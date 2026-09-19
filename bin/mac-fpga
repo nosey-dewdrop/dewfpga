@@ -4,7 +4,7 @@
 #   mac-fpga check          altı parça yerinde mi
 #   mac-fpga new <dizin>    LED yakan örnek projeyi aç (blink.sv + xdc + Makefile)
 set -euo pipefail
-HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # symlink (brew bin) üzerinden de çalışır
 FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
 
 usage() { sed -n '2,6p' "$0"; exit "${1:-0}"; }
