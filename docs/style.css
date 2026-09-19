@@ -11,3 +11,5 @@ table { border-collapse:collapse; font-size:.95rem; }
 td, th { text-align:left; padding:6px 10px 6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
 hr { border:0; border-top:1px solid var(--line); margin:2.5rem auto; }
 a { color:inherit; }
+.dl { color:var(--mute); font-size:.9rem; margin-top:24px; }
+@media print { .dl { display:none; } pre { white-space:pre-wrap; } }

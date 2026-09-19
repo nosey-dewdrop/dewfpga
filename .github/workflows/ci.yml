@@ -32,8 +32,11 @@ jobs:
           mkdir -p out/docs out/templates/.vscode
           cp site/* out/ && cp mac-fpga-*.tgz out/mac-fpga.tgz
           cp templates/* out/templates/ && cp templates/.vscode/tasks.json out/templates/.vscode/
-          pandoc -f gfm docs/manual-setup.md -s --css style.css --metadata title="How do you run CS223 labs on a Mac without Vivado?" -o out/docs/index.html
+          pandoc -f gfm docs/manual-setup.md -s --css style.css --include-before-body docs/before.html --metadata title="How do you run CS223 labs on a Mac without Vivado?" -o out/docs/index.html
           cp docs/style.css out/docs/
+          pandoc -f gfm docs/manual-setup.md -s --css docs/style.css --embed-resources --metadata title="How do you run CS223 labs on a Mac without Vivado?" -o /tmp/guide.html
+          "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu --no-pdf-header-footer --print-to-pdf=out/docs/cs223-mac-setup.pdf "file:///tmp/guide.html"
+          ls -l out/docs/cs223-mac-setup.pdf
       - uses: actions/upload-pages-artifact@v3
         with: { path: out }
 
