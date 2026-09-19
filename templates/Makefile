@@ -56,7 +56,7 @@ $(TOP).bit: $(TOP).frames
 	@ls -lh $@
 
 flash: $(TOP).bit
-	openFPGALoader -b basys3 $(TOP).bit
+	@openFPGALoader -b basys3 $(TOP).bit || { echo "HATA: kart görünmüyor. USB (PROG portu) takılı ve güç anahtarı ON mu?"; exit 1; }
 
 clean:
 	rm -f $(TOP)_sim $(TOP).vcd $(TOP).json $(TOP)_routed.json \
