@@ -8,16 +8,8 @@ copy a command, paste it into the terminal and press Enter, you can finish this.
 Every step tells you what you are doing, why you need it and what you should see
 when it worked.
 
-The compiling takes roughly 4 minutes in total while you wait. The rest is
+The compiling takes roughly 20 minutes in total while you wait. The rest is
 downloads and copy and paste.
-
-If you only want it working, one command does all of it:
-
-```bash
-curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash
-```
-
-This guide is the same steps by hand, so you see what each one does.
 
 I only tested this on Apple Silicon, which means M1 and later. I have not tried it
 on an Intel Mac.
@@ -110,13 +102,13 @@ other two.
 
 ```bash
 brew install yosys openfpgaloader icarus-verilog \
-     cmake ninja eigen pkg-config python
+     cmake ninja boost eigen pkg-config libomp python
 ```
 
 The first three are the tools from the diagram. `cmake` and `ninja` are the
-programs that run a compile job. `eigen` and `pkg-config` are pieces that
-nextpnr's code expects to find on your machine, and `boost`, which it also needs,
-comes along with openfpgaloader. `python` runs two of the steps in the chain.
+programs that run a compile job. `boost`, `eigen`, `pkg-config` and `libomp` are
+pieces that nextpnr's code expects to find on your machine. `python` runs two of
+the steps in the chain.
 
 This download is a few hundred MB, so give it some minutes.
 
@@ -158,6 +150,9 @@ python3 -m venv ~/fpga/venv
 ~/fpga/venv/bin/pip install fasm pyyaml textx simplejson intervaltree
 ```
 
+You will see a warning about the Antlr parser. It is normal. It means a slower
+Python parser gets used, and at lab sizes you will not feel it.
+
 ---
 
 ## 5. How do you build nextpnr-xilinx?
@@ -186,10 +181,10 @@ cmake -B build -G Ninja \
   -DUSE_OPENMP=OFF \
   -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
 
-ninja -C build -j3 nextpnr-xilinx bbasm
+ninja -C build -j3
 ```
 
-The `ninja` step takes about 80 seconds. You will see a counter like `[17/42]`
+The `ninja` step takes about 10 minutes. You will see a counter like `[57/312]`
 going up, and your Mac may get warm.
 
 Two parts of that command matter.
@@ -296,14 +291,6 @@ cd ~/cs223/blink
 Then open VS Code, choose File and Open Folder, and pick `cs223/blink` inside your
 home folder. The folder will hold five files. For each one below you make a new
 file in VS Code, give it the exact name shown, paste the content and save.
-
-If you would rather not paste, the same five files are on the site and this
-downloads them into the folder:
-
-```bash
-B=https://nosey-dewdrop.github.io/mac-fpga/templates
-curl -fsSLO $B/Makefile -O $B/check_xdc.py -O $B/blink.sv -O $B/blink_tb.sv -O $B/blink.xdc
-```
 
 The example is a blinking LED, which is the smallest design that proves the whole
 chain works.
@@ -673,7 +660,7 @@ I used real CS223 code from old student repos on GitHub.
 | `SevSeg_4digit.sv` | Seven-segment multiplexing | 46 cells, after the fix in step 12 |
 
 All four in one design come out at 136 LUTs and 48 flip-flops. The timing check
-passes at 209.60 MHz against our 100 MHz clock, and the bitstream is ready in 4.5
+passes at 154.70 MHz against our 100 MHz clock, and the bitstream is ready in 4.5
 seconds.
 
 The SystemVerilog we use in labs went through with zero errors. That covers
@@ -719,8 +706,8 @@ list up front.
 
 **Builds differ from run to run by default.** nextpnr picks a random seed. With
 `--seed 1` the `.fasm` and `.frames` files come out identical byte for byte. The
-`.bit` file still differs in one place, a timestamp in the header around byte 95.
-That is a standard Xilinx field and it does not change the circuit.
+`.bit` file still differs in one place, a timestamp in the header at byte 95. That
+is a standard Xilinx field and it does not change the circuit.
 
 **nextpnr's pin errors name the wrong port.** Type `led` as `ledd` in the pin file
 and it says `ERROR: port led[0] of type PAD has no IOSTANDARD property`. That is a
