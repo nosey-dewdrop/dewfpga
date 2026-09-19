@@ -20,7 +20,7 @@ a{color:var(--purple);text-decoration:underline;text-decoration-thickness:1px;te
 a:hover{text-decoration-thickness:2px}
 h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:0}
 h1{font-size:2rem;margin:2.6rem 0 .6rem}
-h2{font-size:1.25rem;margin:2.6rem 0 .6rem}
+h2{font-size:1.25rem;margin:2.6rem 0 .6rem;color:var(--purple)}
 h3{font-size:1.05rem;margin:1.8rem 0 .4rem}
 p,ul,ol,table,pre{margin:0 0 1rem}
 li{margin:.3rem 0}
@@ -30,12 +30,18 @@ small,.small{font-size:.9rem}
 hr{border:0;border-top:1px solid var(--line);margin:2.4rem 0}
 
 /* nav + footer */
-nav.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
+nav.top{display:flex;justify-content:flex-start;align-items:baseline;gap:26px;flex-wrap:wrap;
   padding:22px 0 0;font-size:.95rem}
 nav.top .brand{color:var(--purple);text-decoration:none;font-weight:600;letter-spacing:-.01em}
 nav.top .brand span{font-weight:400;font-size:1.3em;line-height:0;vertical-align:-.05em}
 nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;flex-wrap:wrap}
+nav.top li:last-child{margin-left:auto}
 nav.top a{color:var(--fg);text-decoration:none}
+nav.top li:nth-child(1) a{color:var(--green)}
+nav.top li:nth-child(2) a{color:var(--yellow)}
+nav.top li:nth-child(3) a{color:var(--pink)}
+nav.top li:nth-child(4) a{color:var(--blue)}
+nav.top li:nth-child(5) a{color:var(--purple)}
 nav.top a:hover,nav.top a[aria-current]{color:var(--purple);text-decoration:underline;text-underline-offset:4px}
 nav.top .soon{color:var(--mute);cursor:default}
 nav.top .soon sup{font-size:.6em;color:var(--purple);margin-left:2px}
@@ -50,7 +56,7 @@ pre{background:var(--code);border:1px solid var(--line);border-radius:8px;paddin
 pre code{background:none;padding:0;font-size:inherit;color:inherit}
 code{background:var(--code);padding:.1em .35em;border-radius:4px;font-size:.88em}
 pre .c{color:var(--mute)}
-pre .p{color:var(--purple)}
+pre .p{color:var(--green)}
 .copy{position:absolute;top:8px;right:8px;font:inherit;font-size:.75rem;color:var(--mute);
   background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer}
 .copy:hover{color:var(--purple);border-color:var(--purple)}
@@ -58,7 +64,7 @@ pre .p{color:var(--purple)}
 /* tables */
 table{border-collapse:collapse;width:100%;font-size:.95rem}
 td,th{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-weight:600;color:var(--mute);font-size:.85rem}
+th{font-weight:600;color:var(--blue);font-size:.85rem}
 
 /* figures: the numbers row */
 .nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:18px 24px;margin:1.6rem 0 1.2rem}
@@ -79,7 +85,7 @@ ol.walls li b{font-weight:600}
 .err:last-child{border:0}
 .err a.title{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.92rem;word-break:break-word}
 .err p{margin:.35rem 0 0;color:var(--mute)}
-h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.35rem;font-weight:600;word-break:break-word;
+h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.35rem;font-weight:600;word-break:break-word;color:var(--pink);
   background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:2rem}
 .eyebrow{color:var(--mute);font-size:.9rem;margin:2.4rem 0 -1.2rem}
 .eyebrow a{color:inherit}
