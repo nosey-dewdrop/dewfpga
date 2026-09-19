@@ -39,6 +39,10 @@ self.onmessage = async (e) => {
     const text = typeof json === 'string' ? json : new TextDecoder().decode(json);
     self.postMessage({ id, ok: true, json: text, log, ms: Math.round(performance.now() - t0) });
   } catch (err) {
-    self.postMessage({ id, ok: false, log: log || String(err && err.message || err) });
+    let msg = log || String(err && err.message || err);
+    if (/WebAssembly|wasm/i.test(msg) && !log) {
+      msg = msg + "\n\nyosys could not start in this browser. an old copy may be cached: reload the page once with a hard refresh (cmd shift r). if it keeps failing, try chrome or firefox and tell me which browser and version you are on.";
+    }
+    self.postMessage({ id, ok: false, log: msg });
   }
 };

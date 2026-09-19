@@ -1,25 +1,29 @@
 /* one type scale (16 / 20 / 34), one rhythm (28px), zero borders, weight 400 everywhere. */
-body.pal-night{
-  --bg:#101410; --bg-soft:#171d17; --bg-line:#1c241c; --ink:#e8efe6; --ink-dim:#8a9a88;
-  --accent:#5cff7a; --accent-dim:#2d7a3c; --sel:#2a4a2f;
-  --board:#1d221d; --silk:#c9d4c6; --chip:#0b0e0b; --seg-off:#243024; --hole:#0b0e0b; --lit:#5cff7a;
+/* same palette and type as the rest of dewfpga */
+body,body.pal-night,body.pal-white{
+  --bg:#ffffff; --bg-soft:#f5f5f6; --bg-line:#e4e4e4; --ink:#141414; --ink-dim:#6a6a6a;
+  --accent:#5b2fc9; --accent-dim:#b0a2e0; --sel:#efe9fb;
+  --purple:#5b2fc9; --pink:#c23a70; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e;
+  --board:#1c4f9a; --silk:#eef2f9; --chip:#0b0e0b; --seg-off:#2a2a2e; --hole:#0b0e0b; --lit:#ff5b5b;
 }
-body.pal-white{
-  --bg:#ffffff; --bg-soft:#f4f6f4; --bg-line:#eef2ee; --ink:#141614; --ink-dim:#6f786f;
-  --accent:#1f9a3a; --accent-dim:#9ad3a6; --sel:#d5f0da;
-  --board:#232823; --silk:#dfe6dd; --chip:#101310; --seg-off:#2d352d; --hole:#101310; --lit:#5cff7a;
+@media (prefers-color-scheme:dark){
+  body,body.pal-night,body.pal-white{
+    --bg:#0f0f11; --bg-soft:#18181b; --bg-line:#27272b; --ink:#ebebeb; --ink-dim:#9a9a9f;
+    --accent:#c4a8ff; --accent-dim:#5a4a80; --sel:#1f1730;
+    --purple:#c4a8ff; --pink:#ffa3c2; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2;
+  }
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html{color-scheme:light dark}
 body{
-  font-family:ui-monospace,Menlo,'SF Mono',Consolas,monospace; background:var(--bg); color:var(--ink);
-  font-size:16px; line-height:1.75; overflow-x:hidden; min-height:100vh;
+  font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink);
+  font-size:17px; line-height:1.6; overflow-x:hidden; min-height:100vh;
   transition:background .35s,color .35s;
 }
-a{color:var(--ink);text-decoration:underline dotted;display:inline-block;transition:transform .15s}
-a:hover{text-decoration:underline;transform:translateY(-3px)}
-h1{font-size:34px;line-height:1.35;font-weight:400}
-h2{font-size:20px;font-weight:400;margin:56px 0 14px}
+a{color:var(--purple);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+h1{font-size:2rem;line-height:1.25;font-weight:600;letter-spacing:-.015em}
+h2{font-size:1.25rem;font-weight:600;letter-spacing:-.015em;margin:2.6rem 0 .6rem;color:var(--purple)}
 h3{font-size:16px;font-weight:400;margin:28px 0 8px;color:var(--ink-dim)}
 p{max-width:720px}
 .dim{color:var(--ink-dim)}
@@ -33,7 +37,9 @@ select{color:var(--ink-dim)}select:hover{color:var(--accent)}
 code{font:inherit;color:var(--ink)}
 pre{background:var(--bg-soft);padding:14px 18px;border-radius:2px;overflow-x:auto;line-height:1.6;font-size:14px;margin:8px 0 20px;max-width:900px}
 pre .c{color:var(--ink-dim)}
-main,header.site,footer{max-width:1180px;margin:0 auto;padding:28px 28px 0;position:relative;z-index:1}
+main,header.site,footer{max-width:1040px;margin:0 auto;padding:0 24px;position:relative;z-index:1}
+header.site{padding-top:22px}
+main{padding-bottom:0}
 footer{padding-bottom:56px;color:var(--ink-dim);font-size:14px;margin-top:84px}
 
 /* ---- glyph field (deterministic, seeded) ---- */
@@ -59,16 +65,18 @@ nav.tabs a.on::before{content:'·';color:var(--accent);margin-right:8px}
 #pal button.on{color:var(--ink);text-decoration:underline}
 
 /* ---- hero (shared shape on every tab) ---- */
-.hero{padding:56px 0 28px}
+.hero{padding:2.2rem 0 1rem}
 .hero .hi{color:var(--ink-dim);margin-bottom:8px}
 .cur{animation:blink 1s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
 
 /* ---- simulator workbench ---- */
-.bench{display:grid;grid-template-columns:minmax(380px,6fr) minmax(320px,5fr);gap:28px;align-items:start;margin-top:28px}
-.board-wrap{margin-top:28px;display:flex;flex-direction:column;gap:8px}
+.bench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:20px}
+.board-wrap{margin:0;display:flex;flex-direction:column;gap:8px}
+.work{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:28px;align-items:start;margin-top:20px}
+@media(max-width:1000px){.work{grid-template-columns:1fr}}
 @media(max-width:960px){.bench{grid-template-columns:1fr}}
-.pane{background:var(--bg-soft);border-radius:2px;display:flex;flex-direction:column;min-height:420px}
+.pane{background:var(--bg-soft);border:1px solid var(--bg-line);border-radius:8px;display:flex;flex-direction:column;min-height:360px}
 .pane-bar{display:flex;gap:16px;align-items:baseline;padding:10px 14px 0;font-size:14px;flex-wrap:wrap}
 .pane-bar .grow{flex:1}
 .ftab{color:var(--ink-dim)}.ftab.on{color:var(--ink)}
@@ -146,3 +154,14 @@ kbd{font:inherit;color:var(--accent)}
 .tb-out .c-line{color:var(--ink)}
 .wave-wrap{margin-top:28px;background:var(--bg-soft);border-radius:2px;overflow:hidden}
 .wave-wrap canvas{display:block;cursor:crosshair}
+
+/* simulator: board on the left, the compiler on the right */
+.work .left{position:sticky;top:20px}
+.work .right{display:flex;flex-direction:column;gap:20px}
+.work .right .pane{min-height:0}
+.work .right .editors{min-height:320px}
+.work .console-pane{min-height:180px}
+.work .board-wrap svg#board{width:100%;height:auto}
+.hero p.dim{max-width:760px}
+.small{font-size:.9rem}
+@media(max-width:1000px){.work .left{position:static}}

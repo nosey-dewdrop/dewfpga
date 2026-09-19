@@ -31,17 +31,16 @@
 <body class="pal-night">
 <div id="glyphs" aria-hidden="true"></div>
 <header class="site">
-  <a class="wordmark" href="../"><span class="led"></span>dewfpga</a>
+  <a class="wordmark" href="/dewfpga/">dewfpga <span>⋆</span></a>
   <nav class="tabs" aria-label="sections">
-    <a href="./">simulator</a>
-    <a href="tb.html">testbench</a>
-    <a href="../docs/">docs</a>
-    <a href="../errors/">errors</a>
+    <a href="/dewfpga/docs/">docs</a>
+    <a href="/dewfpga/why/">why</a>
+    <a href="/dewfpga/errors/">errors</a>
+    <a href="/dewfpga/sim/" class="on">simulator</a>
+    <a href="/dewfpga/sim/tb.html">testbench</a>
+    <a href="/dewfpga/cli/">cli</a>
+    <a href="https://github.com/nosey-dewdrop/dewfpga">github</a>
   </nav>
-  <div class="site-right">
-    <div id="pal"><button data-pal="night">night</button><button data-pal="white">white</button></div>
-    <a href="https://github.com/nosey-dewdrop/dewfpga">github ↗</a>
-  </div>
 </header>
 <main>
   <section class="hero">
@@ -50,37 +49,37 @@
     <p class="dim">the same .sv and .xdc you would hand to vivado. yosys reads it here, as webassembly, and the board below reacts. nothing to install, nothing to buy.</p>
   </section>
 
-  <section class="board-wrap" aria-label="board">
-    <svg id="board" tabindex="0" role="img" aria-label="virtual basys3 board"></svg>
-    <div id="status" aria-live="polite"></div>
-    <div class="controls">
-      <button id="pause">pause</button>
-      <button id="step">step one cycle</button>
-      <label>speed <input id="speed" type="range" min="0" max="5" value="1"></label>
-      <span id="speed-label"></span>
-      <span class="grow"></span>
-      <span>click a switch to flip it, hold a button to press it. with the board focused, arrows and enter are the five buttons.</span>
+  <div class="work">
+    <div class="left">
+      <section class="board-wrap" aria-label="board">
+        <svg id="board" tabindex="0" role="img" aria-label="virtual basys3 board"></svg>
+        <div id="status" aria-live="polite"></div>
+        <div class="controls">
+          <button id="pause">pause</button>
+          <button id="step">step one cycle</button>
+          <label>speed <input id="speed" type="range" min="0" max="5" value="1"></label>
+          <span id="speed-label"></span>
+        </div>
+        <p class="dim small">click a switch to flip it, hold a button to press it. with the board focused, arrows and enter are the five buttons.</p>
+      </section>
     </div>
-  </section>
-
-  <section class="bench" aria-label="workbench">
-    <div class="pane">
-      <div class="pane-bar">
-        <span id="ftabs" class="ftabs"></span>
-        <span class="grow"></span>
-        <select id="examples" aria-label="load an example"><option value="">examples</option></select>
-        <button id="share">share</button>
-        <button id="run" title="⌘↵ on mac, ctrl+enter on windows">run</button>
-      </div>
-      <div id="editors" class="editors"></div>
-    </div>
-    <div class="side">
+    <div class="right">
       <div class="pane">
+        <div class="pane-bar">
+          <span id="ftabs" class="ftabs"></span>
+          <span class="grow"></span>
+          <select id="examples" aria-label="load an example"><option value="">examples</option></select>
+          <button id="share">share</button>
+          <button id="run" title="⌘↵ on mac, ctrl+enter on windows">run</button>
+        </div>
+        <div id="editors" class="editors"></div>
+      </div>
+      <div class="pane console-pane">
         <div class="pane-bar"><span class="dim">yosys</span></div>
         <div id="console" aria-live="polite"></div>
       </div>
     </div>
-  </section>
+  </div>
 </main>
 <footer>
   <p>made by <a href="https://github.com/nosey-dewdrop">damla su bilge</a> for cs223 at bilkent. open source, runs entirely on your machine, nothing is uploaded anywhere.</p>
