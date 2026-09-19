@@ -8,7 +8,7 @@ copy a command, paste it into the terminal and press Enter, you can finish this.
 Every step tells you what you are doing, why you need it and what you should see
 when it worked.
 
-The compiling takes roughly 20 minutes in total while you wait. The rest is
+The compiling takes roughly 4 minutes in total while you wait. The rest is
 downloads and copy and paste.
 
 I only tested this on Apple Silicon, which means M1 and later. I have not tried it
@@ -205,7 +205,7 @@ cmake -B build -G Ninja \
 ninja -C build -j3
 ```
 
-The `ninja` step takes about 10 minutes. You will see a counter like `[57/312]`
+The `ninja` step takes about a minute and a half. You will see a counter like `[17/42]`
 going up, and your Mac may get warm.
 
 Two parts of that command matter.
