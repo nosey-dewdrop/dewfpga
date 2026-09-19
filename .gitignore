@@ -1,10 +1,16 @@
+# build outputs of a design folder
 *.bit
 *.frames
 *.fasm
-*.json
 *.vcd
 *_sim
+*_routed.json
+blink.json
+top.json
+node_modules/
+*.tgz
 .rabadon/
+# keep
 !test/golden/*.fasm
-!templates/.vscode/
+!package.json
 !templates/.vscode/tasks.json
