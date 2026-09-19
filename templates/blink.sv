@@ -1,19 +1,19 @@
-// blink.sv — Basys3'te ışık yakma
+// blink.sv — light an LED on the Basys3
 //
-// sw[0]  : ışığı aç/kapat
-// led[0] : yanıp söner (~1 Hz)
-// led[15]: sw[0] doğrudan bağlı — kartın canlı olduğunu anında gösterir
+// sw[0]  : enable
+// led[0] : blinks at ~1 Hz while sw[0] is on
+// led[15]: mirrors sw[0] — shows the board is alive instantly
 
 module blink (
-    input  logic        clk,      // W5 — 100 MHz kart osilatörü
+    input  logic        clk,      // W5 — 100 MHz on-board oscillator
     input  logic [15:0] sw,
     output logic [15:0] led
 );
 
-    // 100 MHz'i saymak: 50_000_000 çevrimde bir tersle -> ~1 Hz (yarım periyot)
+    // count 100 MHz: toggle every 50_000_000 cycles -> ~1 Hz (half period)
     localparam int HALF_PERIOD = 50_000_000;
 
-    logic [25:0] counter = '0;   // 2^26 = 67M, 50M'i tutar
+    logic [25:0] counter = '0;   // 2^26 = 67M, holds 50M
     logic        blink_state = 1'b0;
 
     always_ff @(posedge clk) begin
@@ -25,10 +25,6 @@ module blink (
         end
     end
 
-    always_comb begin
-        led        = '0;
-        led[0]     = blink_state & sw[0];  // sw[0] açıkken yanıp söner
-        led[15]    = sw[0];                // anahtarın aynası
-    end
+    assign led = {sw[0], 14'b0, blink_state & sw[0]};
 
 endmodule

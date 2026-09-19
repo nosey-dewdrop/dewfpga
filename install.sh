@@ -1,42 +1,42 @@
 #!/usr/bin/env bash
-# mac-fpga install — macOS Apple Silicon'da Vivado'suz Basys3 (XC7A35T) zinciri.
+# mac-fpga install — Basys3 (XC7A35T) toolchain on macOS Apple Silicon, no Vivado.
 #
 #   SystemVerilog -> yosys -> nextpnr-xilinx -> prjxray -> openFPGALoader -> Basys3
 #
-# Tek komut. Yeniden çalıştırmak güvenli: biten adım atlanır.
-# Her şey $FPGA_HOME altına kurulur (varsayılan ~/fpga). Sistem Python'a dokunmaz.
+# One command. Safe to re-run: finished steps are skipped.
+# Everything goes under $FPGA_HOME (default ~/fpga). System Python is never touched.
 #
-# Kullanım:  ./install.sh            (ya da: mac-fpga install)
-#            FPGA_HOME=/başka/yer ./install.sh
+# Usage:  ./install.sh            (or: mac-fpga install)
+#         FPGA_HOME=/elsewhere ./install.sh
 set -euo pipefail
 
 export FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
-# 8 GB RAM'de -j3 güvenli (daha fazlası swap'e düşer); 16 GB ve üstünde çekirdek sayısı kadar.
+# -j3 is safe on 8 GB RAM (more swaps); on 16 GB+ use all cores.
 if [ -z "${JOBS:-}" ]; then
     if [ "$(sysctl -n hw.memsize 2>/dev/null || echo 0)" -ge $((16*1024*1024*1024)) ]; then JOBS=$(sysctl -n hw.ncpu); else JOBS=3; fi
 fi
 DEVICE="xc7a35tcpg236-1"                # Basys3
 CHIPDB_NAME="xc7a35t"
 
-# Sabitlenmiş kaynaklar — 19 Eyl 2026'da bu commit'lerle LED yandı.
+# Pinned sources — the LED lit with exactly these commits on 2026-09-19.
 NEXTPNR_URL="https://github.com/openXC7/nextpnr-xilinx.git"
 NEXTPNR_SHA="3fd78784c7788f93f276358edf5477221cc6c179"
 PRJXRAY_URL="https://github.com/f4pga/prjxray.git"
 PRJXRAY_SHA="c9f02d8576042325425824647ab5555b1bc77833"
 
 BREW_PKGS=(yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14)
-# 19 Eyl 2026'da çalışan sürümler. Brew paketleri sabitlenemez (yosys 0.69, openFPGALoader 1.1.1, iverilog 13.0 ile test edildi).
+# Versions that worked on 2026-09-19. Brew packages can't be pinned (tested with yosys 0.69, openFPGALoader 1.1.1, iverilog 13.0).
 PIP_PKGS=(fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 intervaltree==3.2.1 numpy==2.5.3 pyjson5==2.0.1)
 
-# ---------------------------------------------------------------- yardımcılar
+# ---------------------------------------------------------------- helpers
 T0=$(date +%s)
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then B=$'\033[1m' G=$'\033[32m' Y=$'\033[33m' R=$'\033[31m' N=$'\033[0m'; else B='' G='' Y='' R='' N=''; fi
 step()  { printf '\n%s[%s] %s%s  (+%ds)\n' "$B" "$1" "$2" "$N" "$(( $(date +%s) - T0 ))"; }
 ok()    { printf '    %s✓%s %s\n' "$G" "$N" "$*"; }
-skip()  { printf '    %s↷%s %s (zaten var, atlandı)\n' "$Y" "$N" "$*"; }
-die()   { printf '\n%sHATA:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
+skip()  { printf '    %s↷%s %s (already there, skipped)\n' "$Y" "$N" "$*"; }
+die()   { printf '\n%sERROR:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 
-# Sabit bir commit'i sığ (depth 1) çek. Ana dal ilerlese de aynı kaynak gelir.
+# Shallow-fetch one pinned commit. Same source even after the branch moves on.
 clone_pinned() {  # <url> <sha> <dir>
     local url=$1 sha=$2 dir=$3
     if [ -d "$dir/.git" ] && [ "$(git -C "$dir" rev-parse HEAD 2>/dev/null)" = "$sha" ]; then
@@ -46,30 +46,30 @@ clone_pinned() {  # <url> <sha> <dir>
     git init -q "$dir"
     git -C "$dir" remote add origin "$url"
     git -C "$dir" fetch -q --depth 1 origin "$sha" \
-        || die "$url çekilemedi (ağ yok mu? GitHub erişimi var mı?)"
+        || die "could not fetch $url (no network? can you reach GitHub?)"
     git -C "$dir" -c advice.detachedHead=false checkout -q FETCH_HEAD
-    # --recursive ŞART: prjxray'in yaml-cpp/googletest/abseil'i submodule; eksikse cmake patlar.
+    # --recursive is REQUIRED: prjxray's yaml-cpp/googletest/abseil are submodules; cmake fails without them.
     git -C "$dir" submodule update -q --init --recursive --depth 1
     ok "$dir @ ${sha:0:7} (+submodule)"
 }
 
-# ---------------------------------------------------------------- 0. ortam
-step 0 "Ortam kontrolü"
-[ "$(id -u)" -ne 0 ] || die "sudo ile çalıştırma. Her şey kendi kullanıcına, ~/fpga altına kurulur."
-[ "$(uname -s)" = Darwin ] || die "Bu script macOS için. Linux/Windows desteklenmiyor."
-[ "$(uname -m)" = arm64 ]  || die "Sadece Apple Silicon (arm64) test edildi. Intel Mac henüz yok."
-xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools yok. Önce:  xcode-select --install   (sonra bu komutu tekrar çalıştır)"
-command -v brew >/dev/null   || die "Homebrew yok. Önce:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
+# ---------------------------------------------------------------- 0. environment
+step 0 "Environment"
+[ "$(id -u)" -ne 0 ] || die "do not run with sudo. Everything installs as your user under ~/fpga."
+[ "$(uname -s)" = Darwin ] || die "this script is for macOS. Linux/Windows are not supported."
+[ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is tested. Intel Mac not yet."
+xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools missing. First:  xcode-select --install   (then run this again)"
+command -v brew >/dev/null   || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
 mkdir -p "$FPGA_HOME"
 FREE_GB=$(df -g "$FPGA_HOME" | awk 'NR==2{print $4}')
-[ "$FREE_GB" -ge 4 ] || die "Diskte $FREE_GB GB boş var; kurulum 1.4 GB + derleme geçici alanı için en az 4 GB gerekli."
+[ "$FREE_GB" -ge 4 ] || die "only $FREE_GB GB free; the install needs 1.4 GB plus build scratch, at least 4 GB."
 LOG="$FPGA_HOME/install.log"
 exec > >(tee -a "$LOG") 2>&1
 echo "    FPGA_HOME=$FPGA_HOME   JOBS=$JOBS   log: $LOG"
 echo "    $(date)  $(sw_vers -productVersion)  $(uname -m)"
 
 # ---------------------------------------------------------------- 1. brew
-step 1 "Homebrew paketleri"
+step 1 "Homebrew packages"
 missing=()
 for p in "${BREW_PKGS[@]}"; do
     brew list --formula "$p" >/dev/null 2>&1 && skip "$p" || missing+=("$p")
@@ -80,32 +80,32 @@ if [ ${#missing[@]} -gt 0 ]; then
 fi
 BREW_PREFIX="$(brew --prefix)"
 PY3="$BREW_PREFIX/opt/python@3.14/bin/python3.14"
-[ -x "$PY3" ] || die "python@3.14 bulunamadı: $PY3"
+[ -x "$PY3" ] || die "python@3.14 not found: $PY3"
 
 # ---------------------------------------------------------------- 2. nextpnr-xilinx
-# oss-cad-suite'te nextpnr-xilinx YOK (497 MB boşa gider). Kaynaktan derlenir.
-step 2 "nextpnr-xilinx (kaynaktan derleme, ~2 dk)"
+# oss-cad-suite does NOT ship nextpnr-xilinx (497 MB wasted). Build from source.
+step 2 "nextpnr-xilinx (from source, ~2 min)"
 NEXTPNR_DIR="$FPGA_HOME/nextpnr-xilinx"
 clone_pinned "$NEXTPNR_URL" "$NEXTPNR_SHA" "$NEXTPNR_DIR"
 if [ -x "$NEXTPNR_DIR/build/nextpnr-xilinx" ] && [ -x "$NEXTPNR_DIR/build/bbasm" ]; then
     skip "nextpnr-xilinx binary"
 else
-    # USE_OPENMP=OFF ŞART: Apple clang -fopenmp bilmiyor, açık kalırsa cmake hata verir.
+    # USE_OPENMP=OFF is REQUIRED: Apple clang has no -fopenmp; cmake fails otherwise.
     cmake -S "$NEXTPNR_DIR" -B "$NEXTPNR_DIR/build" -G Ninja \
           -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release \
           -DUSE_OPENMP=OFF -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
     ninja -C "$NEXTPNR_DIR/build" -j"$JOBS" nextpnr-xilinx bbasm
-    ok "nextpnr-xilinx + bbasm derlendi"
+    ok "nextpnr-xilinx + bbasm built"
 fi
 
 # ---------------------------------------------------------------- 3. venv
-# PEP 668: Homebrew Python'a pip install yasak -> venv şart.
+# PEP 668: pip install into Homebrew Python is refused -> venv required.
 step 3 "Python venv"
 VENV="$FPGA_HOME/venv"
 VPY="$VENV/bin/python"
-# brew Python güncellenince eski venv'in symlink'i kopar ("dead venv"); çalışmıyorsa sıfırdan kur.
+# a brew Python upgrade breaks the old venv's symlink ("dead venv"); rebuild if it doesn't run.
 if [ -x "$VPY" ] && ! "$VPY" -c "import sys" >/dev/null 2>&1; then
-    echo "    venv bozuk (Python güncellenmiş olabilir), yeniden kuruluyor"; rm -rf "$VENV"
+    echo "    venv is broken (Python upgraded?), rebuilding"; rm -rf "$VENV"
 fi
 [ -x "$VPY" ] || "$PY3" -m venv "$VENV"
 if "$VPY" -c "import fasm, yaml, textx, simplejson, intervaltree" 2>/dev/null; then
@@ -117,30 +117,30 @@ else
 fi
 
 # ---------------------------------------------------------------- 4. prjxray
-step 4 "prjxray (fasm2frames + xc7frames2bit, ~2 dk)"
+step 4 "prjxray (fasm2frames + xc7frames2bit, ~2 min)"
 PRJXRAY_DIR="$FPGA_HOME/prjxray"
 clone_pinned "$PRJXRAY_URL" "$PRJXRAY_SHA" "$PRJXRAY_DIR"
 if "$VPY" -c "import prjxray" 2>/dev/null; then
-    skip "prjxray python paketi"
+    skip "prjxray python package"
 else
     "$VENV/bin/pip" install -q -e "$PRJXRAY_DIR"
-    ok "prjxray python paketi (editable)"
+    ok "prjxray python package (editable)"
 fi
 if [ -x "$PRJXRAY_DIR/build/tools/xc7frames2bit" ]; then
     skip "xc7frames2bit"
 else
-    # CMAKE_POLICY_VERSION_MINIMUM=3.5 ŞART: prjxray eski cmake sözdizimi kullanıyor,
-    # cmake 4.x bunu olmadan reddediyor.
+    # CMAKE_POLICY_VERSION_MINIMUM=3.5 is REQUIRED: prjxray uses old cmake syntax
+    # that cmake 4.x refuses without it.
     cmake -S "$PRJXRAY_DIR" -B "$PRJXRAY_DIR/build" \
           -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 \
           -DPRJXRAY_BUILD_TESTING=OFF
     cmake --build "$PRJXRAY_DIR/build" --target xc7frames2bit -j"$JOBS"
-    ok "xc7frames2bit derlendi"
+    ok "xc7frames2bit built"
 fi
 
 # ---------------------------------------------------------------- 5. chipdb
-# nextpnr-xilinx hazır chipdb dağıtmıyor; her cihaz için elle üretilir.
-step 5 "chipdb ($DEVICE, ~1 dk, ~900 MB RAM)"
+# nextpnr-xilinx ships no prebuilt chipdb; it is generated per device.
+step 5 "chipdb ($DEVICE, ~1 min, ~900 MB RAM)"
 CHIPDB_DIR="$FPGA_HOME/chipdb"
 CHIPDB_BIN="$CHIPDB_DIR/$CHIPDB_NAME.bin"
 if [ -s "$CHIPDB_BIN" ]; then
@@ -153,22 +153,22 @@ else
         --metadata xilinx/external/nextpnr-xilinx-meta/artix7 \
         --device "$DEVICE" --constids xilinx/constids.inc --bba "$BBA" )
     "$NEXTPNR_DIR/build/bbasm" --l "$BBA" "$CHIPDB_BIN"
-    rm -f "$BBA"                         # 268 MB ara dosya; .bin yeter
+    rm -f "$BBA"                         # 268 MB intermediate; .bin is all we need
     ok "$CHIPDB_BIN ($(du -h "$CHIPDB_BIN" | cut -f1))"
 fi
 
-# ---------------------------------------------------------------- 6. doğrula
-step 6 "Doğrulama"
+# ---------------------------------------------------------------- 6. verify
+step 6 "Verify"
 CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/mac-fpga"
-BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: kullanıcı yazabilir, PATH'te
+BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: user-writable, on PATH
 if [ "$(readlink -f "$(command -v mac-fpga 2>/dev/null || echo /nonexistent)")" = "$CLI" ]; then
-    skip "mac-fpga PATH'te ($(command -v mac-fpga))"          # npm -g ya da önceki link
+    skip "mac-fpga on PATH ($(command -v mac-fpga))"          # npm -g or an earlier link
 elif [ -w "$BIN_DIR" ]; then
-    ln -sfn "$CLI" "$BIN_DIR/mac-fpga" && ok "mac-fpga -> $BIN_DIR/mac-fpga (PATH'te)"
+    ln -sfn "$CLI" "$BIN_DIR/mac-fpga" && ok "mac-fpga -> $BIN_DIR/mac-fpga (on PATH)"
 else
-    echo "    $BIN_DIR yazılamıyor; PATH'e ekle:  export PATH=\"$(dirname "$CLI"):\$PATH\""
+    echo "    $BIN_DIR not writable; add to PATH:  export PATH=\"$(dirname "$CLI"):\$PATH\""
 fi
 "$CLI" check
 echo
-echo "Toplam süre: $(( ($(date +%s) - T0) / 60 )) dk. Log: $LOG"
-echo "Sıradaki:  mac-fpga new blink && cd blink && make flash"
+echo "Total: $(( ($(date +%s) - T0) / 60 )) min. Log: $LOG"
+echo "Next:  mac-fpga new blink && cd blink && mac-fpga flash"

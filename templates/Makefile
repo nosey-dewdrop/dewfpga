@@ -1,12 +1,12 @@
-# Basys3 — macOS'ta Vivado'suz akış (mac-fpga)
+# Basys3 on macOS without Vivado (mac-fpga)
 #
-#   make sim    -> simülasyon (iverilog)
-#   make bit    -> bitstream üret (~4 sn)
-#   make flash  -> karta yükle (SRAM: kart resetlenince silinir)
-#   make check  -> araçlar yerinde mi
+#   make sim    -> simulate (iverilog)
+#   make bit    -> build the bitstream (~4 s)
+#   make flash  -> program the board (SRAM: cleared on power cycle)
+#   make check  -> are the tools in place
 #   make clean
 #
-# Yeni modül: TOP/SRCS/XDC'yi değiştir. XDC pinleri Basys3_Master.xdc'den kopyalanır.
+# New module: change TOP/SRCS/XDC. Copy pins from Basys3_Master.xdc.
 
 TOP  := blink
 SRCS := blink.sv
@@ -27,10 +27,10 @@ CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
 all: bit
 
 check:
-	@for t in yosys iverilog openFPGALoader; do printf "%-16s " $$t; command -v $$t || echo "-YOK-"; done
-	@printf "%-16s " nextpnr-xilinx; [ -x "$(NEXTPNR)" ] && echo "$(NEXTPNR)" || echo "-YOK-"
-	@printf "%-16s " xc7frames2bit;  [ -x "$(F2B)" ]     && echo "$(F2B)"     || echo "-YOK-"
-	@printf "%-16s " chipdb;         [ -s "$(CHIPDB)" ]  && echo "$(CHIPDB)"  || echo "-YOK-"
+	@for t in yosys iverilog openFPGALoader; do printf "%-16s " $$t; command -v $$t || echo "-MISSING-"; done
+	@printf "%-16s " nextpnr-xilinx; [ -x "$(NEXTPNR)" ] && echo "$(NEXTPNR)" || echo "-MISSING-"
+	@printf "%-16s " xc7frames2bit;  [ -x "$(F2B)" ]     && echo "$(F2B)"     || echo "-MISSING-"
+	@printf "%-16s " chipdb;         [ -s "$(CHIPDB)" ]  && echo "$(CHIPDB)"  || echo "-MISSING-"
 
 sim: $(TOP)_sim
 	./$(TOP)_sim
@@ -57,7 +57,7 @@ $(TOP).bit: $(TOP).frames
 	@ls -lh $@
 
 flash: $(TOP).bit
-	@openFPGALoader -b basys3 $(TOP).bit || { echo "HATA: kart görünmüyor. USB (PROG portu) takılı ve güç anahtarı ON mu?"; exit 1; }
+	@openFPGALoader -b basys3 $(TOP).bit || { echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?"; exit 1; }
 
 clean:
 	rm -f $(TOP)_sim $(TOP).vcd $(TOP).json $(TOP)_routed.json \

@@ -1,99 +1,88 @@
 # mac-fpga
 
-macOS Apple Silicon'da **Vivado olmadan** SystemVerilog yazıp Basys3'e yükle.
-Sanal makine yok, Rosetta yok. `.sv` → `.bit` → kart, ~4 saniye.
+Write SystemVerilog on an Apple Silicon Mac and flash a Digilent **Basys3**. No Vivado,
+no virtual machine, no Rosetta. `.sv` → `.bit` → board in about 4 seconds.
+
+[Türkçe](README.tr.md)
 
 ```bash
-npm install -g mac-fpga     # (henüz npm'de yayınlanmadı; şimdilik: npm install -g <tgz>)
-mac-fpga install            # zinciri kur: ~5 dk, 1.4 GB, ~/fpga altına, tek sefer
+npm install -g mac-fpga     # not on npm yet — see "Install" below
+mac-fpga install            # toolchain into ~/fpga: ~4 min, 1.4 GB, once
 ```
 
-Sonra herhangi bir klasörde `blink.sv` + `blink.xdc` yaz ve:
+Then in any folder with `blink.sv` + `blink.xdc`:
 
 ```bash
 mac-fpga sim      # iverilog
-mac-fpga bit      # .sv -> .bit  (~4 sn)
-mac-fpga flash    # karta yükle: LED yanar
+mac-fpga bit      # .sv -> .bit   (~4 s)
+mac-fpga flash    # program the board: the LED blinks
 ```
 
-Makefile yok, proje yapısı yok. Klasördeki bütün `.sv`/`.v` dosyaları sentezlenir
-(alt modüller ayrı dosyada olabilir). Top modül: `.xdc`'si olan dosya; belirsizse
-`mac-fpga flash <top>`. Simülasyon `<top>_tb.sv` ister. Örnek: `mac-fpga new blink`.
+No Makefile, no project layout. Every `.sv`/`.v` in the folder is synthesized (submodules
+can live in their own files). The top module is the `.sv` with a matching `.xdc`; if that
+is ambiguous, `mac-fpga flash <top>`. `sim` needs `<top>_tb.sv`. Example: `mac-fpga new blink`.
 
-## Ne kuruyor?
+## Install
 
-| Aşama | Araç | Nereden |
+Until the package is published: clone the repo and run `./install.sh`. It links `mac-fpga`
+into Homebrew's bin. Requirements: macOS on Apple Silicon, Xcode Command Line Tools,
+Homebrew. Node is only needed for the npm route.
+
+## What it installs
+
+| Stage | Tool | From |
 |---|---|---|
-| simülasyon | iverilog | brew |
-| sentez | yosys | brew |
-| place & route | nextpnr-xilinx | kaynaktan, sabit commit |
-| fasm → frames | prjxray `fasm2frames` | kaynaktan, sabit commit, venv |
-| frames → .bit | prjxray `xc7frames2bit` | kaynaktan |
-| chipdb XC7A35T | `bbaexport` + `bbasm` | üretilir (~90 MB) |
-| karta yükleme | openFPGALoader | brew |
+| simulation | iverilog | brew |
+| synthesis | yosys | brew |
+| place & route | nextpnr-xilinx | source, pinned commit |
+| fasm → frames | prjxray `fasm2frames` | source, pinned commit, venv |
+| frames → .bit | prjxray `xc7frames2bit` | source |
+| chipdb XC7A35T | `bbaexport` + `bbasm` | generated (~90 MB) |
+| programming | openFPGALoader | brew |
 
-Vivado'nun tek pencerede yaptığı beş işi beş açık kaynak araç yapıyor;
-`install.sh` bunları kurup birbirine bağlıyor.
+Vivado does five jobs in one window; five open-source tools do them here and `install.sh`
+wires them together.
 
-## Neden bu script var?
+## Why a script?
 
-Bu zinciri elle kurmak 6 saat sürdü. Hiçbiri tek yerde yazılı olmayan altı duvar:
+Setting this chain up by hand took six hours. Six walls, none documented in one place:
 
-1. **oss-cad-suite'te nextpnr-xilinx yok.** 497 MB indirip içinde ice40/ecp5/gowin
-   olduğunu, Xilinx olmadığını öğrenirsin. Kaynaktan derlemek şart.
-2. **Apple clang `-fopenmp` bilmiyor.** nextpnr `-DUSE_OPENMP=OFF` ister.
-3. **PEP 668.** Homebrew Python'a `pip install` yasak; venv şart.
-4. **prjxray `--recursive` ister.** Yoksa yaml-cpp / googletest / abseil gelmez, cmake patlar.
-5. **cmake 4 prjxray'i reddediyor.** `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` ister.
-6. **Hazır chipdb yok.** Cihaz başına `bbaexport.py` + `bbasm` ile elle üretilir.
+1. **oss-cad-suite has no nextpnr-xilinx.** You download 497 MB to learn it only has
+   ice40/ecp5/gowin. It must be built from source.
+2. **Apple clang has no `-fopenmp`.** nextpnr needs `-DUSE_OPENMP=OFF`.
+3. **PEP 668.** `pip install` into Homebrew Python is refused; a venv is required.
+4. **prjxray needs `--recursive`.** Without it yaml-cpp / googletest / abseil are missing and cmake fails.
+5. **cmake 4 rejects prjxray.** It needs `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`.
+6. **No prebuilt chipdb.** It is generated per device with `bbaexport.py` + `bbasm`.
 
-Script her adımı bitince işaretler; yeniden çalıştırınca biten adımlar atlanır.
-Log: `~/fpga/install.log`.
+Re-running the script skips finished steps. Log: `~/fpga/install.log`.
 
-## Komutlar
+## Commands
 
 ```
-mac-fpga install                 zinciri kur (yeniden çalıştırmak güvenli)
-mac-fpga check                   altı parça yerinde mi
-mac-fpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
+mac-fpga install                     install the toolchain (safe to re-run)
+mac-fpga check                       is every piece in place
+mac-fpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+mac-fpga new <dir>                   example project with Makefile + VS Code task (⌘⇧B = flash)
 mac-fpga --version
-mac-fpga new <dizin>             örnek proje: blink.sv + xdc + Makefile + VS Code görevi (⌘⇧B = flash)
 ```
 
-Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `mac-fpga`'yı brew bin'e bağlar.
+## Scope
 
-## Kapsam
+- Board: Digilent **Basys3** (XC7A35T-1CPG236C). Other 7-series boards: change `DEVICE`
+  in `install.sh` and regenerate the chipdb; untested.
+- Platform: **macOS arm64**. Intel Mac and Linux are untested and refused by the script.
+- The course's XDC files work as-is (`PACKAGE_PIN` + `IOSTANDARD`).
+- `flash` writes SRAM: the design is gone after a power cycle.
 
-- Kart: Digilent **Basys3** (XC7A35T-1CPG236C). Başka 7-serisi kart için
-  `install.sh` içinde `DEVICE` değişir ve chipdb yeniden üretilir; test edilmedi.
-- Platform: **macOS arm64**. Intel Mac ve Linux test edilmedi, script reddeder.
-- Dersin verdiği XDC dosyaları olduğu gibi çalışır (`PACKAGE_PIN` + `IOSTANDARD`).
-- `make flash` SRAM'a yazar: kartın gücü kesilince silinir.
+## Tests
 
-## Testler (19 Eyl 2026, M2 8 GB, macOS 15)
+`test/run.sh` (27 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
+every error path, idempotent install). `FULL=1 test/run.sh` adds a clean install into a
+temp directory. CI runs the clean install, the suite and the npm package on a fresh
+`macos-15` (Apple Silicon) GitHub runner on every push.
 
-| Test | Sonuç |
-|---|---|
-| Temiz kurulum (boş `FPGA_HOME`) | exit 0, **4 dk 17 s**, 1.4 GB. Adımlar: nextpnr 77 s · venv 5 s · prjxray 114 s · chipdb 58 s |
-| Aynı kurulum, boşluklu yola (`sp ace/fpga`) | exit 0, 4 dk 11 s, `make bit` geçti |
-| İkinci koşu (idempotency) | exit 0, **2.7 s**, 15 adım "zaten var" ile atlandı |
-| Çıktı eşitliği | Taze zincirin `.frames` dosyası elle kurulan zincirle **bayt bayt aynı**; `.bit` yalnızca başlıktaki saat damgasında 4 byte farklı |
-| Sabitleme | nextpnr-xilinx `3fd7878`, prjxray `c9f02d8` ve tüm submodule SHA'ları elle kurulanla aynı |
-| `make bit` | 4.6 s, tepe 552 MB RAM · `make check` 0.08 s · chipdb üretimi tepe 859 MB RAM |
-| shellcheck (`-S style`) | temiz |
-| gitleaks | sızıntı yok; repoda kişisel yol / e-posta yok |
-| Script hijyeni | `sudo`, `eval`, `curl \| sh` yok; 3 URL hepsi https; yazma yalnız `FPGA_HOME` + brew |
-| Intel Mac / brew yok / ağ yok | üçü de tek satır `HATA:` ile exit 1, yarım durum bırakmaz (yarım klon sonraki koşuda yeniden çekilir) |
-| `new` var olan dizine / bilinmeyen komut / eksik zincirde `check` | exit 1 |
-| npm: `npm pack` → `npm install -g` → boş klasörde `mac-fpga bit` | `.fasm` elle kurulanla aynı; `npm uninstall -g` temiz kaldırır |
-| Klasörde iki `.sv` / `.xdc` yok / testbench yok / zincir kurulmamış | tek satır HATA, exit 1 |
-| `top.sv` + `counter.sv` (alt modül ayrı dosyada) | top `.xdc`'den bulundu, `top.bit` üretildi |
-| `sudo ./install.sh` / boş disk < 4 GB / bozuk venv (Python güncellemesi) | HATA ile durur / HATA ile durur / venv yeniden kurulur |
-| Kodda olup XDC'de olmayan port | derlemeden önce `HATA: ... led[15]` ile durur, exit 2 |
-
-Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makinede `make flash`.
-
-## Kanıt
-
-19 Eyl 2026: elle kurulan zincirle Basys3'te LED yandı. Bu script ile temiz dizine
-kurulan zincir aynı `.frames` dosyasını üretiyor (yukarıdaki tablo).
+Measured 2026-09-19 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
+1.4 GB; second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.
+The chain built by the script produces byte-identical `.frames` to the hand-built chain
+that lit the LED.

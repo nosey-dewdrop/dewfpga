@@ -1,0 +1,22 @@
+name: ci
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  macos-arm64:
+    runs-on: macos-15          # Apple Silicon runner
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install shellcheck
+      - name: install toolchain from scratch
+        run: ./install.sh
+      - name: test suite
+        run: test/run.sh
+      - name: npm package installs and runs
+        run: |
+          npm pack
+          npm install -g ./mac-fpga-*.tgz
+          mkdir /tmp/w && cp templates/blink.sv templates/blink.xdc /tmp/w/
+          cd /tmp/w && mac-fpga --version && mac-fpga bit && ls -l blink.bit
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: install-log, path: ~/fpga/install.log }

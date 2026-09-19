@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
-"""XDC ile kodun port isimlerini karşılaştırır; derlemeden ÖNCE anlaşılır hata verir.
-Kullanım: check_xdc.py <top.json> <top.xdc>"""
+"""Compare the design's ports with the XDC; fail with a readable message BEFORE place-and-route.
+Usage: check_xdc.py <top.json> <top.xdc>"""
 import json, re, sys
 
 if len(sys.argv) != 3:
-    sys.exit("kullanim: check_xdc.py <json> <xdc>")
+    sys.exit("usage: check_xdc.py <json> <xdc>")
 
 jf, xf = sys.argv[1], sys.argv[2]
 
-# 1) tasarımdaki portlar (yosys json'undan)
+# 1) ports in the design (from yosys json)
 design = json.load(open(jf))
 top = None
 for name, mod in design["modules"].items():
@@ -24,25 +24,25 @@ for p, info in tmod.get("ports", {}).items():
     if n == 1: ports.add(p)
     else: ports.update(f"{p}[{i}]" for i in range(n))
 
-# 2) XDC'de geçen portlar
+# 2) ports mentioned in the XDC
 xdc_ports = set()
 for line in open(xf):
     line = line.split("#")[0]
     for m in re.finditer(r"get_ports\s*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", line):
         xdc_ports.add(m.group(1))
 
-missing = sorted(ports - xdc_ports)   # kodda var, XDC'de yok
-extra   = sorted(xdc_ports - ports)   # XDC'de var, kodda yok
+missing = sorted(ports - xdc_ports)   # in the code, not in the XDC
+extra   = sorted(xdc_ports - ports)   # in the XDC, not in the code
 
 if missing:
-    print(f"HATA: bu portlarin XDC'de pin atamasi YOK ({tname}):")
+    print(f"ERROR: these ports have NO pin in the XDC ({tname}):")
     for p in missing: print(f"   - {p}")
-    print("   -> Basys3_Master.xdc'den ilgili satirlari kopyala.")
+    print("   -> copy the matching lines from Basys3_Master.xdc.")
 if extra:
-    print("HATA: XDC'de olup kodda OLMAYAN port (yazim hatasi olabilir):")
+    print("ERROR: port in the XDC but NOT in the code (typo?):")
     for p in extra: print(f"   - {p}")
-    print("   -> XDC'deki ismi modulundeki port ismiyle ayni yaz.")
+    print("   -> make the XDC name match the module port name.")
 
 if missing or extra:
     sys.exit(1)
-print(f"XDC kontrolu OK: {len(ports)} port, hepsi eslendi.")
+print(f"XDC check OK: {len(ports)} ports, all mapped.")
