@@ -9,6 +9,7 @@ blink.json
 top.json
 node_modules/
 *.tgz
+!site/cs223/blink.zip
 .rabadon/
 # keep
 !test/golden/*.fasm

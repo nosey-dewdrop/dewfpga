@@ -30,7 +30,7 @@ jobs:
         run: |
           brew install pandoc
           mkdir -p out/docs out/templates/.vscode
-          cp site/* out/ && cp mac-fpga-*.tgz out/mac-fpga.tgz
+          cp -R site/. out/ && cp mac-fpga-*.tgz out/mac-fpga.tgz
           cp templates/* out/templates/ && cp templates/.vscode/tasks.json out/templates/.vscode/
           pandoc -f gfm docs/manual-setup.md -s --css style.css --include-before-body docs/before.html --metadata title="How do you run CS223 labs on a Mac without Vivado?" -o out/docs/index.html
           cp docs/style.css out/docs/
