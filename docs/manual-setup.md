@@ -15,9 +15,33 @@ I only tested this on Apple Silicon, which means M1 and later. I have not tried 
 on an Intel Mac.
 
 **If a step fails.** Do not skip ahead, because every step needs the one before it.
-Read the last lines in the terminal. Most errors I hit are listed in step 15 with
+Read the last lines in the terminal. Most errors I hit are listed in step 16 with
 the fix. If yours is not there, send me the last ten lines of the terminal on
 LinkedIn and tell me which step you were on.
+
+<!-- toc -->
+## Contents
+
+- [1. What are you building?](#1-what-are-you-building)
+- [2. What do you need before you start?](#2-what-do-you-need-before-you-start)
+- [3. Which tools come ready-made?](#3-which-tools-come-ready-made)
+- [4. Why do you need a Python environment?](#4-why-do-you-need-a-python-environment)
+- [5. How do you build nextpnr-xilinx?](#5-how-do-you-build-nextpnr-xilinx)
+- [6. How do you make the chip database?](#6-how-do-you-make-the-chip-database)
+- [7. How do you build the prjxray tools?](#7-how-do-you-build-the-prjxray-tools)
+- [8. What goes in your project folder?](#8-what-goes-in-your-project-folder)
+- [9. How do you run it?](#9-how-do-you-run-it)
+- [10. How do you use it for your own lab?](#10-how-do-you-use-it-for-your-own-lab)
+- [11. How do you set up VS Code?](#11-how-do-you-set-up-vs-code)
+- [12. Which course file breaks?](#12-which-course-file-breaks)
+- [13. What was tested?](#13-what-was-tested)
+- [14. What can it actually not do?](#14-what-can-it-actually-not-do)
+- [15. What should you be concerned about?](#15-what-should-you-be-concerned-about)
+- [16. What went wrong during my setup?](#16-what-went-wrong-during-my-setup)
+- [17. Which versions did I use?](#17-which-versions-did-i-use)
+- [18. What is not verified?](#18-what-is-not-verified)
+
+<!-- /toc -->
 
 ---
 
@@ -673,25 +697,77 @@ spaces in it.
 
 ---
 
-## 14. What does not work?
+## 14. What can it actually not do?
 
-**IP cores.** Anything from Vivado's IP Catalog is out. That includes Block Design,
-IP Integrator, MicroBlaze and AXI, along with the Clocking Wizard and the BRAM, VGA
-and UART cores.
+This chain is not a replacement for Vivado. It covers the small part of Vivado that
+CS223 labs use, and nothing more.
 
-I checked whether CS223 needs any of them. I searched 35 old student repos and 240
-source files and found none. The course has you write clock dividers and memory by
-hand, which is the part this chain handles.
+**Ready-made blocks.** Anything from Vivado's IP Catalog is out. That includes Block
+Design, IP Integrator, MicroBlaze and AXI, along with the Clocking Wizard and the
+BRAM, VGA and UART cores. I checked whether CS223 needs any of them. I searched 35
+old student repos and 240 source files and found none. The course has you write
+clock dividers and memory by hand, which is the part this chain handles.
+
+**The graphical tools.** Vivado shows you waveforms, a schematic of your design and
+a debugger that watches signals inside the running chip. This chain has none of
+those. Everything happens in the terminal and the results are text.
+
+**Vivado project files.** This chain does not create a Vivado project. Your `.sv`
+and `.xdc` files are the same ones Vivado uses, so you can still open them in Vivado
+on a lab computer.
 
 **BRAM.** The Makefile passes `-nobram`, so arrays become distributed RAM. That is
 fine at lab sizes.
+
+**Large multipliers.** I have not tested a design with a big multiplication. Yosys
+may map it onto the chip's DSP blocks, and I do not know if the rest of the chain
+handles those.
 
 **Other boards.** I only tested the Basys3. Another 7-series chip needs its own
 chip database, which is the command in step 6 with a different `--device`.
 
 ---
 
-## 15. What went wrong during my setup?
+## 15. What should you be concerned about?
+
+**Two tools read your code, and they do not agree on everything.** Icarus Verilog
+reads it for simulation and Yosys reads it for synthesis. Each one supports its own
+part of SystemVerilog. Code that passes `make sim` can still fail in `make bit`, and
+step 12 is a real example. The features I tested are listed in step 13. Anything
+more advanced than that list is untested, and Yosys may reject it. When it does, the
+error usually names the file and the line. Rewriting that line in a simpler way has
+fixed it for me.
+
+**If your lab is checked in Vivado, try it in Vivado too.** Your `.sv` and `.xdc`
+files are the same ones Vivado reads, so I expect a design that works here to work
+there. I have not compared the two lab by lab. I would not make the lab demo the
+first time you open your design in Vivado.
+
+**If your report needs a waveform picture, this guide does not get you there yet.**
+`make sim` tells you pass or fail and writes a `.vcd` file. Opening that file as a
+waveform needs a viewer, and I have not set one up.
+
+**These tools are unofficial.** AMD does not make or support them. nextpnr-xilinx
+calls itself an experiment. prjxray worked out the bitstream format on its own,
+without AMD's documentation. They worked for every lab I tried. If something
+behaves strangely on the board, build the same design in Vivado before you blame
+your code.
+
+**The timing number is an estimate.** The 154.70 MHz in step 13 comes from nextpnr's
+own model of the chip. Vivado's timing report is the official one. At 100 MHz with
+lab-sized designs the margin is large, so I did not worry about it.
+
+**The code you download keeps changing.** `git clone` brings the newest version of
+each project, which may differ from what I used. The versions I used are in step
+17. If a build step that worked for me fails for you, this is the first thing to
+suspect.
+
+**I tested on one machine.** It was an M2 with 8 GB of RAM and macOS 15. I have not
+tried an Intel Mac, a different macOS version or a different board.
+
+---
+
+## 16. What went wrong during my setup?
 
 These cost me time, so you can skip them.
 
@@ -716,7 +792,7 @@ the real mistake.
 
 ---
 
-## 16. Which versions did I use?
+## 17. Which versions did I use?
 
 ```
 Yosys              0.69+post (git 143eb14f)
@@ -732,7 +808,7 @@ Machine            Apple M2, 8 GB RAM, macOS 15 (Darwin 24.2.0)
 
 ---
 
-## 17. What is not verified?
+## 18. What is not verified?
 
 - The combined four-module test went as far as a bitstream. I did not load it onto
   the board because the board was not with me at the time. The designs I loaded and
