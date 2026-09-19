@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dewfpga cli: one command from SystemVerilog to a Basys3</title>
+<meta name="description" content="Install the open-source FPGA chain for a Basys3 on an Apple Silicon Mac with one line, then dewfpga sim, bit and flash in any folder. No Makefile, no project layout.">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/">errors</a></li>
+    <li><a href="/dewfpga/cli/" aria-current="page">cli</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <h1>One command from SystemVerilog to a Basys3</h1>
+  <p class="lead">The 18-step guide, done for you. One line installs the chain; after that, <code>dewfpga</code> builds whatever <code>.sv</code> files are in the folder.</p>
+
+<pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, 1.4 GB, once</span></code></pre>
+  <p class="mute small">Requirements: macOS on Apple Silicon, Xcode Command Line Tools, Homebrew. It puts the CLI in <code>~/.dewfpga</code>, links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update. No Node needed.</p>
+
+  <h2>How do you use it?</h2>
+  <p>In any folder with <code>blink.sv</code> and <code>blink.xdc</code>:</p>
+<pre data-copy="1"><code>dewfpga sim      <span class="c"># iverilog</span>
+dewfpga bit      <span class="c"># .sv -> .bit   (~4 s)</span>
+dewfpga flash    <span class="c"># program the board: the LED blinks</span></code></pre>
+  <p>No Makefile, no project layout. Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files. The top module is the <code>.sv</code> with a matching <code>.xdc</code>; if that is ambiguous, <code>dewfpga flash &lt;top&gt;</code>. <code>sim</code> needs <code>&lt;top&gt;_tb.sv</code>. First time? <code>dewfpga new blink</code> gives you the blinking LED to start from, with a Makefile and a VS Code task (⌘⇧B = flash).</p>
+
+  <h2>Commands</h2>
+<pre><code>dewfpga install                     install the toolchain (safe to re-run)
+dewfpga check                       is every piece in place
+dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+dewfpga new &lt;dir&gt;                   example project with Makefile + VS Code task
+dewfpga --version</code></pre>
+
+  <h2>What does it install?</h2>
+  <table>
+    <tr><th>stage</th><th>tool</th><th>from</th></tr>
+    <tr><td>simulation</td><td>iverilog</td><td>brew</td></tr>
+    <tr><td>synthesis</td><td>yosys</td><td>brew</td></tr>
+    <tr><td>place &amp; route</td><td>nextpnr-xilinx</td><td>source, pinned commit</td></tr>
+    <tr><td>fasm → frames</td><td>prjxray <code>fasm2frames</code></td><td>source, pinned commit, venv</td></tr>
+    <tr><td>frames → .bit</td><td>prjxray <code>xc7frames2bit</code></td><td>source</td></tr>
+    <tr><td>chipdb XC7A35T</td><td><code>bbaexport</code> + <code>bbasm</code></td><td>generated, ~90 MB</td></tr>
+    <tr><td>programming</td><td>openFPGALoader</td><td>brew</td></tr>
+  </table>
+  <p>Everything goes into <code>~/fpga</code>. Re-running the script skips finished steps. Log: <code>~/fpga/install.log</code>.</p>
+
+  <h2>What was measured?</h2>
+  <p>19 September 2026, M2 with 8 GB, macOS 15.</p>
+  <dl class="kv">
+    <dt>clean install</dt><dd>3 min 37 s to 4 min 17 s over three runs, 1.4 GB</dd>
+    <dt>second run</dt><dd>2.7 s, every step skipped as already done</dd>
+    <dt><code>bit</code></dt><dd>4.6 s, peak 552 MB RAM</dd>
+    <dt>chipdb generation</dt><dd>peak 859 MB RAM</dd>
+    <dt>output</dt><dd>byte-identical <code>.frames</code> to the hand-built chain that lit the LED</dd>
+    <dt>tests</dt><dd>27 checks in <code>test/run.sh</code>; CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
+  </dl>
+
+  <h2>Scope</h2>
+  <ul>
+    <li>Board: Digilent Basys3 (XC7A35T-1CPG236C). Other 7-series boards: change <code>DEVICE</code> in <code>install.sh</code> and regenerate the chipdb; untested.</li>
+    <li>Platform: macOS arm64. Intel Mac and Linux are untested and refused by the script.</li>
+    <li>The course's XDC files work as-is (<code>PACKAGE_PIN</code> + <code>IOSTANDARD</code>).</li>
+    <li><code>flash</code> writes SRAM: the design is gone after a power cycle.</li>
+  </ul>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/">home</a></span>
+</footer>
+</body>
+</html>

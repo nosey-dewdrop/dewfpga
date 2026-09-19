@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Errors while setting up Yosys, nextpnr-xilinx and prjxray on macOS, with fixes</title>
+<meta name="description" content="Every error hit while building the open-source FPGA chain for a Digilent Basys3 on an Apple Silicon Mac: -fopenmp, externally-managed-environment, yaml-cpp not built, CMake policy version, IOSTANDARD, missing separator, and more. Exact error text, cause, fix.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Errors while setting up Yosys, nextpnr-xilinx and prjxray on macOS, with fixes">
+<meta property="og:description" content="Every error hit while building the open-source FPGA chain for a Digilent Basys3 on an Apple Silicon Mac: -fopenmp, externally-managed-environment, yaml-cpp not built, CMake policy version, IOSTANDARD, missing separator, and more. Exact error text, cause, fix.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <h1>Which error did you get?</h1>
+  <p class="lead">Every wall hit while setting up the chain on a Mac, filed under the exact line the terminal printed. Paste your error into the search box of your browser on this page, or read down.</p>
+
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/fopenmp/">clang++: error: unsupported option &#x27;-fopenmp&#x27;</a>
+    <p>nextpnr-xilinx, while compiling on macOS. nextpnr&#x27;s default build asks Apple&#x27;s clang for OpenMP, which it does not have.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/externally-managed-environment/">error: externally-managed-environment</a>
+    <p>pip, with Homebrew&#x27;s Python on macOS. PEP 668. Homebrew&#x27;s Python refuses a plain pip install. The chain needs a venv.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/yaml-cpp-not-built/">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</a>
+    <p>CMake, while configuring prjxray. prjxray was cloned without --recursive, so its submodules are empty.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/cmake-policy-version-minimum/">Compatibility with CMake &lt; 3.5 has been removed from CMake</a>
+    <p>CMake 4, while configuring prjxray. prjxray is written for an older CMake. CMake 4 refuses it without a policy flag.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/no-iostandard-property/">ERROR: port led[0] of type PAD has no IOSTANDARD property</a>
+    <p>nextpnr-xilinx, at the start of place and route. A port in your design has no pin in the .xdc file. nextpnr names the wrong port.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
+    <p>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv. The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/missing-separator/">Makefile:29: *** missing separator.  Stop.</a>
+    <p>make, on a Makefile copied from a PDF or a web page. The recipe lines lost their Tab characters when you copied them.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/oss-cad-suite-no-nextpnr-xilinx/">oss-cad-suite has no nextpnr-xilinx</a>
+    <p>the obvious first try, 497 MB later. YosysHQ&#x27;s bundle ships nextpnr for ice40, ecp5, nexus and Gowin. Not Xilinx.</p>
+  </div>
+  <div class="err">
+    <a class="title" href="/dewfpga/errors/no-chipdb/">nextpnr-xilinx: where is the chip database for the XC7A35T?</a>
+    <p>nextpnr-xilinx, the first time you run it. There is no prebuilt chipdb. It is generated per device from the prjxray data.</p>
+  </div>
+  <h2>Your error is not here?</h2>
+  <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. Do not skip ahead, because every step of the guide needs the one before it. If it is still stuck, send the last ten lines and the step number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
+  <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#17-which-versions-did-i-use">step 17 of the guide</a>. Newer versions can move the walls.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/">home</a></span>
+</footer>
+</body>
+</html>

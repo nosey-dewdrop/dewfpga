@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dewfpga: Mac'te Vivado olmadan CS223 labları</title>
+<meta name="description" content="Apple Silicon Mac'te Vivado olmadan CS223 FPGA labları. SystemVerilog'dan Digilent Basys3'e: Icarus Verilog, Yosys, nextpnr-xilinx, prjxray ve openFPGALoader. 50 ila 100 GB yerine 1.76 GB, bitstream 5 saniyenin altında.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
+<link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mac'te Vivado olmadan CS223 labları">
+<meta property="og:description" content="Apple Silicon'da SystemVerilog'dan Basys3'e. Vivado yok, sanal makine yok. Adım adım rehber.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/tr/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/" hreflang="en">rehber</a></li>
+    <li><a href="/dewfpga/why/" hreflang="en">neden</a></li>
+    <li><a href="/dewfpga/errors/" hreflang="en">hatalar</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <h1>Mac'te Vivado olmadan CS223 labları</h1>
+  <p class="lead">Apple Silicon Mac'te SystemVerilog yaz, Digilent Basys3'e yükle. Vivado yok, sanal makine yok, Rosetta yok.</p>
+
+  <div class="cta">
+    <a class="big" href="/dewfpga/docs/">Kurulum rehberini oku →</a>
+    <p>18 adım, terminali açmaktan kartta LED'in yanmasına. Her komut, ne yaptığı ve ne görmen gerektiği. Rehber İngilizce; <a href="/dewfpga/docs/CS223_Mac_Setup.pdf">13 sayfalık PDF</a> olarak da var.</p>
+  </div>
+
+<pre><code><span class="p">$</span> make sim
+TB passed
+<span class="p">$</span> make bit
+xdc ok: 33 ports, all matched.
+Info: Max frequency for clock 'clk': 209.60 MHz (PASS at 100.00 MHz)
+<span class="p">$</span> make flash
+Load SRAM: [==================================================] 100.00%
+Done
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
+  <p class="mute small">Basys3'te blink örneği, 8 GB'lık bir M2'den. <code>done 1</code> çipin tasarımı kabul ettiği anlamına gelir; LED 0 yanıp sönmeye başlar.</p>
+
+  <div class="nums">
+    <div><b>1.76 GB</b><span>bütün zincir için disk. Vivado 50 ila 100 GB istiyor.</span></div>
+    <div><b>4.6 sn</b><span>blink tasarımı için <code>.sv</code>'den <code>.bit</code>'e.</span></div>
+    <div><b>~4 dk</b><span>derleme, bir kez. Gerisi indirme ve kopyala-yapıştır.</span></div>
+    <div><b>5 araç</b><span>Vivado'nun tek pencerede yaptığı her iş için bir ücretsiz araç.</span></div>
+  </div>
+
+  <h2>Nasıl çalışıyor?</h2>
+  <p>Vivado bir CS223 labı için beş iş yapar. Burada her işi bir açık kaynak araç yapıyor, küçük bir Makefile de onları sırayla çalıştırıyor.</p>
+<pre><code>tasarimin.sv
+  |
+  |-> Icarus Verilog   -> simülasyon
+  |-> Yosys            -> sentez
+  |-> nextpnr-xilinx   -> place and route
+  |-> fasm2frames      -> konfigürasyon frame'leri
+  |-> xc7frames2bit    -> tasarimin.bit
+  `-> openFPGALoader   -> USB üzerinden kart</code></pre>
+  <p><code>.sv</code> ve <code>.xdc</code> dosyaların Vivado'nun okuduğu dosyaların aynısı. Dersin verdiği pin dosyaları, kullandığın pinlerin başındaki <code>#</code> kaldırılınca olduğu gibi çalışıyor.</p>
+
+  <h2>Neden var?</h2>
+  <p>Vivado'nun macOS sürümü yok. Açık kaynak zinciri elle kurmak altı saat sürdü; sebep, hiçbiri tek yerde yazılı olmayan altı duvar: oss-cad-suite'te nextpnr-xilinx yok, Apple clang'de OpenMP yok, Homebrew Python <code>pip install</code>'u reddediyor, prjxray bağımlılıklarını submodule'lerde saklıyor, CMake 4 prjxray'i reddediyor ve hazır chip database yok. <a href="/dewfpga/why/" hreflang="en">Altı duvar ve her birinin bedeli</a> (İngilizce).</p>
+  <p>Bir adım patladığında en hızlı yol genelde hata metni. <a href="/dewfpga/errors/" hreflang="en">Kurulumda çıkan her hata, çözümüyle</a> (İngilizce).</p>
+
+  <h2>Ne yapamıyor?</h2>
+  <ul>
+    <li>Vivado IP Catalog'undan hiçbir şey: Block Design, MicroBlaze, AXI, Clocking Wizard, BRAM, VGA ve UART core'ları yok. 35 eski CS223 reposu ve 240 kaynak dosya tarandı, hiçbiri bunları kullanmıyor.</li>
+    <li>Dalga formu görüntüleyici, şematik ya da çip içi debugger yok. <code>make sim</code> bir <code>.vcd</code> dosyası yazıp duruyor.</li>
+    <li>Yalnızca Basys3 (XC7A35T), yalnızca Apple Silicon. Intel Mac, Linux ve başka kartlar denenmedi.</li>
+    <li>Araçlar resmi değil. AMD bunları yapmıyor ve desteklemiyor.</li>
+  </ul>
+
+  <h2>Sırada ne var?</h2>
+  <ul class="soonlist">
+    <li><b>cli</b><i>yakında</i><span>zinciri tek satırda kur, sonra herhangi bir klasörde <code>dewfpga sim</code>, <code>bit</code>, <code>flash</code>. Makefile yok.</span></li>
+    <li><b>Basys3 simülatörü</b><i>yakında</i><span>kart tarayıcıda: switch'ler, LED'ler, yedi segment.</span></li>
+    <li><b>derleyici</b><i>yakında</i><span>hiçbir şey kurmadan SystemVerilog'dan Basys3 bitstream'ine.</span></li>
+  </ul>
+
+  <h2>Kim yaptı?</h2>
+  <p>Damla Su Bilge, Bilkent CS. Buradaki her şey 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve bir Basys3 ile çalıştırıldı. Bir adım sende patlarsa terminalin son on satırını ve adım numarasını <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den gönder.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">kaynak</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/" lang="en" hreflang="en">english</a></span>
+</footer>
+</body>
+</html>

@@ -1,332 +1,105 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CS223 labs on a Mac without Vivado · dewfpga</title>
-<meta name="description" content="Run CS223 FPGA labs on an Apple Silicon Mac without Vivado: SystemVerilog to a Digilent Basys3 with Icarus Verilog, Yosys, nextpnr-xilinx, prjxray and openFPGALoader. Step by step PDF.">
+<title>dewfpga: CS223 labs on a Mac, without Vivado</title>
+<meta name="description" content="Run CS223 FPGA labs on an Apple Silicon Mac without Vivado. SystemVerilog to a Digilent Basys3 with Icarus Verilog, Yosys, nextpnr-xilinx, prjxray and openFPGALoader. 1.76 GB instead of 50 to 100 GB, a bitstream in under five seconds.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/">
-<meta name="robots" content="index,follow">
+<link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
+<link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="CS223 labs on a Mac without Vivado">
-<meta property="og:description" content="SystemVerilog to a Basys3 on Apple Silicon. No Vivado, no virtual machine. Step by step PDF.">
+<meta property="og:title" content="CS223 labs on a Mac, without Vivado">
+<meta property="og:description" content="SystemVerilog to a Basys3 on Apple Silicon. No Vivado, no virtual machine. Step by step guide.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦋</text></svg>">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
-<style>
-/* ---------- palettes: body.pal-a (gece) / pal-b (krem) / pal-c (menekse) ---------- */
-body.pal-a{
-  --bg:#171221; --bg-soft:#1f1930; --ink:#efe8f7; --ink-dim:#9d92b5;
-  --pink:#ff8fb3; --purple:#c9a6ff; --green:#b8e39a; --yellow:#ffd479; --blue:#8fc7ff;
-}
-body.pal-b{
-  --bg:#ffffff; --bg-soft:#f5f5f5; --ink:#141414; --ink-dim:#6b6b6b;
-  --pink:#c23a70; --purple:#5f35a8; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e;
-}
-body.pal-c{
-  --bg:#101623; --bg-soft:#182032; --ink:#e6eef6; --ink-dim:#8b98ad;
-  --pink:#ffa3c2; --purple:#b0b6ff; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2;
-}
-/* ---------- base: one type scale (16 / 20 / 34), one spacing rhythm (28px), zero borders ---------- */
-*{margin:0;padding:0;box-sizing:border-box}
-body{
-  font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--ink);
-  font-size:16px; line-height:1.75; overflow-x:hidden; cursor:default;
-  transition:background .35s,color .35s;
-}
-a{color:var(--pink);text-decoration:underline dotted;display:inline-block;transition:transform .15s}
-a:hover{text-decoration:underline;transform:translateY(-3px)}
-header.site nav,#pal,footer{font-size:14px}
-main{max-width:1060px;margin:0 auto;padding:28px 28px 0}
-h1{font-size:34px;line-height:1.35;font-weight:400}
-h2{font-size:20px;font-weight:400}
-.dim{color:var(--ink-dim)}
-::selection{background:var(--pink);color:var(--bg)}
-
-/* star field */
-#stars{position:fixed;inset:0;pointer-events:none;z-index:0}
-.star{position:absolute;font-size:11px;color:var(--ink-dim);opacity:.32;animation:tw 3.4s ease-in-out infinite}
-@keyframes tw{0%,100%{opacity:.15}50%{opacity:.65}}
-main,header.site,#marquees{position:relative;z-index:1}
-
-/* palette switcher (dev control) */
-.site-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-#pal{display:flex;gap:8px}
-#pal button{font:inherit;background:none;color:var(--ink-dim);cursor:pointer;border:none}
-#pal button::before{content:'['}#pal button::after{content:']'}
-#pal button.on{color:var(--ink);text-decoration:underline}
-
-/* ---------- HR layer ---------- */
-header.site{max-width:1060px;margin:0 auto;padding:28px 28px 0;display:flex;justify-content:space-between;align-items:baseline}
-.wordmark{font-weight:400;text-decoration:none;color:var(--purple)}
-#tip{position:fixed;display:none;pointer-events:none;z-index:99;font-size:13px;color:var(--pink)}
-.hero{padding:56px 0 28px;position:relative;min-height:220px}
-.hero-text{max-width:720px}
-.hero .hi{color:var(--ink-dim);margin-bottom:8px}
-.hl-p{color:var(--pink)} .hl-m{color:var(--purple)} .hl-g{color:var(--green)} .hl-y{color:var(--yellow)} .hl-b{color:var(--blue)}
-.mascot{font-size:11px;line-height:1.05;white-space:pre;color:var(--purple);user-select:none;animation:bob 4s ease-in-out infinite}
-.hero .mascot{font-size:15px;line-height:1.1;position:absolute;right:0;top:28px}
-@media(max-width:1000px){.hero .mascot{display:none}}
-.cur{animation:blink 1s steps(1) infinite}
-@keyframes blink{50%{opacity:0}}
-@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-
-.stats{display:flex;gap:24px;row-gap:10px;flex-wrap:wrap;align-items:baseline;padding:28px 0 8px;font-size:20px}
-.stats>span{white-space:nowrap}
-.stats .cg{color:var(--green)}
-.stats .c1{color:var(--green)} .stats .c2{color:var(--purple)} .stats .c3{color:var(--yellow)} .stats .c4{color:var(--pink)}
-.pr{color:var(--ink-dim);user-select:none}
-.cols{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr;gap:28px;padding:24px 0 8px;font-size:14px;line-height:1.65}
-.cols>div:nth-of-type(2){font-size:13px;line-height:1.6}
-.cols>div>p{margin:0 0 8px}
-.cols>div:nth-of-type(3){font-size:12px;line-height:1.55}
-.cols>div:nth-of-type(3) p{break-inside:avoid}
-.cols>div:nth-of-type(3) .pr{column-span:all}
-.cols .pr{margin-bottom:6px}
-.edu-b{font-size:14px}
-@media(max-width:860px){.cols{grid-template-columns:1fr}}
-
-/* ---------- marquees: two thin rows, opposite directions, decoration only ---------- */
-#marquees{padding:8px 0;overflow:hidden}
-.mq{display:flex;gap:44px;white-space:nowrap;width:max-content;color:var(--ink-dim)}
-.mq span b{font-weight:400}
-.mq .g{margin-right:10px}
-.mq-i.st-live{color:var(--green)} .mq-i.st-wip{color:var(--yellow)} .mq-i.st-uni{color:var(--blue)} .mq-i.st-arc{color:var(--ink-dim)}
-.mq1{animation:sl 60s linear infinite}
-.mq2{animation:sr 75s linear infinite;margin-top:14px}
-#marquees:hover .mq{animation-play-state:paused}
-@keyframes sl{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-@keyframes sr{from{transform:translateX(-50%)}to{transform:translateX(0)}}
-
-/* ---------- the wall: dense list, name - one sentence - tech ---------- */
-.wall-head{padding:8px 0 8px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px}
-.legend{display:flex;gap:20px;color:var(--ink-dim)}
-.legend i{font-style:normal}
-.d{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
-.d-live{background:var(--green)} .d-wip{background:var(--yellow)} .d-uni{background:var(--blue)} .d-arc{background:var(--ink-dim)}
-.filters{padding:0 0 10px;font-size:14px}
-.filters p{margin:0}
-.tok{cursor:pointer;color:var(--ink-dim);margin-right:10px}
-.tok::before{content:'['}.tok::after{content:']'}
-.tok:hover{color:var(--ink)}
-.tok.st.on[data-v="live"]{color:var(--green)}
-.tok.st.on[data-v="wip"]{color:var(--yellow)}
-.tok.st.on[data-v="uni"]{color:var(--blue)}
-.tok.st.on[data-v="arc"]{color:var(--ink)}
-.tok.on{text-decoration:underline}
-.tok.on[data-v=""]{color:var(--pink)}
-#q{font:inherit;background:none;border:none;outline:none;color:var(--pink);width:170px}
-.cmdline{color:var(--ink-dim);padding-top:4px}
-.cmdline b{color:var(--green);font-weight:400}
-.wall{list-style:none;font-size:13.5px;line-height:1.55}
-.wall li{display:grid;grid-template-columns:26px 185px 1fr 195px;gap:12px;padding:2px 8px;border-radius:2px;cursor:pointer;align-items:baseline}
-.wall li:hover{background:var(--bg-soft)}
-.wall .no{font-weight:400}
-.no.st-live{color:var(--green)} .no.st-wip{color:var(--yellow)} .no.st-uni{color:var(--blue)} .no.st-arc{color:var(--ink-dim)}
-.wall .nm{font-weight:400}
-.nm.st-live{color:var(--green)} .nm.st-wip{color:var(--yellow)} .nm.st-uni{color:var(--blue)} .nm.st-arc{color:var(--ink-dim)}
-.wall .one{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.wall .tech{color:var(--ink-dim);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media(max-width:860px){
-  .wall li{grid-template-columns:26px 1fr;grid-auto-rows:auto;row-gap:2px;padding:8px;margin-bottom:6px}
-  .wall .one{grid-column:1 / -1;white-space:normal;overflow:visible}
-  .wall .tech{grid-column:1 / -1;text-align:left;white-space:normal;overflow:visible}
-  .stats{gap:20px} .facts{gap:28px}
-}
-
-/* ---------- detail mock (overlay, template for per-project mini docs) ---------- */
-#detail{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(3px);display:none;z-index:20;overflow-y:auto}
-#detail.open{display:block}
-.doc{max-width:720px;margin:56px auto;background:var(--bg-soft);border-radius:3px;padding:44px}
-.doc .close{float:right;cursor:pointer;color:var(--ink-dim)}
-.doc h1{font-size:20px;margin-bottom:8px}
-#d-live{display:none;font-size:34px;color:var(--green);text-decoration:none;margin:4px 0}
-#d-live:hover{text-decoration:underline}
-#d-live.landing{color:var(--purple)}
-.doc .sect{margin-top:28px}
-.doc .sect h2{font-size:16px;color:var(--purple);margin-bottom:8px}
-.doc pre{color:var(--ink-dim);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
-#d-frame{width:100%;height:340px;border:0;background:#fff;border-radius:3px}
-.mod-row{display:grid;grid-template-columns:minmax(150px,45%) 1fr;gap:10px;font-size:12.5px;margin-bottom:6px}
-.mod-row code{color:var(--purple);word-break:break-all}
-.doc strong{font-weight:400}
-.doc em{font-style:normal}
-.doc .tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
-.doc .tags span{background:var(--bg);padding:2px 12px;border-radius:2px}
-
-.bg-art{position:absolute;z-index:0;opacity:1;color:var(--purple);font-size:10px;line-height:1.05;white-space:pre;pointer-events:none;user-select:none}
-@media(max-width:1000px){.bg-art{display:none}}
-.wall-sect{position:relative}
-.art-wall{right:-30px;top:120px}
-.cols{position:relative}
-.art-cols{right:-150px;top:50%;font-size:13px;transform:rotate(-8deg)}
-.about{padding:28px 0 0;position:relative}
-.about .mascot{position:absolute;right:6%;bottom:30px;opacity:.45;font-size:13px;z-index:0;animation:none}
-.about-text{position:relative;z-index:1}
-.about-row{display:flex;gap:28px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
-.about-row p{margin:0 0 6px}
-.about-text{font-size:13px;line-height:1.6;column-count:2;column-gap:44px}
-.about-text p{break-inside:avoid}
-.about-text>p:first-child{color:var(--purple);column-span:all}
-.about-end{text-align:center;margin:14px 0 0}
-.heart{color:var(--purple)}
-.about-text .dim{color:var(--purple)}
-.about-text p{margin:0 0 12px}
-footer{max-width:1060px;margin:0 auto;padding:12px 28px 32px;color:var(--ink-dim);text-align:center}
-footer p{margin:0 0 8px}
-.at-pink{color:var(--pink)}
-
-/* phone */
-@media(max-width:700px){
-  main{padding:20px 16px 0}
-  header.site{flex-direction:column;align-items:flex-start;gap:8px}
-  .site-right{align-items:flex-start}
-  h2{font-size:17px}
-  .wall{font-size:13px}
-  .wall li{padding:6px 8px}
-  .wall .one{white-space:normal}
-  .wall .tech{white-space:normal}
-  header.site{padding:20px 16px 0}
-  .hero{padding:32px 0 16px;min-height:0}
-  h1{font-size:22px;line-height:1.5}
-  .stats{font-size:15px;gap:12px;row-gap:6px}
-  .cols{grid-template-columns:1fr;gap:20px}
-  .about-text{column-count:1}
-  .about .mascot{display:none}
-  .filters{font-size:13px}
-  #q{width:120px}
-  .doc{margin:16px;padding:24px 20px}
-  .mod-row{grid-template-columns:1fr;gap:2px}
-  #d-live{font-size:26px}
-  .mq{gap:28px}
-  footer{padding:8px 16px 24px}
-}
-
-/* confetti */
-.cf{position:fixed;z-index:30;pointer-events:none;font-size:17px;animation:fall 1.1s ease-out forwards}
-@keyframes fall{to{transform:translateY(70px) rotate(220deg);opacity:0}}
-
-/* ---- dewfpga page ---- */
-main{max-width:680px;padding:28px 28px 56px}
-main h1{font-size:34px;margin:28px 0 4px}
-main .sub{color:var(--ink-dim);margin:0 0 8px}
-main h2{font-size:20px;color:var(--purple);margin:36px 0 8px}
-main p{margin:0 0 10px}
-main pre{background:var(--bg-soft);border-radius:3px;padding:12px 14px;overflow-x:auto;font:14px/1.6 inherit;color:var(--ink);margin:8px 0 12px}
-main pre code{color:var(--ink)}
-main p code,main li code,main td code{color:var(--purple)}
-main table{border-collapse:collapse;width:100%;font-size:14px}
-main td,main th{text-align:left;padding:5px 10px 5px 0;vertical-align:top;color:var(--ink)}
-main th{color:var(--ink-dim);font-weight:400}
-main ol{padding-left:22px}
-main ol li{margin:6px 0}
-main .note{color:var(--ink-dim);font-size:14px}
-.na{color:var(--ink-dim);cursor:default;text-decoration:underline dotted}
-.na:hover{transform:none;color:var(--ink)}
-#tip2{position:fixed;display:none;pointer-events:none;z-index:99;font-size:13px;color:var(--yellow)}
-</style>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"dewfpga","url":"https://nosey-dewdrop.github.io/dewfpga/",
+ "description":"Run CS223 FPGA labs on an Apple Silicon Mac without Vivado: SystemVerilog to a Digilent Basys3 with open-source tools.",
+ "author":{"@type":"Person","name":"Damla Su Bilge","url":"https://github.com/nosey-dewdrop"},"inLanguage":["en","tr"]}
+</script>
 </head>
-<body class="pal-c">
-<div id="stars"></div>
-<header class="site">
-  <div><a class="wordmark" href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener"><span>nosey-dewdrop ⋆˙⟡</span></a> <span class="dim">[<a href="docs/CS223_Mac_Setup.pdf" target="_blank" rel="noopener">docs - 19.09.26</a>] [<span class="na" id="cli">CLI</span>]</span></div>
-<div id="tip">linkedin!</div>
-<div id="tip2">coming soon</div>
-  <div class="site-right">
-    <div id="pal">
-      <button data-p="pal-a">night</button>
-      <button data-p="pal-b">white</button>
-      <button data-p="pal-c" class="on">violet</button>
-    </div>
-    <nav class="dim">[<a href="https://github.com/nosey-dewdrop" target="_blank" rel="noopener">github ↗</a>]</nav>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <h1>CS223 labs on a Mac, without Vivado</h1>
+  <p class="lead">Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine, no Rosetta.</p>
+
+  <div class="cta">
+    <a class="big" href="/dewfpga/docs/">Read the setup guide →</a>
+    <p>18 steps, from opening the terminal to an LED blinking on the board. Every command, what it does and what you should see. Also as a <a href="/dewfpga/docs/CS223_Mac_Setup.pdf">13-page PDF</a>.</p>
   </div>
-</header>
 
-<main>
-  <h1>dewfpga</h1>
-  <p class="sub">Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine.</p>
+<pre><code><span class="p">$</span> make sim
+TB passed
+<span class="p">$</span> make bit
+xdc ok: 33 ports, all matched.
+Info: Max frequency for clock 'clk': 209.60 MHz (PASS at 100.00 MHz)
+<span class="p">$</span> make flash
+Load SRAM: [==================================================] 100.00%
+Done
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
+  <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking.</p>
 
-  <h2>Docs</h2>
-  <p><a href="docs/CS223_Mac_Setup.pdf" target="_blank" rel="noopener">CS223_Mac_Setup.pdf ↗</a> <span class="dim">· step by step, from opening the terminal to an LED blinking on the board. 13 pages.</span></p>
-  <p class="dim">CLI and the browser simulator: coming soon.</p>
+  <div class="nums">
+    <div><b>1.76 GB</b><span>of disk for the whole chain. Vivado asks for 50 to 100 GB.</span></div>
+    <div><b>4.6 s</b><span>from <code>.sv</code> to <code>.bit</code> for the blink design.</span></div>
+    <div><b>~4 min</b><span>of compiling, once. The rest is downloads and copy-paste.</span></div>
+    <div><b>5 tools</b><span>one free tool for each job Vivado does in one window.</span></div>
+  </div>
 
-  <h2>Use</h2>
-  <p>In any folder with <code>blink.sv</code> and <code>blink.xdc</code>:</p>
-  <pre><code>dewfpga sim      # simulate (iverilog)
-dewfpga bit      # .sv -> .bit, about 4 seconds
-dewfpga flash    # program the board</code></pre>
-  <p>No Makefile, no project layout. Every <code>.sv</code> in the folder is synthesized; the top module is the one with a matching <code>.xdc</code>. First time? <code>dewfpga new blink</code> gives you a blinking LED to start from.</p>
-
-  <h2>What runs under the hood?</h2>
-  <table>
-    <tr><th>Stage</th><th>Tool</th></tr>
-    <tr><td>simulation</td><td>iverilog</td></tr>
-    <tr><td>synthesis</td><td>yosys</td></tr>
-    <tr><td>place &amp; route</td><td>nextpnr-xilinx (built from source, pinned commit)</td></tr>
-    <tr><td>bitstream</td><td>prjxray fasm2frames + xc7frames2bit</td></tr>
-    <tr><td>chip database</td><td>generated for XC7A35T</td></tr>
-    <tr><td>programming</td><td>openFPGALoader over USB-JTAG</td></tr>
-  </table>
-  <p>Vivado does these jobs in one window. Five open-source tools do them here; the installer wires them together.</p>
+  <h2>How does it work?</h2>
+  <p>Vivado does five jobs for a CS223 lab. One open-source tool does each job here, and a small Makefile runs them in order.</p>
+<pre><code>your_design.sv
+  |
+  |-> Icarus Verilog   -> simulation
+  |-> Yosys            -> synthesis
+  |-> nextpnr-xilinx   -> place and route
+  |-> fasm2frames      -> configuration frames
+  |-> xc7frames2bit    -> your_design.bit
+  `-> openFPGALoader   -> the board, over USB</code></pre>
+  <p>Your <code>.sv</code> and <code>.xdc</code> files are the same ones Vivado reads. The course's pin files work as they are, once you uncomment the pins you use.</p>
 
   <h2>Why does this exist?</h2>
-  <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours because of six walls nobody documents in one place:</p>
-  <ol>
-    <li>oss-cad-suite does not ship nextpnr-xilinx (497 MB downloaded to learn that).</li>
-    <li>Apple clang has no OpenMP; nextpnr must be built with <code>USE_OPENMP=OFF</code>.</li>
-    <li>PEP 668 blocks <code>pip install</code> into Homebrew Python; a venv is required.</li>
-    <li>prjxray needs <code>--recursive</code> or its submodules are missing and cmake fails.</li>
-    <li>cmake 4 rejects prjxray without <code>CMAKE_POLICY_VERSION_MINIMUM=3.5</code>.</li>
-    <li>There is no prebuilt chip database; it has to be generated.</li>
-  </ol>
+  <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours, because of six walls that nobody documents in one place: oss-cad-suite ships no nextpnr-xilinx, Apple's clang has no OpenMP, Homebrew's Python refuses <code>pip install</code>, prjxray hides its submodules, CMake 4 rejects prjxray, and there is no prebuilt chip database. <a href="/dewfpga/why/">The six walls, and what each one cost.</a></p>
+  <p>When a step fails, the error text is usually the fastest way in. <a href="/dewfpga/errors/">Every error hit during this setup, with the fix.</a></p>
 
-  <h2>Scope</h2>
-  <p>Basys3 (XC7A35T) on macOS Apple Silicon. Tested on an M2 with 8 GB and on GitHub's macOS runners. Intel Macs, Linux and other boards are not supported yet. <code>flash</code> writes SRAM, so the design is gone after a power cycle.</p>
+  <h2>What can it not do?</h2>
+  <ul>
+    <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. 35 old CS223 repos and 240 source files were searched and none of them use any of it.</li>
+    <li>No waveform viewer, schematic or in-chip debugger. <code>make sim</code> writes a <code>.vcd</code> file and stops there.</li>
+    <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
+    <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#15-what-should-you-be-concerned-about">What you should be concerned about.</a></li>
+  </ul>
 
+  <h2>What is coming?</h2>
+  <ul class="soonlist">
+    <li><b>cli</b><i>soon</i><span>one line to install the chain, then <code>dewfpga sim</code>, <code>bit</code>, <code>flash</code> in any folder. No Makefile.</span></li>
+    <li><b>Basys3 simulator</b><i>soon</i><span>the board in the browser: switches, LEDs, seven-segment display.</span></li>
+    <li><b>compiler</b><i>soon</i><span>SystemVerilog to a Basys3 bitstream without installing anything.</span></li>
+  </ul>
+
+  <h2>Who made this?</h2>
+  <p>Damla Su Bilge, Bilkent CS. Everything here was run on 19 September 2026 on an M2 with 8 GB of RAM, macOS 15 and a Basys3. If a step fails for you, send the last ten lines of the terminal and the step number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
 </main>
 
-<footer>
-  <p>[<a href="https://github.com/nosey-dewdrop" target="_blank" rel="noopener">github ↗</a>] [<a href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener">linkedin ↗</a>]</p>
-  <p class="at-pink">@nosey-dewdrop</p>
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/tr/" lang="tr" hreflang="tr">türkçe</a></span>
 </footer>
-
-<script>
-/* stars */
-const sf=document.getElementById("stars");
-for(let i=0;i<130;i++){
-  const SG=["*","+","·",".","-"];
-  const s=document.createElement("span");s.className="star";s.textContent=SG[i%5];
-  s.style.fontSize=(9+(i%3)*3)+"px";
-  if(i%4===0)s.style.color=`var(${["--pink","--purple","--green","--yellow","--blue"][i%5]})`;
-  s.style.left=Math.random()*100+"vw";s.style.top=Math.random()*100+"vh";
-  s.style.animationDelay=(Math.random()*3)+"s";sf.appendChild(s);
-}
-/* confetti: mouse trail + click burst */
-const G=["+","*","·"];
-const CFC=["--pink","--purple","--green","--yellow","--blue"];let last=0;
-function piece(x,y,vx){
-  const c=document.createElement("span");c.className="cf";c.textContent=G[Math.floor(Math.random()*3)];
-  c.style.left=x+vx+"px";c.style.top=y+"px";
-  c.style.color=`var(${CFC[Math.floor(Math.random()*5)]})`;
-  document.body.appendChild(c);setTimeout(()=>c.remove(),1100);
-}
-function burst(x,y){for(let i=0;i<24;i++)piece(x,y,(Math.random()-.5)*160)}
-addEventListener("mousemove",e=>{const t=Date.now();if(t-last>90){last=t;piece(e.clientX,e.clientY,0)}});
-addEventListener("touchmove",e=>{const t=Date.now();if(t-last>90){last=t;const p=e.touches[0];if(p)piece(p.clientX,p.clientY,0)}},{passive:true});
-/* tooltips */
-function follow(el,tip){el.addEventListener("mousemove",e=>{tip.style.display="block";tip.style.left=(e.clientX+16)+"px";tip.style.top=(e.clientY+8)+"px"});el.addEventListener("mouseleave",()=>tip.style.display="none")}
-follow(document.querySelector(".wordmark"),document.getElementById("tip"));
-follow(document.getElementById("cli"),document.getElementById("tip2"));
-/* palette switcher */
-const pals=["pal-a","pal-b","pal-c"];
-function setPal(p){document.body.className=p;document.querySelectorAll("#pal button").forEach(b=>b.classList.toggle("on",b.dataset.p===p));try{localStorage.setItem("dhw-theme",p)}catch(e){}}
-try{const saved=localStorage.getItem("dhw-theme");if(saved&&pals.includes(saved))setPal(saved)}catch(e){}
-document.querySelectorAll("#pal button").forEach(b=>b.onclick=()=>setPal(b.dataset.p));
-addEventListener("keydown",e=>{if(e.key>="1"&&e.key<="3")setPal(pals[e.key-1])});
-</script>
 </body>
 </html>

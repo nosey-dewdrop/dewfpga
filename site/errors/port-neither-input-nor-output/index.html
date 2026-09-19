@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR: Module port &#x27;dp&#x27; is neither input nor output (fix, macOS)</title>
+<meta name="description" content="The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR: Module port &#x27;dp&#x27; is neither input nor output (fix, macOS)">
+<meta property="og:description" content="The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR: Module port 'dp' is neither input nor output","url":"https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv</p>
+  <h1 class="mono">ERROR: Module port &#x27;dp&#x27; is neither input nor output</h1>
+<p>The first lab that uses the seven-segment display stops in synthesis with this line. Simulation was fine.</p>
+<h2>Why does it happen?</h2>
+<p>The <code>SevSeg_4digit.sv</code> module that the course hands out declares its ports like this.</p>
+<pre><code>output [6:0]seg, logic dp,     // dp ends up with no direction</code></pre>
+<p>Whoever wrote it meant <code>output logic dp</code>, but the language does not read it that way. Vivado accepts the line anyway, and so does Icarus Verilog, which is why <code>make sim</code> passes. Yosys reads the standard more strictly and stops.</p>
+<h2>What is the fix?</h2>
+<pre data-copy="1"><code>output [6:0] seg,
+output logic dp,</code></pre>
+<p>After the change the module synthesizes to 46 cells and the rest of the lab goes through unchanged.</p>
+<p>This is the one course file that breaks. It is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#12-which-course-file-breaks">Step 12</a> and <a href="/dewfpga/docs/#15-what-should-you-be-concerned-about">step 15</a> of the guide.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

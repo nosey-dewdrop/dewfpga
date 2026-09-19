@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Makefile:29: *** missing separator.  Stop. (fix, macOS)</title>
+<meta name="description" content="The recipe lines lost their Tab characters when you copied them. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Makefile:29: *** missing separator.  Stop. (fix, macOS)">
+<meta property="og:description" content="The recipe lines lost their Tab characters when you copied them. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Makefile:29: *** missing separator.  Stop.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · make, on a Makefile copied from a PDF or a web page</p>
+  <h1 class="mono">Makefile:29: *** missing separator.  Stop.</h1>
+<p>You created the Makefile by copying it from the PDF guide or a web page, ran <code>make</code>, and it stopped immediately with this message. The line number varies.</p>
+<h2>Why does it happen?</h2>
+<p>Every indented line in a Makefile has to start with a real Tab character. A PDF cannot hold tabs, and some web pages turn them into spaces when you copy. <code>make</code> sees spaces, does not recognize the line as a recipe, and gives up.</p>
+<h2>What is the fix?</h2>
+<p>Put the tabs back. Run this once inside your project folder.</p>
+<pre data-copy="1"><code>perl -pi -e 's/^ +/\t/' Makefile</code></pre>
+<p>Or skip the copying: the five project files are downloadable as they are, tabs included.</p>
+<ul>
+  <li><a href="/dewfpga/templates/Makefile">Makefile</a></li>
+  <li><a href="/dewfpga/templates/check_xdc.py">check_xdc.py</a></li>
+  <li><a href="/dewfpga/templates/blink.sv">blink.sv</a> · <a href="/dewfpga/templates/blink_tb.sv">blink_tb.sv</a> · <a href="/dewfpga/templates/blink.xdc">blink.xdc</a></li>
+</ul>
+<p><a href="/dewfpga/docs/#8-what-goes-in-your-project-folder">Step 8 of the guide</a> has the same files with a paragraph on each.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

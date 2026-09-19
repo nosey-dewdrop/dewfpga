@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>error: externally-managed-environment (fix, macOS)</title>
+<meta name="description" content="PEP 668. Homebrew&#x27;s Python refuses a plain pip install. The chain needs a venv. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="error: externally-managed-environment (fix, macOS)">
+<meta property="og:description" content="PEP 668. Homebrew&#x27;s Python refuses a plain pip install. The chain needs a venv. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"error: externally-managed-environment","url":"https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · pip, with Homebrew&#x27;s Python on macOS</p>
+  <h1 class="mono">error: externally-managed-environment</h1>
+<p>You ran <code>pip install fasm</code> (or <code>pip install -e .</code> inside prjxray) with Homebrew's Python and pip refused with a long message that starts with this line and mentions PEP 668.</p>
+<h2>Why does it happen?</h2>
+<p>Homebrew marks its Python as externally managed, which means pip is not allowed to install into it and break packages that Homebrew itself relies on. Two steps of the FPGA chain are Python scripts (<code>bbaexport.py</code> for the chip database and <code>fasm2frames</code> for the bitstream) and they need a handful of packages.</p>
+<h2>What is the fix?</h2>
+<p>Make a venv, a private Python where you are free to install things, and use it for every Python command in the chain. The guide keeps it next to everything else in <code>~/fpga</code>.</p>
+<pre data-copy="1"><code>mkdir -p ~/fpga
+python3 -m venv ~/fpga/venv
+~/fpga/venv/bin/pip install fasm pyyaml textx simplejson intervaltree</code></pre>
+<p>Later, prjxray is installed into the same venv with <code>~/fpga/venv/bin/pip install -e .</code>, and the Makefile calls <code>~/fpga/venv/bin/python</code> instead of <code>python3</code>.</p>
+<p>Do not use <code>--break-system-packages</code>. It does what it says.</p>
+<p>Step 4 of the guide: <a href="/dewfpga/docs/#4-why-do-you-need-a-python-environment">Why do you need a Python environment?</a></p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

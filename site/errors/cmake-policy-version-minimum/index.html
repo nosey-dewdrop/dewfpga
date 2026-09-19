@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compatibility with CMake &lt; 3.5 has been removed from CMake (fix, macOS)</title>
+<meta name="description" content="prjxray is written for an older CMake. CMake 4 refuses it without a policy flag. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Compatibility with CMake &lt; 3.5 has been removed from CMake (fix, macOS)">
+<meta property="og:description" content="prjxray is written for an older CMake. CMake 4 refuses it without a policy flag. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Compatibility with CMake < 3.5 has been removed from CMake","url":"https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · CMake 4, while configuring prjxray</p>
+  <h1 class="mono">Compatibility with CMake &lt; 3.5 has been removed from CMake</h1>
+<p>You ran <code>cmake -B build</code> inside prjxray with a current Homebrew CMake (version 4 or later) and it stopped at <code>cmake_minimum_required</code> with this message.</p>
+<h2>Why does it happen?</h2>
+<p>CMake 4 dropped compatibility with projects that declare a minimum version below 3.5. prjxray still declares one, and the version it asks for is older than what CMake 4 will accept.</p>
+<h2>What is the fix?</h2>
+<p>Tell CMake to treat the project as if it asked for 3.5.</p>
+<pre data-copy="1"><code>cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+cmake --build build --target xc7frames2bit -j3</code></pre>
+<p>Only the <code>xc7frames2bit</code> target is needed. prjxray's own README starts by telling you to install Vivado 2017.2; ignore that, it is for people who map a chip from zero, and the Artix-7 is already mapped.</p>
+<h2>What should you see?</h2>
+<pre><code>ls ~/fpga/prjxray/build/tools/xc7frames2bit</code></pre>
+<p>If it prints the path back, the tool is built.</p>
+<p class="mute small">The message above is CMake 4's wording. The guide was written against the same CMake and describes the failure without quoting it: <a href="/dewfpga/docs/#7-how-do-you-build-the-prjxray-tools">step 7</a>.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>nextpnr-xilinx: where is the chip database for the XC7A35T? (fix, macOS)</title>
+<meta name="description" content="There is no prebuilt chipdb. It is generated per device from the prjxray data. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="nextpnr-xilinx: where is the chip database for the XC7A35T? (fix, macOS)">
+<meta property="og:description" content="There is no prebuilt chipdb. It is generated per device from the prjxray data. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"nextpnr-xilinx: where is the chip database for the XC7A35T?","url":"https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · nextpnr-xilinx, the first time you run it</p>
+  <h1 class="mono">nextpnr-xilinx: where is the chip database for the XC7A35T?</h1>
+<p>nextpnr-xilinx built fine, and now it wants <code>--chipdb</code> pointing at a <code>.bin</code> file that does not exist anywhere on your disk or in the download.</p>
+<h2>Why does it happen?</h2>
+<p>nextpnr knows how to place and route, but it knows nothing about a specific chip. The description of every part and every wire on the XC7A35T is generated from prjxray's database, and no prebuilt copy is shipped. You generate it once per device.</p>
+<h2>What is the fix?</h2>
+<p>The raw data came along with the <code>--recursive</code> clone of nextpnr-xilinx, so nothing extra is downloaded. The Python is the venv from <a href="/dewfpga/errors/externally-managed-environment/">the PEP 668 wall</a>.</p>
+<pre data-copy="1"><code>mkdir -p ~/fpga/chipdb
+cd ~/fpga/nextpnr-xilinx
+
+~/fpga/venv/bin/python xilinx/python/bbaexport.py \
+  --xray xilinx/external/prjxray-db/artix7 \
+  --metadata xilinx/external/nextpnr-xilinx-meta/artix7 \
+  --device xc7a35tcpg236-1 \
+  --constids xilinx/constids.inc \
+  --bba ~/fpga/chipdb/xc7a35t.bba
+
+build/bbasm -l ~/fpga/chipdb/xc7a35t.bba ~/fpga/chipdb/xc7a35t.bin</code></pre>
+<p>The first command takes about 35 seconds and writes a 256 MB text file. The second takes 3 seconds and packs it into the 89 MB binary that nextpnr reads. Peak memory during generation was 859 MB. For a different 7-series board, change <code>--device</code> to that board's chip name; <code>openFPGALoader --list-boards</code> prints it.</p>
+<p>Step 6 of the guide: <a href="/dewfpga/docs/#6-how-do-you-make-the-chip-database">How do you make the chip database?</a></p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>
