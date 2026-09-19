@@ -210,10 +210,10 @@ footer p{margin:0 0 8px}
 .chain b{font-weight:400;color:var(--ink)}
 .status p{margin:0 0 6px}
 .st-live{color:var(--green)} .st-soon{color:var(--yellow)}
-.tvs{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:28px 0 8px}
+.tvs{display:grid;grid-template-columns:1fr;gap:28px;padding:28px 0 8px}
 @media(max-width:700px){.tvs{grid-template-columns:1fr}}
-.tv{position:relative;background:var(--bg-soft);border-radius:3px;overflow:hidden;aspect-ratio:16/9}
-.tv canvas{width:100%;height:100%;display:block;opacity:.55}
+.tv{position:relative;background:var(--bg-soft);border-radius:3px;overflow:hidden;height:150px}
+.tv canvas{width:100%;height:100%;display:block;opacity:.45}
 .tv .lbl{position:absolute;left:14px;bottom:10px;font-size:14px;color:var(--ink)}
 .tv .lbl span{color:var(--yellow)}
 .tv .scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,color-mix(in srgb,var(--bg) 35%,transparent) 2px 3px);pointer-events:none}
@@ -223,8 +223,8 @@ footer p{margin:0 0 8px}
 <body class="pal-c">
 <div id="stars"></div>
 <header class="site">
-  <div><a class="wordmark" href="https://noseydewdrop.com/" target="_blank" rel="noopener"><span>nosey-dewdrop ⋆˙⟡</span></a> <span class="dim">[<a href="docs/CS223_Mac_Setup.pdf" target="_blank" rel="noopener">docs - 19.09.26</a>] [<span class="na" id="cli">CLI</span>]</span></div>
-<div id="tip">portfolio!</div>
+  <div><a class="wordmark" href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener"><span>nosey-dewdrop ⋆˙⟡</span></a> <span class="dim">[<a href="docs/CS223_Mac_Setup.pdf" target="_blank" rel="noopener">docs - 19.09.26</a>] [<span class="na" id="cli">CLI</span>]</span></div>
+<div id="tip">linkedin!</div>
 <div id="tip2">coming soon</div>
   <div class="site-right">
     <div id="pal">
@@ -232,7 +232,7 @@ footer p{margin:0 0 8px}
       <button data-p="pal-b">white</button>
       <button data-p="pal-c" class="on">violet</button>
     </div>
-    <nav class="dim">[<a href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener">linkedin ↗</a>]</nav>
+    <nav class="dim">[<a href="https://github.com/nosey-dewdrop" target="_blank" rel="noopener">github ↗</a>]</nav>
   </div>
 </header>
 
@@ -289,57 +289,17 @@ footer p{margin:0 0 8px}
     <p><span class="st-soon">*</span> CLI <span class="dim">· coming soon</span></p>
     <p><span class="st-soon">*</span> simulator <span class="dim">· coming soon</span></p>
   </div>
-  <pre class="bg-art art-cols" aria-hidden="true">⠀⢀⠤⠤⢄⡀⠀⠀⠀⠀⠀⠀⢀⠤⠒⠒⢤
-⠀⠏⠀⠀⠀⠈⠳⡄⠀⠀⡠⠚⠁⠀⠀⠀⠘⡄
-⢸⠀⠀⠀⠤⣤⣤⡆⠀⠈⣱⣤⣴⡄⠀⠀⠀⡇
-⠘⡀⠀⠀⠀⠀⢈⣷⠤⠴⢺⣀⠀⠀⠀⠀⢀⡇
-⠀⠡⣀⣀⣤⠶⠻⡏⠀⠀⢸⡟⠙⣶⡤⠤⠼
-⠀⠀⢠⡾⠉⠀⢠⡆⠀⠀⢸⠃⠀⠈⢻⣆
-⠀⠀⣿⣠⢶⣄⠀⡇⠀⠀⠘⠃⣀⡤⢌⣈⡀⠀
-⠀⠀⠀⠀⠀⠙⠼⠀⠀⠀⠀⠿⠋</pre>
 </section>
 
-<section class="tvs wall-sect">
-  <pre class="bg-art art-wall" aria-hidden="true">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢠⠀⠀⣀⠤⣤⣤⣠⣀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⢢⣒⣃⡃⠓⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⡰⠒⡄⠀⡜⣠⠏⠁⠀⠀⠉⠙⠓⠦⣄⢀⣠⣴⠯⠚⠋⠉⠈⠈⢹⡆⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠘⠒⠁⣰⢡⢯⢀⢀⢀⢀⣀⠤⠔⢔⣼⣿⡯⣄⡀⡀⠀⢀⢀⠔⢩⠇⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⢸⠈⢧⣅⣁⣁⣁⡤⠦⣚⡽⢻⢽⡣⡙⠮⣬⣩⣁⣁⡤⠟⡀⡔⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠓⣄⣀⡁⣁⢁⡴⢼⠃⢠⠟⠀⣧⠙⢤⠀⠀⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⢷⠀⠀⡀⡔⠊⢁⠔⢡⠼⠋⠀⠀⠘⢧⡀⠱⣄⡀⠀⠀⠀⠀⠀⠀⢢⡔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⡠⠒⠁⣀⠖⢁⡼⠋⠀⠀⠀⠀⠀⠈⠳⣄⠱⡙⢤⠀⠀⠀⠀⠐⠁⠘⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⢀⠜⠀⢠⠊⠀⣠⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣦⠱⡀⠳⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⡜⠀⠀⡇⠀⣰⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣇⢱⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⡇⠀⠀⡇⢠⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡿⠀⡇⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⡄⠀⠀⠘⣄⠀⠱⣏⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡟⠀⢱⠀⡣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠒⡵⣊⠀⠀⠈⠑⣺⢅⡉⠦⡀⠀⠀⠀⠀⠀⠀⠀⣼⠂⠀⢸⠀⡎⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠊⢱⠈⠀⠀⠀⠀⡯⠀⠉⢢⡉⢦⠀⠀⠀⠀⠀⣰⠃⠀⠀⡰⡕⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⢻⡀⠀⠀⢱⠈⡆⠀⠀⠀⢠⠏⠀⢀⢴⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠈⢧⡀⠀⡸⢐⠇⠀⠀⠀⡾⠁⡠⢪⠊⠀⠀⠀⠀⠀⡄⠀⠠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠄⠀⠈⢧⡰⢁⠎⠀⠀⠀⠀⢸⣅⠎⢠⠃⠀⠀⠀⠀⠀⠠⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⢀⠞⣧⠃⠀⠀⠀⠀⠀⠀⣸⡃⢠⠃⠀⠀⠀⠀⠀⠘⢔⡥⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⡠⢃⠜⢹⠄⠀⠀⠀⠀⠀⢰⠹⣆⠇⠀⠀⠀⠀⠀⠀⢠⢚⠕⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⡜⣠⠃⠀⢸⠅⠀⠀⠀⠀⠀⡇⠀⠽⡆⠀⠀⠀⠀⠀⠀⠀⢐⠅⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⣸⢠⠃⠀⠀⣼⠀⠀⠀⠀⠀⠀⡇⠀⢣⡙⣦⠀⠀⠀⠀⠀⠀⠰⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠄⠀⠀⡆⢸⠀⣠⠜⠃⠀⠀⠀⠀⠀⢣⠀⠀⢣⠈⢳⡄⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⢀⡀⠀⠀⢣⠸⡴⠃⠀⠀⠀⠀⠀⠀⠙⢢⡀⢇⠀⠹⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠐⡅⣈⠇⠀⠀⡿⡙⢄⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣄⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠈⠀⠀⢼⠁⠙⢌⠣⣄⠀⠀⠀⠀⠀⠀⠀⠸⡱⣀⠀⠙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⢀⡏⠀⠀⠀⠑⣄⠓⢤⠀⠀⠀⠀⠀⠀⠱⡘⡄⠀⢸⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠐⠃⠀⠀⠀⠀⠈⠢⠀⠁⠀⠀⠀⠀⠀⠀⡇⢸⠀⡼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠇⠀⢱⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</pre>
+<section class="tvs">
   <div class="tv"><canvas></canvas><div class="scan"></div><div class="lbl">basys3 <span>· coming soon</span></div></div>
   <div class="tv"><canvas></canvas><div class="scan"></div><div class="lbl">compiler <span>· coming soon</span></div></div>
 </section>
 </main>
 
-<div id="marquees">
-  <div class="mq mq1" id="mq1"></div>
-  <div class="mq mq2" id="mq2"></div>
-</div>
 
 <footer>
-  <p>[<a href="https://noseydewdrop.com/" target="_blank" rel="noopener">portfolio ↗</a>] [<a href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener">linkedin ↗</a>]</p>
+  <p>[<a href="https://github.com/nosey-dewdrop" target="_blank" rel="noopener">github ↗</a>] [<a href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener">linkedin ↗</a>]</p>
   <p class="at-pink">@nosey-dewdrop</p>
 </footer>
 
@@ -386,17 +346,13 @@ try{const saved=localStorage.getItem("dhw-theme");if(saved&&pals.includes(saved)
 document.querySelectorAll("#pal button").forEach(b=>b.onclick=()=>setPal(b.dataset.p));
 addEventListener("keydown",e=>{if(e.key>="1"&&e.key<="3")setPal(pals[e.key-1])});
 
-/* marquees: the tools in the chain */
-const T=[["icarus verilog","live"],["yosys","live"],["nextpnr-xilinx","live"],["prjxray","live"],["openFPGALoader","live"],["basys3","wip"],["xc7a35t","wip"],["simulator","wip"],["cli","wip"]];
-const items=T.map(([n,st])=>`<span class="mq-i st-${st}"><b>*</b> ${n}</span>`);
-document.getElementById("mq1").innerHTML=items.concat(items).join("");
-document.getElementById("mq2").innerHTML=items.slice().reverse().concat(items.slice().reverse()).join("");
 
 /* tv static */
 document.querySelectorAll(".tv canvas").forEach(cv=>{
-  const ctx=cv.getContext("2d");cv.width=160;cv.height=90;
+  const ctx=cv.getContext("2d");cv.width=240;cv.height=60;
   const img=ctx.createImageData(cv.width,cv.height),d=img.data;
-  (function frame(){for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}ctx.putImageData(img,0,0);setTimeout(()=>requestAnimationFrame(frame),60)})();
+  function tint(){const h=getComputedStyle(document.body).getPropertyValue("--purple").trim();return [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+  (function frame(){const [r,g,b]=tint();for(let i=0;i<d.length;i+=4){const v=Math.random();d[i]=r*v;d[i+1]=g*v;d[i+2]=b*v;d[i+3]=255}ctx.putImageData(img,0,0);setTimeout(()=>requestAnimationFrame(frame),70)})();
 });
 </script>
 </body>
