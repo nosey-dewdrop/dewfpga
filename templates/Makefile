@@ -1,4 +1,4 @@
-# Basys3 on macOS without Vivado (mac-fpga)
+# Basys3 on macOS without Vivado (dewfpga)
 #
 #   make sim    -> simulate (iverilog)
 #   make bit    -> build the bitstream (~4 s)

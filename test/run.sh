@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# mac-fpga test suite. Needs an installed toolchain (FPGA_HOME, default ~/fpga).
+# dewfpga test suite. Needs an installed toolchain (FPGA_HOME, default ~/fpga).
 #   test/run.sh            everything except the clean install
 #   FULL=1 test/run.sh     also a clean install into a temp FPGA_HOME (~4 min, 1.4 GB)
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CLI="$ROOT/bin/mac-fpga"
+CLI="$ROOT/bin/dewfpga"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 pass=0; fail=0
 ok()   { pass=$((pass+1)); printf '  \033[32mPASS\033[0m %s\n' "$1"; }

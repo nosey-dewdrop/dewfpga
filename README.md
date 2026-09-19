@@ -1,4 +1,4 @@
-# mac-fpga
+# dewfpga
 
 Write SystemVerilog on an Apple Silicon Mac and flash a Digilent **Basys3**. No Vivado,
 no virtual machine, no Rosetta. `.sv` → `.bit` → board in about 4 seconds.
@@ -6,33 +6,33 @@ no virtual machine, no Rosetta. `.sv` → `.bit` → board in about 4 seconds.
 [Türkçe](README.tr.md)
 
 ```bash
-curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash   # ~4 min, 1.4 GB, once
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 min, 1.4 GB, once
 ```
 
 Then in any folder with `blink.sv` + `blink.xdc`:
 
 ```bash
-mac-fpga sim      # iverilog
-mac-fpga bit      # .sv -> .bit   (~4 s)
-mac-fpga flash    # program the board: the LED blinks
+dewfpga sim      # iverilog
+dewfpga bit      # .sv -> .bit   (~4 s)
+dewfpga flash    # program the board: the LED blinks
 ```
 
 No Makefile, no project layout. Every `.sv`/`.v` in the folder is synthesized (submodules
 can live in their own files). The top module is the `.sv` with a matching `.xdc`; if that
-is ambiguous, `mac-fpga flash <top>`. `sim` needs `<top>_tb.sv`. Example: `mac-fpga new blink`.
+is ambiguous, `dewfpga flash <top>`. `sim` needs `<top>_tb.sv`. Example: `dewfpga new blink`.
 
 ## Install
 
 One line, no Node needed:
 
 ```bash
-curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 ```
 
-It puts the CLI in `~/.mac-fpga`, links `mac-fpga` into Homebrew's bin and runs
-`mac-fpga install`. Re-run the same line to update. Requirements: macOS on Apple Silicon,
+It puts the CLI in `~/.dewfpga`, links `dewfpga` into Homebrew's bin and runs
+`dewfpga install`. Re-run the same line to update. Requirements: macOS on Apple Silicon,
 Xcode Command Line Tools, Homebrew. Switching to the npm package later: remove
-`$(brew --prefix)/bin/mac-fpga` first, npm wants that path.
+`$(brew --prefix)/bin/dewfpga` first, npm wants that path.
 
 ## What it installs
 
@@ -66,11 +66,11 @@ Re-running the script skips finished steps. Log: `~/fpga/install.log`.
 ## Commands
 
 ```
-mac-fpga install                     install the toolchain (safe to re-run)
-mac-fpga check                       is every piece in place
-mac-fpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
-mac-fpga new <dir>                   example project with Makefile + VS Code task (⌘⇧B = flash)
-mac-fpga --version
+dewfpga install                     install the toolchain (safe to re-run)
+dewfpga check                       is every piece in place
+dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+dewfpga new <dir>                   example project with Makefile + VS Code task (⌘⇧B = flash)
+dewfpga --version
 ```
 
 ## Scope

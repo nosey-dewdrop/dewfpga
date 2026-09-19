@@ -1,14 +1,14 @@
 {
-  "name": "mac-fpga",
+  "name": "dewfpga",
   "version": "0.1.0",
   "description": "Basys3 on macOS Apple Silicon without Vivado: write SystemVerilog, flash the board.",
-  "bin": { "mac-fpga": "bin/mac-fpga" },
+  "bin": { "dewfpga": "bin/dewfpga" },
   "files": ["bin/", "install.sh", "templates/", "README.md", "LICENSE"],
   "scripts": { "test": "test/run.sh" },
   "os": ["darwin"],
   "cpu": ["arm64"],
   "engines": { "node": ">=18" },
-  "repository": { "type": "git", "url": "https://github.com/nosey-dewdrop/mac-fpga.git" },
+  "repository": { "type": "git", "url": "https://github.com/nosey-dewdrop/dewfpga.git" },
   "license": "MIT",
   "keywords": ["fpga", "basys3", "artix-7", "xilinx", "yosys", "nextpnr", "macos", "systemverilog"]
 }

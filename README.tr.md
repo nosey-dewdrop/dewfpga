@@ -1,4 +1,4 @@
-# mac-fpga
+# dewfpga
 
 [English](README.md)
 
@@ -6,20 +6,20 @@ macOS Apple Silicon'da **Vivado olmadan** SystemVerilog yazıp Basys3'e yükle.
 Sanal makine yok, Rosetta yok. `.sv` → `.bit` → kart, ~4 saniye.
 
 ```bash
-curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash   # ~4 dk, 1.4 GB, tek sefer
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 dk, 1.4 GB, tek sefer
 ```
 
 Sonra herhangi bir klasörde `blink.sv` + `blink.xdc` yaz ve:
 
 ```bash
-mac-fpga sim      # iverilog
-mac-fpga bit      # .sv -> .bit  (~4 sn)
-mac-fpga flash    # karta yükle: LED yanar
+dewfpga sim      # iverilog
+dewfpga bit      # .sv -> .bit  (~4 sn)
+dewfpga flash    # karta yükle: LED yanar
 ```
 
 Makefile yok, proje yapısı yok. Klasördeki bütün `.sv`/`.v` dosyaları sentezlenir
 (alt modüller ayrı dosyada olabilir). Top modül: `.xdc`'si olan dosya; belirsizse
-`mac-fpga flash <top>`. Simülasyon `<top>_tb.sv` ister. Örnek: `mac-fpga new blink`.
+`dewfpga flash <top>`. Simülasyon `<top>_tb.sv` ister. Örnek: `dewfpga new blink`.
 
 ## Ne kuruyor?
 
@@ -54,14 +54,14 @@ Log: `~/fpga/install.log`.
 ## Komutlar
 
 ```
-mac-fpga install                 zinciri kur (yeniden çalıştırmak güvenli)
-mac-fpga check                   altı parça yerinde mi
-mac-fpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
-mac-fpga --version
-mac-fpga new <dizin>             örnek proje: blink.sv + xdc + Makefile + VS Code görevi (⌘⇧B = flash)
+dewfpga install                 zinciri kur (yeniden çalıştırmak güvenli)
+dewfpga check                   altı parça yerinde mi
+dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
+dewfpga --version
+dewfpga new <dizin>             örnek proje: blink.sv + xdc + Makefile + VS Code görevi (⌘⇧B = flash)
 ```
 
-Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `mac-fpga`'yı brew bin'e bağlar.
+Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `dewfpga`'yı brew bin'e bağlar.
 
 ## Kapsam
 
@@ -86,7 +86,7 @@ Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `mac-fpga`'yı b
 | Script hijyeni | `sudo`, `eval`, `curl \| sh` yok; 3 URL hepsi https; yazma yalnız `FPGA_HOME` + brew |
 | Intel Mac / brew yok / ağ yok | üçü de tek satır `HATA:` ile exit 1, yarım durum bırakmaz (yarım klon sonraki koşuda yeniden çekilir) |
 | `new` var olan dizine / bilinmeyen komut / eksik zincirde `check` | exit 1 |
-| npm: `npm pack` → `npm install -g` → boş klasörde `mac-fpga bit` | `.fasm` elle kurulanla aynı; `npm uninstall -g` temiz kaldırır |
+| npm: `npm pack` → `npm install -g` → boş klasörde `dewfpga bit` | `.fasm` elle kurulanla aynı; `npm uninstall -g` temiz kaldırır |
 | Klasörde iki `.sv` / `.xdc` yok / testbench yok / zincir kurulmamış | tek satır HATA, exit 1 |
 | `top.sv` + `counter.sv` (alt modül ayrı dosyada) | top `.xdc`'den bulundu, `top.bit` üretildi |
 | `sudo ./install.sh` / boş disk < 4 GB / bozuk venv (Python güncellemesi) | HATA ile durur / HATA ile durur / venv yeniden kurulur |

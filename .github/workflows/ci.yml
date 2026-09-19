@@ -14,22 +14,22 @@ jobs:
       - name: npm package installs and runs
         run: |
           npm pack
-          rm -f "$(brew --prefix)/bin/mac-fpga"      # install.sh linked it there; npm wants the same path
-          npm install -g ./mac-fpga-*.tgz
+          rm -f "$(brew --prefix)/bin/dewfpga"      # install.sh linked it there; npm wants the same path
+          npm install -g ./dewfpga-*.tgz
           mkdir /tmp/w && cp templates/blink.sv templates/blink.xdc /tmp/w/
-          cd /tmp/w && mac-fpga --version && mac-fpga bit && ls -l blink.bit
+          cd /tmp/w && dewfpga --version && dewfpga bit && ls -l blink.bit
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: install-log, path: ~/fpga/install.log }
       - name: web installer against the freshly built package
         run: |
-          mkdir -p /tmp/site && cp site/install /tmp/site/ && cp mac-fpga-*.tgz /tmp/site/mac-fpga.tgz
-          MAC_FPGA_URL=file:///tmp/site MAC_FPGA_DIR=/tmp/cli bash site/install
-          /tmp/cli/bin/mac-fpga check
+          mkdir -p /tmp/site && cp site/install /tmp/site/ && cp dewfpga-*.tgz /tmp/site/dewfpga.tgz
+          DEWFPGA_URL=file:///tmp/site DEWFPGA_DIR=/tmp/cli bash site/install
+          /tmp/cli/bin/dewfpga check
       - name: site bundle (page, installer, package, templates, docs pdf)
         run: |
           mkdir -p out/templates/.vscode
-          cp -R site/. out/ && cp mac-fpga-*.tgz out/mac-fpga.tgz
+          cp -R site/. out/ && cp dewfpga-*.tgz out/dewfpga.tgz
           cp templates/* out/templates/ && cp templates/.vscode/tasks.json out/templates/.vscode/
       - uses: actions/upload-pages-artifact@v3
         with: { path: out }

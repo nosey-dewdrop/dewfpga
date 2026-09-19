@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# mac-fpga: Basys3 on macOS without Vivado.
-#   mac-fpga install                 install the toolchain into ~/fpga (safe to re-run)
-#   mac-fpga check                   verify every piece is in place
-#   mac-fpga sim | bit | flash | clean [top]
+# dewfpga: Basys3 on macOS without Vivado.
+#   dewfpga install                 install the toolchain into ~/fpga (safe to re-run)
+#   dewfpga check                   verify every piece is in place
+#   dewfpga sim | bit | flash | clean [top]
 #                                    work on the .sv files in the current folder; top = the .sv
 #                                    that has a matching .xdc (or the only .sv); else name it
-#   mac-fpga new <dir>               example project: blink.sv + blink.xdc + Makefile + VS Code task
-#   mac-fpga --version
+#   dewfpga new <dir>               example project: blink.sv + blink.xdc + Makefile + VS Code task
+#   dewfpga --version
 set -euo pipefail
 # resolve symlink chain (npm bin / brew bin). readlink -f is missing on older macOS, so by hand:
 resolve() { local f=$1 d; while [ -L "$f" ]; do d=$(cd "$(dirname "$f")" && pwd); f=$(readlink "$f"); [[ $f = /* ]] || f="$d/$f"; done; printf '%s' "$f"; }
@@ -30,7 +30,7 @@ cmd_check() {
         if [ -n "$where" ]; then printf '  \033[32m✓\033[0m %-16s %s\n' "$name" "$where"
         else printf '  \033[31m✗\033[0m %-16s MISSING\n' "$name"; fail=1; fi
     }
-    echo "mac-fpga check  (FPGA_HOME=$FPGA_HOME)"
+    echo "dewfpga check  (FPGA_HOME=$FPGA_HOME)"
     row yosys           yosys                                            c
     row iverilog        iverilog                                         c
     row openFPGALoader  openFPGALoader                                   c
@@ -44,7 +44,7 @@ cmd_check() {
         then printf '  \033[32m✓\033[0m %-16s fasm prjxray pyyaml textx simplejson intervaltree\n' "python pkgs"
         else printf '  \033[31m✗\033[0m %-16s missing package\n' "python pkgs"; fail=1; fi
     fi
-    if [ $fail -eq 0 ]; then echo "all good."; else echo "something is missing -> mac-fpga install"; return 1; fi
+    if [ $fail -eq 0 ]; then echo "all good."; else echo "something is missing -> dewfpga install"; return 1; fi
 }
 
 cmd_new() {
@@ -67,7 +67,7 @@ cmd_build() {  # <target> [top]
         done
         if   [ ${#withxdc[@]} -eq 1 ]; then top=${withxdc[0]%.sv}
         elif [ ${#svs[@]} -eq 1 ];     then top=${svs[0]%.sv}
-        else die "cannot tell which module is top (${#svs[@]} .sv files, ${#withxdc[@]} with a matching .xdc). Name it:  mac-fpga $target <top>"; fi
+        else die "cannot tell which module is top (${#svs[@]} .sv files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
     fi
     [ -f "$top.sv" ] || [ -f "$top.v" ] || die "$top.sv not found"
     # every source in the folder is synthesized (submodules may live in their own files); testbenches excluded
@@ -75,11 +75,11 @@ cmd_build() {  # <target> [top]
     for f in *.sv *.v; do [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] && srcs+=("$f"); done
     case $target in
         sim)
-            [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench (see: mac-fpga new example)" ;;
+            [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench (see: dewfpga new example)" ;;
         bit|flash)
             [ -f "$top.xdc" ] || die "$top.xdc not found. Copy the pins you use from:  $HERE/templates/Basys3_Master.xdc"
             [ -s "$FPGA_HOME/chipdb/xc7a35t.bin" ] && [ -x "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" ] \
-                || die "toolchain not installed. Run:  mac-fpga install   (status: mac-fpga check)" ;;
+                || die "toolchain not installed. Run:  dewfpga install   (status: dewfpga check)" ;;
     esac
     exec make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$top.xdc" "$target"
 }

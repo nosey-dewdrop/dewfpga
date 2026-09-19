@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# mac-fpga install: Basys3 (XC7A35T) toolchain on macOS Apple Silicon, no Vivado.
+# dewfpga install: Basys3 (XC7A35T) toolchain on macOS Apple Silicon, no Vivado.
 #
 #   SystemVerilog -> yosys -> nextpnr-xilinx -> prjxray -> openFPGALoader -> Basys3
 #
 # One command. Safe to re-run: finished steps are skipped.
 # Everything goes under $FPGA_HOME (default ~/fpga). System Python is never touched.
 #
-# Usage:  ./install.sh            (or: mac-fpga install)
+# Usage:  ./install.sh            (or: dewfpga install)
 #         FPGA_HOME=/elsewhere ./install.sh
 set -euo pipefail
 
@@ -160,16 +160,16 @@ fi
 
 # ---------------------------------------------------------------- 6. verify
 step 6 "Verify"
-CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/mac-fpga"
+CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/dewfpga"
 BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: user-writable, on PATH
-if [ "$(readlink -f "$(command -v mac-fpga 2>/dev/null || echo /nonexistent)")" = "$CLI" ]; then
-    skip "mac-fpga on PATH ($(command -v mac-fpga))"          # npm -g or an earlier link
+if [ "$(readlink -f "$(command -v dewfpga 2>/dev/null || echo /nonexistent)")" = "$CLI" ]; then
+    skip "dewfpga on PATH ($(command -v dewfpga))"          # npm -g or an earlier link
 elif [ -w "$BIN_DIR" ]; then
-    ln -sfn "$CLI" "$BIN_DIR/mac-fpga" && ok "mac-fpga -> $BIN_DIR/mac-fpga (on PATH)"
+    ln -sfn "$CLI" "$BIN_DIR/dewfpga" && ok "dewfpga -> $BIN_DIR/dewfpga (on PATH)"
 else
     echo "    $BIN_DIR not writable; add to PATH:  export PATH=\"$(dirname "$CLI"):\$PATH\""
 fi
 "$CLI" check
 echo
 echo "Total: $(( ($(date +%s) - T0) / 60 )) min. Log: $LOG"
-echo "Next:  mac-fpga new blink && cd blink && mac-fpga flash"
+echo "Next:  dewfpga new blink && cd blink && dewfpga flash"
