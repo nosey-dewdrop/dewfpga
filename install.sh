@@ -148,7 +148,14 @@ fi
 
 # ---------------------------------------------------------------- 6. doğrula
 step 6 "Doğrulama"
-"$(dirname "${BASH_SOURCE[0]}")/bin/mac-fpga" check
+CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/mac-fpga"
+BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: kullanıcı yazabilir, PATH'te
+if [ -w "$BIN_DIR" ]; then
+    ln -sfn "$CLI" "$BIN_DIR/mac-fpga" && ok "mac-fpga -> $BIN_DIR/mac-fpga (PATH'te)"
+else
+    echo "    $BIN_DIR yazılamıyor; PATH'e ekle:  export PATH=\"$(dirname "$CLI"):\$PATH\""
+fi
+"$CLI" check
 echo
 echo "Toplam süre: $(( ($(date +%s) - T0) / 60 )) dk. Log: $LOG"
 echo "Sıradaki:  mac-fpga new blink && cd blink && make flash"
