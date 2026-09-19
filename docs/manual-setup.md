@@ -14,9 +14,13 @@ downloads and copy and paste.
 I only tested this on Apple Silicon, which means M1 and later. I have not tried it
 on an Intel Mac.
 
+You can download the five project files. Section 8 lists them in full, but you don't
+have to copy them out of this guide. The download link is in section 8, and it gives
+you all five files with their tabs and indentation intact.
+
 **If a step fails.** Do not skip ahead, because every step needs the one before it.
-Read the last lines in the terminal. Most errors I hit are listed in step 16 with
-the fix. If yours is not there, send me the last ten lines of the terminal on
+Read the last lines in the terminal. Most errors I hit are listed in steps 5, 7
+and 16 with the fix. If yours is not there, send me the last ten lines of the terminal on
 LinkedIn and tell me which step you were on.
 
 <!-- toc -->
@@ -76,7 +80,7 @@ chip database at 344 MB. Vivado asks for 50 to 100 GB.
 
 ## 2. What do you need before you start?
 
-You need three things that are probably half there already.
+You need four things that are probably half there already.
 
 **The terminal.** Press Cmd and Space, type Terminal and press Enter. The window
 that opens is where every command in this guide goes. You paste a command, press
@@ -310,8 +314,18 @@ cd ~/cs223/blink
 ```
 
 Then open VS Code, choose File and Open Folder, and pick `cs223/blink` inside your
-home folder. The folder will hold five files. For each one below you make a new
-file in VS Code, give it the exact name shown, paste the content and save.
+home folder. The folder will hold five files.
+
+The fastest way to get them is to download them. These two commands put all five
+files into the folder, with their tabs and indentation intact.
+
+```bash
+curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip
+unzip blink.zip
+```
+
+If you would rather type them yourself, they are all printed below. Make a new file
+in VS Code for each one, give it the exact name shown, paste the content and save.
 
 The example is a blinking LED, which is the smallest design that proves the whole
 chain works.
@@ -555,7 +569,7 @@ The two `sorry` lines are Icarus saying it simulates `led[0]` and `led[15]` a bi
 more conservatively than the code asks. They are not errors.
 
 The last line only says the test reached its end. If a check fails you see a line
-with `ERROR` and the message from the testbench instead. The run also writes
+with `ERROR` and the message from the testbench as well. The run also writes
 `blink.vcd`, which holds the value of every signal over time. A waveform viewer can open that file. I have not set one
 up yet, so this guide stops at the file.
 
@@ -638,17 +652,7 @@ To flash with one key, put this in `.vscode/tasks.json` inside your project.
 }
 ```
 
-Then bind a key in `keybindings.json`.
-
-```json
-[
-  { "key": "cmd+j",
-    "command": "workbench.action.tasks.runTask",
-    "args": "FPGA: flash" }
-]
-```
-
-Now Cmd J builds the open design and loads it onto the board.
+Now Cmd Shift B builds the open design and loads it onto the board.
 
 ---
 

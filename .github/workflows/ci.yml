@@ -31,6 +31,7 @@ jobs:
           mkdir -p out/templates/.vscode
           cp -R site/. out/ && cp dewfpga-*.tgz out/dewfpga.tgz
           cp templates/* out/templates/ && cp templates/.vscode/tasks.json out/templates/.vscode/
+          (cd templates && zip -q ../out/blink.zip blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json)
       - uses: actions/upload-pages-artifact@v3
         with: { path: out }
 

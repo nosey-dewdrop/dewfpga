@@ -7,5 +7,5 @@ pandoc -f gfm -t html5 --syntax-highlighting=none --wrap=none \
   --template docs/site.tmpl -V date="$DATE" \
   docs/manual-setup.md -o site/docs/index.html
 # the docbar goes right under the h1
-perl -0pi -e 's{(</h1>)}{$1\n<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF, 13 pages</a><a href="/dewfpga/templates/Makefile">the five project files</a><span>steps 1 to 9 install, 10 and 11 are your lab, 12 to 18 are reference</span></p>}' site/docs/index.html
+perl -0pi -e 's{(</h1>)}{$1\n<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF, 16 pages</a><a href="/dewfpga/templates/Makefile">the five project files</a><span>steps 1 to 9 install, 10 and 11 are your lab, 12 to 18 are reference</span></p>}' site/docs/index.html
 echo "site/docs/index.html: $(wc -c < site/docs/index.html) bytes"
