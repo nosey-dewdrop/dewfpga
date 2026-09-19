@@ -32,6 +32,7 @@
 <main class="wrap">
   <h1>One command from SystemVerilog to a Basys3</h1>
   <p class="lead">The 18-step guide, done for you. One line installs the chain; after that, <code>dewfpga</code> builds whatever <code>.sv</code> files are in the folder.</p>
+  <p class="mute">No Mac or no board with you? The <a href="/dewfpga/sim/">Basys3 simulator</a> and the <a href="/dewfpga/sim/tb.html">testbench runner</a> do the same first two steps in a browser, with nothing installed.</p>
 
 <pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, 1.4 GB, once</span></code></pre>
   <p class="mute small">Requirements: macOS on Apple Silicon, Xcode Command Line Tools, Homebrew. It puts the CLI in <code>~/.dewfpga</code>, links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update. No Node needed.</p>

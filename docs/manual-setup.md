@@ -18,6 +18,10 @@ You can download the five project files. Section 8 lists them in full, but you d
 have to copy them out of this guide. The download link is in section 8, and it gives
 you all five files with their tabs and indentation intact.
 
+No Mac yet, or no board? The [Basys3 simulator](https://nosey-dewdrop.github.io/dewfpga/sim/)
+and the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/tb.html) run the same
+`.sv` and `.xdc` in a browser, with nothing installed.
+
 **If a step fails.** Do not skip ahead, because every step needs the one before it.
 Read the last lines in the terminal. Most errors I hit are listed in steps 5, 7
 and 16 with the fix. If yours is not there, send me the last ten lines of the terminal on
