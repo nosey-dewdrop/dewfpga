@@ -21,23 +21,22 @@
 </head>
 <body>
 <nav class="top wrap">
-  <a class="brand" href="/dewfpga/tr/">dewfpga <span>⋆</span></a>
+  <a class="brand" href="/dewfpga/tr/">dewfpga</a>
   <ul>
     <li><a href="/dewfpga/docs/" hreflang="en">rehber</a></li>
     <li><a href="/dewfpga/why/" hreflang="en">neden</a></li>
     <li><a href="/dewfpga/errors/" hreflang="en">hatalar</a></li>
     <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+    <li><a href="/dewfpga/" lang="en" hreflang="en">english</a></li>
   </ul>
 </nav>
 
 <main class="wrap">
   <h1>Mac'te Vivado olmadan CS223 labları</h1>
-  <p class="lead">Apple Silicon Mac'te SystemVerilog yaz, Digilent Basys3'e yükle. Vivado yok, sanal makine yok, Rosetta yok.</p>
+  <p class="lead">CS223 lablarını Apple Silicon bir Mac'ten (M1 ve sonrası) simüle et, sentezle ve Digilent Basys3'e yükle. Ücretsiz, açık kaynak araçlar. Vivado yok, sanal makine yok, Rosetta yok.</p>
 
-  <div class="cta">
-    <a class="big" href="/dewfpga/docs/">Kurulum rehberini oku →</a>
-    <p>18 adım, terminali açmaktan kartta LED'in yanmasına. Her komut, ne yaptığı ve ne görmen gerektiği. Rehber İngilizce; <a href="/dewfpga/docs/CS223_Mac_Setup.pdf">13 sayfalık PDF</a> olarak da var.</p>
-  </div>
+  <p><a href="/dewfpga/docs/"><b>Kurulum rehberiyle</b></a> başla: 18 adım, terminali açmaktan kartta LED'in yanmasına, bir komutu kopyalayıp Enter'a basmak yetecek şekilde yazıldı. Rehber İngilizce. 1'den 9'a kadar olan adımlar kurulum. İçlerindeki derleme yaklaşık 4 dakika; gerisi indirme ve yapıştırma. <a href="/dewfpga/docs/#8-what-goes-in-your-project-folder">Beş proje dosyası</a> olduğu gibi indirilebiliyor, hiçbir şey elle yazılmıyor.</p>
+  <p class="mute">Şunlar için değil: Intel Mac, Vivado IP Catalog'undan herhangi bir şey, dalga formu görüntüleme. <a href="#limits">Aşağıda ayrıntı.</a></p>
 
 <pre><code><span class="p">$</span> make sim
 TB passed
@@ -48,53 +47,42 @@ Info: Max frequency for clock 'clk': 209.60 MHz (PASS at 100.00 MHz)
 Load SRAM: [==================================================] 100.00%
 Done
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-  <p class="mute small">Basys3'te blink örneği, 8 GB'lık bir M2'den. <code>done 1</code> çipin tasarımı kabul ettiği anlamına gelir; LED 0 yanıp sönmeye başlar.</p>
-
-  <div class="nums">
-    <div><b>1.76 GB</b><span>bütün zincir için disk. Vivado 50 ila 100 GB istiyor.</span></div>
-    <div><b>4.6 sn</b><span>blink tasarımı için <code>.sv</code>'den <code>.bit</code>'e.</span></div>
-    <div><b>~4 dk</b><span>derleme, bir kez. Gerisi indirme ve kopyala-yapıştır.</span></div>
-    <div><b>5 araç</b><span>Vivado'nun tek pencerede yaptığı her iş için bir ücretsiz araç.</span></div>
-  </div>
+  <p class="mute small">Basys3'te blink örneği, 8 GB'lık bir M2'den. <code>done 1</code> çipin tasarımı kabul ettiği anlamına gelir; LED 0 yanıp sönmeye başlar. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Bütün zincir 1.76 GB disk; Vivado 50 ila 100 GB istiyor.</p>
 
   <h2>Nasıl çalışıyor?</h2>
   <p>Vivado bir CS223 labı için beş iş yapar. Burada her işi bir açık kaynak araç yapıyor, küçük bir Makefile de onları sırayla çalıştırıyor.</p>
-<pre><code>tasarimin.sv
-  |
-  |-> Icarus Verilog   -> simülasyon
-  |-> Yosys            -> sentez
-  |-> nextpnr-xilinx   -> place and route
-  |-> fasm2frames      -> konfigürasyon frame'leri
-  |-> xc7frames2bit    -> tasarimin.bit
-  `-> openFPGALoader   -> USB üzerinden kart</code></pre>
+  <table>
+    <tr><th>aşama</th><th>araç</th></tr>
+    <tr><td>simülasyon</td><td>Icarus Verilog</td></tr>
+    <tr><td>sentez</td><td>Yosys</td></tr>
+    <tr><td>place and route</td><td>nextpnr-xilinx, kaynaktan derlenir</td></tr>
+    <tr><td>bitstream</td><td>prjxray <code>fasm2frames</code> + <code>xc7frames2bit</code></td></tr>
+    <tr><td>chip database</td><td>XC7A35T için bir kez üretilir</td></tr>
+    <tr><td>karta yükleme</td><td>openFPGALoader, USB üzerinden</td></tr>
+  </table>
   <p><code>.sv</code> ve <code>.xdc</code> dosyaların Vivado'nun okuduğu dosyaların aynısı. Dersin verdiği pin dosyaları, kullandığın pinlerin başındaki <code>#</code> kaldırılınca olduğu gibi çalışıyor.</p>
 
   <h2>Neden var?</h2>
-  <p>Vivado'nun macOS sürümü yok. Açık kaynak zinciri elle kurmak altı saat sürdü; sebep, hiçbiri tek yerde yazılı olmayan altı duvar: oss-cad-suite'te nextpnr-xilinx yok, Apple clang'de OpenMP yok, Homebrew Python <code>pip install</code>'u reddediyor, prjxray bağımlılıklarını submodule'lerde saklıyor, CMake 4 prjxray'i reddediyor ve hazır chip database yok. <a href="/dewfpga/why/" hreflang="en">Altı duvar ve her birinin bedeli</a> (İngilizce).</p>
-  <p>Bir adım patladığında en hızlı yol genelde hata metni. <a href="/dewfpga/errors/" hreflang="en">Kurulumda çıkan her hata, çözümüyle</a> (İngilizce).</p>
+  <p>Vivado'nun macOS sürümü yok. Açık kaynak zinciri elle kurmak altı saat sürdü; sebep, hiçbiri tek yerde yazılı olmayan altı duvar. <a href="/dewfpga/why/" hreflang="en">Altı duvar, her birinin bedeli ve sonucun CS223'e yetip yetmediği</a> (İngilizce). Bir adım patladığında en hızlı yol hata metni: <a href="/dewfpga/errors/" hreflang="en">kurulumda çıkan her hata, çözümüyle</a> (İngilizce).</p>
 
-  <h2>Ne yapamıyor?</h2>
+  <h2 id="limits">Ne yapamıyor?</h2>
   <ul>
-    <li>Vivado IP Catalog'undan hiçbir şey: Block Design, MicroBlaze, AXI, Clocking Wizard, BRAM, VGA ve UART core'ları yok. 35 eski CS223 reposu ve 240 kaynak dosya tarandı, hiçbiri bunları kullanmıyor.</li>
+    <li>Vivado IP Catalog'undan hiçbir şey: Block Design, MicroBlaze, AXI, Clocking Wizard, BRAM, VGA ve UART core'ları yok. 35 eski CS223 öğrenci reposu, 240 kaynak dosya kontrol edildi; hiçbiri bunları kullanmıyor.</li>
     <li>Dalga formu görüntüleyici, şematik ya da çip içi debugger yok. <code>make sim</code> bir <code>.vcd</code> dosyası yazıp duruyor.</li>
     <li>Yalnızca Basys3 (XC7A35T), yalnızca Apple Silicon. Intel Mac, Linux ve başka kartlar denenmedi.</li>
     <li>Araçlar resmi değil. AMD bunları yapmıyor ve desteklemiyor.</li>
   </ul>
 
   <h2>Sırada ne var?</h2>
-  <ul class="soonlist">
-    <li><b>cli</b><i>yakında</i><span>zinciri tek satırda kur, sonra herhangi bir klasörde <code>dewfpga sim</code>, <code>bit</code>, <code>flash</code>. Makefile yok.</span></li>
-    <li><b>Basys3 simülatörü</b><i>yakında</i><span>kart tarayıcıda: switch'ler, LED'ler, yedi segment.</span></li>
-    <li><b>derleyici</b><i>yakında</i><span>hiçbir şey kurmadan SystemVerilog'dan Basys3 bitstream'ine.</span></li>
-  </ul>
+  <p>Zinciri tek satırda kuran ve herhangi bir klasördeki <code>.sv</code> dosyalarını Makefile'sız derleyen bir komut satırı aracı. Tarayıcıda bir Basys3 simülatörü: switch'ler, LED'ler, yedi segment. Tarayıcıda bir derleyici: hiçbir şey kurmadan SystemVerilog'dan bitstream'e. Hiçbiri henüz açık değil; rehber açık.</p>
 
   <h2>Kim yaptı?</h2>
-  <p>Damla Su Bilge, Bilkent CS. Buradaki her şey 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve bir Basys3 ile çalıştırıldı. Bir adım sende patlarsa terminalin son on satırını ve adım numarasını <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den gönder.</p>
+  <p>Damla Su Bilge, Bilkent CS. Buradaki her şey 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve bir Basys3 ile çalıştırıldı. Bir adım sende patlarsa terminalin son on satırı ve adım numarasıyla GitHub'da <a href="https://github.com/nosey-dewdrop/dewfpga/issues">issue</a> aç ya da <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den yaz.</p>
 </main>
 
 <footer class="wrap">
   <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">kaynak</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
-  <span><a href="/dewfpga/" lang="en" hreflang="en">english</a></span>
+  <span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">rehber PDF olarak</a></span>
 </footer>
 </body>
 </html>
