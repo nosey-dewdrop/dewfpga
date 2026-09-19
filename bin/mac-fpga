@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# mac-fpga — macOS'ta Vivado'suz Basys3.
+#   mac-fpga install        zinciri kur (~/fpga altına, yeniden çalıştırılabilir)
+#   mac-fpga check          altı parça yerinde mi
+#   mac-fpga new <dizin>    LED yakan örnek projeyi aç (blink.sv + xdc + Makefile)
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
+
+usage() { sed -n '2,6p' "$0"; exit "${1:-0}"; }
+
+cmd_check() {
+    local fail=0
+    row() {  # <ad> <yol|komut> <tür f|x|c>
+        local name=$1 target=$2 kind=$3 where=""
+        case $kind in
+            c) where=$(command -v "$target" 2>/dev/null || true) ;;
+            x) [ -x "$target" ] && where=$target ;;
+            f) [ -s "$target" ] && where=$target ;;
+        esac
+        if [ -n "$where" ]; then printf '  \033[32m✓\033[0m %-16s %s\n' "$name" "$where"
+        else printf '  \033[31m✗\033[0m %-16s YOK\n' "$name"; fail=1; fi
+    }
+    echo "mac-fpga check  (FPGA_HOME=$FPGA_HOME)"
+    row yosys           yosys                                            c
+    row iverilog        iverilog                                         c
+    row openFPGALoader  openFPGALoader                                   c
+    row nextpnr-xilinx  "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" x
+    row xc7frames2bit   "$FPGA_HOME/prjxray/build/tools/xc7frames2bit"   x
+    row fasm2frames     "$FPGA_HOME/prjxray/utils/fasm2frames.py"        f
+    row chipdb          "$FPGA_HOME/chipdb/xc7a35t.bin"                  f
+    row venv            "$FPGA_HOME/venv/bin/python"                     x
+    if [ -x "$FPGA_HOME/venv/bin/python" ]; then
+        if "$FPGA_HOME/venv/bin/python" -c "import fasm, prjxray, yaml, textx, simplejson, intervaltree" 2>/dev/null
+        then printf '  \033[32m✓\033[0m %-16s fasm prjxray pyyaml textx simplejson intervaltree\n' "python pkgs"
+        else printf '  \033[31m✗\033[0m %-16s eksik paket\n' "python pkgs"; fail=1; fi
+    fi
+    [ $fail -eq 0 ] && echo "hepsi yerinde." || { echo "eksik var -> mac-fpga install"; return 1; }
+}
+
+cmd_new() {
+    local dir=${1:-}; [ -n "$dir" ] || usage 1
+    [ -e "$dir" ] && { echo "HATA: $dir zaten var" >&2; exit 1; }
+    mkdir -p "$dir/.vscode"
+    cp "$HERE"/templates/{blink.sv,blink_tb.sv,blink.xdc,Basys3_Master.xdc,check_xdc.py,Makefile} "$dir/"
+    cp "$HERE"/templates/.vscode/tasks.json "$dir/.vscode/"
+    echo "$dir/ hazır:  cd $dir && make flash    (VS Code'da ⌘⇧B)"
+}
+
+case "${1:-}" in
+    install) shift; exec bash "$HERE/install.sh" "$@" ;;
+    check)   cmd_check ;;
+    new)     shift; cmd_new "$@" ;;
+    -h|--help|help|"") usage ;;
+    *) echo "bilinmeyen komut: $1" >&2; usage 1 ;;
+esac

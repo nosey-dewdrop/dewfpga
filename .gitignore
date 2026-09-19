@@ -1,0 +1,7 @@
+*.bit
+*.frames
+*.fasm
+*.json
+*.vcd
+*_sim
+.rabadon/
