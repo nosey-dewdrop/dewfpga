@@ -1,4 +1,4 @@
-// blink_tb.sv — does the counter run and does sw[0] gate the LED?
+// blink_tb.sv: does the counter run and does sw[0] gate the LED?
 // Waiting 50M cycles is pointless here; this bench checks the sw[0] mask
 // and that the clock advances the counter. Look at the waveform for the toggle.
 `timescale 1ns/1ps

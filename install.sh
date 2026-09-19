@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mac-fpga install — Basys3 (XC7A35T) toolchain on macOS Apple Silicon, no Vivado.
+# mac-fpga install: Basys3 (XC7A35T) toolchain on macOS Apple Silicon, no Vivado.
 #
 #   SystemVerilog -> yosys -> nextpnr-xilinx -> prjxray -> openFPGALoader -> Basys3
 #
@@ -18,7 +18,7 @@ fi
 DEVICE="xc7a35tcpg236-1"                # Basys3
 CHIPDB_NAME="xc7a35t"
 
-# Pinned sources — the LED lit with exactly these commits on 2026-09-19.
+# Pinned sources: the LED lit with exactly these commits on 2026-09-19.
 NEXTPNR_URL="https://github.com/openXC7/nextpnr-xilinx.git"
 NEXTPNR_SHA="3fd78784c7788f93f276358edf5477221cc6c179"
 PRJXRAY_URL="https://github.com/f4pga/prjxray.git"

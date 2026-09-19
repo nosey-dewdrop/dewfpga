@@ -1,7 +1,7 @@
-## Basys3 — pins used by the blink project
+## Basys3: pins used by the blink project
 ## Source: Digilent Basys-3-Master.xdc (full file next to this one: Basys3_Master.xdc)
 
-## Clock — 100 MHz
+## Clock: 100 MHz
 set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
 create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]
 

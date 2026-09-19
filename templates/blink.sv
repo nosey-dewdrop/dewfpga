@@ -1,11 +1,11 @@
-// blink.sv — light an LED on the Basys3
+// blink.sv: light an LED on the Basys3
 //
 // sw[0]  : enable
 // led[0] : blinks at ~1 Hz while sw[0] is on
-// led[15]: mirrors sw[0] — shows the board is alive instantly
+// led[15]: mirrors sw[0]: shows the board is alive instantly
 
 module blink (
-    input  logic        clk,      // W5 — 100 MHz on-board oscillator
+    input  logic        clk,      // W5: 100 MHz on-board oscillator
     input  logic [15:0] sw,
     output logic [15:0] led
 );

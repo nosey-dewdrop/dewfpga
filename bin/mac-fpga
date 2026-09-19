@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# mac-fpga — Basys3 on macOS without Vivado.
+# mac-fpga: Basys3 on macOS without Vivado.
 #   mac-fpga install                 install the toolchain into ~/fpga (safe to re-run)
 #   mac-fpga check                   verify every piece is in place
 #   mac-fpga sim | bit | flash | clean [top]
