@@ -35,7 +35,9 @@ jobs:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: { pages: write, id-token: write }
-    environment: { name: github-pages, url: ${{ steps.deploy.outputs.page_url }} }
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - id: deploy
         uses: actions/deploy-pages@v4
