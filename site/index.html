@@ -55,7 +55,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking. 4.6 seconds from <code>.sv</code> to <code>.bit</code>. The whole chain takes 1.76 GB of disk; Vivado asks for 50 to 100 GB.</p>
 
   <h2>How does it work?</h2>
-  <p>Vivado does five jobs for a CS223 lab. One open-source tool does each job here, and a small Makefile runs them in order.</p>
+  <p>Vivado does five jobs for a CS223 lab. One open-source tool does each job here, plus a chip database generated once, and a small Makefile runs them in order.</p>
   <table>
     <tr><th>stage</th><th>tool</th></tr>
     <tr><td>simulation</td><td>Icarus Verilog</td></tr>
@@ -79,7 +79,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   </ul>
 
   <h2>What is coming?</h2>
-  <p>A command-line tool that installs the chain in one line and builds any folder of <code>.sv</code> files without a Makefile. A Basys3 simulator in the browser, with the switches, LEDs and seven-segment display. A compiler in the browser, SystemVerilog to a bitstream without installing anything. None of these are public yet; the guide is.</p>
+  <p>A command-line tool that installs the chain in one line and builds any folder of <code>.sv</code> files without a Makefile. A Basys3 simulator in the browser, with the switches, LEDs and seven-segment display. A compiler in the browser, SystemVerilog to a bitstream without installing anything. Not public yet.</p>
 
   <h2>Who made this?</h2>
   <p>Damla Su Bilge, Bilkent CS. Everything here was run on 19 September 2026 on an M2 with 8 GB of RAM, macOS 15 and a Basys3. If a step fails for you, open an <a href="https://github.com/nosey-dewdrop/dewfpga/issues">issue</a> or write on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a> with the last ten lines of the terminal and the step number.</p>

@@ -38,7 +38,7 @@
 
   <h2>Is it enough for CS223?</h2>
   <p>Real lab code from old student repos went through: an FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer with a carry chain, and the course's seven-segment module. All four together synthesize to 136 LUTs and 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, and the bitstream is ready in 4.5 seconds. <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays and <code>interface</code> with <code>modport</code> all synthesized with zero errors.</p>
-  <p>Nothing from Vivado's IP Catalog is available, and that is the real limit. 35 old CS223 student repos with 240 source files were checked for it; none of them use any of it. The course has you write clock dividers and memory by hand, which is the part this chain handles. The honest list of what is untested is in the guide: <a href="/dewfpga/docs/#14-what-can-it-actually-not-do">what it cannot do</a> and <a href="/dewfpga/docs/#15-what-should-you-be-concerned-about">what you should be concerned about</a>.</p>
+  <p>Nothing from Vivado's IP Catalog is available, and that is the real limit. 35 old CS223 student repos with 240 source files were checked for it; none of them use any of it. The course has you write clock dividers and memory by hand, which is the part this chain handles. What is untested is in the guide: <a href="/dewfpga/docs/#14-what-can-it-actually-not-do">what it cannot do</a> and <a href="/dewfpga/docs/#15-what-should-you-be-concerned-about">what you should be concerned about</a>.</p>
 
   <h2>What does it cost, compared with Vivado?</h2>
   <table>
@@ -47,13 +47,13 @@
     <tr><td>runs on Apple Silicon</td><td>natively</td><td>no macOS build; a Windows or Linux VM</td></tr>
     <tr><td>blink to bitstream</td><td>4.6 s on an M2, 8 GB</td><td>not measured here</td></tr>
     <tr><td>IP Catalog, Block Design, ILA</td><td>none</td><td>yes</td></tr>
-    <tr><td>waveforms, schematic view</td><td>none yet</td><td>yes</td></tr>
+    <tr><td>waveforms, schematic view</td><td>none</td><td>yes</td></tr>
     <tr><td>official support</td><td>none, these are unofficial tools</td><td>AMD</td></tr>
   </table>
-  <p class="mute small">The Vivado disk figure is AMD's own requirement. Nothing else about Vivado was measured for this page.</p>
+  <p class="mute small">The Vivado disk figure is AMD's own requirement; nothing else about Vivado was measured here.</p>
 
   <h2>What were the six walls?</h2>
-  <p>CS223 is Bilkent's digital design course: write SystemVerilog, simulate, synthesize, load it onto a Basys3. On a Mac with an M1 or later there is no Vivado for that loop. The five open-source tools that cover it all run on macOS; getting them to work together took six hours, and the time went into these.</p>
+  <p>CS223 is Bilkent's digital design course: write SystemVerilog, simulate, synthesize, load it onto a Basys3. The five open-source tools that cover that loop all run on macOS; getting them to work together took six hours, and the time went into these.</p>
   <ol class="walls">
     <li id="oss-cad-suite"><a href="/dewfpga/errors/oss-cad-suite-no-nextpnr-xilinx/"><b>oss-cad-suite does not ship nextpnr-xilinx.</b></a> It is YosysHQ's ready-made bundle with a macOS build, and it looks like the obvious first try. It has nextpnr for ice40, ecp5, nexus and Gowin chips. 497 MB downloaded to learn that Xilinx is missing. nextpnr-xilinx has to be built from source.</li>
     <li id="pep-668"><a href="/dewfpga/errors/externally-managed-environment/"><b>Homebrew's Python refuses <code>pip install</code>.</b></a> PEP 668 marks it as externally managed. Two steps of the chain are Python scripts with a few packages, so a venv is required.</li>
@@ -63,7 +63,7 @@
     <li id="cmake-4"><a href="/dewfpga/errors/cmake-policy-version-minimum/"><b>CMake 4 rejects prjxray.</b></a> The project is written for an older CMake and the current one refuses to configure it without <code>-DCMAKE_POLICY_VERSION_MINIMUM=3.5</code>.</li>
   </ol>
 
-  <h2>What is dewfpga, then?</h2>
+  <h2>What is dewfpga?</h2>
   <p>Right now, the <a href="/dewfpga/docs/">guide</a>: the six walls removed, in 18 steps that a first-year student can paste. Next, a command-line tool that installs the chain in one line and builds any folder of <code>.sv</code> files without a Makefile, then a Basys3 simulator and a compiler in the browser.</p>
 </main>
 

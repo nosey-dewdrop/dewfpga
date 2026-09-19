@@ -50,7 +50,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <p class="mute small">Basys3'te blink örneği, 8 GB'lık bir M2'den. <code>done 1</code> çipin tasarımı kabul ettiği anlamına gelir; LED 0 yanıp sönmeye başlar. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Bütün zincir 1.76 GB disk; Vivado 50 ila 100 GB istiyor.</p>
 
   <h2>Nasıl çalışıyor?</h2>
-  <p>Vivado bir CS223 labı için beş iş yapar. Burada her işi bir açık kaynak araç yapıyor, küçük bir Makefile de onları sırayla çalıştırıyor.</p>
+  <p>Vivado bir CS223 labı için beş iş yapar. Burada her işi bir açık kaynak araç yapıyor, bir kez üretilen bir chip database ekleniyor, küçük bir Makefile de onları sırayla çalıştırıyor.</p>
   <table>
     <tr><th>aşama</th><th>araç</th></tr>
     <tr><td>simülasyon</td><td>Icarus Verilog</td></tr>
@@ -74,7 +74,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   </ul>
 
   <h2>Sırada ne var?</h2>
-  <p>Zinciri tek satırda kuran ve herhangi bir klasördeki <code>.sv</code> dosyalarını Makefile'sız derleyen bir komut satırı aracı. Tarayıcıda bir Basys3 simülatörü: switch'ler, LED'ler, yedi segment. Tarayıcıda bir derleyici: hiçbir şey kurmadan SystemVerilog'dan bitstream'e. Hiçbiri henüz açık değil; rehber açık.</p>
+  <p>Zinciri tek satırda kuran ve herhangi bir klasördeki <code>.sv</code> dosyalarını Makefile'sız derleyen bir komut satırı aracı. Tarayıcıda bir Basys3 simülatörü: switch'ler, LED'ler, yedi segment. Tarayıcıda bir derleyici: hiçbir şey kurmadan SystemVerilog'dan bitstream'e. Henüz açık değil.</p>
 
   <h2>Kim yaptı?</h2>
   <p>Damla Su Bilge, Bilkent CS. Buradaki her şey 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve bir Basys3 ile çalıştırıldı. Bir adım sende patlarsa terminalin son on satırı ve adım numarasıyla GitHub'da <a href="https://github.com/nosey-dewdrop/dewfpga/issues">issue</a> aç ya da <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den yaz.</p>

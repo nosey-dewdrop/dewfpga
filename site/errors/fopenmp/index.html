@@ -43,7 +43,7 @@
   -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
 
 ninja -C build -j3</code></pre>
-<p>OpenMP only makes one part of placement run in parallel. At CS223 design sizes you will not notice it missing. <code>-j3</code> keeps an 8 GB Mac from swapping; with 16 GB or more you can raise it.</p>
+<p>OpenMP only parallelises part of the placer; the blink build in the guide takes 4.6 s without it. <code>-j3</code> keeps an 8 GB Mac from swapping; with 16 GB or more you can raise it.</p>
 <h2>What should you see?</h2>
 <pre><code>~/fpga/nextpnr-xilinx/build/nextpnr-xilinx --version
 # "nextpnr-xilinx" -- Next Generation Place and Route (Version 0.9.6)</code></pre>
