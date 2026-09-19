@@ -8,17 +8,16 @@ copy a command, paste it into the terminal and press Enter, you can finish this.
 Every step tells you what you are doing, why you need it and what you should see
 when it worked.
 
-The two compiles take about four minutes in total on an M2 while you wait. The
-rest is downloads and copy and paste.
+The compiling takes roughly 4 minutes in total while you wait. The rest is
+downloads and copy and paste.
 
-**The short way.** Everything below is also packed into one command:
+If you only want it working, one command does all of it:
 
 ```bash
 curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash
 ```
 
-It runs the same steps and takes about four minutes. This guide is the long way,
-for when you want to see what each step does or when something needs fixing.
+This guide is the same steps by hand, so you see what each one does.
 
 I only tested this on Apple Silicon, which means M1 and later. I have not tried it
 on an Intel Mac.
@@ -55,8 +54,7 @@ come from a project called prjxray, and together they write the `.bit` file. The
 last tool sends that file to the Basys3 over the USB cable.
 
 The whole setup takes 1.76 GB of disk. Most of it is nextpnr at 1.1 GB and the
-chip database at 344 MB, of which 256 MB is a text file you can delete after step 6.
-Vivado asks for 50 to 100 GB.
+chip database at 344 MB. Vivado asks for 50 to 100 GB.
 
 ---
 
@@ -86,9 +84,9 @@ tool and it downloads a ready-made copy.
 ```
 
 It asks for your Mac password. You will not see the letters while you type, which
-is normal. When it finishes it prints a few lines under "Next steps". Copy those
-lines, paste them into the terminal and press Enter. They tell your terminal where
-`brew` lives, and without them the next command answers `command not found`.
+is normal. When it finishes it prints a few lines under "Next steps". Copy those lines, paste
+them into the terminal and press Enter. They tell your terminal where `brew` lives,
+and without them the next command answers `command not found`.
 
 Check that it works.
 
@@ -98,7 +96,7 @@ brew --version
 
 You should see a version number.
 
-**A code editor.** You will edit a few text files in step 8. I use VS Code, which
+**A code editor.** You will create a few text files in step 8. I use VS Code, which
 you download from code.visualstudio.com. Do not use TextEdit for this. It saves
 rich text by default, and the tools cannot read that.
 
@@ -118,8 +116,7 @@ brew install yosys openfpgaloader icarus-verilog \
 The first three are the tools from the diagram. `cmake` and `ninja` are the
 programs that run a compile job. `eigen` and `pkg-config` are pieces that
 nextpnr's code expects to find on your machine, and `boost`, which it also needs,
-arrives on its own as a dependency of openFPGALoader. `python` runs two of the
-steps in the chain.
+comes along with openfpgaloader. `python` runs two of the steps in the chain.
 
 This download is a few hundred MB, so give it some minutes.
 
@@ -180,8 +177,7 @@ cd nextpnr-xilinx
 ```
 
 Then you compile it. The `cmake` command prepares the job and the `ninja` command
-does it. The two names at the end of the `ninja` line are the only two programs
-you need, so nothing else gets built.
+does it.
 
 ```bash
 cmake -B build -G Ninja \
@@ -193,9 +189,8 @@ cmake -B build -G Ninja \
 ninja -C build -j3 nextpnr-xilinx bbasm
 ```
 
-The `ninja` step is 42 files and took 77 seconds on my M2. You will see a counter
-like `[17/42]` going up, and your Mac may get warm. Lines that say `warning` are
-normal, only `error` matters.
+The `ninja` step takes about 80 seconds. You will see a counter like `[17/42]`
+going up, and your Mac may get warm.
 
 Two parts of that command matter.
 
@@ -237,10 +232,9 @@ cd ~/fpga/nextpnr-xilinx
 build/bbasm -l ~/fpga/chipdb/xc7a35t.bba ~/fpga/chipdb/xc7a35t.bin
 ```
 
-The two commands take about a minute together and use up to 900 MB of memory
-while they run. The first writes a 256 MB text file, the second packs it into an
-89 MB binary file, which is the one nextpnr reads. Once the `.bin` exists you can
-delete the `.bba`.
+The first command takes about 35 seconds and writes a 256 MB text file. The second
+takes 3 seconds and packs it into an 89 MB binary file, which is the one nextpnr
+reads.
 
 `--xray` and `--metadata` both point inside the folder you cloned in step 5. The
 raw chip data came along with `--recursive`, so there is nothing extra to
@@ -266,8 +260,6 @@ cd prjxray
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 cmake --build build --target xc7frames2bit -j3
 ```
-
-The compile took just under two minutes on my M2.
 
 If you open prjxray's own README, it starts by telling you to install Vivado
 2017.2. Ignore that. It is for people who map a chip from zero, and our chip is
@@ -301,19 +293,17 @@ mkdir -p ~/cs223/blink
 cd ~/cs223/blink
 ```
 
-The folder will hold five files. This downloads all of them, plus the VS Code
-task from step 11:
+Then open VS Code, choose File and Open Folder, and pick `cs223/blink` inside your
+home folder. The folder will hold five files. For each one below you make a new
+file in VS Code, give it the exact name shown, paste the content and save.
+
+If you would rather not paste, the same five files are on the site and this
+downloads them into the folder:
 
 ```bash
 B=https://nosey-dewdrop.github.io/mac-fpga/templates
 curl -fsSLO $B/Makefile -O $B/check_xdc.py -O $B/blink.sv -O $B/blink_tb.sv -O $B/blink.xdc
-mkdir -p .vscode && curl -fsSL $B/.vscode/tasks.json -o .vscode/tasks.json
 ```
-
-Then open VS Code, choose File and Open Folder, and pick `cs223/blink` inside your
-home folder. Below is what each file is and what is inside it, so you know what
-you downloaded. You can also type them in yourself, with one trap explained under
-the Makefile.
 
 The example is a blinking LED, which is the smallest design that proves the whole
 chain works.
@@ -323,7 +313,7 @@ LED 15 follows switch 0 directly.
 
 ```systemverilog
 module blink (
-    input  logic        clk,      // W5 — 100 MHz on-board oscillator
+    input  logic        clk,
     input  logic [15:0] sw,
     output logic [15:0] led
 );
@@ -341,7 +331,11 @@ module blink (
         end
     end
 
-    assign led = {sw[0], 14'b0, blink_state & sw[0]};
+    always_comb begin
+        led     = '0;
+        led[0]  = blink_state & sw[0];
+        led[15] = sw[0];
+    end
 endmodule
 ```
 
@@ -358,42 +352,40 @@ module blink_tb;
 
     blink dut (.clk(clk), .sw(sw), .led(led));
 
-    always #5 clk = ~clk;   // 100 MHz
+    always #5 clk = ~clk;
 
     initial begin
         $dumpfile("blink.vcd");
         $dumpvars(0, blink_tb);
 
-        sw[0] = 0;
-        #100;
-        if (led[15] !== 1'b0) $error("led[15] must be 0 while sw[0]=0");
-        if (led[0]  !== 1'b0) $error("led[0] must be 0 while sw[0]=0");
+        sw[0] = 0; #100;
+        if (led[15] !== 1'b0) $error("sw[0]=0 should give led[15]=0");
 
-        sw[0] = 1;
-        #100;
-        if (led[15] !== 1'b1) $error("led[15] must be 1 while sw[0]=1");
+        sw[0] = 1; #100;
+        if (led[15] !== 1'b1) $error("sw[0]=1 should give led[15]=1");
 
-        $display("TB: basic checks passed (see the waveform for the toggle)");
+        $display("TB passed");
         $finish;
     end
 endmodule
 ```
 
 **`blink.xdc`** is the pin file. It says which port of your design goes to which
-physical pin on the board. It is the same file you would use in Vivado. The
-downloaded one already has the 34 lines this design needs. For your own designs
-you start from Digilent's full file:
+physical pin on the board. It is the same file you would use in Vivado, and you
+download it from Digilent.
 
 ```bash
-curl -sL -o Basys3_Master.xdc \
+curl -sL -o blink.xdc \
   https://raw.githubusercontent.com/Digilent/digilent-xdc/master/Basys-3-Master.xdc
 ```
 
-Every pin line in it starts with `#`, which means it is switched off. You copy the
-lines your design uses into your own `.xdc` and remove the `#`. For `blink.sv`
-that is the two lines that end in `[get_ports clk]`, the sixteen lines with `sw[0]`
-to `sw[15]` and the sixteen lines with `led[0]` to `led[15]`. The
-`PACKAGE_PIN ... IOSTANDARD` syntax works in nextpnr as it is.
+Run that in the terminal and the file appears in your folder. Every pin line in it
+starts with `#`, which means it is switched off. Open the file in VS Code and
+remove the `#` from the lines your design uses. For `blink.sv` that means the two
+lines that end in `[get_ports clk]`, the sixteen lines with `sw[0]` to `sw[15]` and
+the sixteen lines with `led[0]` to `led[15]`. That is 34 lines and it is the whole
+edit. The `PACKAGE_PIN ... IOSTANDARD`
+syntax works in nextpnr as it is.
 
 **`check_xdc.py`** compares your design's ports with the pin file before the build
 runs. You need it because nextpnr's own error for a pin mistake names the wrong
@@ -401,53 +393,48 @@ port, and you end up searching in the wrong place.
 
 ```python
 #!/usr/bin/env python3
-"""Compare the design's ports with the XDC; fail with a readable message BEFORE place-and-route.
-Usage: check_xdc.py <top.json> <top.xdc>"""
 import json, re, sys
-
-if len(sys.argv) != 3:
-    sys.exit("usage: check_xdc.py <json> <xdc>")
 
 jf, xf = sys.argv[1], sys.argv[2]
 
-# 1) ports in the design (from yosys json)
 design = json.load(open(jf))
 top = None
 for name, mod in design["modules"].items():
     if mod.get("attributes", {}).get("top"):
         top = (name, mod); break
 if top is None:
-    name = list(design["modules"])[0]; top = (name, design["modules"][name])
+    name = list(design["modules"])[0]
+    top = (name, design["modules"][name])
 tname, tmod = top
 
 ports = set()
-for p, info in tmod.get("ports", {}).items():
+for pn, info in tmod.get("ports", {}).items():
     n = len(info.get("bits", []))
-    if n == 1: ports.add(p)
-    else: ports.update(f"{p}[{i}]" for i in range(n))
+    if n == 1:
+        ports.add(pn)
+    else:
+        ports.update(f"{pn}[{i}]" for i in range(n))
 
-# 2) ports mentioned in the XDC
-xdc_ports = set()
+xdc = set()
 for line in open(xf):
     line = line.split("#")[0]
-    for m in re.finditer(r"get_ports\s*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", line):
-        xdc_ports.add(m.group(1))
+    for m in re.finditer(
+            r"get_ports\s*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", line):
+        xdc.add(m.group(1))
 
-missing = sorted(ports - xdc_ports)   # in the code, not in the XDC
-extra   = sorted(xdc_ports - ports)   # in the XDC, not in the code
+missing = sorted(ports - xdc)
+extra   = sorted(xdc - ports)
 
 if missing:
-    print(f"ERROR: these ports have NO pin in the XDC ({tname}):")
-    for p in missing: print(f"   - {p}")
-    print("   -> copy the matching lines from Basys3_Master.xdc.")
+    print(f"No pin assignment in the xdc for ({tname}):")
+    for x in missing: print(f"   - {x}")
 if extra:
-    print("ERROR: port in the XDC but NOT in the code (typo?):")
-    for p in extra: print(f"   - {p}")
-    print("   -> make the XDC name match the module port name.")
+    print("In the xdc but not in the design, probably a typo:")
+    for x in extra: print(f"   - {x}")
 
 if missing or extra:
     sys.exit(1)
-print(f"XDC check OK: {len(ports)} ports, all mapped.")
+print(f"xdc ok: {len(ports)} ports, all matched.")
 ```
 
 **`Makefile`** is the file that connects the five tools. Each block in it is one
@@ -459,25 +446,28 @@ TOP  := blink
 SRCS := blink.sv
 XDC  := blink.xdc
 
-PART    := xc7a35tcpg236-1
-FPGA    ?= $(or $(FPGA_HOME),$(HOME)/fpga)
-NEXTPNR := $(FPGA)/nextpnr-xilinx/build/nextpnr-xilinx
-CHIPDB  := $(FPGA)/chipdb/xc7a35t.bin
-XRAYDB  := $(FPGA)/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
-PY      := $(FPGA)/venv/bin/python
-F2F     := $(FPGA)/prjxray/utils/fasm2frames.py
-F2B     := $(FPGA)/prjxray/build/tools/xc7frames2bit
-CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
+PART   := xc7a35tcpg236-1
+FPGA   := $(HOME)/fpga
+NEXTPNR:= $(FPGA)/nextpnr-xilinx/build/nextpnr-xilinx
+CHIPDB := $(FPGA)/chipdb/xc7a35t.bin
+XRAYDB := $(FPGA)/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
+PY     := $(FPGA)/venv/bin/python
+F2F    := $(FPGA)/prjxray/utils/fasm2frames.py
+F2B    := $(FPGA)/prjxray/build/tools/xc7frames2bit
+CHECKER:= ./check_xdc.py
 
 .PHONY: all sim synth bit flash clean check
 
 all: bit
 
 check:
-	@for t in yosys iverilog openFPGALoader; do printf "%-16s " $$t; command -v $$t || echo "-MISSING-"; done
-	@printf "%-16s " nextpnr-xilinx; [ -x "$(NEXTPNR)" ] && echo "$(NEXTPNR)" || echo "-MISSING-"
-	@printf "%-16s " xc7frames2bit;  [ -x "$(F2B)" ]     && echo "$(F2B)"     || echo "-MISSING-"
-	@printf "%-16s " chipdb;         [ -s "$(CHIPDB)" ]  && echo "$(CHIPDB)"  || echo "-MISSING-"
+	@for t in yosys iverilog openFPGALoader; do \
+	  printf "%-16s " $$t; command -v $$t || echo "MISSING"; done
+	@printf "%-16s " nextpnr; [ -x $(NEXTPNR) ] && echo ok || echo MISSING
+	@printf "%-16s " frames2bit; [ -x $(F2B) ] && echo ok || echo MISSING
+	@printf "%-16s " chipdb; [ -f $(CHIPDB) ] && echo ok || echo MISSING
+	@printf "%-16s " venv; [ -x $(PY) ] && echo ok || echo MISSING
+	@printf "%-16s " fasm2frames; [ -f $(F2F) ] && echo ok || echo MISSING
 
 sim: $(TOP)_sim
 	./$(TOP)_sim
@@ -487,34 +477,35 @@ $(TOP)_sim: $(SRCS) $(TOP)_tb.sv
 
 synth: $(TOP).json
 $(TOP).json: $(SRCS)
-	yosys -q -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@" $(SRCS)
+	yosys -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 \
+	          -top $(TOP); write_json $@" $(SRCS)
 
 $(TOP).fasm: $(TOP).json $(XDC)
-	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
-	"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
+	@python3 $(CHECKER) $(TOP).json $(XDC)
+	$(NEXTPNR) --chipdb $(CHIPDB) --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           --write $(TOP)_routed.json --fasm $@
 
 $(TOP).frames: $(TOP).fasm
-	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
+	$(PY) $(F2F) --part $(PART) --db-root $(XRAYDB) $< > $@
 
 bit: $(TOP).bit
 $(TOP).bit: $(TOP).frames
-	"$(F2B)" --part_file "$(XRAYDB)/$(PART)/part.yaml" --part_name $(PART) \
+	$(F2B) --part_file $(XRAYDB)/$(PART)/part.yaml --part_name $(PART) \
 	       --frm_file $< --output_file $@
 	@ls -lh $@
 
 flash: $(TOP).bit
-	@openFPGALoader -b basys3 $(TOP).bit || { echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?"; exit 1; }
+	openFPGALoader -b basys3 $(TOP).bit
 
 clean:
 	rm -f $(TOP)_sim $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).fasm $(TOP).frames $(TOP).bit
 ```
 
-There is one trap if you type this in instead of downloading it. The indented
-lines in a Makefile must start with a real Tab character. A PDF cannot hold tabs,
-and some web pages turn them into spaces. If you copied the file from a PDF, `make`
-will stop with `missing separator`. This command puts the tabs back.
+There is one trap when you copy this. The indented lines in a Makefile must start
+with a real Tab character. A PDF cannot hold tabs, and some web pages turn them into
+spaces. If you copied the file from a PDF, `make` will stop with `missing
+separator`. This command puts the tabs back.
 
 ```bash
 perl -pi -e 's/^ +/\t/' Makefile
@@ -524,8 +515,6 @@ Run it once inside your project folder, and the error is gone.
 
 `-g2012` tells Icarus to read the file as SystemVerilog. `--seed 1` makes builds
 repeatable, because without it nextpnr picks a random layout on every run.
-`PYTHONWARNINGS=ignore` hides a harmless notice from the fasm library about a
-faster parser it could not build.
 
 ---
 
@@ -541,27 +530,29 @@ make bit       # .sv -> .bit          (~4 seconds)
 make flash     # load onto the board
 ```
 
-`make check` prints one line per tool. Every line should end with a path. If one
-says `-MISSING-`, go back to the step that installs it.
+`make check` prints one line per tool. Every line should end with a path or with
+`ok`. If one says `MISSING`, go back to the step that installs it.
 
-`make sim` prints three lines, and the one you care about is `TB: basic checks passed`.
+`make sim` prints three lines, and the one you care about is `TB passed`.
 
 ```
 VCD info: dumpfile blink.vcd opened for output.
-TB: basic checks passed (see the waveform for the toggle)
-blink_tb.sv:29: $finish called at 200000 (1ps)
+TB passed
+blink_tb.sv:23: $finish called at 200000 (1ps)
 ```
 
 The last line only says the test reached its end. If a check fails you see a line
 with `ERROR` and the message from the testbench instead. The run also writes
-`blink.vcd`, which holds the value of every signal over time. A waveform viewer
-can open that file. I have not set one up yet, so this guide stops at the file.
+`blink.vcd`, which holds the value of every signal over time. A waveform viewer can open that file. I have not set one
+up yet, so this guide stops at the file.
 
 `make bit` runs synthesis, the pin check, place and route and the two prjxray
-tools. A lot of text scrolls by. Near the start you should see `XDC check OK: 33
-ports, all mapped.`, which is the pin check passing. If it stops there instead, it
-lists the port names you forgot or mistyped. The whole thing takes about four
-seconds and ends by listing `blink.bit` with its size.
+tools. A lot of text scrolls by. In the middle you should see `xdc ok: 33 ports,
+all matched.`, which is the pin check passing. If it stops there instead, it lists
+the port names you forgot to uncomment or mistyped. You will also see a warning
+about the Antlr parser. It is normal. It means a slower Python parser gets used,
+and at lab sizes you will not feel it. The whole thing takes about four seconds
+and ends by listing `blink.bit` with its size.
 
 `make flash` sends the file to the board, and a good run ends like this.
 
@@ -615,18 +606,36 @@ code --install-extension mshr-h.veriloghdl
 If the terminal says `code` is not found, open VS Code, press Cmd Shift P and run
 "Shell Command: Install 'code' command in PATH".
 
-The `.vscode/tasks.json` you downloaded in step 8 defines three tasks: flash,
-simulate and build only. Flash is the default build task, so Cmd Shift B builds
-the open design and loads it onto the board. If you prefer one key, bind it in
-`keybindings.json` (Cmd Shift P, "Open Keyboard Shortcuts (JSON)"):
+To flash with one key, put this in `.vscode/tasks.json` inside your project.
+
+```json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FPGA: flash",
+      "type": "shell",
+      "command": "make flash",
+      "options": { "cwd": "${fileDirname}" },
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "clear": true },
+      "problemMatcher": []
+    }
+  ]
+}
+```
+
+Then bind a key in `keybindings.json`.
 
 ```json
 [
   { "key": "cmd+j",
     "command": "workbench.action.tasks.runTask",
-    "args": "FPGA: flash (build + program)" }
+    "args": "FPGA: flash" }
 ]
 ```
+
+Now Cmd J builds the open design and loads it onto the board.
 
 ---
 
@@ -663,10 +672,9 @@ I used real CS223 code from old student repos on GitHub.
 | `debounce.sv` | 25-bit counter plus FSM | 40 cells, CARRY4 chain |
 | `SevSeg_4digit.sv` | Seven-segment multiplexing | 46 cells, after the fix in step 12 |
 
-All four in one design come out at 136 LUTs and 48 flip-flops. nextpnr reports
-timing twice, after placement and again after routing; the final report says
-209.60 MHz against our 100 MHz clock, so the check passes with room to spare. The
-bitstream is ready in about four seconds.
+All four in one design come out at 136 LUTs and 48 flip-flops. The timing check
+passes at 209.60 MHz against our 100 MHz clock, and the bitstream is ready in 4.5
+seconds.
 
 The SystemVerilog we use in labs went through with zero errors. That covers
 `parameter`, `generate`, `struct packed`, `$clog2`, `unique case`, packed arrays
@@ -711,18 +719,13 @@ list up front.
 
 **Builds differ from run to run by default.** nextpnr picks a random seed. With
 `--seed 1` the `.fasm` and `.frames` files come out identical byte for byte. The
-`.bit` file still differs in a few bytes near the start, the timestamp that
-`xc7frames2bit` writes into the header. That is a standard Xilinx field and it
-does not change the circuit.
+`.bit` file still differs in one place, a timestamp in the header around byte 95.
+That is a standard Xilinx field and it does not change the circuit.
 
 **nextpnr's pin errors name the wrong port.** Type `led` as `ledd` in the pin file
 and it says `ERROR: port led[0] of type PAD has no IOSTANDARD property`. That is a
 different port than the broken one. `check_xdc.py` runs before nextpnr and names
 the real mistake.
-
-**Homebrew's Python moves.** When brew upgrades Python, the venv from step 4 stops
-working with `No such file or directory` on its own `python`. Delete `~/fpga/venv`
-and repeat step 4 and the `pip install -e .` line of step 7.
 
 ---
 
@@ -730,20 +733,15 @@ and repeat step 4 and the `pip install -e .` line of step 7.
 
 ```
 Yosys              0.69+post (git 143eb14f)
-nextpnr-xilinx     0.9.6      (openXC7, commit 3fd7878)
+nextpnr-xilinx     0.9.6      (openXC7)
 openFPGALoader     1.1.1
 Icarus Verilog     13.0 (stable)
-prjxray            commit c9f02d8
 prjxray-db         0.9.1-30-g1768fb3 (artix7)
 
 Board              Digilent Basys3
 Chip               Artix-7 XC7A35T-1CPG236C
 Machine            Apple M2, 8 GB RAM, macOS 15 (Darwin 24.2.0)
 ```
-
-Homebrew gives you whatever version is current on the day you install. On
-GitHub's own macOS machines the same steps ran with Yosys 0.68 and produced a
-working bitstream, so a nearby version is fine.
 
 ---
 
@@ -757,5 +755,3 @@ working bitstream, so a nearby version is fine.
   environment.
 - I have not opened a waveform yet. `make sim` writes the `.vcd` file and the guide
   stops there.
-- Intel Macs. Nothing here is specific to Apple Silicon as far as I can tell, but I
-  had no Intel Mac to try it on.
