@@ -1,4 +1,4 @@
-/* sprinkle trail (purple only) + copy buttons. no other motion on the site. */
+/* sprinkle trail + copy buttons. no other motion on the site. */
 (function(){
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   var G=["*","+","·"], last=0;
@@ -6,8 +6,8 @@
     var c=document.createElement("span"); c.className="cf";
     c.textContent=G[Math.floor(Math.random()*G.length)];
     c.style.left=x+"px"; c.style.top=y+"px";
-    var C=["--pink","--purple","--green","--yellow","--blue"];
-    c.style.color="var("+C[Math.floor(Math.random()*C.length)]+")";
+    c.style.color="var(--mute)";
+    c.style.opacity=(0.35+Math.random()*0.45).toFixed(2);
     c.style.fontSize=(12+Math.random()*8|0)+"px";
     document.body.appendChild(c); setTimeout(function(){c.remove()},1000);
   }
