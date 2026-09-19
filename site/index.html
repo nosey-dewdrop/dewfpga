@@ -1,75 +1,403 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>mac-fpga — Basys3 on a Mac, no Vivado</title>
-<meta name="description" content="Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine. One install command.">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>cs223 without vivado · nosey-dewdrop</title>
+<meta name="description" content="Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🦋</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
 <style>
-  :root { color-scheme: light dark; --fg:#111; --bg:#fff; --mute:#666; --line:#ddd; --code:#f4f4f4; }
-  @media (prefers-color-scheme: dark) { :root { --fg:#eee; --bg:#111; --mute:#999; --line:#333; --code:#1c1c1c; } }
-  body { margin:0; font:16px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; color:var(--fg); background:var(--bg); }
-  main { max-width:680px; margin:0 auto; padding:56px 20px 80px; }
-  h1 { font-size:2rem; margin:0 0 .25rem; letter-spacing:-.02em; }
-  .sub { color:var(--mute); margin:0 0 2rem; }
-  h2 { font-size:1.15rem; margin:2.5rem 0 .6rem; }
-  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px; overflow-x:auto; font:14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
-  code { font:inherit; }
-  p code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
-  table { border-collapse:collapse; width:100%; font-size:.95rem; }
-  td, th { text-align:left; padding:6px 8px 6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
-  ol li { margin:.4rem 0; }
-  .note { color:var(--mute); font-size:.92rem; }
-  a { color:inherit; }
-  footer { margin-top:3rem; color:var(--mute); font-size:.9rem; }
+/* ---------- palettes: body.pal-a (gece) / pal-b (krem) / pal-c (menekse) ---------- */
+body.pal-a{
+  --bg:#171221; --bg-soft:#1f1930; --ink:#efe8f7; --ink-dim:#9d92b5;
+  --pink:#ff8fb3; --purple:#c9a6ff; --green:#b8e39a; --yellow:#ffd479; --blue:#8fc7ff;
+}
+body.pal-b{
+  --bg:#ffffff; --bg-soft:#f5f5f5; --ink:#141414; --ink-dim:#6b6b6b;
+  --pink:#c23a70; --purple:#5f35a8; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e;
+}
+body.pal-c{
+  --bg:#101623; --bg-soft:#182032; --ink:#e6eef6; --ink-dim:#8b98ad;
+  --pink:#ffa3c2; --purple:#b0b6ff; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2;
+}
+/* ---------- base: one type scale (16 / 20 / 34), one spacing rhythm (28px), zero borders ---------- */
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--ink);
+  font-size:16px; line-height:1.75; overflow-x:hidden; cursor:default;
+  transition:background .35s,color .35s;
+}
+a{color:var(--pink);text-decoration:underline dotted;display:inline-block;transition:transform .15s}
+a:hover{text-decoration:underline;transform:translateY(-3px)}
+header.site nav,#pal,footer{font-size:14px}
+main{max-width:1060px;margin:0 auto;padding:28px 28px 0}
+h1{font-size:34px;line-height:1.35;font-weight:400}
+h2{font-size:20px;font-weight:400}
+.dim{color:var(--ink-dim)}
+::selection{background:var(--pink);color:var(--bg)}
+
+/* star field */
+#stars{position:fixed;inset:0;pointer-events:none;z-index:0}
+.star{position:absolute;font-size:11px;color:var(--ink-dim);opacity:.32;animation:tw 3.4s ease-in-out infinite}
+@keyframes tw{0%,100%{opacity:.15}50%{opacity:.65}}
+main,header.site,#marquees{position:relative;z-index:1}
+
+/* palette switcher (dev control) */
+.site-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+#pal{display:flex;gap:8px}
+#pal button{font:inherit;background:none;color:var(--ink-dim);cursor:pointer;border:none}
+#pal button::before{content:'['}#pal button::after{content:']'}
+#pal button.on{color:var(--ink);text-decoration:underline}
+
+/* ---------- HR layer ---------- */
+header.site{max-width:1060px;margin:0 auto;padding:28px 28px 0;display:flex;justify-content:space-between;align-items:baseline}
+.wordmark{font-weight:400;text-decoration:none;color:var(--purple)}
+#tip{position:fixed;display:none;pointer-events:none;z-index:99;font-size:13px;color:var(--pink)}
+.hero{padding:56px 0 28px;position:relative;min-height:220px}
+.hero-text{max-width:720px}
+.hero .hi{color:var(--ink-dim);margin-bottom:8px}
+.hl-p{color:var(--pink)} .hl-m{color:var(--purple)} .hl-g{color:var(--green)} .hl-y{color:var(--yellow)} .hl-b{color:var(--blue)}
+.mascot{font-size:11px;line-height:1.05;white-space:pre;color:var(--purple);user-select:none;animation:bob 4s ease-in-out infinite}
+.hero .mascot{font-size:15px;line-height:1.1;position:absolute;right:0;top:28px}
+@media(max-width:1000px){.hero .mascot{display:none}}
+.cur{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+.stats{display:flex;gap:24px;row-gap:10px;flex-wrap:wrap;align-items:baseline;padding:28px 0 8px;font-size:20px}
+.stats>span{white-space:nowrap}
+.stats .cg{color:var(--green)}
+.stats .c1{color:var(--green)} .stats .c2{color:var(--purple)} .stats .c3{color:var(--yellow)} .stats .c4{color:var(--pink)}
+.pr{color:var(--ink-dim);user-select:none}
+.cols{display:grid;grid-template-columns:1.1fr 1.2fr 1.2fr;gap:28px;padding:24px 0 8px;font-size:14px;line-height:1.65}
+.cols>div:nth-of-type(2){font-size:13px;line-height:1.6}
+.cols>div>p{margin:0 0 8px}
+.cols>div:nth-of-type(3){font-size:12px;line-height:1.55}
+.cols>div:nth-of-type(3) p{break-inside:avoid}
+.cols>div:nth-of-type(3) .pr{column-span:all}
+.cols .pr{margin-bottom:6px}
+.edu-b{font-size:14px}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+
+/* ---------- marquees: two thin rows, opposite directions, decoration only ---------- */
+#marquees{padding:8px 0;overflow:hidden}
+.mq{display:flex;gap:44px;white-space:nowrap;width:max-content;color:var(--ink-dim)}
+.mq span b{font-weight:400}
+.mq .g{margin-right:10px}
+.mq-i.st-live{color:var(--green)} .mq-i.st-wip{color:var(--yellow)} .mq-i.st-uni{color:var(--blue)} .mq-i.st-arc{color:var(--ink-dim)}
+.mq1{animation:sl 60s linear infinite}
+.mq2{animation:sr 75s linear infinite;margin-top:14px}
+#marquees:hover .mq{animation-play-state:paused}
+@keyframes sl{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@keyframes sr{from{transform:translateX(-50%)}to{transform:translateX(0)}}
+
+/* ---------- the wall: dense list, name - one sentence - tech ---------- */
+.wall-head{padding:8px 0 8px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:10px}
+.legend{display:flex;gap:20px;color:var(--ink-dim)}
+.legend i{font-style:normal}
+.d{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.d-live{background:var(--green)} .d-wip{background:var(--yellow)} .d-uni{background:var(--blue)} .d-arc{background:var(--ink-dim)}
+.filters{padding:0 0 10px;font-size:14px}
+.filters p{margin:0}
+.tok{cursor:pointer;color:var(--ink-dim);margin-right:10px}
+.tok::before{content:'['}.tok::after{content:']'}
+.tok:hover{color:var(--ink)}
+.tok.st.on[data-v="live"]{color:var(--green)}
+.tok.st.on[data-v="wip"]{color:var(--yellow)}
+.tok.st.on[data-v="uni"]{color:var(--blue)}
+.tok.st.on[data-v="arc"]{color:var(--ink)}
+.tok.on{text-decoration:underline}
+.tok.on[data-v=""]{color:var(--pink)}
+#q{font:inherit;background:none;border:none;outline:none;color:var(--pink);width:170px}
+.cmdline{color:var(--ink-dim);padding-top:4px}
+.cmdline b{color:var(--green);font-weight:400}
+.wall{list-style:none;font-size:13.5px;line-height:1.55}
+.wall li{display:grid;grid-template-columns:26px 185px 1fr 195px;gap:12px;padding:2px 8px;border-radius:2px;cursor:pointer;align-items:baseline}
+.wall li:hover{background:var(--bg-soft)}
+.wall .no{font-weight:400}
+.no.st-live{color:var(--green)} .no.st-wip{color:var(--yellow)} .no.st-uni{color:var(--blue)} .no.st-arc{color:var(--ink-dim)}
+.wall .nm{font-weight:400}
+.nm.st-live{color:var(--green)} .nm.st-wip{color:var(--yellow)} .nm.st-uni{color:var(--blue)} .nm.st-arc{color:var(--ink-dim)}
+.wall .one{color:var(--ink-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.wall .tech{color:var(--ink-dim);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:860px){
+  .wall li{grid-template-columns:26px 1fr;grid-auto-rows:auto;row-gap:2px;padding:8px;margin-bottom:6px}
+  .wall .one{grid-column:1 / -1;white-space:normal;overflow:visible}
+  .wall .tech{grid-column:1 / -1;text-align:left;white-space:normal;overflow:visible}
+  .stats{gap:20px} .facts{gap:28px}
+}
+
+/* ---------- detail mock (overlay, template for per-project mini docs) ---------- */
+#detail{position:fixed;inset:0;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(3px);display:none;z-index:20;overflow-y:auto}
+#detail.open{display:block}
+.doc{max-width:720px;margin:56px auto;background:var(--bg-soft);border-radius:3px;padding:44px}
+.doc .close{float:right;cursor:pointer;color:var(--ink-dim)}
+.doc h1{font-size:20px;margin-bottom:8px}
+#d-live{display:none;font-size:34px;color:var(--green);text-decoration:none;margin:4px 0}
+#d-live:hover{text-decoration:underline}
+#d-live.landing{color:var(--purple)}
+.doc .sect{margin-top:28px}
+.doc .sect h2{font-size:16px;color:var(--purple);margin-bottom:8px}
+.doc pre{color:var(--ink-dim);line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
+#d-frame{width:100%;height:340px;border:0;background:#fff;border-radius:3px}
+.mod-row{display:grid;grid-template-columns:minmax(150px,45%) 1fr;gap:10px;font-size:12.5px;margin-bottom:6px}
+.mod-row code{color:var(--purple);word-break:break-all}
+.doc strong{font-weight:400}
+.doc em{font-style:normal}
+.doc .tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:8px}
+.doc .tags span{background:var(--bg);padding:2px 12px;border-radius:2px}
+
+.bg-art{position:absolute;z-index:0;opacity:1;color:var(--purple);font-size:10px;line-height:1.05;white-space:pre;pointer-events:none;user-select:none}
+@media(max-width:1000px){.bg-art{display:none}}
+.wall-sect{position:relative}
+.art-wall{right:-30px;top:120px}
+.tvs .art-wall{right:-120px;top:-40px;opacity:.5}
+.cols{position:relative}
+.art-cols{right:-150px;top:50%;font-size:13px;transform:rotate(-8deg)}
+.about{padding:28px 0 0;position:relative}
+.about .mascot{position:absolute;right:6%;bottom:30px;opacity:.45;font-size:13px;z-index:0;animation:none}
+.about-text{position:relative;z-index:1}
+.about-row{display:flex;gap:28px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+.about-row p{margin:0 0 6px}
+.about-text{font-size:13px;line-height:1.6;column-count:2;column-gap:44px}
+.about-text p{break-inside:avoid}
+.about-text>p:first-child{color:var(--purple);column-span:all}
+.about-end{text-align:center;margin:14px 0 0}
+.heart{color:var(--purple)}
+.about-text .dim{color:var(--purple)}
+.about-text p{margin:0 0 12px}
+footer{max-width:1060px;margin:0 auto;padding:12px 28px 32px;color:var(--ink-dim);text-align:center}
+footer p{margin:0 0 8px}
+.at-pink{color:var(--pink)}
+
+/* phone */
+@media(max-width:700px){
+  main{padding:20px 16px 0}
+  header.site{flex-direction:column;align-items:flex-start;gap:8px}
+  .site-right{align-items:flex-start}
+  h2{font-size:17px}
+  .wall{font-size:13px}
+  .wall li{padding:6px 8px}
+  .wall .one{white-space:normal}
+  .wall .tech{white-space:normal}
+  header.site{padding:20px 16px 0}
+  .hero{padding:32px 0 16px;min-height:0}
+  h1{font-size:22px;line-height:1.5}
+  .stats{font-size:15px;gap:12px;row-gap:6px}
+  .cols{grid-template-columns:1fr;gap:20px}
+  .about-text{column-count:1}
+  .about .mascot{display:none}
+  .filters{font-size:13px}
+  #q{width:120px}
+  .doc{margin:16px;padding:24px 20px}
+  .mod-row{grid-template-columns:1fr;gap:2px}
+  #d-live{font-size:26px}
+  .mq{gap:28px}
+  footer{padding:8px 16px 24px}
+}
+
+/* confetti */
+.cf{position:fixed;z-index:30;pointer-events:none;font-size:17px;animation:fall 1.1s ease-out forwards}
+@keyframes fall{to{transform:translateY(70px) rotate(220deg);opacity:0}}
+
+/* ---- mac-fpga additions ---- */
+.na{color:var(--ink-dim);cursor:default;text-decoration:underline dotted}
+.na:hover{transform:none;text-decoration:underline dotted;color:var(--ink)}
+.chain{color:var(--ink-dim);font-size:13px;line-height:1.5;white-space:pre}
+.chain b{font-weight:400;color:var(--ink)}
+.status p{margin:0 0 6px}
+.st-live{color:var(--green)} .st-soon{color:var(--yellow)}
+.tvs{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:28px;padding:28px 0 8px}
+@media(max-width:700px){.tvs{grid-template-columns:1fr}}
+.tv{position:relative;background:var(--bg-soft);border-radius:3px;overflow:hidden;aspect-ratio:16/9}
+.tv canvas{width:100%;height:100%;display:block;opacity:.55}
+.tv .lbl{position:absolute;left:14px;bottom:10px;font-size:14px;color:var(--ink)}
+.tv .lbl span{color:var(--yellow)}
+.tv .scan{position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent 0 2px,color-mix(in srgb,var(--bg) 35%,transparent) 2px 3px);pointer-events:none}
+.docs-link{font-size:20px}
 </style>
 </head>
-<body>
+<body class="pal-c">
+<div id="stars"></div>
+<header class="site">
+  <div><a class="wordmark" href="https://noseydewdrop.com/" target="_blank" rel="noopener"><span>nosey-dewdrop ⋆˙⟡</span></a> <span class="dim">[<a href="docs/CS223_Mac_Setup.pdf" target="_blank" rel="noopener">docs - 19.09.26</a>] [<span class="na" id="cli">CLI</span>]</span></div>
+<div id="tip">portfolio!</div>
+<div id="tip2">coming soon</div>
+  <div class="site-right">
+    <div id="pal">
+      <button data-p="pal-a">night</button>
+      <button data-p="pal-b">white</button>
+      <button data-p="pal-c" class="on">violet</button>
+    </div>
+    <nav class="dim">[<a href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener">linkedin ↗</a>]</nav>
+  </div>
+</header>
+
 <main>
-  <h1>mac-fpga</h1>
-  <p class="sub">Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine.</p>
+<section class="hero">
+  <div class="hero-text">
+    <p class="hi">cs223 on a mac -</p>
+    <h1><span id="typer">CS223 labs on a Mac, without Vivado</span><span class="cur">▊</span></h1>
+  </div>
+  <pre class="mascot" aria-hidden="true">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⢔⣶⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡼⠗⡿⣾⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡼⠓⡞⢩⣯⡀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⠀⠀⠀⠀⠀⠀⠀⠰⡹⠁⢰⠃⣩⣿⡇⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⢷⣿⠿⣉⣩⠛⠲⢶⡠⢄⠐⣣⠃⣰⠗⠋⢀⣯⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣯⣠⠬⠦⢤⣀⠈⠓⢽⣾⢔⣡⡴⠞⠻⠙⢳⡄
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣵⣳⠖⠉⠉⢉⣩⣵⣿⣿⣒⢤⣴⠤⠽⣬⡇
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⢻⣟⠟⠋⢡⡎⢿⢿⠳⡕⢤⡉⡷⡽⠁
+⣧⢮⢭⠛⢲⣦⣀⠀⠀⠀⠠⡀⠀⠀⠀⡾⣥⣏⣖⡟⠸⢺⠀⠀⠈⠙⠋⠁⠀⠀
+⠈⠻⣶⡛⠲⣄⠀⠙⠢⣀⠀⢇⠀⠀⠀⠘⠿⣯⣮⢦⠶⠃⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢻⣿⣥⡬⠽⠶⠤⣌⣣⣼⡔⠊⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⣿⣧⣤⡴⢤⡴⣶⣿⣟⢯⡙⠒⠤⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠘⣗⣞⣢⡟⢋⢜⣿⠛⡿⡄⢻⡮⣄⠈⠳⢦⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠈⠻⠮⠴⠵⢋⣇⡇⣷⢳⡀⢱⡈⢋⠛⣄⣹⣲⡀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢿⣱⡇⣦⢾⣾⠿⠟⠿⠷⠷⣻⠧⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⠻⠽⠞⠊⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</pre>
+</section>
 
-  <h2>Install</h2>
-  <pre><code>curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash</code></pre>
-  <p class="note">About 4 minutes and 1.4 GB, into <code>~/fpga</code>. Needs Homebrew and Xcode Command Line Tools. Safe to re-run.</p>
+<section class="stats">
+  <span class="c1">Basys3</span> <span class="dim">-</span>
+  <span class="c2">Apple Silicon</span> <span class="dim">-</span>
+  <span class="c4">no Vivado</span>
+</section>
 
-  <h2>Use</h2>
-  <p>In any folder with <code>blink.sv</code> and <code>blink.xdc</code>:</p>
-  <pre><code>mac-fpga sim      # simulate (iverilog)
-mac-fpga bit      # .sv -> .bit, about 4 seconds
-mac-fpga flash    # program the board</code></pre>
-  <p>No Makefile, no project layout. Every <code>.sv</code> in the folder is synthesized; the top module is the one with a matching <code>.xdc</code>. First time? <code>mac-fpga new blink</code> gives you a blinking LED to start from.</p>
+<section class="cols">
+  <div>
+    <p class="pr">$ chain</p>
+<pre class="chain"><b>your_design.sv</b>
+  |
+  |-> Icarus Verilog   -> simulation
+  |-> Yosys            -> synthesis
+  |-> nextpnr-xilinx   -> place and route
+  |-> fasm2frames      -> configuration frames
+  |-> xc7frames2bit    -> <b>your_design.bit</b>
+  `-> openFPGALoader   -> the board, over USB</pre>
+  </div>
+  <div>
+    <p class="pr">$ docs</p>
+    <p class="docs-link"><a href="docs/CS223_Mac_Setup.pdf" target="_blank" rel="noopener">CS223_Mac_Setup.pdf ↗</a></p>
+    <p class="dim">Step by step, from opening the terminal to an LED blinking on the board. 13 pages, macOS Apple Silicon, tested on an M2 with 8 GB.</p>
+  </div>
+  <div class="status">
+    <p class="pr">$ status</p>
+    <p><span class="st-live">*</span> docs <span class="dim">· live</span></p>
+    <p><span class="st-soon">*</span> CLI <span class="dim">· coming soon</span></p>
+    <p><span class="st-soon">*</span> simulator <span class="dim">· coming soon</span></p>
+  </div>
+  <pre class="bg-art art-cols" aria-hidden="true">⠀⢀⠤⠤⢄⡀⠀⠀⠀⠀⠀⠀⢀⠤⠒⠒⢤
+⠀⠏⠀⠀⠀⠈⠳⡄⠀⠀⡠⠚⠁⠀⠀⠀⠘⡄
+⢸⠀⠀⠀⠤⣤⣤⡆⠀⠈⣱⣤⣴⡄⠀⠀⠀⡇
+⠘⡀⠀⠀⠀⠀⢈⣷⠤⠴⢺⣀⠀⠀⠀⠀⢀⡇
+⠀⠡⣀⣀⣤⠶⠻⡏⠀⠀⢸⡟⠙⣶⡤⠤⠼
+⠀⠀⢠⡾⠉⠀⢠⡆⠀⠀⢸⠃⠀⠈⢻⣆
+⠀⠀⣿⣠⢶⣄⠀⡇⠀⠀⠘⠃⣀⡤⢌⣈⡀⠀
+⠀⠀⠀⠀⠀⠙⠼⠀⠀⠀⠀⠿⠋</pre>
+</section>
 
-  <h2>What runs under the hood?</h2>
-  <table>
-    <tr><th>Stage</th><th>Tool</th></tr>
-    <tr><td>simulation</td><td>iverilog</td></tr>
-    <tr><td>synthesis</td><td>yosys</td></tr>
-    <tr><td>place &amp; route</td><td>nextpnr-xilinx (built from source, pinned commit)</td></tr>
-    <tr><td>bitstream</td><td>prjxray fasm2frames + xc7frames2bit</td></tr>
-    <tr><td>chip database</td><td>generated for XC7A35T</td></tr>
-    <tr><td>programming</td><td>openFPGALoader over USB-JTAG</td></tr>
-  </table>
-  <p>Vivado does these jobs in one window. Five open-source tools do them here; the installer wires them together.</p>
-
-  <h2>Why does this exist?</h2>
-  <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours because of six walls nobody documents in one place:</p>
-  <ol>
-    <li>oss-cad-suite does not ship nextpnr-xilinx (497 MB downloaded to learn that).</li>
-    <li>Apple clang has no OpenMP; nextpnr must be built with <code>USE_OPENMP=OFF</code>.</li>
-    <li>PEP 668 blocks <code>pip install</code> into Homebrew Python; a venv is required.</li>
-    <li>prjxray needs <code>--recursive</code> or its submodules are missing and cmake fails.</li>
-    <li>cmake 4 rejects prjxray without <code>CMAKE_POLICY_VERSION_MINIMUM=3.5</code>.</li>
-    <li>There is no prebuilt chip database; it has to be generated.</li>
-  </ol>
-
-  <h2>Manual setup</h2>
-  <p>Prefer to see every step? <a href="docs/">The step by step guide</a> does the same install by hand and explains each tool.</p>
-
-  <h2>Scope</h2>
-  <p>Basys3 (XC7A35T) on macOS Apple Silicon. Tested on an M2 with 8 GB and on GitHub's macOS runners. Intel Macs, Linux and other boards are not supported yet. <code>flash</code> writes SRAM, so the design is gone after a power cycle.</p>
-
-  <footer>Built by Damla Su Bilge, 2026. MIT.</footer>
+<section class="tvs wall-sect">
+  <pre class="bg-art art-wall" aria-hidden="true">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢠⠀⠀⣀⠤⣤⣤⣠⣀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠤⢢⣒⣃⡃⠓⢢⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⡰⠒⡄⠀⡜⣠⠏⠁⠀⠀⠉⠙⠓⠦⣄⢀⣠⣴⠯⠚⠋⠉⠈⠈⢹⡆⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠘⠒⠁⣰⢡⢯⢀⢀⢀⢀⣀⠤⠔⢔⣼⣿⡯⣄⡀⡀⠀⢀⢀⠔⢩⠇⠀⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢸⠈⢧⣅⣁⣁⣁⡤⠦⣚⡽⢻⢽⡣⡙⠮⣬⣩⣁⣁⡤⠟⡀⡔⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠓⣄⣀⡁⣁⢁⡴⢼⠃⢠⠟⠀⣧⠙⢤⠀⠀⠉⠉⠉⠉⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⢷⠀⠀⡀⡔⠊⢁⠔⢡⠼⠋⠀⠀⠘⢧⡀⠱⣄⡀⠀⠀⠀⠀⠀⠀⢢⡔⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⡠⠒⠁⣀⠖⢁⡼⠋⠀⠀⠀⠀⠀⠈⠳⣄⠱⡙⢤⠀⠀⠀⠀⠐⠁⠘⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⠜⠀⢠⠊⠀⣠⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⣦⠱⡀⠳⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⡜⠀⠀⡇⠀⣰⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣇⢱⠀⢣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⡇⠀⠀⡇⢠⠏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡿⠀⡇⠀⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⡄⠀⠀⠘⣄⠀⠱⣏⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⡟⠀⢱⠀⡣⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠒⡵⣊⠀⠀⠈⠑⣺⢅⡉⠦⡀⠀⠀⠀⠀⠀⠀⠀⣼⠂⠀⢸⠀⡎⠀⠀⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠊⢱⠈⠀⠀⠀⠀⡯⠀⠉⢢⡉⢦⠀⠀⠀⠀⠀⣰⠃⠀⠀⡰⡕⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⢻⡀⠀⠀⢱⠈⡆⠀⠀⠀⢠⠏⠀⢀⢴⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠈⢧⡀⠀⡸⢐⠇⠀⠀⠀⡾⠁⡠⢪⠊⠀⠀⠀⠀⠀⡄⠀⠠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠄⠀⠈⢧⡰⢁⠎⠀⠀⠀⠀⢸⣅⠎⢠⠃⠀⠀⠀⠀⠀⠠⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⢀⠞⣧⠃⠀⠀⠀⠀⠀⠀⣸⡃⢠⠃⠀⠀⠀⠀⠀⠘⢔⡥⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⡠⢃⠜⢹⠄⠀⠀⠀⠀⠀⢰⠹⣆⠇⠀⠀⠀⠀⠀⠀⢠⢚⠕⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⡜⣠⠃⠀⢸⠅⠀⠀⠀⠀⠀⡇⠀⠽⡆⠀⠀⠀⠀⠀⠀⠀⢐⠅⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⣸⢠⠃⠀⠀⣼⠀⠀⠀⠀⠀⠀⡇⠀⢣⡙⣦⠀⠀⠀⠀⠀⠀⠰⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠄⠀⠀⡆⢸⠀⣠⠜⠃⠀⠀⠀⠀⠀⢣⠀⠀⢣⠈⢳⡄⠀⠈⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⢀⡀⠀⠀⢣⠸⡴⠃⠀⠀⠀⠀⠀⠀⠙⢢⡀⢇⠀⠹⣆⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠐⡅⣈⠇⠀⠀⡿⡙⢄⠀⠀⠀⠀⠀⠀⠀⠀⠈⠻⣄⠀⠈⠳⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠈⠀⠀⢼⠁⠙⢌⠣⣄⠀⠀⠀⠀⠀⠀⠀⠸⡱⣀⠀⠙⣦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⢀⡏⠀⠀⠀⠑⣄⠓⢤⠀⠀⠀⠀⠀⠀⠱⡘⡄⠀⢸⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠐⠃⠀⠀⠀⠀⠈⠢⠀⠁⠀⠀⠀⠀⠀⠀⡇⢸⠀⡼⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠇⠀⢱⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</pre>
+  <div class="tv"><canvas></canvas><div class="scan"></div><div class="lbl">basys3 <span>· coming soon</span></div></div>
+  <div class="tv"><canvas></canvas><div class="scan"></div><div class="lbl">compiler <span>· coming soon</span></div></div>
+</section>
 </main>
+
+<div id="marquees">
+  <div class="mq mq1" id="mq1"></div>
+  <div class="mq mq2" id="mq2"></div>
+</div>
+
+<footer>
+  <p>[<a href="https://noseydewdrop.com/" target="_blank" rel="noopener">portfolio ↗</a>] [<a href="https://www.linkedin.com/in/damla-su-bilge-278841278/" target="_blank" rel="noopener">linkedin ↗</a>]</p>
+  <p class="at-pink">@nosey-dewdrop</p>
+</footer>
+
+<script>
+/* typer */
+(function(){const t=document.getElementById("typer"),full=t.textContent;let i=0;t.textContent="";(function type(){if(i>full.length)return;t.textContent=full.slice(0,i);i++;setTimeout(type,28)})()})();
+
+/* stars */
+const sf=document.getElementById("stars");
+for(let i=0;i<130;i++){
+  const SG=["*","+","·",".","-"];
+  const s=document.createElement("span");s.className="star";s.textContent=SG[i%5];
+  s.style.fontSize=(9+(i%3)*3)+"px";
+  if(i%4===0)s.style.color=`var(${["--pink","--purple","--green","--yellow","--blue"][i%5]})`;
+  s.style.left=Math.random()*100+"vw";s.style.top=Math.random()*100+"vh";
+  s.style.animationDelay=(Math.random()*3)+"s";sf.appendChild(s);
+}
+
+/* confetti: mouse trail + click burst */
+const G=["+","*","·"];
+const CFC=["--pink","--purple","--green","--yellow","--blue"];let last=0;
+function piece(x,y,vx){
+  const c=document.createElement("span");c.className="cf";c.textContent=G[Math.floor(Math.random()*3)];
+  c.style.left=x+vx+"px";c.style.top=y+"px";
+  c.style.color=`var(${CFC[Math.floor(Math.random()*5)]})`;
+  document.body.appendChild(c);setTimeout(()=>c.remove(),1100);
+}
+function burst(x,y){for(let i=0;i<24;i++)piece(x,y,(Math.random()-.5)*160)}
+addEventListener("mousemove",e=>{const t=Date.now();if(t-last>90){last=t;piece(e.clientX,e.clientY,0)}});
+addEventListener("click",e=>burst(e.clientX,e.clientY));
+addEventListener("touchmove",e=>{const t=Date.now();if(t-last>90){last=t;const p=e.touches[0];if(p)piece(p.clientX,p.clientY,0)}},{passive:true});
+
+/* tooltips: wordmark -> portfolio, CLI -> coming soon */
+function follow(el,tip){el.addEventListener("mousemove",e=>{tip.style.display="block";tip.style.left=(e.clientX+16)+"px";tip.style.top=(e.clientY+8)+"px"});el.addEventListener("mouseleave",()=>tip.style.display="none")}
+const tip2=document.getElementById("tip2");tip2.id="tip2";tip2.style.cssText="position:fixed;display:none;pointer-events:none;z-index:99;font-size:13px;color:var(--yellow)";
+follow(document.querySelector(".wordmark"),document.getElementById("tip"));
+follow(document.getElementById("cli"),tip2);
+document.getElementById("cli").addEventListener("click",e=>{burst(e.clientX,e.clientY)});
+
+/* palette switcher */
+const pals=["pal-a","pal-b","pal-c"];
+function setPal(p){document.body.className=p;document.querySelectorAll("#pal button").forEach(b=>b.classList.toggle("on",b.dataset.p===p));try{localStorage.setItem("dhw-theme",p)}catch(e){}}
+try{const saved=localStorage.getItem("dhw-theme");if(saved&&pals.includes(saved))setPal(saved)}catch(e){}
+document.querySelectorAll("#pal button").forEach(b=>b.onclick=()=>setPal(b.dataset.p));
+addEventListener("keydown",e=>{if(e.key>="1"&&e.key<="3")setPal(pals[e.key-1])});
+
+/* marquees: the tools in the chain */
+const T=[["icarus verilog","live"],["yosys","live"],["nextpnr-xilinx","live"],["prjxray","live"],["openFPGALoader","live"],["basys3","wip"],["xc7a35t","wip"],["simulator","wip"],["cli","wip"]];
+const items=T.map(([n,st])=>`<span class="mq-i st-${st}"><b>*</b> ${n}</span>`);
+document.getElementById("mq1").innerHTML=items.concat(items).join("");
+document.getElementById("mq2").innerHTML=items.slice().reverse().concat(items.slice().reverse()).join("");
+
+/* tv static */
+document.querySelectorAll(".tv canvas").forEach(cv=>{
+  const ctx=cv.getContext("2d");cv.width=160;cv.height=90;
+  const img=ctx.createImageData(cv.width,cv.height),d=img.data;
+  (function frame(){for(let i=0;i<d.length;i+=4){const v=Math.random()*255|0;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}ctx.putImageData(img,0,0);setTimeout(()=>requestAnimationFrame(frame),60)})();
+});
+</script>
 </body>
 </html>
