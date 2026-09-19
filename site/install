@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# mac-fpga web installer.
+#   curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash
+# Downloads the CLI into ~/.mac-fpga, links `mac-fpga` into Homebrew's bin, then runs
+# `mac-fpga install` (the toolchain, ~4 min). Re-run the same line to update.
+set -euo pipefail
+BASE="${MAC_FPGA_URL:-https://nosey-dewdrop.github.io/mac-fpga}"
+DIR="${MAC_FPGA_DIR:-$HOME/.mac-fpga}"
+die() { echo "ERROR: $*" >&2; exit 1; }
+
+[ "$(uname -s)" = Darwin ] || die "mac-fpga is for macOS."
+[ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is supported for now."
+[ "$(id -u)" -ne 0 ]       || die "do not run with sudo."
+command -v brew >/dev/null || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
+
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+echo "downloading $BASE/mac-fpga.tgz"
+curl -fsSL "$BASE/mac-fpga.tgz" -o "$tmp/mac-fpga.tgz" || die "download failed"
+mkdir -p "$DIR"
+tar -xzf "$tmp/mac-fpga.tgz" -C "$DIR" --strip-components 1 || die "extract failed"
+chmod +x "$DIR/bin/mac-fpga" "$DIR/install.sh"
+
+BIN="$(brew --prefix)/bin"
+if [ -w "$BIN" ]; then
+    ln -sfn "$DIR/bin/mac-fpga" "$BIN/mac-fpga"
+    echo "mac-fpga $("$DIR/bin/mac-fpga" --version) -> $BIN/mac-fpga"
+else
+    echo "$BIN is not writable. Add to your PATH:  export PATH=\"$DIR/bin:\$PATH\""
+fi
+echo
+exec "$DIR/bin/mac-fpga" install

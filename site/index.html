@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mac-fpga — Basys3 on a Mac, no Vivado</title>
+<meta name="description" content="Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine. One install command.">
+<style>
+  :root { color-scheme: light dark; --fg:#111; --bg:#fff; --mute:#666; --line:#ddd; --code:#f4f4f4; }
+  @media (prefers-color-scheme: dark) { :root { --fg:#eee; --bg:#111; --mute:#999; --line:#333; --code:#1c1c1c; } }
+  body { margin:0; font:16px/1.55 -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; color:var(--fg); background:var(--bg); }
+  main { max-width:680px; margin:0 auto; padding:56px 20px 80px; }
+  h1 { font-size:2rem; margin:0 0 .25rem; letter-spacing:-.02em; }
+  .sub { color:var(--mute); margin:0 0 2rem; }
+  h2 { font-size:1.15rem; margin:2.5rem 0 .6rem; }
+  pre { background:var(--code); border:1px solid var(--line); border-radius:8px; padding:14px 16px; overflow-x:auto; font:14px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }
+  code { font:inherit; }
+  p code { background:var(--code); padding:1px 5px; border-radius:4px; font-size:.92em; }
+  table { border-collapse:collapse; width:100%; font-size:.95rem; }
+  td, th { text-align:left; padding:6px 8px 6px 0; border-bottom:1px solid var(--line); vertical-align:top; }
+  ol li { margin:.4rem 0; }
+  .note { color:var(--mute); font-size:.92rem; }
+  a { color:inherit; }
+  footer { margin-top:3rem; color:var(--mute); font-size:.9rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>mac-fpga</h1>
+  <p class="sub">Write SystemVerilog on an Apple Silicon Mac and flash a Digilent Basys3. No Vivado, no virtual machine.</p>
+
+  <h2>Install</h2>
+  <pre><code>curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash</code></pre>
+  <p class="note">About 4 minutes and 1.4 GB, into <code>~/fpga</code>. Needs Homebrew and Xcode Command Line Tools. Safe to re-run.</p>
+
+  <h2>Use</h2>
+  <p>In any folder with <code>blink.sv</code> and <code>blink.xdc</code>:</p>
+  <pre><code>mac-fpga sim      # simulate (iverilog)
+mac-fpga bit      # .sv -> .bit, about 4 seconds
+mac-fpga flash    # program the board</code></pre>
+  <p>No Makefile, no project layout. Every <code>.sv</code> in the folder is synthesized; the top module is the one with a matching <code>.xdc</code>. First time? <code>mac-fpga new blink</code> gives you a blinking LED to start from.</p>
+
+  <h2>What runs under the hood?</h2>
+  <table>
+    <tr><th>Stage</th><th>Tool</th></tr>
+    <tr><td>simulation</td><td>iverilog</td></tr>
+    <tr><td>synthesis</td><td>yosys</td></tr>
+    <tr><td>place &amp; route</td><td>nextpnr-xilinx (built from source, pinned commit)</td></tr>
+    <tr><td>bitstream</td><td>prjxray fasm2frames + xc7frames2bit</td></tr>
+    <tr><td>chip database</td><td>generated for XC7A35T</td></tr>
+    <tr><td>programming</td><td>openFPGALoader over USB-JTAG</td></tr>
+  </table>
+  <p>Vivado does these jobs in one window. Five open-source tools do them here; the installer wires them together.</p>
+
+  <h2>Why does this exist?</h2>
+  <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours because of six walls nobody documents in one place:</p>
+  <ol>
+    <li>oss-cad-suite does not ship nextpnr-xilinx (497 MB downloaded to learn that).</li>
+    <li>Apple clang has no OpenMP; nextpnr must be built with <code>USE_OPENMP=OFF</code>.</li>
+    <li>PEP 668 blocks <code>pip install</code> into Homebrew Python; a venv is required.</li>
+    <li>prjxray needs <code>--recursive</code> or its submodules are missing and cmake fails.</li>
+    <li>cmake 4 rejects prjxray without <code>CMAKE_POLICY_VERSION_MINIMUM=3.5</code>.</li>
+    <li>There is no prebuilt chip database; it has to be generated.</li>
+  </ol>
+
+  <h2>Scope</h2>
+  <p>Basys3 (XC7A35T) on macOS Apple Silicon. Tested on an M2 with 8 GB and on GitHub's macOS runners. Intel Macs, Linux and other boards are not supported yet. <code>flash</code> writes SRAM, so the design is gone after a power cycle.</p>
+
+  <footer>Built by Damla Su Bilge, 2026. MIT.</footer>
+</main>
+</body>
+</html>

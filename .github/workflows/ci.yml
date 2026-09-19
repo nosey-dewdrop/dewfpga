@@ -20,3 +20,22 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: install-log, path: ~/fpga/install.log }
+      - name: web installer against the freshly built package
+        run: |
+          mkdir -p /tmp/site && cp site/install /tmp/site/ && cp mac-fpga-*.tgz /tmp/site/mac-fpga.tgz
+          MAC_FPGA_URL=file:///tmp/site MAC_FPGA_DIR=/tmp/cli bash site/install
+          /tmp/cli/bin/mac-fpga check
+      - name: site bundle
+        run: mkdir -p out && cp site/* out/ && cp mac-fpga-*.tgz out/mac-fpga.tgz
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: out }
+
+  pages:
+    needs: macos-arm64
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions: { pages: write, id-token: write }
+    environment: { name: github-pages, url: ${{ steps.deploy.outputs.page_url }} }
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
