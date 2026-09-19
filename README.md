@@ -6,8 +6,7 @@ no virtual machine, no Rosetta. `.sv` → `.bit` → board in about 4 seconds.
 [Türkçe](README.tr.md)
 
 ```bash
-npm install -g mac-fpga     # not on npm yet — see "Install" below
-mac-fpga install            # toolchain into ~/fpga: ~4 min, 1.4 GB, once
+curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash   # ~4 min, 1.4 GB, once
 ```
 
 Then in any folder with `blink.sv` + `blink.xdc`:
@@ -24,9 +23,16 @@ is ambiguous, `mac-fpga flash <top>`. `sim` needs `<top>_tb.sv`. Example: `mac-f
 
 ## Install
 
-Until the package is published: clone the repo and run `./install.sh`. It links `mac-fpga`
-into Homebrew's bin. Requirements: macOS on Apple Silicon, Xcode Command Line Tools,
-Homebrew. Node is only needed for the npm route.
+One line, no Node needed:
+
+```bash
+curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash
+```
+
+It puts the CLI in `~/.mac-fpga`, links `mac-fpga` into Homebrew's bin and runs
+`mac-fpga install`. Re-run the same line to update. Requirements: macOS on Apple Silicon,
+Xcode Command Line Tools, Homebrew. Switching to the npm package later: remove
+`$(brew --prefix)/bin/mac-fpga` first, npm wants that path.
 
 ## What it installs
 

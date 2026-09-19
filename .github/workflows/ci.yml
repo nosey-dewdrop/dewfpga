@@ -14,6 +14,7 @@ jobs:
       - name: npm package installs and runs
         run: |
           npm pack
+          rm -f "$(brew --prefix)/bin/mac-fpga"      # install.sh linked it there; npm wants the same path
           npm install -g ./mac-fpga-*.tgz
           mkdir /tmp/w && cp templates/blink.sv templates/blink.xdc /tmp/w/
           cd /tmp/w && mac-fpga --version && mac-fpga bit && ls -l blink.bit

@@ -6,8 +6,7 @@ macOS Apple Silicon'da **Vivado olmadan** SystemVerilog yazıp Basys3'e yükle.
 Sanal makine yok, Rosetta yok. `.sv` → `.bit` → kart, ~4 saniye.
 
 ```bash
-npm install -g mac-fpga     # henüz npm'de değil; şimdilik: repoyu klonla, ./install.sh
-mac-fpga install            # zinciri kur: ~5 dk, 1.4 GB, ~/fpga altına, tek sefer
+curl -fsSL https://nosey-dewdrop.github.io/mac-fpga/install | bash   # ~4 dk, 1.4 GB, tek sefer
 ```
 
 Sonra herhangi bir klasörde `blink.sv` + `blink.xdc` yaz ve:
