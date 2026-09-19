@@ -26,9 +26,3 @@
   });
 })();
 
-(function(){
-  var pals=["pal-a","pal-b","pal-c"];
-  function setPal(p){document.body.className=p;document.querySelectorAll("#pal button").forEach(function(b){b.classList.toggle("on",b.dataset.p===p)});try{localStorage.setItem("dhw-theme",p)}catch(e){}}
-  try{var s=localStorage.getItem("dhw-theme");if(s&&pals.indexOf(s)>=0)setPal(s)}catch(e){}
-  document.querySelectorAll("#pal button").forEach(function(b){b.onclick=function(){setPal(b.dataset.p)}});
-})();

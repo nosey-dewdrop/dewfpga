@@ -1,22 +1,20 @@
 /* dewfpga: one font, one accent, no motion. */
-/* palettes from the portfolio: pal-a night / pal-b white / pal-c violet (default) */
-body.pal-a{ --bg:#171221; --code:#1f1930; --fg:#efe8f7; --mute:#9d92b5; --line:#2b2340;
-  --pink:#ff8fb3; --purple:#c9a6ff; --green:#b8e39a; --yellow:#ffd479; --blue:#8fc7ff; }
-body.pal-b{ --bg:#ffffff; --code:#f5f5f5; --fg:#141414; --mute:#6b6b6b; --line:#e4e4e4;
+:root{ color-scheme:light dark;
+  --bg:#ffffff; --code:#f5f5f5; --fg:#141414; --mute:#6b6b6b; --line:#e4e4e4;
   --pink:#c23a70; --purple:#5f35a8; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e; }
-body.pal-c{ --bg:#101623; --code:#182032; --fg:#e6eef6; --mute:#8b98ad; --line:#243044;
-  --pink:#ffa3c2; --purple:#b0b6ff; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2; }
+@media (prefers-color-scheme:dark){ :root{
+  --bg:#101623; --code:#182032; --fg:#e6eef6; --mute:#8b98ad; --line:#243044;
+  --pink:#ffa3c2; --purple:#b0b6ff; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2; } }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);transition:background .3s,color .3s;
   font:16px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
   overflow-x:hidden}
 .wrap{max-width:1100px;margin:0 auto;padding:0 28px}
-a{color:var(--pink);text-decoration:underline dotted;text-underline-offset:3px}
-a:hover{text-decoration:underline solid}
+a{color:inherit;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:0}
 h1{font-size:1.75rem;line-height:1.2;margin:2.2rem 0 .5rem}
-h2{font-size:1.125rem;line-height:1.3;margin:2.2rem 0 .5rem;color:var(--purple)}
+h2{font-size:1.125rem;line-height:1.3;margin:2.2rem 0 .5rem}
 h3{font-size:1rem;margin:1.6rem 0 .4rem}
 p,ul,ol,table,pre{margin:0 0 1rem}
 li{margin:.2rem 0}
@@ -29,29 +27,21 @@ hr{border:0;border-top:1px solid var(--line);margin:2.4rem 0}
 nav.top{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap;
   padding:22px 0 0;font-size:.9rem}
 nav.top .brand{color:var(--purple);text-decoration:none;font-weight:600;letter-spacing:-.01em}
-nav.top .dim{color:var(--mute)}
-nav.top .right{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-#pal{display:flex;gap:8px;font-size:.85rem}
-#pal button{font:inherit;background:none;color:var(--mute);cursor:pointer;border:0;padding:0}
-#pal button::before{content:'['}#pal button::after{content:']'}
-#pal button.on{color:var(--fg);text-decoration:underline}
 nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:10px;flex-wrap:wrap}
-nav.top a{color:var(--pink);text-decoration:none}
-nav.top a:hover{text-decoration:underline}
+nav.top a{color:var(--mute);text-decoration:none}
+nav.top a:hover{color:var(--fg)}
 nav.top a[aria-current]{color:var(--fg)}
-nav.top li::before{content:'[';color:var(--mute)}nav.top li::after{content:']';color:var(--mute)}
 footer{margin:3rem 0 2rem;padding-top:1rem;border-top:1px solid var(--line);
   color:var(--mute);font-size:.85rem;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-footer a{color:var(--pink)}
+footer a{color:inherit}
 
 /* code */
 pre,code,kbd{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
 pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;
   overflow-x:auto;font-size:.85rem;line-height:1.5;position:relative}
 pre code{background:none;padding:0;font-size:inherit;color:inherit}
-code{background:var(--code);padding:.1em .3em;border-radius:4px;font-size:.88em;color:var(--purple)}
-pre code{color:var(--fg)}
-pre .p{color:var(--green)}
+code{background:var(--code);padding:.1em .3em;border-radius:4px;font-size:.88em}
+pre .p{color:var(--mute)}
 pre .c{color:var(--mute)}
 .copy{position:absolute;top:8px;right:8px;font:inherit;font-size:.75rem;color:var(--mute);
   background:var(--code);border:1px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer}
@@ -70,8 +60,8 @@ ol.walls li b{font-weight:600}
 .err:last-child{border:0}
 .err a.title{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.92rem;word-break:break-word}
 .err p{margin:.3rem 0 0;color:var(--mute)}
-.err .step,.eyebrow .step{color:var(--yellow);font-size:.8rem;margin-right:8px;white-space:nowrap}
-h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.1rem;font-weight:500;line-height:1.4;word-break:break-word;color:var(--yellow);
+.err .step,.eyebrow .step{color:var(--mute);font-size:.8rem;margin-right:8px;white-space:nowrap}
+h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.1rem;font-weight:500;line-height:1.4;word-break:break-word;
   background:var(--code);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:0 0 1rem}
 .eyebrow{color:var(--mute);font-size:.875rem;margin:2rem 0 .5rem}
 .eyebrow a{color:inherit}
@@ -97,7 +87,7 @@ dl.kv dt{color:var(--mute)} dl.kv dd{margin:0}
 @media (prefers-reduced-motion:reduce){.cf{display:none}}
 @media (max-width:520px){
   body{font-size:15px} h1{font-size:1.5rem}
-  nav.top{flex-direction:column;align-items:flex-start} nav.top .right{align-items:flex-start} footer{flex-direction:column}
+  nav.top{flex-direction:column;align-items:flex-start} footer{flex-direction:column}
 }
 
 /* one column, spread across the page; no narrow strip in the middle */
