@@ -150,7 +150,9 @@ fi
 step 6 "Doğrulama"
 CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/mac-fpga"
 BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: kullanıcı yazabilir, PATH'te
-if [ -w "$BIN_DIR" ]; then
+if [ "$(readlink -f "$(command -v mac-fpga 2>/dev/null || echo /nonexistent)")" = "$CLI" ]; then
+    skip "mac-fpga PATH'te ($(command -v mac-fpga))"          # npm -g ya da önceki link
+elif [ -w "$BIN_DIR" ]; then
     ln -sfn "$CLI" "$BIN_DIR/mac-fpga" && ok "mac-fpga -> $BIN_DIR/mac-fpga (PATH'te)"
 else
     echo "    $BIN_DIR yazılamıyor; PATH'e ekle:  export PATH=\"$(dirname "$CLI"):\$PATH\""

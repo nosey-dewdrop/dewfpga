@@ -20,6 +20,7 @@ XRAYDB  := $(FPGA)/nextpnr-xilinx/xilinx/external/prjxray-db/artix7
 PY      := $(FPGA)/venv/bin/python
 F2F     := $(FPGA)/prjxray/utils/fasm2frames.py
 F2B     := $(FPGA)/prjxray/build/tools/xc7frames2bit
+CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
 
 .PHONY: all sim synth bit flash clean check
 
@@ -42,7 +43,7 @@ $(TOP).json: $(SRCS)
 	yosys -q -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@" $(SRCS)
 
 $(TOP).fasm: $(TOP).json $(XDC)
-	@"$(PY)" check_xdc.py $(TOP).json $(XDC)
+	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
 	"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           --write $(TOP)_routed.json --fasm $@
 

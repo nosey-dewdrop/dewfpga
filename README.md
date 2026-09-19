@@ -4,11 +4,20 @@ macOS Apple Silicon'da **Vivado olmadan** SystemVerilog yazıp Basys3'e yükle.
 Sanal makine yok, Rosetta yok. `.sv` → `.bit` → kart, ~4 saniye.
 
 ```bash
-git clone <bu repo> && cd mac-fpga
-./install.sh              # tek komut, ~5 dk, 1.4 GB, ~/fpga altına
-bin/mac-fpga new blink    # LED yakan örnek proje
-cd blink && make flash    # kart takılıyken: LED yanar
+npm install -g mac-fpga     # (henüz npm'de yayınlanmadı; şimdilik: npm install -g <tgz>)
+mac-fpga install            # zinciri kur: ~5 dk, 1.4 GB, ~/fpga altına, tek sefer
 ```
+
+Sonra herhangi bir klasörde `blink.sv` + `blink.xdc` yaz ve:
+
+```bash
+mac-fpga sim      # iverilog
+mac-fpga bit      # .sv -> .bit  (~4 sn)
+mac-fpga flash    # karta yükle: LED yanar
+```
+
+Makefile yok, proje yapısı yok. Klasörde tek `.sv` varsa adı verilmez;
+birden fazlaysa `mac-fpga flash <top>`. Örnek proje: `mac-fpga new blink`.
 
 ## Ne kuruyor?
 
@@ -43,13 +52,13 @@ Log: `~/fpga/install.log`.
 ## Komutlar
 
 ```
-mac-fpga install       zinciri kur (= ./install.sh)
-mac-fpga check         altı parça yerinde mi
-mac-fpga new <dizin>   örnek proje: blink.sv + blink.xdc + Makefile + VS Code görevi
+mac-fpga install                 zinciri kur (yeniden çalıştırmak güvenli)
+mac-fpga check                   altı parça yerinde mi
+mac-fpga sim|bit|flash|clean [top]   bulunduğun klasördeki <top>.sv + <top>.xdc
+mac-fpga new <dizin>             örnek proje: blink.sv + xdc + Makefile + VS Code görevi (⌘⇧B = flash)
 ```
 
-Proje içinde: `make sim` · `make bit` · `make flash` · `make check` · `make clean`.
-VS Code'da ⌘⇧B = `make flash`.
+Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `mac-fpga`'yı brew bin'e bağlar.
 
 ## Kapsam
 
@@ -74,6 +83,8 @@ VS Code'da ⌘⇧B = `make flash`.
 | Script hijyeni | `sudo`, `eval`, `curl \| sh` yok; 3 URL hepsi https; yazma yalnız `FPGA_HOME` + brew |
 | Intel Mac / brew yok / ağ yok | üçü de tek satır `HATA:` ile exit 1, yarım durum bırakmaz (yarım klon sonraki koşuda yeniden çekilir) |
 | `new` var olan dizine / bilinmeyen komut / eksik zincirde `check` | exit 1 |
+| npm: `npm pack` → `npm install -g` → boş klasörde `mac-fpga bit` | `.fasm` elle kurulanla aynı; `npm uninstall -g` temiz kaldırır |
+| Klasörde iki `.sv` / `.xdc` yok | tek satır HATA, exit 1 |
 | Kodda olup XDC'de olmayan port | derlemeden önce `HATA: ... led[15]` ile durur, exit 2 |
 
 Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makinede `make flash`.
