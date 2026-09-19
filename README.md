@@ -16,8 +16,9 @@ mac-fpga bit      # .sv -> .bit  (~4 sn)
 mac-fpga flash    # karta yükle: LED yanar
 ```
 
-Makefile yok, proje yapısı yok. Klasörde tek `.sv` varsa adı verilmez;
-birden fazlaysa `mac-fpga flash <top>`. Örnek proje: `mac-fpga new blink`.
+Makefile yok, proje yapısı yok. Klasördeki bütün `.sv`/`.v` dosyaları sentezlenir
+(alt modüller ayrı dosyada olabilir). Top modül: `.xdc`'si olan dosya; belirsizse
+`mac-fpga flash <top>`. Simülasyon `<top>_tb.sv` ister. Örnek: `mac-fpga new blink`.
 
 ## Ne kuruyor?
 
@@ -54,7 +55,8 @@ Log: `~/fpga/install.log`.
 ```
 mac-fpga install                 zinciri kur (yeniden çalıştırmak güvenli)
 mac-fpga check                   altı parça yerinde mi
-mac-fpga sim|bit|flash|clean [top]   bulunduğun klasördeki <top>.sv + <top>.xdc
+mac-fpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
+mac-fpga --version
 mac-fpga new <dizin>             örnek proje: blink.sv + xdc + Makefile + VS Code görevi (⌘⇧B = flash)
 ```
 
@@ -84,7 +86,9 @@ Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `mac-fpga`'yı b
 | Intel Mac / brew yok / ağ yok | üçü de tek satır `HATA:` ile exit 1, yarım durum bırakmaz (yarım klon sonraki koşuda yeniden çekilir) |
 | `new` var olan dizine / bilinmeyen komut / eksik zincirde `check` | exit 1 |
 | npm: `npm pack` → `npm install -g` → boş klasörde `mac-fpga bit` | `.fasm` elle kurulanla aynı; `npm uninstall -g` temiz kaldırır |
-| Klasörde iki `.sv` / `.xdc` yok | tek satır HATA, exit 1 |
+| Klasörde iki `.sv` / `.xdc` yok / testbench yok / zincir kurulmamış | tek satır HATA, exit 1 |
+| `top.sv` + `counter.sv` (alt modül ayrı dosyada) | top `.xdc`'den bulundu, `top.bit` üretildi |
+| `sudo ./install.sh` / boş disk < 4 GB / bozuk venv (Python güncellemesi) | HATA ile durur / HATA ile durur / venv yeniden kurulur |
 | Kodda olup XDC'de olmayan port | derlemeden önce `HATA: ... led[15]` ile durur, exit 2 |
 
 Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makinede `make flash`.

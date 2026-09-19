@@ -3,14 +3,18 @@
 #   mac-fpga install        zinciri kur (~/fpga altına, yeniden çalıştırılabilir)
 #   mac-fpga check          altı parça yerinde mi
 #   mac-fpga new <dizin>    LED yakan örnek projeyi aç (blink.sv + xdc + Makefile)
-#   mac-fpga sim | bit | flash | clean [top]
+#   mac-fpga sim | bit | flash | clean [top]   (mac-fpga --version)
 #                           bulunduğun klasördeki <top>.sv + <top>.xdc ile çalış
 #                           (top verilmezse klasördeki tek .sv dosyasından bulunur)
 set -euo pipefail
-HERE="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/.." && pwd)"   # symlink (brew bin) üzerinden de çalışır
+# symlink zinciri çöz (npm bin / brew bin). readlink -f eski macOS'ta yok, elle:
+resolve() { local f=$1 d; while [ -L "$f" ]; do d=$(cd "$(dirname "$f")" && pwd); f=$(readlink "$f"); [[ $f = /* ]] || f="$d/$f"; done; printf '%s' "$f"; }
+SELF="$(resolve "${BASH_SOURCE[0]}")"
+HERE="$(cd "$(dirname "$SELF")/.." && pwd)"
 FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
 
-usage() { sed -n '2,8p' "$(readlink -f "${BASH_SOURCE[0]}")"; exit "${1:-0}"; }
+usage() { sed -n '2,8p' "$SELF"; exit "${1:-0}"; }
+version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
 
 cmd_check() {
     local fail=0
@@ -53,16 +57,29 @@ cmd_new() {
 cmd_build() {  # <hedef> [top]
     local target=$1 top=${2:-}
     if [ -z "$top" ]; then
-        local f svs=()
-        for f in *.sv; do [ -f "$f" ] && [[ $f != *_tb.sv ]] && svs+=("$f"); done
-        [ ${#svs[@]} -eq 1 ] || { echo "HATA: klasörde tek .sv yok; hangisi? ->  mac-fpga $target <top>" >&2; exit 1; }
-        top=${svs[0]%.sv}
+        # top = .xdc'si olan .sv; o da belirsizse klasördeki tek .sv
+        local f svs=() withxdc=()
+        for f in *.sv; do
+            [ -f "$f" ] && [[ $f != *_tb.sv ]] || continue
+            svs+=("$f"); [ -f "${f%.sv}.xdc" ] && withxdc+=("$f")
+        done
+        if   [ ${#withxdc[@]} -eq 1 ]; then top=${withxdc[0]%.sv}
+        elif [ ${#svs[@]} -eq 1 ];     then top=${svs[0]%.sv}
+        else echo "HATA: top modül belirsiz (${#svs[@]} .sv, ${#withxdc[@]} .xdc eşleşmesi); ->  mac-fpga $target <top>" >&2; exit 1; fi
     fi
-    [ -f "$top.sv" ]  || { echo "HATA: $top.sv yok" >&2; exit 1; }
-    if [ "$target" != sim ] && [ "$target" != clean ] && [ ! -f "$top.xdc" ]; then
-        echo "HATA: $top.xdc yok. Pinleri Basys3_Master.xdc'den kopyala:  $HERE/templates/Basys3_Master.xdc" >&2; exit 1
-    fi
-    exec make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="$top.sv" XDC="$top.xdc" "$target"
+    [ -f "$top.sv" ] || [ -f "$top.v" ] || { echo "HATA: $top.sv yok" >&2; exit 1; }
+    # klasördeki TÜM kaynaklar sentezlenir (alt modüller ayrı dosyada olabilir); testbench hariç
+    local srcs=()
+    for f in *.sv *.v; do [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] && srcs+=("$f"); done
+    case $target in
+        sim)
+            [ -f "${top}_tb.sv" ] || { echo "HATA: ${top}_tb.sv yok. Simülasyon için testbench gerekli (örnek: mac-fpga new ornek)" >&2; exit 1; } ;;
+        bit|flash)
+            [ -f "$top.xdc" ] || { echo "HATA: $top.xdc yok. Pinleri Basys3_Master.xdc'den kopyala:  $HERE/templates/Basys3_Master.xdc" >&2; exit 1; }
+            [ -s "$FPGA_HOME/chipdb/xc7a35t.bin" ] && [ -x "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" ] \
+                || { echo "HATA: zincir kurulu değil. Önce:  mac-fpga install   (durum: mac-fpga check)" >&2; exit 1; } ;;
+    esac
+    exec make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$top.xdc" "$target"
 }
 
 case "${1:-}" in
@@ -70,6 +87,7 @@ case "${1:-}" in
     check)   cmd_check ;;
     new)     shift; cmd_new "$@" ;;
     sim|bit|flash|clean) cmd_build "$@" ;;
+    -v|--version|version) version ;;
     -h|--help|help|"") usage ;;
     *) echo "bilinmeyen komut: $1" >&2; usage 1 ;;
 esac

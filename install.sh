@@ -11,7 +11,10 @@
 set -euo pipefail
 
 export FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
-JOBS="${JOBS:-3}"                       # 8 GB RAM'de -j3 güvenli; daha fazlası swap'e düşer
+# 8 GB RAM'de -j3 güvenli (daha fazlası swap'e düşer); 16 GB ve üstünde çekirdek sayısı kadar.
+if [ -z "${JOBS:-}" ]; then
+    if [ "$(sysctl -n hw.memsize 2>/dev/null || echo 0)" -ge $((16*1024*1024*1024)) ]; then JOBS=$(sysctl -n hw.ncpu); else JOBS=3; fi
+fi
 DEVICE="xc7a35tcpg236-1"                # Basys3
 CHIPDB_NAME="xc7a35t"
 
@@ -27,10 +30,11 @@ PIP_PKGS=(fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 interv
 
 # ---------------------------------------------------------------- yardımcılar
 T0=$(date +%s)
-step()  { printf '\n\033[1m[%s] %s\033[0m  (+%ds)\n' "$1" "$2" "$(( $(date +%s) - T0 ))"; }
-ok()    { printf '    \033[32m✓\033[0m %s\n' "$*"; }
-skip()  { printf '    \033[33m↷\033[0m %s (zaten var, atlandı)\n' "$*"; }
-die()   { printf '\n\033[31mHATA:\033[0m %s\n' "$*" >&2; exit 1; }
+if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then B=$'\033[1m' G=$'\033[32m' Y=$'\033[33m' R=$'\033[31m' N=$'\033[0m'; else B='' G='' Y='' R='' N=''; fi
+step()  { printf '\n%s[%s] %s%s  (+%ds)\n' "$B" "$1" "$2" "$N" "$(( $(date +%s) - T0 ))"; }
+ok()    { printf '    %s✓%s %s\n' "$G" "$N" "$*"; }
+skip()  { printf '    %s↷%s %s (zaten var, atlandı)\n' "$Y" "$N" "$*"; }
+die()   { printf '\n%sHATA:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 
 # Sabit bir commit'i sığ (depth 1) çek. Ana dal ilerlese de aynı kaynak gelir.
 clone_pinned() {  # <url> <sha> <dir>
@@ -51,11 +55,14 @@ clone_pinned() {  # <url> <sha> <dir>
 
 # ---------------------------------------------------------------- 0. ortam
 step 0 "Ortam kontrolü"
+[ "$(id -u)" -ne 0 ] || die "sudo ile çalıştırma. Her şey kendi kullanıcına, ~/fpga altına kurulur."
 [ "$(uname -s)" = Darwin ] || die "Bu script macOS için. Linux/Windows desteklenmiyor."
 [ "$(uname -m)" = arm64 ]  || die "Sadece Apple Silicon (arm64) test edildi. Intel Mac henüz yok."
-xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools yok. Önce:  xcode-select --install"
-command -v brew >/dev/null   || die "Homebrew yok. Önce: https://brew.sh"
+xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools yok. Önce:  xcode-select --install   (sonra bu komutu tekrar çalıştır)"
+command -v brew >/dev/null   || die "Homebrew yok. Önce:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
 mkdir -p "$FPGA_HOME"
+FREE_GB=$(df -g "$FPGA_HOME" | awk 'NR==2{print $4}')
+[ "$FREE_GB" -ge 4 ] || die "Diskte $FREE_GB GB boş var; kurulum 1.4 GB + derleme geçici alanı için en az 4 GB gerekli."
 LOG="$FPGA_HOME/install.log"
 exec > >(tee -a "$LOG") 2>&1
 echo "    FPGA_HOME=$FPGA_HOME   JOBS=$JOBS   log: $LOG"
@@ -96,6 +103,10 @@ fi
 step 3 "Python venv"
 VENV="$FPGA_HOME/venv"
 VPY="$VENV/bin/python"
+# brew Python güncellenince eski venv'in symlink'i kopar ("dead venv"); çalışmıyorsa sıfırdan kur.
+if [ -x "$VPY" ] && ! "$VPY" -c "import sys" >/dev/null 2>&1; then
+    echo "    venv bozuk (Python güncellenmiş olabilir), yeniden kuruluyor"; rm -rf "$VENV"
+fi
 [ -x "$VPY" ] || "$PY3" -m venv "$VENV"
 if "$VPY" -c "import fasm, yaml, textx, simplejson, intervaltree" 2>/dev/null; then
     skip "fasm pyyaml textx simplejson intervaltree"
