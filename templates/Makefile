@@ -47,7 +47,7 @@ $(TOP).fasm: $(TOP).json $(XDC)
 	           --write $(TOP)_routed.json --fasm $@
 
 $(TOP).frames: $(TOP).fasm
-	"$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
+	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
 
 bit: $(TOP).bit
 $(TOP).bit: $(TOP).frames
