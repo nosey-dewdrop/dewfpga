@@ -5,7 +5,7 @@ Sanal makine yok, Rosetta yok. `.sv` → `.bit` → kart, ~4 saniye.
 
 ```bash
 git clone <bu repo> && cd mac-fpga
-./install.sh              # tek komut, ~20-30 dk, ~1.5 GB, ~/fpga altına
+./install.sh              # tek komut, ~5 dk, 1.4 GB, ~/fpga altına
 bin/mac-fpga new blink    # LED yakan örnek proje
 cd blink && make flash    # kart takılıyken: LED yanar
 ```

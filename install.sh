@@ -22,6 +22,8 @@ PRJXRAY_URL="https://github.com/f4pga/prjxray.git"
 PRJXRAY_SHA="c9f02d8576042325425824647ab5555b1bc77833"
 
 BREW_PKGS=(yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14)
+# 19 Eyl 2026'da çalışan sürümler. Brew paketleri sabitlenemez (yosys 0.69, openFPGALoader 1.1.1, iverilog 13.0 ile test edildi).
+PIP_PKGS=(fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 intervaltree==3.2.1 numpy==2.5.3 pyjson5==2.0.1)
 
 # ---------------------------------------------------------------- yardımcılar
 T0=$(date +%s)
@@ -39,7 +41,8 @@ clone_pinned() {  # <url> <sha> <dir>
     rm -rf "$dir"
     git init -q "$dir"
     git -C "$dir" remote add origin "$url"
-    git -C "$dir" fetch -q --depth 1 origin "$sha"
+    git -C "$dir" fetch -q --depth 1 origin "$sha" \
+        || die "$url çekilemedi (ağ yok mu? GitHub erişimi var mı?)"
     git -C "$dir" -c advice.detachedHead=false checkout -q FETCH_HEAD
     # --recursive ŞART: prjxray'in yaml-cpp/googletest/abseil'i submodule; eksikse cmake patlar.
     git -C "$dir" submodule update -q --init --recursive --depth 1
@@ -74,7 +77,7 @@ PY3="$BREW_PREFIX/opt/python@3.14/bin/python3.14"
 
 # ---------------------------------------------------------------- 2. nextpnr-xilinx
 # oss-cad-suite'te nextpnr-xilinx YOK (497 MB boşa gider). Kaynaktan derlenir.
-step 2 "nextpnr-xilinx (kaynaktan, ~15-25 dk)"
+step 2 "nextpnr-xilinx (kaynaktan derleme, ~2 dk)"
 NEXTPNR_DIR="$FPGA_HOME/nextpnr-xilinx"
 clone_pinned "$NEXTPNR_URL" "$NEXTPNR_SHA" "$NEXTPNR_DIR"
 if [ -x "$NEXTPNR_DIR/build/nextpnr-xilinx" ] && [ -x "$NEXTPNR_DIR/build/bbasm" ]; then
@@ -98,12 +101,12 @@ if "$VPY" -c "import fasm, yaml, textx, simplejson, intervaltree" 2>/dev/null; t
     skip "fasm pyyaml textx simplejson intervaltree"
 else
     "$VENV/bin/pip" install -q --upgrade pip
-    "$VENV/bin/pip" install -q fasm pyyaml textx simplejson intervaltree
-    ok "fasm pyyaml textx simplejson intervaltree"
+    "$VENV/bin/pip" install -q "${PIP_PKGS[@]}"
+    ok "${PIP_PKGS[*]}"
 fi
 
 # ---------------------------------------------------------------- 4. prjxray
-step 4 "prjxray (fasm2frames + xc7frames2bit)"
+step 4 "prjxray (fasm2frames + xc7frames2bit, ~2 dk)"
 PRJXRAY_DIR="$FPGA_HOME/prjxray"
 clone_pinned "$PRJXRAY_URL" "$PRJXRAY_SHA" "$PRJXRAY_DIR"
 if "$VPY" -c "import prjxray" 2>/dev/null; then
@@ -126,7 +129,7 @@ fi
 
 # ---------------------------------------------------------------- 5. chipdb
 # nextpnr-xilinx hazır chipdb dağıtmıyor; her cihaz için elle üretilir.
-step 5 "chipdb ($DEVICE)"
+step 5 "chipdb ($DEVICE, ~1 dk, ~900 MB RAM)"
 CHIPDB_DIR="$FPGA_HOME/chipdb"
 CHIPDB_BIN="$CHIPDB_DIR/$CHIPDB_NAME.bin"
 if [ -s "$CHIPDB_BIN" ]; then

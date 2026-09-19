@@ -35,7 +35,7 @@ cmd_check() {
         then printf '  \033[32m✓\033[0m %-16s fasm prjxray pyyaml textx simplejson intervaltree\n' "python pkgs"
         else printf '  \033[31m✗\033[0m %-16s eksik paket\n' "python pkgs"; fail=1; fi
     fi
-    [ $fail -eq 0 ] && echo "hepsi yerinde." || { echo "eksik var -> mac-fpga install"; return 1; }
+    if [ $fail -eq 0 ]; then echo "hepsi yerinde."; else echo "eksik var -> mac-fpga install"; return 1; fi
 }
 
 cmd_new() {

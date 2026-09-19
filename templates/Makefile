@@ -27,9 +27,9 @@ all: bit
 
 check:
 	@for t in yosys iverilog openFPGALoader; do printf "%-16s " $$t; command -v $$t || echo "-YOK-"; done
-	@printf "%-16s " nextpnr-xilinx; [ -x $(NEXTPNR) ] && echo $(NEXTPNR) || echo "-YOK-"
-	@printf "%-16s " xc7frames2bit;  [ -x $(F2B) ]     && echo $(F2B)     || echo "-YOK-"
-	@printf "%-16s " chipdb;         [ -s $(CHIPDB) ]  && echo $(CHIPDB)  || echo "-YOK-"
+	@printf "%-16s " nextpnr-xilinx; [ -x "$(NEXTPNR)" ] && echo "$(NEXTPNR)" || echo "-YOK-"
+	@printf "%-16s " xc7frames2bit;  [ -x "$(F2B)" ]     && echo "$(F2B)"     || echo "-YOK-"
+	@printf "%-16s " chipdb;         [ -s "$(CHIPDB)" ]  && echo "$(CHIPDB)"  || echo "-YOK-"
 
 sim: $(TOP)_sim
 	./$(TOP)_sim
@@ -42,16 +42,16 @@ $(TOP).json: $(SRCS)
 	yosys -q -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@" $(SRCS)
 
 $(TOP).fasm: $(TOP).json $(XDC)
-	@$(PY) check_xdc.py $(TOP).json $(XDC)
-	$(NEXTPNR) --chipdb $(CHIPDB) --xdc $(XDC) --json $(TOP).json --seed 1 \
+	@"$(PY)" check_xdc.py $(TOP).json $(XDC)
+	"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           --write $(TOP)_routed.json --fasm $@
 
 $(TOP).frames: $(TOP).fasm
-	$(PY) $(F2F) --part $(PART) --db-root $(XRAYDB) $< > $@
+	"$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
 
 bit: $(TOP).bit
 $(TOP).bit: $(TOP).frames
-	$(F2B) --part_file $(XRAYDB)/$(PART)/part.yaml --part_name $(PART) \
+	"$(F2B)" --part_file "$(XRAYDB)/$(PART)/part.yaml" --part_name $(PART) \
 	       --frm_file $< --output_file $@
 	@ls -lh $@
 
