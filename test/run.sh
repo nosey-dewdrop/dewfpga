@@ -28,7 +28,15 @@ echo "== build (folder with only .sv + .xdc)"
 mkdir -p "$T/w"; cp "$ROOT"/templates/{blink.sv,blink.xdc,blink_tb.sv} "$T/w/"
 check "sim"                   "cd '$T/w' && '$CLI' sim | grep -q 'basic checks passed'"
 check "bit"                   "cd '$T/w' && '$CLI' bit && [ -s blink.bit ]"
-check "fasm == golden"        "diff <(strip '$T/w/blink.fasm') <(strip '$ROOT/test/golden/blink.fasm')"
+# The golden .fasm is exact only for the yosys version it was made with (brew can't be pinned).
+# With another yosys the netlist differs, so only the I/O placement (IOB lines = XDC pins) is compared.
+YV=$(yosys -V | awk '{print $2}'); GV=$(cat "$ROOT/test/golden/yosys-version")
+if [ "$YV" = "$GV" ]; then
+    check "fasm == golden (yosys $YV)" "diff <(strip '$T/w/blink.fasm') <(strip '$ROOT/test/golden/blink.fasm')"
+else
+    echo "  SKIP fasm == golden: yosys $YV here, golden made with $GV; checking I/O placement only"
+    check "fasm I/O placement == golden" "diff <(grep -E '^[LR]IOB33' '$T/w/blink.fasm' | sort) <(grep -E '^[LR]IOB33' '$ROOT/test/golden/blink.fasm' | sort)"
+fi
 check "no warnings in output" "cd '$T/w' && '$CLI' clean && ! '$CLI' bit 2>&1 | grep -qiE 'warning|error'"
 check "bit is deterministic"  "cd '$T/w' && cp blink.frames a && '$CLI' clean && '$CLI' bit >/dev/null && cmp a blink.frames"
 check "flash w/o board: message" "cd '$T/w' && { '$CLI' flash || true; } 2>&1 | grep -qE 'board not found|done'"

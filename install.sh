@@ -79,6 +79,7 @@ if [ ${#missing[@]} -gt 0 ]; then
     ok "${missing[*]}"
 fi
 BREW_PREFIX="$(brew --prefix)"
+echo "    $(yosys -V | cut -d' ' -f1-2) · openFPGALoader $(openFPGALoader --Version 2>&1 | head -1 | awk '{print $NF}') · $(iverilog -V 2>&1 | head -1 | cut -d' ' -f1-4) · $(cmake --version | head -1)"
 PY3="$BREW_PREFIX/opt/python@3.14/bin/python3.14"
 [ -x "$PY3" ] || die "python@3.14 not found: $PY3"
 
