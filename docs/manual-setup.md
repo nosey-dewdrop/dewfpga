@@ -174,9 +174,6 @@ python3 -m venv ~/fpga/venv
 ~/fpga/venv/bin/pip install fasm pyyaml textx simplejson intervaltree
 ```
 
-You will see a warning about the Antlr parser. It is normal. It means a slower
-Python parser gets used, and at lab sizes you will not feel it.
-
 ---
 
 ## 5. How do you build nextpnr-xilinx?
@@ -544,13 +541,18 @@ make flash     # load onto the board
 `make check` prints one line per tool. Every line should end with a path or with
 `ok`. If one says `MISSING`, go back to the step that installs it.
 
-`make sim` prints three lines, and the one you care about is `TB passed`.
+`make sim` prints a few lines, and the one you care about is `TB passed`.
 
 ```
+blink.sv:22: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'sw[15:0]').
+blink.sv:23: sorry: constant selects in always_* processes are not fully supported (the process will be sensitive to all bits in 'sw[15:0]').
 VCD info: dumpfile blink.vcd opened for output.
 TB passed
 blink_tb.sv:23: $finish called at 200000 (1ps)
 ```
+
+The two `sorry` lines are Icarus saying it simulates `led[0]` and `led[15]` a bit
+more conservatively than the code asks. They are not errors.
 
 The last line only says the test reached its end. If a check fails you see a line
 with `ERROR` and the message from the testbench instead. The run also writes
