@@ -6,7 +6,8 @@
     var c=document.createElement("span"); c.className="cf";
     c.textContent=G[Math.floor(Math.random()*G.length)];
     c.style.left=x+"px"; c.style.top=y+"px";
-    c.style.opacity=(0.45+Math.random()*0.55).toFixed(2);
+    var C=["--pink","--purple","--green","--yellow","--blue"];
+    c.style.color="var("+C[Math.floor(Math.random()*C.length)]+")";
     c.style.fontSize=(12+Math.random()*8|0)+"px";
     document.body.appendChild(c); setTimeout(function(){c.remove()},1000);
   }
@@ -23,4 +24,11 @@
     };
     pre.appendChild(b);
   });
+})();
+
+(function(){
+  var pals=["pal-a","pal-b","pal-c"];
+  function setPal(p){document.body.className=p;document.querySelectorAll("#pal button").forEach(function(b){b.classList.toggle("on",b.dataset.p===p)});try{localStorage.setItem("dhw-theme",p)}catch(e){}}
+  try{var s=localStorage.getItem("dhw-theme");if(s&&pals.indexOf(s)>=0)setPal(s)}catch(e){}
+  document.querySelectorAll("#pal button").forEach(function(b){b.onclick=function(){setPal(b.dataset.p)}});
 })();
