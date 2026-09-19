@@ -1,0 +1,13 @@
+import { chromium } from 'playwright';
+const S = process.argv[2];
+const browser = await chromium.launch({ executablePath: process.env.HOME + '/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' });
+const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
+await page.goto('http://localhost:4173/tb.html');
+await page.waitForFunction(() => /compile \d+ ms|failed|stopped/.test(document.querySelector('#status').textContent), null, { timeout: 120000 });
+await page.selectOption('#examples', 'tb: switches to leds');
+await page.waitForFunction(() => /compile \d+ ms/.test(document.querySelector('#status').textContent), null, { timeout: 120000 });
+await page.waitForTimeout(800);
+console.log(await page.locator('#status').innerText());
+await page.locator('#wave').hover({ position: { x: 700, y: 40 } });
+await page.locator('#wave').screenshot({ path: S + '/s-wave2.png' });
+await browser.close();

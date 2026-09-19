@@ -11,7 +11,7 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--fg);transition:background .3s,color .3s;
   font:16px/1.55 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
   overflow-x:hidden}
-.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 28px}
 a{color:var(--pink);text-decoration:underline dotted;text-underline-offset:3px}
 a:hover{text-decoration:underline solid}
 h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:0}
@@ -100,10 +100,5 @@ dl.kv dt{color:var(--mute)} dl.kv dd{margin:0}
   nav.top{flex-direction:column;align-items:flex-start} nav.top .right{align-items:flex-start} footer{flex-direction:column}
 }
 
-/* use the width: two columns where the content pairs up */
-.hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:36px;align-items:start;margin-top:1.4rem}
-.hero h1{margin-top:0}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:0 36px;align-items:start}
-.two>section>h2:first-child{margin-top:2.2rem}
-.docs,.err-page{max-width:820px}
-@media (max-width:860px){.hero,.two{grid-template-columns:1fr}}
+/* one column, spread across the page; no narrow strip in the middle */
+.docs,.err-page{max-width:none}

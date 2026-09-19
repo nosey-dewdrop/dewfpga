@@ -1,0 +1,32 @@
+{
+  "name": "sim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/language": "^6.12.4",
+    "@codemirror/legacy-modes": "^6.5.4",
+    "@codemirror/state": "^6.7.5",
+    "@codemirror/view": "^6.43.12",
+    "@yowasp/yosys": "^0.70.62-dev.1236",
+    "codemirror": "^6.0.2",
+    "digitaljs": "^0.14.2",
+    "lz-string": "^1.5.0",
+    "yosys2digitaljs": "^0.10.3"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.1",
+    "vite": "^8.3.0"
+  }
+}

@@ -1,0 +1,17 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ executablePath: process.env.HOME + '/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' });
+const page = await browser.newPage();
+await page.goto('http://localhost:4173/');
+await page.waitForFunction(() => /combinational|simulated clock/.test(document.querySelector('#status').textContent), null, { timeout: 180000 });
+await page.selectOption('#examples', 'count on the display');
+await page.waitForFunction(() => /simulated clock/.test(document.querySelector('#status').textContent), null, { timeout: 60000 });
+console.log(await page.locator('#console').innerText());
+const btn = page.locator('#board .b-btn[data-btn=btnC]');
+await btn.dispatchEvent('pointerdown');
+await page.waitForTimeout(100);
+console.log('cap class while down:', await page.locator('#board .b-btn[data-btn=btnC] .b-btn-cap').getAttribute('class'));
+console.log('labels:', await page.evaluate(() => [...document.querySelectorAll('.b-port')].map(t => t.textContent).join(',')));
+await btn.dispatchEvent('pointerup');
+await page.waitForTimeout(200);
+console.log(await page.evaluate(() => [...document.querySelectorAll('#board g[transform^="translate(96 96)"] > g')].map((d) => [...d.querySelectorAll('.b-seg')].map((s) => s.classList.contains('on') ? 1 : 0).join(''))));
+await browser.close();

@@ -34,6 +34,9 @@
       <li><a href="/dewfpga/docs/">docs</a></li>
       <li><a href="/dewfpga/why/">why</a></li>
       <li><a href="/dewfpga/errors/">errors</a></li>
+      <li><a href="/dewfpga/sim/">simulator</a></li>
+      <li><a href="/dewfpga/sim/tb.html">testbench</a></li>
+      <li><a href="/dewfpga/cli/">cli</a></li>
       <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
       <li><a href="/dewfpga/tr/" lang="tr" hreflang="tr">türkçe</a></li>
     </ul>
@@ -41,13 +44,13 @@
 </nav>
 
 <main class="wrap">
-  <div class="hero">
-    <div><h1>CS223 labs on a Mac, without Vivado</h1>
+  <h1>CS223 labs on a Mac, without Vivado</h1>
   <p class="lead">Simulate, synthesize and flash your CS223 labs to a Digilent Basys3 from an Apple Silicon Mac, M1 and later. Free, open-source tools. No Vivado, no virtual machine, no Rosetta.</p>
 
   <p>Start with the <a href="/dewfpga/docs/"><b>setup guide</b></a>: 18 steps, from opening the terminal to an LED blinking on the board, written so that copying a command and pressing Enter is enough. Steps 1 to 9 are the install. The compiling in them is about 4 minutes; the rest is downloads and pasting. The <a href="/dewfpga/docs/#8-what-goes-in-your-project-folder">five project files</a> are downloadable as they are, so nothing has to be typed.</p>
-  <p class="mute">Not for: Intel Macs, anything from Vivado's IP Catalog, waveform viewing. <a href="#limits">Details below.</a></p></div>
-    <div><pre><code><span class="p">$</span> make sim
+  <p class="mute">No board and no install? The <a href="/dewfpga/sim/">Basys3 simulator</a> runs your design in the browser, and the <a href="/dewfpga/sim/tb.html">testbench runner</a> runs your testbench with a waveform. Not for: Intel Macs, anything from Vivado's IP Catalog. <a href="#limits">Details below.</a></p>
+
+<pre><code><span class="p">$</span> make sim
 TB passed
 <span class="p">$</span> make bit
 xdc ok: 33 ports, all matched.
@@ -56,10 +59,8 @@ Info: Max frequency for clock 'clk': 209.60 MHz (PASS at 100.00 MHz)
 Load SRAM: [==================================================] 100.00%
 Done
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-  <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking. 4.6 seconds from <code>.sv</code> to <code>.bit</code>. The whole chain takes 1.76 GB of disk; Vivado asks for 50 to 100 GB.</p></div>
-  </div>
-  <div class="two">
-    <section><h2>How does it work?</h2>
+  <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking. 4.6 seconds from <code>.sv</code> to <code>.bit</code>. The whole chain takes 1.76 GB of disk; Vivado asks for 50 to 100 GB.</p>
+  <h2>How does it work?</h2>
   <p>Vivado does five jobs for a CS223 lab. One open-source tool does each job here, plus a chip database generated once, and a small Makefile runs them in order.</p>
   <table>
     <tr><th>stage</th><th>tool</th></tr>
@@ -72,29 +73,24 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   </table>
   <p>Your <code>.sv</code> and <code>.xdc</code> files are the same ones Vivado reads. The course's pin files work as they are, once you uncomment the pins you use.</p>
 
-  </section>
-    <section><h2>Why does this exist?</h2>
+  <h2>Why does this exist?</h2>
   <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours, because of six walls that nobody documents in one place. <a href="/dewfpga/why/">The six walls, what each one cost, and whether the result is enough for CS223.</a> When a step fails, the error text is the fastest way in: <a href="/dewfpga/errors/">every error hit during this setup, with the fix</a>.</p>
 
-  <h2>What is coming?</h2>
-  <p>A command-line tool that installs the chain in one line and builds any folder of <code>.sv</code> files without a Makefile. A Basys3 simulator in the browser, with the switches, LEDs and seven-segment display. A compiler in the browser, SystemVerilog to a bitstream without installing anything. Not public yet.</p>
-
-  </section>
-  </div>
-  <div class="two">
-    <section><h2 id="limits">What can it not do?</h2>
+  <h2 id="limits">What can it not do?</h2>
   <ul>
     <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. 35 old CS223 student repos with 240 source files were checked; none of them use any of it.</li>
-    <li>No waveform viewer, schematic or in-chip debugger. <code>make sim</code> writes a <code>.vcd</code> file and stops there.</li>
+    <li>On the Mac chain there is no waveform viewer, schematic or in-chip debugger: <code>make sim</code> writes a <code>.vcd</code> file and stops there. The <a href="/dewfpga/sim/tb.html">testbench runner in the browser</a> draws the waveform instead.</li>
     <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
     <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#15-what-should-you-be-concerned-about">What you should be concerned about.</a></li>
   </ul>
 
-  </section>
-    <section><h2>Who made this?</h2>
+  <h2>What is coming?</h2>
+  <p>A compiler in the browser: SystemVerilog to a Basys3 bitstream without installing anything. Not public yet. The <a href="/dewfpga/sim/">simulator</a>, the <a href="/dewfpga/sim/tb.html">testbench runner</a> and the <a href="/dewfpga/cli/">command-line tool</a> are.</p>
+
+  
+  <h2>Who made this?</h2>
   <p>Damla Su Bilge, Bilkent CS. Everything here was run on 19 September 2026 on an M2 with 8 GB of RAM, macOS 15 and a Basys3. If a step fails for you, open an <a href="https://github.com/nosey-dewdrop/dewfpga/issues">issue</a> or write on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a> with the last ten lines of the terminal and the step number.</p>
-</section>
-  </div>
+
 </main>
 
 <footer class="wrap">

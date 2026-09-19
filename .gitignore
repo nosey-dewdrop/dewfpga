@@ -14,3 +14,4 @@ node_modules/
 !test/golden/*.fasm
 !package.json
 !templates/.vscode/tasks.json
+dist/

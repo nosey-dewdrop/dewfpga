@@ -26,12 +26,18 @@ jobs:
           mkdir -p /tmp/site && cp site/install /tmp/site/ && cp dewfpga-*.tgz /tmp/site/dewfpga.tgz
           DEWFPGA_URL=file:///tmp/site DEWFPGA_DIR=/tmp/cli bash site/install
           /tmp/cli/bin/dewfpga check
-      - name: site bundle (page, installer, package, templates, docs pdf)
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: sim/package-lock.json }
+      - name: simulator and testbench (vite, yosys and iverilog as webassembly)
+        run: |
+          cd sim && npm ci --ignore-scripts && npm run build
+      - name: site bundle (page, installer, package, templates, docs pdf, sim)
         run: |
           mkdir -p out/templates/.vscode
           cp -R site/. out/ && cp dewfpga-*.tgz out/dewfpga.tgz
           cp templates/* out/templates/ && cp templates/.vscode/tasks.json out/templates/.vscode/
           (cd templates && zip -q ../out/blink.zip blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json)
+          mkdir -p out/sim && cp -R sim/dist/. out/sim/
       - uses: actions/upload-pages-artifact@v3
         with: { path: out }
 

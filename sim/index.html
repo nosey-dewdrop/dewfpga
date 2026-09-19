@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>cs223 without vivado · basys3 simulator in the browser</title>
+<meta name="description" content="write systemverilog, press run, watch a virtual basys3 light up. yosys runs in your browser as webassembly, no vivado, no windows, no board needed. built for bilkent cs223 students on mac.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%235cff7a%27/%3E%3C/svg%3E">
+<meta name="robots" content="noindex,nofollow">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sim/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="cs223 without vivado · basys3 simulator in the browser">
+<meta property="og:description" content="write systemverilog, press run, watch a virtual basys3 light up. no vivado, no board.">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/sim/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sim/">
+
+<meta name="keywords" content="basys3 simulator, systemverilog online, vivado alternative mac, cs223 bilkent, fpga simulator browser, yosys webassembly, digilent basys3 online">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {"@type": "WebSite", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "name": "cs223 without vivado", "description": "a browser basys3 simulator and a mac command-line toolchain for bilkent cs223 digital design, without vivado.", "inLanguage": "en"},
+    {"@type": "SoftwareApplication", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#sim", "name": "basys3 simulator", "applicationCategory": "DeveloperApplication", "operatingSystem": "any (browser)", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "description": "simulates systemverilog designs on a virtual digilent basys3 board inside the browser. synthesis by yosys compiled to webassembly, netlist simulation by digitaljs. switches, buttons, 16 leds and the four-digit seven-segment display are interactive.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "isPartOf": {"@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site"}, "featureList": ["systemverilog input (always_ff, always_comb, enum, typedef)", "xdc pin constraints mapped to the board, same as vivado", "interactive switches, buttons, leds, seven-segment display", "shareable links, code lives in the url", "no install, no account"]}
+  ]
+}
+</script>
+</head>
+<body class="pal-night">
+<div id="glyphs" aria-hidden="true"></div>
+<header class="site">
+  <a class="wordmark" href="../"><span class="led"></span>dewfpga</a>
+  <nav class="tabs" aria-label="sections">
+    <a href="./">simulator</a>
+    <a href="tb.html">testbench</a>
+    <a href="../docs/">docs</a>
+    <a href="../errors/">errors</a>
+  </nav>
+  <div class="site-right">
+    <div id="pal"><button data-pal="night">night</button><button data-pal="white">white</button></div>
+    <a href="https://github.com/nosey-dewdrop/dewfpga">github ↗</a>
+  </div>
+</header>
+<main>
+  <section class="hero">
+    <p class="hi">write systemverilog, press run, watch the board</p>
+    <h1><span data-typed="a basys3 that lives in your browser."></span></h1>
+    <p class="dim">the same .sv and .xdc you would hand to vivado. yosys reads it here, as webassembly, and the board below reacts. nothing to install, nothing to buy.</p>
+  </section>
+
+  <section class="board-wrap" aria-label="board">
+    <svg id="board" tabindex="0" role="img" aria-label="virtual basys3 board"></svg>
+    <div id="status" aria-live="polite"></div>
+    <div class="controls">
+      <button id="pause">pause</button>
+      <button id="step">step one cycle</button>
+      <label>speed <input id="speed" type="range" min="0" max="5" value="1"></label>
+      <span id="speed-label"></span>
+      <span class="grow"></span>
+      <span>click a switch to flip it, hold a button to press it. with the board focused, arrows and enter are the five buttons.</span>
+    </div>
+  </section>
+
+  <section class="bench" aria-label="workbench">
+    <div class="pane">
+      <div class="pane-bar">
+        <span id="ftabs" class="ftabs"></span>
+        <span class="grow"></span>
+        <select id="examples" aria-label="load an example"><option value="">examples</option></select>
+        <button id="share">share</button>
+        <button id="run" title="⌘↵ on mac, ctrl+enter on windows">run</button>
+      </div>
+      <div id="editors" class="editors"></div>
+    </div>
+    <div class="side">
+      <div class="pane">
+        <div class="pane-bar"><span class="dim">yosys</span></div>
+        <div id="console" aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
+</main>
+<footer>
+  <p>made by <a href="https://github.com/nosey-dewdrop">damla su bilge</a> for cs223 at bilkent. open source, runs entirely on your machine, nothing is uploaded anywhere.</p>
+</footer>
+<script type="module" src="/src/sim/main.js"></script>
+</body>
+</html>
