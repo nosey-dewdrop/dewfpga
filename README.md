@@ -59,8 +59,26 @@ VS Code'da ⌘⇧B = `make flash`.
 - Dersin verdiği XDC dosyaları olduğu gibi çalışır (`PACKAGE_PIN` + `IOSTANDARD`).
 - `make flash` SRAM'a yazar: kartın gücü kesilince silinir.
 
+## Testler (19 Eyl 2026, M2 8 GB, macOS 15)
+
+| Test | Sonuç |
+|---|---|
+| Temiz kurulum (boş `FPGA_HOME`) | exit 0, **4 dk 17 s**, 1.4 GB. Adımlar: nextpnr 77 s · venv 5 s · prjxray 114 s · chipdb 58 s |
+| Aynı kurulum, boşluklu yola (`sp ace/fpga`) | exit 0, 4 dk 11 s, `make bit` geçti |
+| İkinci koşu (idempotency) | exit 0, **2.7 s**, 15 adım "zaten var" ile atlandı |
+| Çıktı eşitliği | Taze zincirin `.frames` dosyası elle kurulan zincirle **bayt bayt aynı**; `.bit` yalnızca başlıktaki saat damgasında 4 byte farklı |
+| Sabitleme | nextpnr-xilinx `3fd7878`, prjxray `c9f02d8` ve tüm submodule SHA'ları elle kurulanla aynı |
+| `make bit` | 4.6 s, tepe 552 MB RAM · `make check` 0.08 s · chipdb üretimi tepe 859 MB RAM |
+| shellcheck (`-S style`) | temiz |
+| gitleaks | sızıntı yok; repoda kişisel yol / e-posta yok |
+| Script hijyeni | `sudo`, `eval`, `curl \| sh` yok; 3 URL hepsi https; yazma yalnız `FPGA_HOME` + brew |
+| Intel Mac / brew yok / ağ yok | üçü de tek satır `HATA:` ile exit 1, yarım durum bırakmaz (yarım klon sonraki koşuda yeniden çekilir) |
+| `new` var olan dizine / bilinmeyen komut / eksik zincirde `check` | exit 1 |
+| Kodda olup XDC'de olmayan port | derlemeden önce `HATA: ... led[15]` ile durur, exit 2 |
+
+Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makinede `make flash`.
+
 ## Kanıt
 
-19 Eyl 2026: bu script ile temiz bir dizine kurulan zincir, dünkü elle kurulan
-zincirle **bire bir aynı `.fasm`** üretti; `.bit` yalnızca başlıktaki saat
-damgasında (3 byte) ayrışıyor. Elle kurulan zincirle Basys3'te LED yandı.
+19 Eyl 2026: elle kurulan zincirle Basys3'te LED yandı. Bu script ile temiz dizine
+kurulan zincir aynı `.frames` dosyasını üretiyor (yukarıdaki tablo).
