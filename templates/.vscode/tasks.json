@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "FPGA: flash (build + program)",
+      "type": "shell",
+      "command": "make flash",
+      "options": { "cwd": "${fileDirname}" },
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "FPGA: simulate",
+      "type": "shell",
+      "command": "make sim",
+      "options": { "cwd": "${fileDirname}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "FPGA: build only",
+      "type": "shell",
+      "command": "make bit",
+      "options": { "cwd": "${fileDirname}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    }
+  ]
+}

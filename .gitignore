@@ -6,3 +6,5 @@
 *_sim
 .rabadon/
 !test/golden/*.fasm
+!templates/.vscode/
+!templates/.vscode/tasks.json
