@@ -46,8 +46,8 @@ virtual Basys3, and a testbench view that draws the waveform.
 
 ## 1. What do you need before you start?
 
-**The board.** A Digilent Basys3 and its micro-USB cable. A MacBook Air or Pro from 2016
-on has only USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is
+**The board.** A Digilent Basys3 and its micro-USB cable. Apple Silicon MacBooks have only
+USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is
 powered from the cable; leave the JP2 jumper on USB.
 
 **The terminal.** Press Cmd Space, type `Terminal`, press Enter. Every command in this
