@@ -53,7 +53,7 @@
 </tr>
 <tr>
 <td>time after section 1</td>
-<td>one command; 3 min 37 s on the tested machine and fast wifi, 1.4 GB downloaded</td>
+<td>one command; 3 min 37 s to 4 min 17 s on the tested machine, 1.4 GB downloaded</td>
 <td>5 steps; about 5 minutes of compiling plus 1.76 GB of full clones, call it 20 minutes</td>
 </tr>
 <tr>
@@ -105,7 +105,7 @@
 <hr />
 <h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
 <pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
-<p>3 min 37 s on the tested machine with fast wifi, 1.4 GB downloaded; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx and prjxray into <code>~/fpga</code> at the two commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
+<p>3 min 37 s to 4 min 17 s over three runs on the tested machine, 1.4 GB downloaded; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx and prjxray into <code>~/fpga</code> at the two commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
 <pre><code>all good.
 
 Total: 217 s. Log: /Users/you/fpga/install.log
@@ -292,7 +292,7 @@ fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
 venv             /Users/you/fpga/venv/bin/python</code></pre>
 <p>Eight lines, each ending in a path, and no <code>-MISSING-</code> anywhere: done. A line such as <code>chipdb           -MISSING-</code> names the step of section 3 to redo (3.4 here). Then:</p>
 <pre class="bash"><code>make sim       # PASS: 3 checks
-make bit       # xdc ok / pnr ok / blink.bit, about 4 seconds
+make bit       # xdc ok / pnr ok / blink.bit, under five seconds
 make flash     # Load SRAM ... done 1</code></pre>
 <p>The outputs are the same three blocks shown in section 2. <code>make sim</code> also writes <code>blink.vcd</code>. No waveform viewer is installed by this guide; to look at the waveform, open the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> and paste the same <code>blink.sv</code> and <code>blink_tb.sv</code> there, and it draws it.</p>
 <hr />

@@ -10,7 +10,7 @@ go in, or the installer refuses your machine.
 | | one line | by hand |
 |---|---|---|
 | do | section 1, then 2, then 5 to 8 | section 1, then 3, then 4 to 8 |
-| time after section 1 | one command; 3 min 37 s on the tested machine and fast wifi, 1.4 GB downloaded | 5 steps; about 5 minutes of compiling plus 1.76 GB of full clones, call it 20 minutes |
+| time after section 1 | one command; 3 min 37 s to 4 min 17 s on the tested machine, 1.4 GB downloaded | 5 steps; about 5 minutes of compiling plus 1.76 GB of full clones, call it 20 minutes |
 | you get | the `dewfpga` command | the same tools plus a Makefile you own |
 | tool versions | two pinned commits, Homebrew versions in section 9 | the same two commits, typed by you |
 
@@ -97,8 +97,8 @@ text, and the tools cannot read that.
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 ```
 
-3 min 37 s on the tested machine with fast wifi, 1.4 GB downloaded; on slow wifi it takes
-longer, and it prints progress the whole time. It never asks for a password. It puts the
+3 min 37 s to 4 min 17 s over three runs on the tested machine, 1.4 GB downloaded; on slow
+wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the
 `dewfpga` command into `~/.dewfpga` (its sha256 is compared with
 `nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256`, so a broken download stops here),
 links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build
@@ -417,7 +417,7 @@ Eight lines, each ending in a path, and no `-MISSING-` anywhere: done. A line su
 
 ```bash
 make sim       # PASS: 3 checks
-make bit       # xdc ok / pnr ok / blink.bit, about 4 seconds
+make bit       # xdc ok / pnr ok / blink.bit, under five seconds
 make flash     # Load SRAM ... done 1
 ```
 

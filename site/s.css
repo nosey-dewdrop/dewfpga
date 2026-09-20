@@ -283,7 +283,8 @@ footer a{color:inherit}
   main.wrap>*,.docs>*,.tablewrap{max-width:none}
   code{overflow-wrap:anywhere}
   pre[data-copy]{padding-top:46px}
-  .copy{min-height:36px;padding:6px 12px}
+  .copy{min-height:36px;padding:6px 12px;font-size:.8rem}
+  .err .step,.eyebrow .step{font-size:.78rem}
   .nums{grid-template-columns:1fr 1fr}
   dl.kv{grid-template-columns:1fr}
   dl.kv dt{margin-top:.5rem}

@@ -253,7 +253,7 @@ nav.tabs a:nth-child(4){animation-delay:.19s}
   .work{gap:20px}
   .viewbar button,.pane-bar button,.pane-bar select,.controls button{min-height:44px;display:inline-flex;align-items:center}
   .pane-bar{gap:10px 14px}
-  .controls input[type=range]{width:120px}
+  .controls input[type=range]{width:120px;height:44px}
   .editor{max-height:60vh}
   footer{margin-top:40px}
 }
