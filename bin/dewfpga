@@ -3,8 +3,8 @@
 #   dewfpga install                 install the toolchain into ~/fpga (safe to re-run)
 #   dewfpga check                   verify every piece is in place
 #   dewfpga sim | bit | flash | clean [top]
-#                                    work on the .sv files in the current folder. top = the .sv that has a
-#                                    matching .xdc, or the only .sv; else name it. pins = <top>.xdc or the only .xdc
+#                                    work on the .sv files in the current folder. top = the module nothing else
+#                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
 #   dewfpga uninstall               remove ~/fpga, ~/.dewfpga and the link in Homebrew's bin (brew packages stay)
 #   dewfpga --version
@@ -75,50 +75,48 @@ cmd_uninstall() {
     echo "done."
 }
 
-is_tb() { [[ $1 == *_tb.sv || $1 == *_tb.v || $1 == *_tb.SV || $1 == *_tb.V ]]; }
-
 cmd_build() {  # <target> [top]
     local target=$1 top=${2:-} xdc f
     case $top in -*) die "unknown option: $top. Usage:  dewfpga $target [top]" ;; esac
     top=${top#./}
     [[ $top != */* ]] || die "run dewfpga inside the folder that holds the .sv files:  cd \"$(dirname "$top")\" && dewfpga $target $(basename "$top")"
-    # every source in the folder is synthesized (submodules may live in their own files); testbenches excluded
-    local srcs=() withxdc=()
+    local files=()
     for f in *.sv *.v *.SV *.V; do
-        { [ -f "$f" ] && ! is_tb "$f"; } || continue
+        [ -f "$f" ] || continue
         [[ $f != *[[:space:]]* ]] || die "'$f': file names with spaces are not supported by the tools. Rename it (e.g. ${f// /_})"
-        srcs+=("$f"); [ -f "${f%.*}.xdc" ] && withxdc+=("${f%.*}")
-    done
-    [ ${#srcs[@]} -gt 0 ] || die "no .sv or .v file in $PWD. cd into the folder with your design, or start one:  dewfpga new blink"
-    if [ -z "$top" ]; then
-        # top = the .sv that has a matching .xdc; if ambiguous, the only .sv in the folder
-        if   [ ${#withxdc[@]} -eq 1 ]; then top=${withxdc[0]}
-        elif [ ${#srcs[@]} -eq 1 ];    then top=${srcs[0]%.*}
-        else die "cannot tell which module is top (${#srcs[@]} source files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
-    fi
-    top=${top%.sv}; top=${top%.v}; top=${top%.SV}; top=${top%.V}
-    [ -f "$top.sv" ] || [ -f "$top.v" ] || [ -f "$top.SV" ] || [ -f "$top.V" ] || die "$top.sv not found"
-    xdc="$top.xdc"
-    # a file that is not named *_tb but calls $finish/$stop is a testbench under another name; yosys would try to build it
-    for f in "${srcs[@]}"; do
-        if grep -qE '[$](finish|stop)([^A-Za-z0-9_]|$)' "$f"; then
-            die "$f calls \$finish, so it is a testbench, but its name does not end in _tb: dewfpga would synthesize it. Rename it to ${top}_tb.sv"
-        fi
-    done
-    # a UTF-8 byte-order mark (Notepad's "UTF-8 with BOM") makes yosys stop at token 1 with "invalid token"
-    for f in "${srcs[@]}"; do
+        # a UTF-8 byte-order mark (Notepad's "UTF-8 with BOM") makes yosys stop at token 1 with "invalid token"
         [ "$(head -c 3 "$f" | LC_ALL=C od -An -tx1 | tr -d ' \n')" != "efbbbf" ] \
             || die "$f starts with a byte-order mark (saved as 'UTF-8 with BOM'). Save it as plain UTF-8, or remove it:  LC_ALL=C sed -i '' \$'1s/^\\xEF\\xBB\\xBF//' $f"
+        files+=("$f")
     done
-    # the top module must exist in one of the sources
-    local found=0
-    for f in "${srcs[@]}"; do
-        if grep -qE "^[[:space:]]*module[[:space:]]+$top\b" "$f"; then found=1; break; fi
-    done
-    [ $found -eq 1 ] || die "no 'module $top' in ${srcs[*]}. The top module must be named after its file ($top.sv), or name the file after the module"
+    [ ${#files[@]} -gt 0 ] || die "no .sv or .v file in $PWD. cd into the folder with your design, or start one:  dewfpga new blink"
+    # what is what: the scanner reads the modules. The top is the design module nothing else instantiates
+    # (or the one named on the command line, by module or by file); a testbench is a module without ports
+    # or one that calls $finish; file names are free. One ERROR= line means it could not decide.
+    local xn="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    for f in *.xdc; do [ -f "$f" ] && xn="$xn,${f%.xdc}"; done
+    local scan line design="" tb="" auto=0 problems=0
+    local ptb=""; [ "$target" = sim ] && ptb=--prefer-tb
+    # shellcheck disable=SC2086
+    scan=$("$py" "$HERE/templates/check_xdc.py" --scan ${top:+--top "$top"} --xdc "${xn#,}" $ptb "${files[@]}") || true
+    while IFS= read -r line; do
+        case $line in
+            ERROR=*)   die "${line#ERROR=}" ;;
+            PROBLEM=*) echo "ERROR: ${line#PROBLEM=}" >&2; problems=1 ;;
+            TOP=*)     top=${line#TOP=} ;;
+            DESIGN=*)  design=${line#DESIGN=} ;;
+            TB=*)      tb=${line#TB=} ;;
+            AUTO=*)    auto=${line#AUTO=} ;;
+        esac
+    done <<< "$scan"
+    [ $problems -eq 0 ] || exit 1
+    [ -n "$top" ] || die "could not find a top module in ${files[*]}"
+    [ "$auto" = 1 ] && [ "$(wc -w <<< "$design")" -gt 1 ] && echo "top module: $top"
+    local srcs=(); read -ra srcs <<< "$design"
+    xdc="$top.xdc"
     case $target in
         sim)
-            [ -f "${top}_tb.sv" ] || [ -f "${top}_tb.v" ] || die "${top}_tb.sv not found. Simulation needs a testbench next to the design; 'dewfpga new blink' gives an example (blink/blink_tb.sv)" ;;
+            [ -n "$tb" ] || die "no testbench for $top in this folder. A testbench is a module without ports that instantiates $top and ends with \$finish; ${top}_tb.sv is the usual name. 'dewfpga new blink' gives an example (blink/blink_tb.sv)" ;;
         bit|flash)
             # the pin file: <top>.xdc, or the only .xdc in the folder (a lab folder usually has Basys3_Master.xdc)
             if [ ! -f "$xdc" ]; then
@@ -137,7 +135,7 @@ cmd_build() {  # <target> [top]
     # empty stream means nothing had changed. sed always exits 0; pipefail (set above) hands back make's code.
     local trailer='/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
     if [ "$target" = sim ]; then
-        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" sim 2> >(sed -E "$trailer" >&2)
+        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" TB="$tb" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" sim 2> >(sed -E "$trailer" >&2)
     else
         DEWFPGA_TMP=$(mktemp -t dewfpga); trap 'rm -f "$DEWFPGA_TMP"' EXIT; local tmp=$DEWFPGA_TMP
         make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \

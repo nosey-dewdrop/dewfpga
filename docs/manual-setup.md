@@ -201,18 +201,23 @@ goes through them in order.
 The rules `dewfpga` follows in a folder:
 
 - Every `.sv` and `.v` in the folder is synthesized, so submodules can live in their own
-  files. Files ending in `_tb.sv` are testbenches and stay out of the bitstream. One
-  design per folder.
-- The top module is the `.sv` whose name matches the `.xdc`; if there is only one `.sv`,
-  that one. Otherwise name it: `dewfpga bit lab4`.
+  files, and a file can be named anything: `lab5.sv` may hold `module top_design`. A module
+  without ports, or one that calls `$finish`, is a testbench and stays out of the bitstream.
+  One design per folder.
+- The top module is the design module that no other module instantiates, as Vivado picks
+  it. When two modules qualify, `dewfpga` names both and you choose: `dewfpga bit lab4`
+  (a module name, or a file name). With several files, `bit` prints the top it chose.
 - The pin file is `<top>.xdc`, or the only `.xdc` in the folder. Pins in it that the
   design does not use are ignored, so a fully uncommented `Basys3_Master.xdc` is fine.
-- `dewfpga sim` needs `<top>_tb.sv` (or `<top>_tb.v`). `bit` and `flash` do not. A testbench that
+- `dewfpga sim` needs a testbench that instantiates the top; `<top>_tb.sv` is the usual name
+  but any name works. `bit` and `flash` do not need one. A testbench that
   never reaches `$finish` is stopped after 120 s with an error; `SIM_TIMEOUT=600 dewfpga sim` waits
   longer. `$stop` ends the run like `$finish`. `flash` builds the `.bit`
   first if it is missing or older than the sources, so `dewfpga flash` alone is enough.
-- The top module must have its file's name: `lab4.sv` holds `module lab4`. Submodule
-  files can be named anything.
+- Two things Vivado lets through and Yosys does not are handled for you: the course's
+  `SevenSegmentDisplay.sv` port line (`output [6:0] seg, logic dp`) gets its direction written
+  in, with a note naming the line; an instance without a name (`clk_div(clk, out);`) and a
+  latch in an `always_comb` stop with the line and the fix. Section 7 has the details.
 - `dewfpga bit` writes no bitstream when timing is not met, and a build that fails removes the
   previous `.bit`, so `flash` can never load yesterday's design by mistake. When nothing changed,
   `bit` prints one line saying so. `$display` in synthesizable code is dropped, as Vivado does. `dewfpga sim` exits with an
@@ -468,8 +473,9 @@ XDC  := Basys3_Master.xdc
 
 `TOP` is the top module's name, `SRCS` every `.sv` in the design, `XDC` the pin file.
 
-Either way, simulation looks for `<top>_tb.sv`; the bitstream does not need one. If `bit`
-stops on the course's `SevSeg_4digit.sv`, section 7 has the one-line fix.
+Either way, simulation looks for a testbench (with the Makefile: `<top>_tb.sv`); the bitstream
+does not need one. The course's `SevSeg_4digit.sv` builds as it is; section 7 says what was
+changed and why.
 
 ---
 
@@ -494,20 +500,36 @@ instead; there the tasks say `make`.
 
 ## 7. Which course file breaks?
 
-One. `SevSeg_4digit.sv` from the course has a port line that Vivado and Icarus accept and
-Yosys does not
+One, and it is fixed for you. `SevSeg_4digit.sv` (also handed out as `SevenSegmentDisplay.sv`)
+has a port line that Vivado and Icarus accept and Yosys does not
 ([port-neither-input-nor-output](https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/)).
 
 ```systemverilog
 output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard
 ```
 
-Yosys does not implement that inheritance. Write it as two lines and it synthesizes.
+Yosys does not implement that inheritance. `dewfpga bit` writes the direction in before
+synthesis and tells you so:
 
-```systemverilog
-output [6:0] seg,
-output logic dp,
 ```
+note: SevSeg_4digit.sv:4: wrote the port direction in:  output [6:0]seg, output logic dp,   (Yosys needs it; Vivado accepts both)
+```
+
+Vivado accepts the changed line too, so the file still works at the lab computer. Two more
+things Vivado lets through and Yosys refuses came up in old student repos; both stop the build
+with the line and the fix, because the code is yours to change:
+
+- An instance without a name, `trans_3s_clock(clk, reset, out);`. The standard requires a
+  name: `trans_3s_clock u1(clk, reset, out);`.
+- A latch in an `always_comb` block: a signal not assigned on every path (an `if` without
+  `else`, a `case` without `default`). Vivado builds a latch and warns; Yosys refuses. Give the
+  signal a default value at the top of the block.
+- A port list where a later port only has a range, `input logic [7:0] d, [2:0] s`: the direction
+  is written in for you, like the seven-segment line above.
+- A reset branch that assigns something other than a constant in an `always_ff` with
+  `posedge reset`, and a signal written on both clock edges: both stop with the line and the fix.
+- A file Vivado wrote after synthesis (`\<const0>`, `keep_hierarchy`) copied in as if it were
+  source: named, with "take the original .sv".
 
 What else was tried: four modules from old student repos, together in one design. An FSM
 with `typedef enum`, a 16x8 RAM, a debouncer and the seven-segment driver above:

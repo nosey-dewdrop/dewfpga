@@ -18,7 +18,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"TechArticle","headline":"How do you run CS223 labs on a Mac without Vivado?",
  "url":"https://nosey-dewdrop.github.io/dewfpga/docs/","author":{"@type":"Person","name":"Damla Su Bilge"},
- "datePublished":"2026-09-19","dateModified":"2026-09-20","inLanguage":"en","proficiencyLevel":"Beginner",
+ "datePublished":"2026-09-19","dateModified":"2026-09-21","inLanguage":"en","proficiencyLevel":"Beginner",
  "about":["Basys3","Vivado alternative macOS","nextpnr-xilinx","Yosys","prjxray","openFPGALoader","SystemVerilog"]}
 </script>
 </head>
@@ -156,11 +156,11 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
 <p>If it prints <code>ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</code> instead, the Mac does not see the board: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper. The <a href="https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/">board not found</a> page goes through them in order.</p>
 <p>The rules <code>dewfpga</code> follows in a folder:</p>
 <ul>
-<li>Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files. Files ending in <code>_tb.sv</code> are testbenches and stay out of the bitstream. One design per folder.</li>
-<li>The top module is the <code>.sv</code> whose name matches the <code>.xdc</code>; if there is only one <code>.sv</code>, that one. Otherwise name it: <code>dewfpga bit lab4</code>.</li>
+<li>Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files, and a file can be named anything: <code>lab5.sv</code> may hold <code>module top_design</code>. A module without ports, or one that calls <code>$finish</code>, is a testbench and stays out of the bitstream. One design per folder.</li>
+<li>The top module is the design module that no other module instantiates, as Vivado picks it. When two modules qualify, <code>dewfpga</code> names both and you choose: <code>dewfpga bit lab4</code> (a module name, or a file name). With several files, <code>bit</code> prints the top it chose.</li>
 <li>The pin file is <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder. Pins in it that the design does not use are ignored, so a fully uncommented <code>Basys3_Master.xdc</code> is fine.</li>
-<li><code>dewfpga sim</code> needs <code>&lt;top&gt;_tb.sv</code> (or <code>&lt;top&gt;_tb.v</code>). <code>bit</code> and <code>flash</code> do not. A testbench that never reaches <code>$finish</code> is stopped after 120 s with an error; <code>SIM_TIMEOUT=600 dewfpga sim</code> waits longer. <code>$stop</code> ends the run like <code>$finish</code>. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
-<li>The top module must have its file's name: <code>lab4.sv</code> holds <code>module lab4</code>. Submodule files can be named anything.</li>
+<li><code>dewfpga sim</code> needs a testbench that instantiates the top; <code>&lt;top&gt;_tb.sv</code> is the usual name but any name works. <code>bit</code> and <code>flash</code> do not need one. A testbench that never reaches <code>$finish</code> is stopped after 120 s with an error; <code>SIM_TIMEOUT=600 dewfpga sim</code> waits longer. <code>$stop</code> ends the run like <code>$finish</code>. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
+<li>Two things Vivado lets through and Yosys does not are handled for you: the course's <code>SevenSegmentDisplay.sv</code> port line (<code>output [6:0] seg, logic dp</code>) gets its direction written in, with a note naming the line; an instance without a name (<code>clk_div(clk, out);</code>) and a latch in an <code>always_comb</code> stop with the line and the fix. Section 7 has the details.</li>
 <li><code>dewfpga bit</code> writes no bitstream when timing is not met, and a build that fails removes the previous <code>.bit</code>, so <code>flash</code> can never load yesterday's design by mistake. When nothing changed, <code>bit</code> prints one line saying so. <code>$display</code> in synthesizable code is dropped, as Vivado does. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
 <li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>), <code>sim</code> leaves <code>&lt;top&gt;_sim</code>, <code>&lt;top&gt;_sim.out</code> and <code>&lt;top&gt;.vcd</code>, <code>flash</code> leaves <code>&lt;top&gt;_flash.out</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
 </ul>
@@ -307,7 +307,7 @@ make flash     # Load SRAM ... done 1</code></pre>
 SRCS := traffic_light.sv debounce.sv
 XDC  := Basys3_Master.xdc</code></pre>
 <p><code>TOP</code> is the top module's name, <code>SRCS</code> every <code>.sv</code> in the design, <code>XDC</code> the pin file.</p>
-<p>Either way, simulation looks for <code>&lt;top&gt;_tb.sv</code>; the bitstream does not need one. If <code>bit</code> stops on the course's <code>SevSeg_4digit.sv</code>, section 7 has the one-line fix.</p>
+<p>Either way, simulation looks for a testbench (with the Makefile: <code>&lt;top&gt;_tb.sv</code>); the bitstream does not need one. The course's <code>SevSeg_4digit.sv</code> builds as it is; section 7 says what was changed and why.</p>
 <hr />
 <h2 id="6-how-do-you-set-up-vs-code">6. How do you set up VS Code?</h2>
 <p>Syntax colors and error marks for SystemVerilog:</p>
@@ -315,11 +315,18 @@ XDC  := Basys3_Master.xdc</code></pre>
 <p><code>dewfpga new</code> and <code>blink.zip</code> both put a <code>.vscode</code> folder in the project: <code>tasks.json</code> (Cmd Shift B builds and flashes the open design), <code>settings.json</code> (Icarus Verilog as the linter, so a syntax error gets a red underline when you save) and <code>extensions.json</code> (VS Code offers to install the extension above when you open the folder). For a folder you made yourself, copy the <code>.vscode</code> folder out of a <code>dewfpga new</code> project; its three tasks already say <code>dewfpga</code>. On the Makefile path, take the three files from <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/</code></a> instead; there the tasks say <code>make</code>.</p>
 <hr />
 <h2 id="7-which-course-file-breaks">7. Which course file breaks?</h2>
-<p>One. <code>SevSeg_4digit.sv</code> from the course has a port line that Vivado and Icarus accept and Yosys does not (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">port-neither-input-nor-output</a>).</p>
+<p>One, and it is fixed for you. <code>SevSeg_4digit.sv</code> (also handed out as <code>SevenSegmentDisplay.sv</code>) has a port line that Vivado and Icarus accept and Yosys does not (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">port-neither-input-nor-output</a>).</p>
 <pre class="systemverilog"><code>output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard</code></pre>
-<p>Yosys does not implement that inheritance. Write it as two lines and it synthesizes.</p>
-<pre class="systemverilog"><code>output [6:0] seg,
-output logic dp,</code></pre>
+<p>Yosys does not implement that inheritance. <code>dewfpga bit</code> writes the direction in before synthesis and tells you so:</p>
+<pre><code>note: SevSeg_4digit.sv:4: wrote the port direction in:  output [6:0]seg, output logic dp,   (Yosys needs it; Vivado accepts both)</code></pre>
+<p>Vivado accepts the changed line too, so the file still works at the lab computer. Two more things Vivado lets through and Yosys refuses came up in old student repos; both stop the build with the line and the fix, because the code is yours to change:</p>
+<ul>
+<li>An instance without a name, <code>trans_3s_clock(clk, reset, out);</code>. The standard requires a name: <code>trans_3s_clock u1(clk, reset, out);</code>.</li>
+<li>A latch in an <code>always_comb</code> block: a signal not assigned on every path (an <code>if</code> without <code>else</code>, a <code>case</code> without <code>default</code>). Vivado builds a latch and warns; Yosys refuses. Give the signal a default value at the top of the block.</li>
+<li>A port list where a later port only has a range, <code>input logic [7:0] d, [2:0] s</code>: the direction is written in for you, like the seven-segment line above.</li>
+<li>A reset branch that assigns something other than a constant in an <code>always_ff</code> with <code>posedge reset</code>, and a signal written on both clock edges: both stop with the line and the fix.</li>
+<li>A file Vivado wrote after synthesis (<code>\&lt;const0&gt;</code>, <code>keep_hierarchy</code>) copied in as if it were source: named, with "take the original .sv".</li>
+</ul>
 <p>What else was tried: four modules from old student repos, together in one design. An FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer and the seven-segment driver above: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features in those files that both Icarus (<code>sim</code>) and Yosys (<code>bit</code>) accepted: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code>. A submodule file named differently from its module, Turkish characters and a BOM in the source, and spaces in the folder path all went through too. That is four files, not the whole course.</p>
 <hr />
 <h2 id="8-what-can-it-not-do">8. What can it not do?</h2>

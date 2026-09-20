@@ -26,8 +26,9 @@ blink.bit  2.2 MB
 ```
 
 No Makefile, no project layout. Every `.sv`/`.v` in the folder is synthesized (submodules
-can live in their own files). The top module is the `.sv` with a matching `.xdc`; if that
-is ambiguous, `dewfpga flash <top>`. `sim` needs `<top>_tb.sv`. Example: `dewfpga new blink`.
+can live in their own files, named anything). The top is the module nothing else instantiates,
+as in Vivado; if two qualify, `dewfpga flash <top>`. A module without ports or with `$finish`
+is the testbench for `sim`. Example: `dewfpga new blink`.
 
 ## Install
 

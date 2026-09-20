@@ -44,7 +44,7 @@
 <pre data-copy="1"><code>dewfpga sim      <span class="c"># iverilog</span>
 dewfpga bit      <span class="c"># .sv -> .bit   (4.6 s)</span>
 dewfpga flash    <span class="c"># program the board: the LED blinks</span></code></pre>
-  <p>No Makefile, no project layout. Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files. The top module is the <code>.sv</code> with a matching <code>.xdc</code>; if that is ambiguous, <code>dewfpga flash &lt;top&gt;</code>. <code>sim</code> needs <code>&lt;top&gt;_tb.sv</code>. First time? <code>dewfpga new blink</code> gives you the blinking LED to start from, with a VS Code task (⌘⇧B = flash).</p>
+  <p>No Makefile, no project layout. Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files. Files can be named anything: the top is the module nothing else instantiates, as in Vivado; if two qualify, <code>dewfpga flash &lt;top&gt;</code>. A module without ports, or with <code>$finish</code>, is the testbench <code>sim</code> runs. The course's seven-segment file builds as it is. First time? <code>dewfpga new blink</code> gives you the blinking LED to start from, with a VS Code task (⌘⇧B = flash).</p>
 
   <h2>Commands</h2>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)

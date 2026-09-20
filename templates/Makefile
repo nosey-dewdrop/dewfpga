@@ -12,8 +12,9 @@
 TOP  := blink
 SRCS := blink.sv
 XDC  := blink.xdc
-TB   ?= $(firstword $(wildcard $(TOP)_tb.sv $(TOP)_tb.v))   # the testbench: <top>_tb.sv (or .v)
-SIM_TIMEOUT ?= 120                                            # seconds before a testbench without $finish is stopped
+# the testbench (<top>_tb.sv or .v), and the seconds after which a testbench that never reaches $finish is stopped
+TB   ?= $(firstword $(wildcard $(TOP)_tb.sv $(TOP)_tb.v))
+SIM_TIMEOUT ?= 120
 
 PART    := xc7a35tcpg236-1
 FPGA    ?= $(or $(FPGA_HOME),$(HOME)/fpga)
@@ -58,7 +59,15 @@ synth: $(TOP).json
 # $display/$print in synthesizable code has no hardware; Vivado drops it silently, so it is dropped here too.
 $(TOP).json: $(SRCS) $(wildcard *.svh *.vh)
 	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json
-	yosys -q -p "read_verilog -sv $(SRCS); synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; write_json $@"
+	@"$(PY)" "$(CHECKER)" --fix-ports $(SRCS)
+	@set -o pipefail; yosys -q -p "read_verilog -sv $(SRCS); synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; write_json $@" 2>&1 \
+	  | awk '/Latch inferred for signal .* from always_comb process/ { \
+	           sig=$$0; sub(/.*Latch inferred for signal `?\\?/,"",sig); sub(/. from always_comb.*/,"",sig); sub(/^.*\\/,"",sig); \
+	           at=$$0; sub(/.*\$$proc\$$/,"",at); sub(/\$$[0-9]+.*/,"",at); \
+	           print "ERROR: " at ": the always_comb block leaves " sig " unassigned on some path (an if without else, a case without default), so it would need a latch. Give " sig " a default value at the top of the block. Vivado builds a latch here with a warning; Yosys refuses."; next } \
+	         /Async reset .* yields non-constant value/ { print; print "ERROR: in an always_ff with an asynchronous reset (posedge clk, posedge reset), the reset branch may only assign constants (x <= 0). Assign that signal a constant on reset, or reset it inside the clocked branch."; next } \
+	         /Multiple edge sensitive events found for this signal/ { print; print "ERROR: a signal is written from two always blocks with different edges (posedge and negedge, or two different resets). Drive each signal from one always block."; next } \
+	         { print }'
 
 # the tool binaries and the chipdb are prerequisites too: after `dewfpga install` (an update) the netlist is re-placed
 $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
