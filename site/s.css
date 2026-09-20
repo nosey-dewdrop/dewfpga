@@ -53,17 +53,16 @@ body{margin:0;background:var(--bg);color:var(--fg);max-width:100vw;
 /* the reading column: the sheet is 1366 wide, a line of prose is not.
    Held to ~68 characters, which is where the eye still finds the next
    line without hunting. Tables, code and the artboard keep full width. */
-main.wrap>p,main.wrap>ul,main.wrap>ol,main.wrap>dl,
-main.wrap>h2,main.wrap>h3,main.wrap>.cta,main.wrap>.eyebrow,
-main.wrap>.err,main.wrap>.soonlist,main.wrap>blockquote,
-.docs>p,.docs>ul,.docs>ol,.docs>h2,.docs>h3,.docs>blockquote{
-  max-width:calc(980*var(--u))}
-main.wrap>h1,.lead,.sub{max-width:calc(980*var(--u))}
 
 a{color:var(--accent);text-decoration:underline;
   text-decoration-thickness:1px;text-underline-offset:3px}
 a:hover{text-decoration-thickness:2px}
 p,ul,ol,table,pre,dl{margin:0 0 1rem}
+
+/* the column is centred in the sheet, not pinned to the left: a held
+   measure with all the slack on one side reads as a mistake. */
+main.wrap,.docs{display:flow-root}
+main.wrap>*,.docs>*{max-width:calc(980*var(--u));margin-left:auto;margin-right:auto}
 li{margin:.35rem 0}
 .mute{color:var(--mute)}
 small,.small{font-size:.87rem}
@@ -197,8 +196,7 @@ pre .p{color:#afddbc}
 /* ---------- tables ----------
    A table sits in the same column as the prose above it, or the page
    reads as two documents side by side. */
-.tablewrap{overflow-x:auto;margin:0 0 1.15rem;max-width:calc(980*var(--u))}
-main.wrap>table,main.wrap>pre,.docs>table,.docs>pre{max-width:calc(980*var(--u))}
+.tablewrap{overflow-x:auto;margin:0 auto 1.15rem;max-width:calc(980*var(--u))}
 table{border-collapse:collapse;width:100%;font-size:.95rem}
 td,th{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);
   vertical-align:top}
