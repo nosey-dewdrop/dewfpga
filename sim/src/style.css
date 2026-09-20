@@ -51,7 +51,7 @@ footer{padding-bottom:56px;color:var(--ink-dim);font-size:14px;margin-top:84px}
 
 /* ---- header: wordmark + tabs + palette ---- */
 
-@media(max-width:700px){.board-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}svg#board{min-width:860px}.site-right{flex-direction:row;gap:14px;align-items:baseline;flex:1;justify-content:space-between}}
+/* phones: see the block at the end of this file */
 
 .wordmark:hover{transform:none}
 .wordmark .led{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.4s steps(1) infinite}
@@ -227,4 +227,32 @@ nav.tabs a:nth-child(4){animation-delay:.19s}
 .hero .dim{animation:slideUp .5s cubic-bezier(.22,.7,.3,1) both;animation-delay:.42s}
 @media (prefers-reduced-motion:reduce){
   .wordmark,nav.tabs a,.hero .hi,.hero h1,.hero .dim{animation:none}
+}
+
+/* ---------- phones ----------
+   Same rule as site/s.css: under 700px the artboard strip is replaced by the
+   six chips as text, 44 px tall; the board fits the width instead of forcing
+   an 860 px horizontal scroll; the buttons grow to a thumb. Desktop untouched. */
+@media (max-width:700px){
+  nav.top{width:100%;aspect-ratio:auto;background:none;display:flex;flex-wrap:wrap;
+    align-items:center;gap:10px 8px;padding:16px 16px 4px}
+  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
+  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
+    padding:0 15px;border-radius:12px;font:700 .92rem/1 var(--body);
+    color:#000;-webkit-text-fill-color:#000;
+    background:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%)}
+  nav.top a.brand{width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
+    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
+    color:#f5e5e8;-webkit-text-fill-color:#f5e5e8}
+  nav.top a.c-github,nav.top a.c-docs{background:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%)}
+  nav.top a.c-sim{background:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%)}
+  nav.top a:hover{transform:none}
+  main,footer{padding:0 16px}
+  .hero{margin:22px 0 18px}
+  .work{gap:20px}
+  .viewbar button,.pane-bar button,.pane-bar select,.controls button{min-height:44px;display:inline-flex;align-items:center}
+  .pane-bar{gap:10px 14px}
+  .controls input[type=range]{width:120px}
+  .editor{max-height:60vh}
+  footer{margin-top:40px}
 }
