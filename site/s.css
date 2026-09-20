@@ -266,13 +266,14 @@ footer a{color:inherit}
    shell's own faces and chip gradients, 44 px tall. Nothing in this block
    reaches a screen wider than 700 px; the desktop strip is untouched. */
 @media (max-width:700px){
-  nav.top{width:100%;aspect-ratio:auto;background:none;display:flex;flex-wrap:wrap;
-    align-items:center;gap:10px 8px;padding:16px 16px 4px}
+  /* the artboard's two groups of three, one group per row, equal chips */
+  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
+    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
   /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
   nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
-    padding:0 15px;border-radius:12px;font:700 .92rem/1 var(--body);
+    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
     color:#000;-webkit-text-fill-color:#000;background:var(--chip-blue)}
-  nav.top a.brand{width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
+  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
     font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
     color:var(--brand);-webkit-text-fill-color:var(--brand)}
   nav.top a.c-github,nav.top a.c-docs{background:var(--chip-lilac)}
