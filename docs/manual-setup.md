@@ -192,6 +192,12 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1
 16 switches): LED 15 (LD15, leftmost) lights and LED 0 (LD0, rightmost, just above SW0)
 blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.
 
+If it prints `ERROR: board not found. Is the USB (PROG port) plugged in and the power
+switch ON?` instead, the Mac does not see the board: power switch, PROG port, a
+charge-only cable, the adapter, or the JP2 jumper. The
+[board not found](https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/) page
+goes through them in order.
+
 The rules `dewfpga` follows in a folder:
 
 - Every `.sv` and `.v` in the folder is synthesized, so submodules can live in their own
@@ -207,6 +213,9 @@ The rules `dewfpga` follows in a folder:
   files can be named anything.
 - `dewfpga bit` writes no bitstream when timing is not met. `dewfpga sim` exits with an
   error when the testbench prints `$error` or `$fatal`, so a red run is visible.
+- `bit` leaves its working files next to the sources (`.json`, `.fasm`, `.frames`, `.log`,
+  `_routed.json`) and `sim` leaves `<top>_sim` and `<top>.vcd`. `dewfpga clean` removes all
+  of them and the `.bit`; the `.sv` and `.xdc` stay. Run it before you hand a lab in.
 
 ```
 dewfpga install                     install the toolchain (safe to re-run)
@@ -421,14 +430,24 @@ the same `blink.sv` and `blink_tb.sv` there, it draws it.
 
 ## 5. How do you use it for your own lab?
 
-**The pin file.** The course hands out `Basys3_Master.xdc` with every line commented out
-(a copy: [templates/Basys3_Master.xdc](https://nosey-dewdrop.github.io/dewfpga/templates/Basys3_Master.xdc)).
+**The pin file.** The course hands out `Basys3_Master.xdc` with every line commented out.
+If you do not have it, this puts a copy into the current folder:
+
+```bash
+curl -fsSL -o Basys3_Master.xdc https://nosey-dewdrop.github.io/dewfpga/templates/Basys3_Master.xdc
+```
+
 Copy it into your lab folder and delete the leading `#` on the `set_property` lines for
 the pins your module uses. Uncommenting all of them is fine too: pins the design does not
 use are ignored. The port names in your top module must match the names in that file:
 `clk`, `sw[0]`, `led[0]`, `seg[0]`, `an[0]`, `btnC`. If your module says `clock`, change
 the name inside `[get_ports ...]` on that line. The `xdc` check that runs before place and
-route lists every port that has no pin.
+route lists every port that has no pin, and names the XDC line to fix.
+
+A design without a clock (`assign led = sw;`) prints `Warning: No clocks found in design`
+and `no clocked paths, timing not applicable`; that is correct, not a problem. With the
+whole file uncommented and no `clk` port, `create_clock: target [get_ports clk] matched
+nothing` is the same thing said by nextpnr.
 
 **With `dewfpga`:** put the `.sv` files and the `.xdc` in one folder, `cd` into it,
 `dewfpga flash`. With `lab4.sv` and `Basys3_Master.xdc` in the folder that is all. With
@@ -460,11 +479,12 @@ code --install-extension mshr-h.veriloghdl
 
 `dewfpga new` and `blink.zip` both put a `.vscode` folder in the project: `tasks.json`
 (Cmd Shift B builds and flashes the open design), `settings.json` (Icarus Verilog as the
-linter, so a syntax error gets a red underline as you type) and `extensions.json` (VS Code
+linter, so a syntax error gets a red underline when you save) and `extensions.json` (VS Code
 offers to install the extension above when you open the folder). For a folder you made
-yourself, copy the three files from
-[`templates/.vscode/`](https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json);
-`tasks.json` says `make flash`, change that to `dewfpga flash` if you took the one-line path.
+yourself, copy the `.vscode` folder out of a `dewfpga new` project; its three tasks already
+say `dewfpga`. On the Makefile path, take the three files from
+[`templates/.vscode/`](https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json)
+instead; there the tasks say `make`.
 
 ---
 

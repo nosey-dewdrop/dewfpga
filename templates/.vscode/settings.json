@@ -1,6 +1,5 @@
 {
   "verilog.linting.linter": "iverilog",
-  "verilog.linting.iverilog.arguments": "-g2012",
-  "verilog.linting.iverilog.runAtFileLocation": true,
-  "files.associations": { "*.sv": "systemverilog", "*.xdc": "tcl" }
+  "verilog.linting.iverilog.arguments": "-y . -Y .sv -Y .v",
+  "verilog.linting.iverilog.runAtFileLocation": true
 }

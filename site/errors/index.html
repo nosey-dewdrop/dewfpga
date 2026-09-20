@@ -67,6 +67,10 @@
     <span class="step">step 12</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
     <p>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv. The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
   </div>
+  <div class="err">
+    <span class="step">flash</span><a class="title" href="/dewfpga/errors/board-not-found/">ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</a>
+    <p>openFPGALoader, when you program the board. The Mac does not see the Basys3 on the USB bus: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper.</p>
+  </div>
   <h2>Your error is not here?</h2>
   <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the step number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
   <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#9-which-versions-were-tested">step 17 of the guide</a>. Newer versions can move the walls.</p>

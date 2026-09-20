@@ -36,13 +36,20 @@ extra   = sorted(xdc_ports - ports)   # in the XDC, not in the code
 
 if missing:
     print(f"ERROR: these ports have NO pin in the XDC ({tname}):")
-    for p in missing: print(f"   - {p}")
-    print("   -> copy the matching lines from Basys3_Master.xdc.")
-if missing:
+    xdc_lower = {q.lower(): q for q in xdc_ports}
+    for p in missing:
+        near = xdc_lower.get(p.lower())
+        print(f"   - {p}" + (f"      (the XDC has '{near}': same name, different case)" if near else ""))
+    print("   -> the port names in the module must match the names in the XDC (the course file uses")
+    print("      clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an). Rename the port in the module,")
+    print("      or change the name inside [get_ports ...] on that line of the XDC.")
+    print("      A line that still starts with # is commented out and does not count.")
     sys.exit(1)
 # pins in the XDC that the design does not use are fine (nextpnr ignores them); a whole
-# uncommented Basys3_Master.xdc is the normal lab setup. Only a near-miss looks like a typo.
-typos = [p for p in extra if any(p.split("[")[0].lower() == q.split("[")[0].lower() and p != q for q in ports)]
+# uncommented Basys3_Master.xdc is the normal lab setup, and led[15] with a led[1:0] port is just
+# an unused pin. Only a case difference (LED vs led) looks like a typo, so only that gets a warning.
+base = {q.split("[")[0] for q in ports}
+typos = [p for p in extra if p.split("[")[0] not in base and p.split("[")[0].lower() in {b.lower() for b in base}]
 for p in typos:
-    print(f"warning: the XDC names '{p}' but the design has no such port (case or index differs from a real port)")
+    print(f"warning: the XDC names '{p}' but the design's port is spelled differently (case differs)")
 print(f"xdc ok: {len(ports)} ports, all mapped" + (f", {len(extra)} unused pins in the XDC ignored." if extra else "."))

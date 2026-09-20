@@ -100,7 +100,7 @@ cmd_build() {  # <target> [top]
         || die "no 'module $top' in ${srcs[*]}. The top module must be named after its file ($top.sv), or name the file after the module"
     case $target in
         sim)
-            [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench (see: dewfpga new example)" ;;
+            [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench next to the design; 'dewfpga new blink' gives an example (blink/blink_tb.sv)" ;;
         bit|flash)
             # the pin file: <top>.xdc, or the only .xdc in the folder (a lab folder usually has Basys3_Master.xdc)
             if [ ! -f "$xdc" ]; then

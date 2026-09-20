@@ -53,9 +53,12 @@ $(TOP).json: $(SRCS) $(wildcard *.svh *.vh)
 $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
 	@if ! grep -q '^[^#]*create_clock' $(XDC); then echo "note: no create_clock in $(XDC); timing is checked against the Basys3's 100 MHz oscillator (--freq 100)"; fi
-	@"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
+	@set -o pipefail; "$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           $$(grep -q '^[^#]*create_clock' $(XDC) || echo --freq 100) \
-	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log
+	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log 2>&1 \
+	  | awk '/^Warning: \[current_design\] isn.t supported, ignoring/ || /^[0-9]+ warnings?, [0-9]+ errors?$$/ {next} !seen[$$0]++'
+	# the course's Basys3_Master.xdc ends in five [current_design] lines nextpnr does not know; they are
+	# harmless and would print on every build, so they are dropped here (the full text is in $(TOP).log)
 	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0; if ($$0 ~ /FAIL/) bad=$$0} \
 	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); if (bad != "") m = bad; sub(/.*: /,"",m); \
 	          if (m == "") m = "no clocked paths, timing not applicable"; \

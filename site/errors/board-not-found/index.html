@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON? (fix, macOS)</title>
+<meta name="description" content="openFPGALoader prints 'unable to open ftdi device: -3 (device not found)' and dewfpga flash stops. The five things to check on a Basys3 plugged into an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR: board not found (dewfpga flash, openFPGALoader)">
+<meta property="og:description" content="openFPGALoader prints 'unable to open ftdi device: -3 (device not found)' and dewfpga flash stops. The five things to check on a Basys3 plugged into an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?","url":"https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-20","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">flash</span>openFPGALoader, when you program the board</p>
+  <h1 class="mono">ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</h1>
+<p>The build went through, then <code>dewfpga flash</code> (or <code>make flash</code>) stops with these lines. The bitstream is fine; the Mac cannot see the board.</p>
+<pre><code>unable to open ftdi device: -3 (device not found)
+JTAG init failed with: unable to open ftdi device
+ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</code></pre>
+<h2>Why does it happen?</h2>
+<p>openFPGALoader talks to the FTDI chip on the Basys3 over USB. <code>device not found</code> means no such USB device is on the bus at that moment. Nothing on the software side is missing; it is always the cable, the port, the power or the jumper.</p>
+<h2>What is the fix?</h2>
+<p>Check these in order; each one has produced exactly this error.</p>
+<ol class="walls">
+  <li><b>The power switch.</b> It is next to the PROG port, top left of the board. It has to be ON; the red power LED lights.</li>
+  <li><b>The PROG port, not the USB host port.</b> The micro-USB socket next to the power switch. The full-size USB-A socket on the board is for a keyboard or a mouse, and programming through it does nothing.</li>
+  <li><b>The cable carries data.</b> Some micro-USB cables are charge-only. If the power LED lights but the Mac still sees nothing, try another cable.</li>
+  <li><b>The adapter or hub.</b> Apple Silicon MacBooks have USB-C only, so the cable goes through a USB-C to USB-A adapter or a hub. Plug the adapter directly into the Mac; a hub that is itself unpowered can drop the board.</li>
+  <li><b>The JP2 jumper.</b> It selects where the board takes power from and has to sit on <code>USB</code>. On a board that has been used with an external supply it may sit on <code>EXT</code>.</li>
+</ol>
+<p>To see whether the Mac has the board at all, before blaming the tools:</p>
+<pre data-copy="1"><code>system_profiler SPUSBDataType | grep -A 4 -i "digilent\|ftdi\|basys"</code></pre>
+<p>Nothing printed means the board is not on the USB bus: cable, port, power, jumper. Something printed and <code>flash</code> still fails: unplug the cable, wait two seconds, plug it back in, run <code>dewfpga flash</code> again. No driver has to be installed on macOS for this to work.</p>
+<p>The design lives in the FPGA's SRAM, so after a power cycle the board is blank again and you flash once more; that is normal, not this error.</p>
+<p>Section 2 of the guide: <a href="/dewfpga/docs/#2-how-do-you-install-it-in-one-line">How do you install it in one line?</a></p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>
