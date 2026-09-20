@@ -517,8 +517,13 @@ This covers the part of Vivado that CS223 uses, and no more.
   multipliers and DSP blocks are untested.
 - **One board, one platform.** Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and
   other boards are untested and the installer refuses them.
-- **Confirmed on the board:** `blink`, switches-to-LEDs, and the Lab 2 adder/subtractor.
-  The four-module design in section 7 went as far as a bitstream and was not loaded.
+- **Confirmed on the board** (19 and 20 September): `blink`, switches-to-LEDs, the Lab 2
+  adder/subtractor, and the simulator's three examples (button counter on the display,
+  traffic-light FSM with sensor hold, switches to LEDs). The four-module design in
+  section 7 went as far as a bitstream and was not loaded.
+- **`` `ifdef SIM ``.** The browser simulator defines `SIM`; the command line does not.
+  A design can use it to shorten a clock divider for the browser and keep the real
+  value for the board, as `blink.sv` does.
 
 ---
 

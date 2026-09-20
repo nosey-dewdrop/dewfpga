@@ -327,7 +327,8 @@ output logic dp,</code></pre>
 <li><strong>Unofficial tools.</strong> AMD does not make or support them; prjxray worked out the bitstream format without AMD's documentation. If a lab is graded in Vivado, open it in Vivado once before the demo.</li>
 <li><strong>Memories become distributed RAM</strong> (<code>-nobram</code>). The 16x8 RAM in section 7 mapped to four RAM32M cells. A large memory such as a VGA framebuffer would not fit this way; big multipliers and DSP blocks are untested.</li>
 <li><strong>One board, one platform.</strong> Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and other boards are untested and the installer refuses them.</li>
-<li><strong>Confirmed on the board:</strong> <code>blink</code>, switches-to-LEDs, and the Lab 2 adder/subtractor. The four-module design in section 7 went as far as a bitstream and was not loaded.</li>
+<li><strong>Confirmed on the board</strong> (19 and 20 September): <code>blink</code>, switches-to-LEDs, the Lab 2 adder/subtractor, and the simulator's three examples (button counter on the display, traffic-light FSM with sensor hold, switches to LEDs). The four-module design in section 7 went as far as a bitstream and was not loaded.</li>
+<li><strong><code>`ifdef SIM</code>.</strong> The browser simulator defines <code>SIM</code>; the command line does not. A design can use it to shorten a clock divider for the browser and keep the real value for the board, as <code>blink.sv</code> does.</li>
 </ul>
 <hr />
 <h2 id="9-which-versions-were-tested">9. Which versions were tested?</h2>

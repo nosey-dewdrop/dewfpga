@@ -103,5 +103,7 @@ temp directory. CI runs the clean install, the suite and the npm package on a fr
 
 Measured 2026-09-19 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
 1.4 GB; second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.
+On the board, 20 September: the blink template and the simulator's three examples (display counter,
+traffic-light FSM, switches to LEDs), each built with `dewfpga flash`.
 With yosys 0.69 the chain built by the script produces byte-identical `.frames` to the hand-built
 chain that lit the LED; with another yosys the netlist differs and only the I/O placement is compared.
