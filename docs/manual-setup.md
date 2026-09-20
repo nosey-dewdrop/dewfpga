@@ -177,8 +177,14 @@ blink.bit  2.2 MB
 `dewfpga flash`:
 
 ```
+Jtag frequency : requested 6.00MHz    -> real 6.00MHz
+Open file DONE
+Parse file DONE
+load program
 Load SRAM: [==================================================] 100.00%
+
 Done
+Shift IR 35
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1
 ```
 

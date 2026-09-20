@@ -143,8 +143,14 @@ blink_tb.sv:35: $finish called at 200000 (1ps)</code></pre>
 pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB</code></pre>
 <p><code>dewfpga flash</code>:</p>
-<pre><code>Load SRAM: [==================================================] 100.00%
+<pre><code>Jtag frequency : requested 6.00MHz    -&gt; real 6.00MHz
+Open file DONE
+Parse file DONE
+load program
+Load SRAM: [==================================================] 100.00%
+
 Done
+Shift IR 35
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
 <p><code>done 1</code> means the chip accepted the design. Flip switch 0 up (SW0, the rightmost of the 16 switches): LED 15 (LD15, leftmost) lights and LED 0 (LD0, rightmost, just above SW0) blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.</p>
 <p>The rules <code>dewfpga</code> follows in a folder:</p>
