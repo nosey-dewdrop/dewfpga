@@ -24,7 +24,7 @@ F2B     := $(FPGA)/prjxray/build/tools/xc7frames2bit
 CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
 
 SHELL := bash
-.SHELLFLAGS := -o pipefail -c
+.DELETE_ON_ERROR:          # a recipe that fails must not leave a half-written target behind (make 3.81 honours this)
 
 .PHONY: all sim synth bit flash clean check
 
@@ -40,29 +40,30 @@ check:
 
 # the testbench's $error/$fatal lines make sim fail, so a red run is visible to make, VS Code and CI
 sim: $(TOP)_sim
-	@./$(TOP)_sim | tee $(TOP)_sim.out; ! grep -qE '^(ERROR|FATAL):' $(TOP)_sim.out || { echo "ERROR: the testbench reported errors (see above)" >&2; exit 1; }
+	@set -o pipefail; ./$(TOP)_sim | tee $(TOP)_sim.out; ! grep -qE '^(ERROR|FATAL):' $(TOP)_sim.out || { echo "ERROR: the testbench reported errors (see above)" >&2; exit 1; }
 
-$(TOP)_sim: $(SRCS) $(TOP)_tb.sv
+$(TOP)_sim: $(SRCS) $(TOP)_tb.sv $(wildcard *.svh *.vh)
 	iverilog -g2012 -o $@ $(SRCS) $(TOP)_tb.sv
 
 synth: $(TOP).json
-$(TOP).json: $(SRCS)
-	yosys -q -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@" $(SRCS)
+$(TOP).json: $(SRCS) $(wildcard *.svh *.vh)
+	yosys -q -p "read_verilog -sv $(SRCS); synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@"
 
 # the tool binaries and the chipdb are prerequisites too: after `dewfpga install` (an update) the netlist is re-placed
-$(TOP).fasm: $(TOP).json $(XDC) $(NEXTPNR) $(CHIPDB) $(MAKEFILE_LIST)
+$(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
 	@if ! grep -q '^[^#]*create_clock' $(XDC); then echo "note: no create_clock in $(XDC); timing is checked against the Basys3's 100 MHz oscillator (--freq 100)"; fi
 	@"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           $$(grep -q '^[^#]*create_clock' $(XDC) || echo --freq 100) \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log
-	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0} \
-	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); sub(/.*: /,"",m); \
-	          if (m == "") m = "no create_clock in the XDC, timing not checked"; \
+	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0; if ($$0 ~ /FAIL/) bad=$$0} \
+	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); if (bad != "") m = bad; sub(/.*: /,"",m); \
+	          if (m == "") m = "no clocked paths, timing not applicable"; \
 	          if (m ~ /FAIL/) { printf "ERROR: timing not met: %s. The design cannot run at the clock the XDC asks for; no bitstream written. Details: $(TOP).log\n",m > "/dev/stderr"; exit 2 } \
 	          printf "pnr ok: %s LUT, %s FF, %s   (full log: $(TOP).log)\n",l,f,m}' $(TOP).log || { rm -f $@; exit 2; }
 
 $(TOP).frames: $(TOP).fasm
+	@grep -qE '^[A-Z0-9_]+\.' $< || { echo "ERROR: $< has no FASM features (empty or corrupt place-and-route output). Run: dewfpga clean" >&2; exit 1; }
 	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
 
 bit: $(TOP).bit

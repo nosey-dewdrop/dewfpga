@@ -40,7 +40,8 @@ die()   { printf '\n%sERROR:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 # Shallow-fetch one pinned commit. Same source even after the branch moves on.
 clone_pinned() {  # <url> <sha> <dir>
     local url=$1 sha=$2 dir=$3
-    if [ -d "$dir/.git" ] && [ "$(git -C "$dir" rev-parse HEAD 2>/dev/null)" = "$sha" ]; then
+    # the stamp is written after the submodules, so a clone interrupted half-way is redone, not skipped
+    if [ -d "$dir/.git" ] && [ "$(git -C "$dir" rev-parse HEAD 2>/dev/null)" = "$sha" ] && [ "$(cat "$dir/.dewfpga-sha" 2>/dev/null)" = "$sha" ]; then
         skip "$dir @ ${sha:0:7}"; return
     fi
     rm -rf "$dir"
@@ -51,6 +52,7 @@ clone_pinned() {  # <url> <sha> <dir>
     git -C "$dir" -c advice.detachedHead=false checkout -q FETCH_HEAD
     # --recursive is REQUIRED: prjxray's yaml-cpp/googletest/abseil are submodules; cmake fails without them.
     git -C "$dir" submodule update -q --init --recursive --depth 1
+    echo "$sha" > "$dir/.dewfpga-sha"
     ok "$dir @ ${sha:0:7} (+submodule)"
 }
 
@@ -59,6 +61,7 @@ step 0 "Environment"
 [ "$(id -u)" -ne 0 ] || die "do not run with sudo. Everything installs as your user under ~/fpga."
 [ "$(uname -s)" = Darwin ] || die "this script is for macOS. Linux/Windows are not supported."
 [ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is tested. Intel Mac not yet."
+[[ $FPGA_HOME != *[[:space:]]* ]] || die "FPGA_HOME=$FPGA_HOME contains a space; the FPGA tools cannot handle that path."
 xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools missing. First:  xcode-select --install   (then run this again)"
 command -v brew >/dev/null   || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
 mkdir -p "$FPGA_HOME"
@@ -169,6 +172,7 @@ fi
 # ---------------------------------------------------------------- 6. verify
 step 6 "Verify"
 CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/dewfpga"
+echo "$FPGA_HOME" > "$(dirname "$CLI")/../.fpga_home"       # the CLI reads this, so FPGA_HOME=/elsewhere sticks
 BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: user-writable, on PATH
 resolve() { local f=$1 d; while [ -L "$f" ]; do d=$(cd "$(dirname "$f")" && pwd); f=$(readlink "$f"); [[ $f = /* ]] || f="$d/$f"; done; printf '%s' "$f"; }
 if [ "$(resolve "$(command -v dewfpga 2>/dev/null || echo /nonexistent)")" = "$CLI" ]; then

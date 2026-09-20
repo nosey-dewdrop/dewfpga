@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # dewfpga web installer.
 #   curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
-# Downloads the CLI into ~/.dewfpga (checked against the published sha256), links `dewfpga` into
+# Downloads the CLI into ~/.dewfpga (sha256 compared with dewfpga.tgz.sha256 from the same site: an integrity
+# check against a broken download, not a signature), links `dewfpga` into
 # Homebrew's bin, then runs `dewfpga install` (the toolchain, ~4 min). Re-run the same line to update.
 # The whole script is one function, so a download that stops halfway runs nothing.
 set -euo pipefail
@@ -19,7 +20,7 @@ main() {
     echo "downloading $BASE/dewfpga.tgz"
     curl -fsSL "$BASE/dewfpga.tgz"        -o "$tmp/dewfpga.tgz"        || { rm -rf "$tmp"; die "download failed"; }
     curl -fsSL "$BASE/dewfpga.tgz.sha256" -o "$tmp/dewfpga.tgz.sha256" || { rm -rf "$tmp"; die "checksum download failed"; }
-    (cd "$tmp" && shasum -a 256 -c dewfpga.tgz.sha256 >/dev/null) || { rm -rf "$tmp"; die "checksum mismatch: the download is corrupt or tampered with. Try again."; }
+    (cd "$tmp" && shasum -a 256 -c dewfpga.tgz.sha256 >/dev/null) || { rm -rf "$tmp"; die "sha256 mismatch: the download is incomplete or corrupt. Try again."; }
     rm -rf "$DIR"; mkdir -p "$DIR"                                   # a fresh tree: files removed upstream do not linger
     tar -xzf "$tmp/dewfpga.tgz" -C "$DIR" --strip-components 1 || { rm -rf "$tmp"; die "extract failed"; }
     rm -rf "$tmp"

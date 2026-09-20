@@ -14,7 +14,8 @@ set -euo pipefail
 resolve() { local f=$1 d; while [ -L "$f" ]; do d=$(cd "$(dirname "$f")" && pwd); f=$(readlink "$f"); [[ $f = /* ]] || f="$d/$f"; done; printf '%s' "$f"; }
 SELF="$(resolve "${BASH_SOURCE[0]}")"
 HERE="$(cd "$(dirname "$SELF")/.." && pwd)"
-FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
+FPGA_HOME="${FPGA_HOME:-$(cat "$HERE/.fpga_home" 2>/dev/null || echo "$HOME/fpga")}"   # install.sh records where it put the tools
+[[ $HERE != *[[:space:]]* && $FPGA_HOME != *[[:space:]]* ]] || { echo "ERROR: a path with a space ($HERE / $FPGA_HOME): the FPGA tools cannot handle that. Move the folder or set FPGA_HOME." >&2; exit 1; }
 
 usage()   { sed -n '2,11s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
 version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
@@ -63,7 +64,10 @@ cmd_uninstall() {
     local link; link="$(brew --prefix 2>/dev/null || echo /opt/homebrew)/bin/dewfpga"
     echo "removing: $FPGA_HOME  $HOME/.dewfpga  $link"
     echo "kept: the Homebrew packages (brew uninstall yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14 if you want them gone)"
-    rm -rf "$FPGA_HOME" "$HOME/.dewfpga"
+    case "$FPGA_HOME" in "$HOME"|/|"") die "FPGA_HOME is $FPGA_HOME; refusing to delete that. Remove the five entries by hand: nextpnr-xilinx prjxray chipdb venv install.log" ;; esac
+    rm -rf "$FPGA_HOME/nextpnr-xilinx" "$FPGA_HOME/prjxray" "$FPGA_HOME/chipdb" "$FPGA_HOME/venv" "$FPGA_HOME/install.log"
+    rmdir "$FPGA_HOME" 2>/dev/null || true      # only if nothing else lives there
+    [ "$HERE" = "$HOME/.dewfpga" ] && rm -rf "$HOME/.dewfpga"
     [ -L "$link" ] && rm -f "$link"
     echo "done."
 }
@@ -73,13 +77,13 @@ cmd_build() {  # <target> [top]
     if [ -z "$top" ]; then
         # top = the .sv that has a matching .xdc; if ambiguous, the only .sv in the folder
         local f svs=() withxdc=()
-        for f in *.sv; do
-            [ -f "$f" ] && [[ $f != *_tb.sv ]] || continue
-            svs+=("$f"); [ -f "${f%.sv}.xdc" ] && withxdc+=("$f")
+        for f in *.sv *.v; do
+            [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] || continue
+            svs+=("${f%.*}"); [ -f "${f%.*}.xdc" ] && withxdc+=("${f%.*}")
         done
-        if   [ ${#withxdc[@]} -eq 1 ]; then top=${withxdc[0]%.sv}
-        elif [ ${#svs[@]} -eq 1 ];     then top=${svs[0]%.sv}
-        else die "cannot tell which module is top (${#svs[@]} .sv files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
+        if   [ ${#withxdc[@]} -eq 1 ]; then top=${withxdc[0]}
+        elif [ ${#svs[@]} -eq 1 ];     then top=${svs[0]}
+        else die "cannot tell which module is top (${#svs[@]} source files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
     fi
     top=${top%.sv}; top=${top%.v}
     [ -f "$top.sv" ] || [ -f "$top.v" ] || die "$top.sv not found"
@@ -91,6 +95,8 @@ cmd_build() {  # <target> [top]
         [[ $f != *[[:space:]]* ]] || die "'$f': file names with spaces are not supported by the tools. Rename it (e.g. ${f// /_})"
         srcs+=("$f")
     done
+    grep -qE "^[[:space:]]*module[[:space:]]+$top\b" "${srcs[@]}" 2>/dev/null \
+        || die "no 'module $top' in ${srcs[*]}. The top module must be named after its file ($top.sv), or name the file after the module"
     case $target in
         sim)
             [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench (see: dewfpga new example)" ;;
@@ -102,13 +108,14 @@ cmd_build() {  # <target> [top]
                 elif [ ${#xdcs[@]} -eq 0 ]; then die "no .xdc pin file in this folder. Copy $HERE/templates/Basys3_Master.xdc here and uncomment the pins you use"
                 else die "${#xdcs[@]} .xdc files here and none is named $top.xdc. Keep one, or name it $top.xdc"; fi
             fi
+            [[ $xdc != *[[:space:]]* ]] || die "'$xdc': file names with spaces are not supported by the tools. Rename it (e.g. ${xdc// /_})"
             [ -s "$FPGA_HOME/chipdb/xc7a35t.bin" ] && [ -x "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" ] \
                 || die "toolchain not installed. Run:  dewfpga install   (status: dewfpga check)" ;;
     esac
     # make's own "*** [target] Error 1" trailer adds nothing to the message the recipe already printed.
     # One merged stream keeps the lines in order; sed always exits 0, so pipefail (set above) hands back make's exit code.
     make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
-        | sed '/^make: \*\*\* /d'
+        | sed -E '/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
 }
 
 case "${1:-}" in

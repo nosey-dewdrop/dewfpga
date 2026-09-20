@@ -37,7 +37,7 @@ One line, no Node needed:
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 ```
 
-It puts the CLI in `~/.dewfpga` (verified against the published sha256), links `dewfpga` into
+It puts the CLI in `~/.dewfpga` (sha256 compared with `dewfpga.tgz.sha256`, an integrity check, not a signature), links `dewfpga` into
 Homebrew's bin and runs `dewfpga install`. Re-run the same line to update; `dewfpga uninstall`
 removes `~/fpga`, `~/.dewfpga` and the link. Requirements: macOS on Apple Silicon,
 Xcode Command Line Tools, Homebrew. Switching to the npm package later: remove
@@ -85,8 +85,9 @@ dewfpga --version
 
 ## Scope
 
-- Board: Digilent **Basys3** (XC7A35T-1CPG236C). Other 7-series boards: change `DEVICE`
-  in `install.sh` and regenerate the chipdb; untested.
+- Board: Digilent **Basys3** (XC7A35T-1CPG236C) only. Another 7-series board would need its own
+  chipdb (`DEVICE` in `install.sh`), part name (`PART`, `CHIPDB` in the Makefile) and openFPGALoader
+  board name; nothing of that is wired up or tested.
 - Platform: **macOS arm64**. Intel Mac and Linux are untested and refused by the script.
 - The course's XDC files work as-is (`PACKAGE_PIN` + `IOSTANDARD`); pins the design does not use are ignored.
 - Memories become distributed RAM (`-nobram`): fine at lab sizes, a VGA framebuffer would not fit.
@@ -102,5 +103,5 @@ temp directory. CI runs the clean install, the suite and the npm package on a fr
 
 Measured 2026-09-19 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
 1.4 GB; second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.
-The chain built by the script produces byte-identical `.frames` to the hand-built chain
-that lit the LED.
+With yosys 0.69 the chain built by the script produces byte-identical `.frames` to the hand-built
+chain that lit the LED; with another yosys the netlist differs and only the I/O placement is compared.

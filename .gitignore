@@ -25,3 +25,4 @@ top.json
 # vercel deploy bundle (deploy.sh)
 out/
 .vercel/
+.fpga_home

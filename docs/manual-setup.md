@@ -9,13 +9,13 @@ go in, or the installer refuses your machine.
 
 | | one line | by hand |
 |---|---|---|
-| do | section 1, then section 2 | section 1, then section 3 |
-| time after section 1 | about 4 minutes, one command | about 20 minutes, 6 steps, mostly downloads |
+| do | section 1, then 2, then 5 to 8 | section 1, then 3, then 4 to 8 |
+| time after section 1 | one command; about 4 minutes of compiling plus a 1.4 GB download | 5 steps; about 20 minutes plus the same downloads |
 | you get | the `dewfpga` command | the same tools plus a Makefile you own |
-| tool versions | pinned to the ones tested here | the same pinned commits, typed by you |
+| tool versions | two pinned commits, three Homebrew versions (section 9) | the same two commits, typed by you |
 
-Sections 4 to 8 are for both: the project files, your own lab, VS Code, the one course
-file that breaks, what this chain cannot do.
+Section 4 is the Makefile project the by-hand path uses. Sections 5 to 8 are for both:
+your own lab, VS Code, the one course file that breaks, what this chain cannot do.
 
 **If a step fails.** Read the last lines in the terminal. Every error hit during this
 setup is filed under its exact text, with the fix:
@@ -57,8 +57,8 @@ comes back before you paste the next one. Some commands span several lines and e
 xcode-select --install
 ```
 
-A window pops up; click Install and wait. If the terminal says the tools are already
-installed, that is fine. Check:
+A window pops up; click Install and wait. If instead the terminal prints
+`xcode-select: note: Command line tools are already installed`, that is fine. Check:
 
 ```bash
 xcode-select -p
@@ -93,15 +93,26 @@ text, and the tools cannot read that.
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 ```
 
-About 4 minutes, 1.4 GB. It downloads the `dewfpga` command into `~/.dewfpga` (checked
-against a published sha256), links it into Homebrew's bin, and installs the six tools
-into `~/fpga` at the exact versions in section 9. Nothing touches your system Python.
-Re-run the same line to update.
+It downloads 1.4 GB and compiles for about 4 minutes; on slow wifi the download takes
+longer, and it prints progress the whole time. It never asks for a password. It puts the
+`dewfpga` command into `~/.dewfpga` (its sha256 is compared with
+`nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256`, so a broken download stops here),
+links it into Homebrew's bin, installs Yosys, openFPGALoader and Icarus Verilog through
+Homebrew, and builds nextpnr-xilinx and prjxray into `~/fpga` at the two commits in
+section 9. Nothing touches your system Python. The last lines it prints:
+
+```
+all good.
+
+Total: 231 s. Log: /Users/you/fpga/install.log
+Next:  dewfpga new blink && cd blink && dewfpga flash
+```
 
 To read the script before running it:
 
 ```bash
-curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install -o install.sh   # open install.sh, then:
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install -o install.sh
+code install.sh      # read it, then:
 bash install.sh
 ```
 
@@ -111,18 +122,34 @@ Check that every piece is there:
 dewfpga check
 ```
 
-Nine lines, each starting with a green `✓`, then `all good.` A red `✗` names the missing
-piece; run `dewfpga install` again, it skips what is done.
+```
+dewfpga check  (FPGA_HOME=/Users/you/fpga)
+  ✓ yosys            /opt/homebrew/bin/yosys
+  ✓ iverilog         /opt/homebrew/bin/iverilog
+  ✓ openFPGALoader   /opt/homebrew/bin/openFPGALoader
+  ✓ nextpnr-xilinx   /Users/you/fpga/nextpnr-xilinx/build/nextpnr-xilinx
+  ✓ xc7frames2bit    /Users/you/fpga/prjxray/build/tools/xc7frames2bit
+  ✓ fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
+  ✓ chipdb           /Users/you/fpga/chipdb/xc7a35t.bin
+  ✓ venv             /Users/you/fpga/venv/bin/python
+  ✓ python pkgs      fasm prjxray pyyaml textx simplejson intervaltree
+all good.
+```
+
+A red `✗` names the missing piece: run the curl line again (it is the same as
+`dewfpga install`), it skips what is done. `dewfpga: command not found` means the
+Homebrew "Next steps" lines from section 1 were not pasted; paste them and open a new
+terminal window.
 
 Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power
 switch) and flip the power switch on. Make the example project and flash it:
 
 ```bash
-dewfpga new blink
+dewfpga new blink    # prints: blink/ ready:  cd blink && dewfpga flash    (VS Code: ⌘⇧B)
 cd blink
-dewfpga sim      # simulation
-dewfpga bit      # .sv -> .bit
-dewfpga flash    # .bit -> the board
+dewfpga sim          # simulation
+dewfpga bit          # .sv -> .bit
+dewfpga flash        # .bit -> the board; runs bit first when the .bit is missing or older than the .sv
 ```
 
 What each one prints when it works. `dewfpga sim`:
@@ -162,7 +189,9 @@ The rules `dewfpga` follows in a folder:
   that one. Otherwise name it: `dewfpga bit lab4`.
 - The pin file is `<top>.xdc`, or the only `.xdc` in the folder. Pins in it that the
   design does not use are ignored, so a fully uncommented `Basys3_Master.xdc` is fine.
-- `dewfpga sim` needs `<top>_tb.sv`. `bit` and `flash` do not.
+- `dewfpga sim` needs `<top>_tb.sv`. `bit` and `flash` do not. `flash` builds the `.bit`
+  first if it is missing or older than the sources, so `dewfpga flash` alone is enough.
+- The top module must have the file's name: `lab4.sv` holds `module lab4`.
 - `dewfpga bit` writes no bitstream when timing is not met. `dewfpga sim` exits with an
   error when the testbench prints `$error` or `$fatal`, so a red run is visible.
 
@@ -171,7 +200,7 @@ dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
 dewfpga new <dir>                   blink example with a VS Code task (Cmd Shift B = flash)
-dewfpga uninstall                   remove ~/fpga, ~/.dewfpga and the link; brew packages stay
+dewfpga uninstall                   remove the tools in ~/fpga, ~/.dewfpga and the link; brew packages stay
 ```
 
 Continue with [section 5](#5-how-do-you-use-it-for-your-own-lab).
@@ -193,9 +222,11 @@ your_design.sv
   `-> openFPGALoader   -> the board, over USB
 ```
 
-Three come from Homebrew, two you compile, one is a Python script inside the prjxray
-checkout. nextpnr also needs a chip database that you generate once. Everything lands in
-`~/fpga`: 1.4 GB with the installer's shallow clones, 1.76 GB with the full clones below.
+Three come from Homebrew, two you compile, and fasm2frames is a Python script inside the
+prjxray checkout. nextpnr also needs a chip database, generated once by another Python
+script. Everything lands in `~/fpga`: 1.4 GB with the installer's shallow clones, 1.76 GB
+with the full clones below. The Makefile in section 4 expects exactly this layout:
+`~/fpga/venv`, `~/fpga/nextpnr-xilinx/build`, `~/fpga/chipdb/xc7a35t.bin`, `~/fpga/prjxray`.
 
 ### 3.1 Homebrew packages
 
@@ -216,7 +247,7 @@ Newer numbers are expected; only the ones in section 9 were tested.
 
 ### 3.2 Python venv
 
-Two steps of the chain are Python scripts. Homebrew's Python refuses a plain
+fasm2frames (3.5) and the chip database generator (3.4) are Python scripts. Homebrew's Python refuses a plain
 `pip install` ([externally-managed-environment](https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/)),
 so they get a private one.
 
@@ -337,7 +368,7 @@ curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip && unzip 
 | `.vscode/tasks.json` | Cmd Shift B in VS Code runs `make flash` |
 
 `dewfpga new blink` gives the same `blink.sv`, `blink_tb.sv` and `blink.xdc` without the
-Makefile; the command replaces it.
+Makefile, and its `tasks.json` says `dewfpga flash` instead.
 
 If you copied the Makefile from somewhere else and `make` says `missing separator`, the
 tabs became spaces: [missing-separator](https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/).
@@ -345,7 +376,23 @@ tabs became spaces: [missing-separator](https://nosey-dewdrop.github.io/dewfpga/
 Plug the board in over USB, switch it on, then from inside the folder:
 
 ```bash
-make check     # one line per tool, a path after each; -MISSING- names what is absent
+make check
+```
+
+```
+yosys            /opt/homebrew/bin/yosys
+iverilog         /opt/homebrew/bin/iverilog
+openFPGALoader   /opt/homebrew/bin/openFPGALoader
+nextpnr-xilinx   /Users/you/fpga/nextpnr-xilinx/build/nextpnr-xilinx
+xc7frames2bit    /Users/you/fpga/prjxray/build/tools/xc7frames2bit
+chipdb           /Users/you/fpga/chipdb/xc7a35t.bin
+fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
+venv             /Users/you/fpga/venv/bin/python
+```
+
+A line ending in `-MISSING-` names the step of section 3 to redo. Then:
+
+```bash
 make sim       # PASS: 3 checks
 make bit       # xdc ok / pnr ok / blink.bit, about 4 seconds
 make flash     # Load SRAM ... done 1
@@ -360,7 +407,8 @@ the same `blink.sv` and `blink_tb.sv` there, it draws it.
 
 ## 5. How do you use it for your own lab?
 
-**The pin file.** The course hands out `Basys3_Master.xdc` with every line commented out.
+**The pin file.** The course hands out `Basys3_Master.xdc` with every line commented out
+(a copy: [templates/Basys3_Master.xdc](https://nosey-dewdrop.github.io/dewfpga/templates/Basys3_Master.xdc)).
 Copy it into your lab folder and delete the leading `#` on the `set_property` lines for
 the pins your module uses. Uncommenting all of them is fine too: pins the design does not
 use are ignored. The port names in your top module must match the names in that file:
@@ -383,7 +431,8 @@ XDC  := Basys3_Master.xdc
 
 `TOP` is the top module's name, `SRCS` every `.sv` in the design, `XDC` the pin file.
 
-Either way, simulation looks for `<top>_tb.sv`; the bitstream does not need one.
+Either way, simulation looks for `<top>_tb.sv`; the bitstream does not need one. If `bit`
+stops on the course's `SevSeg_4digit.sv`, section 7 has the one-line fix.
 
 ---
 
@@ -423,7 +472,7 @@ output logic dp,
 What else was tried: four modules from old student repos, together in one design. An FSM
 with `typedef enum`, a 16x8 RAM, a debouncer and the seven-segment driver above:
 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock,
-bitstream in 4.5 seconds. Language features in those files that went through:
+bitstream in 4.5 seconds. Language features in those files that both Icarus (`sim`) and Yosys (`bit`) accepted:
 `parameter`, `generate`, `struct packed`, `$clog2`, `unique case`, packed arrays,
 `interface` with `modport`. A file named differently from its module, Turkish characters
 and a BOM in the source, and spaces in the folder path all went through too. That is
