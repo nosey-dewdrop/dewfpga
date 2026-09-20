@@ -207,11 +207,15 @@ The rules `dewfpga` follows in a folder:
   that one. Otherwise name it: `dewfpga bit lab4`.
 - The pin file is `<top>.xdc`, or the only `.xdc` in the folder. Pins in it that the
   design does not use are ignored, so a fully uncommented `Basys3_Master.xdc` is fine.
-- `dewfpga sim` needs `<top>_tb.sv`. `bit` and `flash` do not. `flash` builds the `.bit`
+- `dewfpga sim` needs `<top>_tb.sv` (or `<top>_tb.v`). `bit` and `flash` do not. A testbench that
+  never reaches `$finish` is stopped after 120 s with an error; `SIM_TIMEOUT=600 dewfpga sim` waits
+  longer. `$stop` ends the run like `$finish`. `flash` builds the `.bit`
   first if it is missing or older than the sources, so `dewfpga flash` alone is enough.
 - The top module must have its file's name: `lab4.sv` holds `module lab4`. Submodule
   files can be named anything.
-- `dewfpga bit` writes no bitstream when timing is not met. `dewfpga sim` exits with an
+- `dewfpga bit` writes no bitstream when timing is not met, and a build that fails removes the
+  previous `.bit`, so `flash` can never load yesterday's design by mistake. When nothing changed,
+  `bit` prints one line saying so. `$display` in synthesizable code is dropped, as Vivado does. `dewfpga sim` exits with an
   error when the testbench prints `$error` or `$fatal`, so a red run is visible.
 - `bit` leaves its working files next to the sources (`.json`, `.fasm`, `.frames`, `.log`,
   `_routed.json`), `sim` leaves `<top>_sim`, `<top>_sim.out` and `<top>.vcd`, `flash` leaves

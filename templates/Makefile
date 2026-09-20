@@ -12,6 +12,8 @@
 TOP  := blink
 SRCS := blink.sv
 XDC  := blink.xdc
+TB   ?= $(firstword $(wildcard $(TOP)_tb.sv $(TOP)_tb.v))   # the testbench: <top>_tb.sv (or .v)
+SIM_TIMEOUT ?= 120                                            # seconds before a testbench without $finish is stopped
 
 PART    := xc7a35tcpg236-1
 FPGA    ?= $(or $(FPGA_HOME),$(HOME)/fpga)
@@ -38,16 +40,25 @@ check:
 	@printf "%-16s " fasm2frames;    [ -s "$(F2F)" ]     && echo "$(F2F)"     || echo "-MISSING-"
 	@printf "%-16s " venv;           "$(PY)" -c "import fasm, prjxray" 2>/dev/null && echo "$(PY)" || echo "-MISSING-"
 
-# the testbench's $error/$fatal lines make sim fail, so a red run is visible to make, VS Code and CI
+# the testbench's $error/$fatal lines make sim fail, so a red run is visible to make, VS Code and CI.
+# vvp -n: $stop ends the run instead of opening vvp's interactive prompt. -l: a copy of the output for the
+# grep below, while stdout stays live on the terminal. The perl alarm stops a run that never reaches $finish.
 sim: $(TOP)_sim
-	@set -o pipefail; ./$(TOP)_sim | tee $(TOP)_sim.out; ! grep -qE '^(ERROR|FATAL):' $(TOP)_sim.out || { echo "ERROR: the testbench reported errors (see above)" >&2; exit 1; }
+	@rc=0; SIM_TIMEOUT=$(SIM_TIMEOUT) perl -e '$$SIG{ALRM}=sub{kill TERM=>$$p; select(undef,undef,undef,0.3); kill KILL=>$$p; exit 142}; alarm $$ENV{SIM_TIMEOUT}; $$p=fork; exec @ARGV if !$$p; waitpid $$p,0; exit($$?>>8)' vvp -n -l $(TOP)_sim.out ./$(TOP)_sim || rc=$$?; \
+	  if [ $$rc -eq 142 ]; then echo "ERROR: the simulation did not finish in $(SIM_TIMEOUT) s. The testbench must end with \$$finish; a free-running clock never stops on its own. SIM_TIMEOUT=600 dewfpga sim waits longer." >&2; exit 1; fi; \
+	  [ $$rc -eq 0 ] || { echo "ERROR: the simulator stopped with exit $$rc (see above)" >&2; exit 1; }; \
+	  ! grep -qE '^(ERROR|FATAL):' $(TOP)_sim.out || { echo "ERROR: the testbench reported errors (see above)" >&2; exit 1; }
 
-$(TOP)_sim: $(SRCS) $(TOP)_tb.sv $(wildcard *.svh *.vh)
-	iverilog -g2012 -o $@ $(SRCS) $(TOP)_tb.sv
+$(TOP)_sim: $(SRCS) $(TB) $(wildcard *.svh *.vh)
+	@[ -n "$(TB)" ] || { echo "ERROR: $(TOP)_tb.sv not found. Simulation needs a testbench next to the design; 'dewfpga new blink' gives an example (blink/blink_tb.sv)" >&2; exit 1; }
+	iverilog -g2012 -o $@ $(SRCS) $(TB)
 
 synth: $(TOP).json
+# a failed build must not leave the previous .bit behind, so a student never flashes yesterday's design by mistake.
+# $display/$print in synthesizable code has no hardware; Vivado drops it silently, so it is dropped here too.
 $(TOP).json: $(SRCS) $(wildcard *.svh *.vh)
-	yosys -q -p "read_verilog -sv $(SRCS); synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@"
+	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json
+	yosys -q -p "read_verilog -sv $(SRCS); synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; write_json $@"
 
 # the tool binaries and the chipdb are prerequisites too: after `dewfpga install` (an update) the netlist is re-placed
 $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
@@ -56,13 +67,18 @@ $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	@set -o pipefail; "$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           $$(grep -q '^[^#]*create_clock' $(XDC) || echo --freq 100) \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log 2>&1 \
-	  | awk '/^Warning: \[current_design\] isn.t supported, ignoring/ || /^[0-9]+ warnings?, [0-9]+ errors?$$/ {next} !seen[$$0]++'
+	  | awk '/^Warning: \[current_design\] isn.t supported, ignoring/ || /^[0-9]+ warnings?, [0-9]+ errors?$$/ {next} \
+	         { sub(/[0-9]+ warnings?, [0-9]+ errors?$$/, "") } \
+	         /Failed to expand region|Unable to find legal placement|no Bels remaining/ { print; print "ERROR: the design does not fit the XC7A35T (with -nobram every memory becomes LUTs). Make it smaller; the counts are in $(TOP).log"; next } \
+	         !seen[$$0]++'
 	# the course's Basys3_Master.xdc ends in five [current_design] lines nextpnr does not know; they are
 	# harmless and would print on every build, so they are dropped here (the full text is in $(TOP).log)
-	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0; if ($$0 ~ /FAIL/) bad=$$0} \
-	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); if (bad != "") m = bad; sub(/.*: /,"",m); \
+	@awk '/^Info:[[:space:]]+SLICE_LUTX:/{l=$$3} /^Info:[[:space:]]+SLICE_FFX:/{f=$$3} \
+	      /Max frequency for clock/{ v=$$0; sub(/.*for clock[[:space:]]+\047/,"",v); c=v; sub(/\047.*/,"",c); sub(/^[^:]*:[[:space:]]*/,"",v); freq[c]=v; if (v ~ /FAIL/) bad=1 } \
+	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); k=0; for (c in freq) k++; m=""; \
+	          for (c in freq) m = m (m==""?"":", ") (k>1 ? c " " : "") freq[c]; \
 	          if (m == "") m = "no clocked paths, timing not applicable"; \
-	          if (m ~ /FAIL/) { printf "ERROR: timing not met: %s. The design cannot run at the clock the XDC asks for; no bitstream written. Details: $(TOP).log\n",m > "/dev/stderr"; exit 2 } \
+	          if (bad) { printf "ERROR: timing not met: %s. The design cannot run at the clock the XDC asks for; no bitstream written. Details: $(TOP).log\n",m > "/dev/stderr"; exit 2 } \
 	          printf "pnr ok: %s LUT, %s FF, %s   (full log: $(TOP).log)\n",l,f,m}' $(TOP).log || { rm -f $@; exit 2; }
 
 $(TOP).frames: $(TOP).fasm

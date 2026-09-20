@@ -46,7 +46,7 @@ else echo "  SKIP flash: a Digilent board is plugged in; DEWFPGA_TEST_BOARD=1 to
 check "flash w/o board: no make trailer" "cd '$T/w' && ! { '$CLI' flash || true; } 2>&1 | grep -q 'make: \*\*\*'"
 check "bit output is short (<=3 lines)" "cd '$T/w' && '$CLI' clean && [ \$('$CLI' bit 2>&1 | wc -l) -le 3 ]"
 check "bit prints xdc, pnr, bit lines" "cd '$T/w' && '$CLI' clean && out=\$('$CLI' bit 2>&1) && grep -q '^xdc ok' <<<\"\$out\" && grep -q '^pnr ok.*PASS' <<<\"\$out\" && grep -q '^blink.bit' <<<\"\$out\""
-check "bit up to date: exit 0, silent" "cd '$T/w' && out=\$('$CLI' bit 2>&1) && [ -z \"\$out\" ]"
+check "bit up to date: exit 0, one line" "cd '$T/w' && out=\$('$CLI' bit 2>&1) && [ \"\$out\" = 'blink.bit is up to date (nothing changed since the last build; dewfpga clean forces a rebuild)' ]"
 check "full pnr log kept"       "cd '$T/w' && grep -q 'Max frequency' blink.log"
 
 echo "== multi-file design"

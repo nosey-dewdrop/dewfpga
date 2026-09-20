@@ -52,13 +52,15 @@ cmd_check() {
 
 cmd_new() {
     local dir=${1:-}; [ -n "$dir" ] || usage 1
+    dir=${dir%/}
     [ -e "$dir" ] && die "$dir already exists"
     mkdir -p "$dir/.vscode"
     cp "$HERE"/templates/{blink.sv,blink_tb.sv,blink.xdc} "$dir/"
     # the template task says `make ...` for the manual (Makefile) setup; here the CLI does the work
     sed 's/"make /"dewfpga /' "$HERE/templates/.vscode/tasks.json" > "$dir/.vscode/tasks.json"
     cp "$HERE"/templates/.vscode/{settings.json,extensions.json} "$dir/.vscode/"     # iverilog as the linter, the extension recommended
-    echo "$dir/ ready:  cd $dir && dewfpga flash    (VS Code: ⌘⇧B)"
+    local q=$dir; [[ $dir == *[[:space:]]* ]] && q="\"$dir\""
+    echo "$dir/ ready:  cd $q && dewfpga flash    (VS Code: ⌘⇧B)"
 }
 
 cmd_uninstall() {
@@ -73,34 +75,50 @@ cmd_uninstall() {
     echo "done."
 }
 
+is_tb() { [[ $1 == *_tb.sv || $1 == *_tb.v || $1 == *_tb.SV || $1 == *_tb.V ]]; }
+
 cmd_build() {  # <target> [top]
-    local target=$1 top=${2:-} xdc
+    local target=$1 top=${2:-} xdc f
+    case $top in -*) die "unknown option: $top. Usage:  dewfpga $target [top]" ;; esac
+    top=${top#./}
+    [[ $top != */* ]] || die "run dewfpga inside the folder that holds the .sv files:  cd \"$(dirname "$top")\" && dewfpga $target $(basename "$top")"
+    # every source in the folder is synthesized (submodules may live in their own files); testbenches excluded
+    local srcs=() withxdc=()
+    for f in *.sv *.v *.SV *.V; do
+        { [ -f "$f" ] && ! is_tb "$f"; } || continue
+        [[ $f != *[[:space:]]* ]] || die "'$f': file names with spaces are not supported by the tools. Rename it (e.g. ${f// /_})"
+        srcs+=("$f"); [ -f "${f%.*}.xdc" ] && withxdc+=("${f%.*}")
+    done
+    [ ${#srcs[@]} -gt 0 ] || die "no .sv or .v file in $PWD. cd into the folder with your design, or start one:  dewfpga new blink"
     if [ -z "$top" ]; then
         # top = the .sv that has a matching .xdc; if ambiguous, the only .sv in the folder
-        local f svs=() withxdc=()
-        for f in *.sv *.v; do
-            [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] || continue
-            svs+=("${f%.*}"); [ -f "${f%.*}.xdc" ] && withxdc+=("${f%.*}")
-        done
         if   [ ${#withxdc[@]} -eq 1 ]; then top=${withxdc[0]}
-        elif [ ${#svs[@]} -eq 1 ];     then top=${svs[0]}
-        else die "cannot tell which module is top (${#svs[@]} source files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
+        elif [ ${#srcs[@]} -eq 1 ];    then top=${srcs[0]%.*}
+        else die "cannot tell which module is top (${#srcs[@]} source files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
     fi
-    top=${top%.sv}; top=${top%.v}
-    [ -f "$top.sv" ] || [ -f "$top.v" ] || die "$top.sv not found"
+    top=${top%.sv}; top=${top%.v}; top=${top%.SV}; top=${top%.V}
+    [ -f "$top.sv" ] || [ -f "$top.v" ] || [ -f "$top.SV" ] || [ -f "$top.V" ] || die "$top.sv not found"
     xdc="$top.xdc"
-    # every source in the folder is synthesized (submodules may live in their own files); testbenches excluded
-    local srcs=()
-    for f in *.sv *.v; do
-        [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] || continue
-        [[ $f != *[[:space:]]* ]] || die "'$f': file names with spaces are not supported by the tools. Rename it (e.g. ${f// /_})"
-        srcs+=("$f")
+    # a file that is not named *_tb but calls $finish/$stop is a testbench under another name; yosys would try to build it
+    for f in "${srcs[@]}"; do
+        if grep -qE '[$](finish|stop)([^A-Za-z0-9_]|$)' "$f"; then
+            die "$f calls \$finish, so it is a testbench, but its name does not end in _tb: dewfpga would synthesize it. Rename it to ${top}_tb.sv"
+        fi
     done
-    grep -qE "^[[:space:]]*module[[:space:]]+$top\b" "${srcs[@]}" 2>/dev/null \
-        || die "no 'module $top' in ${srcs[*]}. The top module must be named after its file ($top.sv), or name the file after the module"
+    # a UTF-8 byte-order mark (Notepad's "UTF-8 with BOM") makes yosys stop at token 1 with "invalid token"
+    for f in "${srcs[@]}"; do
+        [ "$(head -c 3 "$f" | LC_ALL=C od -An -tx1 | tr -d ' \n')" != "efbbbf" ] \
+            || die "$f starts with a byte-order mark (saved as 'UTF-8 with BOM'). Save it as plain UTF-8, or remove it:  LC_ALL=C sed -i '' \$'1s/^\\xEF\\xBB\\xBF//' $f"
+    done
+    # the top module must exist in one of the sources
+    local found=0
+    for f in "${srcs[@]}"; do
+        if grep -qE "^[[:space:]]*module[[:space:]]+$top\b" "$f"; then found=1; break; fi
+    done
+    [ $found -eq 1 ] || die "no 'module $top' in ${srcs[*]}. The top module must be named after its file ($top.sv), or name the file after the module"
     case $target in
         sim)
-            [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench next to the design; 'dewfpga new blink' gives an example (blink/blink_tb.sv)" ;;
+            [ -f "${top}_tb.sv" ] || [ -f "${top}_tb.v" ] || die "${top}_tb.sv not found. Simulation needs a testbench next to the design; 'dewfpga new blink' gives an example (blink/blink_tb.sv)" ;;
         bit|flash)
             # the pin file: <top>.xdc, or the only .xdc in the folder (a lab folder usually has Basys3_Master.xdc)
             if [ ! -f "$xdc" ]; then
@@ -114,9 +132,18 @@ cmd_build() {  # <target> [top]
                 || die "toolchain not installed. Run:  dewfpga install   (status: dewfpga check)" ;;
     esac
     # make's own "*** [target] Error 1" trailer adds nothing to the message the recipe already printed.
-    # One merged stream keeps the lines in order; sed always exits 0, so pipefail (set above) hands back make's exit code.
-    make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
-        | sed -E '/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
+    # sim: stdout stays a terminal so $display lines appear as they happen (a pipe would buffer them);
+    # only stderr goes through the sed. bit/flash: one merged stream keeps the lines in order, and an
+    # empty stream means nothing had changed. sed always exits 0; pipefail (set above) hands back make's code.
+    local trailer='/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
+    if [ "$target" = sim ]; then
+        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" sim 2> >(sed -E "$trailer" >&2)
+    else
+        DEWFPGA_TMP=$(mktemp -t dewfpga); trap 'rm -f "$DEWFPGA_TMP"' EXIT; local tmp=$DEWFPGA_TMP
+        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
+            | sed -E "$trailer" | tee "$tmp"
+        if [ "$target" = bit ] && [ ! -s "$tmp" ]; then echo "$top.bit is up to date (nothing changed since the last build; dewfpga clean forces a rebuild)"; fi
+    fi
 }
 
 case "${1:-}" in
