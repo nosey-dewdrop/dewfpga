@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dewfpga: Mac'te Vivado olmadan CS223</title>
+<meta name="description" content="Apple Silicon Mac'te Vivado olmadan CS223 FPGA labları. SystemVerilog'dan Digilent Basys3'e: Icarus Verilog, Yosys, nextpnr-xilinx, prjxray ve openFPGALoader. 50 ila 100 GB yerine 1.76 GB, bitstream 5 saniyenin altında.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
+<link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Mac'te Vivado olmadan CS223 labları">
+<meta property="og:description" content="Apple Silicon'da SystemVerilog'dan Basys3'e. Vivado yok, sanal makine yok. Adım adım rehber.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<style>
+/* dewfpga: one font, one accent, no motion. */
+:root{
+  color-scheme:light dark;
+  --bg:#ffffff; --fg:#141414; --mute:#6a6a6a; --line:#e4e4e4; --code:#f5f5f6;
+  --purple:#5b2fc9; --purple-soft:#efe9fb;
+  --pink:#c23a70; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0f0f11; --fg:#ebebeb; --mute:#9a9a9f; --line:#27272b; --code:#18181b;
+         --purple:#c4a8ff; --purple-soft:#1f1730;
+         --pink:#ffa3c2; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:17px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow-x:hidden}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+a{color:var(--purple);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:0}
+h1{font-size:2rem;margin:2.6rem 0 .6rem}
+h2{font-size:1.25rem;margin:2.6rem 0 .6rem;color:var(--purple)}
+h3{font-size:1.05rem;margin:1.8rem 0 .4rem}
+p,ul,ol,table,pre{margin:0 0 1rem}
+li{margin:.3rem 0}
+.mute{color:var(--mute)}
+.lead{font-size:1.15rem;color:var(--mute);margin-bottom:1.6rem}
+small,.small{font-size:.9rem}
+hr{border:0;border-top:1px solid var(--line);margin:2.4rem 0}
+
+/* nav + footer */
+nav.top{display:flex;justify-content:flex-start;align-items:baseline;gap:26px;flex-wrap:wrap;
+  padding:22px 0 0;font-size:.95rem}
+nav.top .brand{color:var(--purple);text-decoration:none;font-weight:600;letter-spacing:-.01em}
+nav.top .brand span{font-weight:400;font-size:1.3em;line-height:0;vertical-align:-.05em}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;flex-wrap:wrap}
+nav.top li:last-child{margin-left:auto}
+nav.top a{color:var(--fg);text-decoration:none}
+nav.top li:nth-child(1) a{color:var(--green)}
+nav.top li:nth-child(2) a{color:var(--yellow)}
+nav.top li:nth-child(3) a{color:var(--pink)}
+nav.top li:nth-child(4) a{color:var(--blue)}
+nav.top li:nth-child(5) a{color:var(--purple)}
+nav.top a:hover,nav.top a[aria-current]{color:var(--purple);text-decoration:underline;text-underline-offset:4px}
+nav.top .soon{color:var(--mute);cursor:default}
+nav.top .soon sup{font-size:.6em;color:var(--purple);margin-left:2px}
+footer{margin:4rem 0 3rem;padding-top:1.2rem;border-top:1px solid var(--line);
+  color:var(--mute);font-size:.9rem;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+footer a{color:inherit}
+
+/* code */
+pre,code,kbd{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:13px 16px;
+  overflow-x:auto;font-size:.86rem;line-height:1.55;position:relative}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+code{background:var(--code);padding:.1em .35em;border-radius:4px;font-size:.88em}
+pre .c{color:var(--mute)}
+pre .p{color:var(--green)}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:.75rem;color:var(--mute);
+  background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer}
+.copy:hover{color:var(--purple);border-color:var(--purple)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+td,th{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--blue);font-size:.85rem}
+
+/* figures: the numbers row */
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:18px 24px;margin:1.6rem 0 1.2rem}
+.nums b{display:block;font-size:1.5rem;font-weight:600;letter-spacing:-.02em;color:var(--purple)}
+.nums span{color:var(--mute);font-size:.9rem;line-height:1.35;display:block}
+
+/* the primary block on the home page */
+.cta{border-left:3px solid var(--purple);padding:4px 0 4px 18px;margin:1.6rem 0}
+.cta a.big{font-size:1.25rem;font-weight:600;text-decoration:none}
+.cta a.big:hover{text-decoration:underline}
+.cta p{margin:.3rem 0 0;color:var(--mute)}
+
+/* walls / errors list */
+ol.walls{padding-left:1.4rem}
+ol.walls li{margin:.6rem 0}
+ol.walls li b{font-weight:600}
+.err{margin:1.4rem 0;padding-bottom:1.2rem;border-bottom:1px solid var(--line)}
+.err:last-child{border:0}
+.err a.title{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.92rem;word-break:break-word}
+.err p{margin:.35rem 0 0;color:var(--mute)}
+h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.35rem;font-weight:600;word-break:break-word;color:var(--pink);
+  background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:2rem}
+.eyebrow{color:var(--mute);font-size:.9rem;margin:2.4rem 0 -1.2rem}
+.eyebrow a{color:inherit}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0 0 1rem}
+dl.kv dt{color:var(--mute)} dl.kv dd{margin:0}
+
+/* roadmap on home */
+.soonlist{list-style:none;padding:0}
+.soonlist li{display:flex;gap:12px;align-items:baseline;color:var(--mute);margin:.5rem 0}
+.soonlist li b{color:var(--fg);font-weight:600;min-width:9.5rem}
+.soonlist li i{font-style:normal;font-size:.75rem;color:var(--purple);border:1px solid currentColor;border-radius:99px;padding:0 7px}
+
+/* docs page */
+.docs h2{margin-top:3rem}
+.docs h2+p{margin-top:.6rem}
+.docs img{max-width:100%}
+.docs .toc ul{padding-left:1.2rem;columns:1}
+.docs blockquote{margin:0 0 1rem;padding-left:14px;border-left:3px solid var(--line);color:var(--mute)}
+.docbar{display:flex;gap:18px;flex-wrap:wrap;font-size:.9rem;color:var(--mute);margin:-.2rem 0 1.4rem}
+.docbar a{color:inherit}
+
+/* sprinkle: the one bit of play we kept */
+.cf{position:fixed;z-index:30;pointer-events:none;font-size:16px;line-height:1;user-select:none;
+  animation:fall 1s ease-out forwards}
+@keyframes fall{to{transform:translateY(60px) rotate(200deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.cf{display:none}}
+@media (max-width:520px){
+  body{font-size:16px} h1{font-size:1.65rem} .nums b{font-size:1.3rem}
+  nav.top ul{gap:12px} footer{flex-direction:column}
+}
+
+</style>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/tr/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/" hreflang="en">rehber</a></li>
+    <li><a href="/dewfpga/why/" hreflang="en">neden</a></li>
+    <li><a href="/dewfpga/errors/" hreflang="en">hatalar</a></li>
+    <li><a href="/dewfpga/sim/" hreflang="en">simülatör</a></li>
+    <li><a href="/dewfpga/cli/" hreflang="en">cli</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+    <li><a href="/dewfpga/" lang="en" hreflang="en">english</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <h1>Mac'te Vivado olmadan CS223</h1>
+  <p class="lead">Vivado'nun Mac sürümü yok. Ben de dersin kullandığı kadarını açık kaynak araçlarla kurdum: M1 ve sonrası bir Mac'te SystemVerilog yaz, simüle et, sentezle, Basys3'e yükle. Sanal makine yok, Rosetta yok.</p>
+
+  <p>Nereden başlanır: <a href="/dewfpga/docs/"><b>kurulum rehberi</b></a>. 18 adım, terminali açmaktan kartta LED'in yanmasına kadar. Komutu kopyala, Enter'a bas, ekranda ne görmen gerektiğini de yazdım. İlk 9 adım kurulum; içindeki derleme dört dakika sürüyor, kalanı indirme ve yapıştırma. Rehber İngilizce, ama komutlar zaten dil bilmiyor. <a href="/dewfpga/docs/#8-what-goes-in-your-project-folder">Beş proje dosyasını</a> tek tek yazmana da gerek yok, indirip kullanıyorsun.</p>
+
+  <p class="mute">Kart yanında değil mi, hiçbir şey kurmak istemiyor musun? <a href="/dewfpga/sim/" hreflang="en">Basys3 simülatörü</a> tasarımını doğrudan tarayıcıda çalıştırıyor, switch'leri elle çeviriyorsun, LED'ler yanıyor. <a href="/dewfpga/sim/tb.html" hreflang="en">Testbench çalıştırıcı</a> da testbench'ini koşup dalga formunu çiziyor. Şunlar için değil: Intel Mac, Vivado IP Catalog'undan herhangi bir şey. <a href="#limits">Aşağıda hepsi yazıyor.</a></p>
+
+<pre><code><span class="p">$</span> make sim
+TB passed
+<span class="p">$</span> make bit
+xdc ok: 33 ports, all matched.
+Info: Max frequency for clock 'clk': 209.60 MHz (PASS at 100.00 MHz)
+<span class="p">$</span> make flash
+Load SRAM: [==================================================] 100.00%
+Done
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
+  <p class="mute small">Yukarıdaki, 8 GB'lık M2'mde blink örneğinin gerçek çıktısı. Son satırdaki <code>done 1</code>, çipin tasarımı kabul ettiği anlamına geliyor; o an LED 0 yanıp sönmeye başlıyor. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Bütün zincir diskte 1.76 GB yer kaplıyor, Vivado 50 ila 100 GB istiyor.</p>
+
+  <h2>Nasıl çalışıyor?</h2>
+  <p>Vivado bir CS223 labı için aslında beş ayrı iş yapıyor. Burada her işi ayrı bir açık kaynak araç yapıyor, bir de bir kez üretilen chip database var; küçük bir Makefile hepsini sırayla çalıştırıyor.</p>
+  <table>
+    <tr><th>aşama</th><th>araç</th></tr>
+    <tr><td>simülasyon</td><td>Icarus Verilog</td></tr>
+    <tr><td>sentez</td><td>Yosys</td></tr>
+    <tr><td>yerleştirme ve yönlendirme</td><td>nextpnr-xilinx, kaynaktan derleniyor</td></tr>
+    <tr><td>bitstream</td><td>prjxray <code>fasm2frames</code> + <code>xc7frames2bit</code></td></tr>
+    <tr><td>chip database</td><td>XC7A35T için bir kez üretiliyor</td></tr>
+    <tr><td>karta yükleme</td><td>openFPGALoader, USB üzerinden</td></tr>
+  </table>
+  <p>Yazdığın <code>.sv</code> ve <code>.xdc</code>, Vivado'ya vereceğin dosyaların aynısı. Dersin verdiği pin dosyaları da olduğu gibi çalışıyor; sadece kullandığın pinlerin başındaki <code>#</code>'i kaldırıyorsun.</p>
+
+  <h2>Neden böyle bir şey yaptım?</h2>
+  <p>Vivado'nun macOS sürümü yok, sanal makine de M serisi Mac'te işe yaramıyor. Zinciri elle kurmak altı saatimi aldı; sebebi, hiçbiri tek yerde yazmayan altı duvardı. <a href="/dewfpga/why/" hreflang="en">Altı duvarın her biri, bana neye mal olduğu ve sonucun CS223'e yetip yetmediği burada</a> (İngilizce). Bir adım patlarsa en hızlı yol hata metnini aramak: <a href="/dewfpga/errors/" hreflang="en">kurulumda karşıma çıkan her hata, çözümüyle</a> (İngilizce).</p>
+
+  <h2 id="limits">Neyi yapamıyor?</h2>
+  <ul>
+    <li>Vivado'nun IP Catalog'undan hiçbir şey çalışmıyor: Block Design, MicroBlaze, AXI, Clocking Wizard, hazır BRAM, VGA ve UART blokları yok. 35 eski CS223 öğrenci reposuna, 240 kaynak dosyaya baktım; hiçbiri bunları kullanmıyor, labları elle yazıyoruz zaten.</li>
+    <li>Mac'teki zincirde dalga formu görüntüleyici, şematik ya da çip içi debugger yok: <code>make sim</code> bir <code>.vcd</code> dosyası bırakıp duruyor. Dalga formuna bakmak istersen <a href="/dewfpga/sim/tb.html" hreflang="en">tarayıcıdaki testbench çalıştırıcıyı</a> kullan.</li>
+    <li>Sadece Basys3 (XC7A35T) ve sadece Apple Silicon denendi. Intel Mac, Linux ve başka kartlar için bir şey diyemem.</li>
+    <li>Bu araçlar resmi değil, AMD'nin yaptığı ya da desteklediği şeyler değil. Lab demosundan önce tasarımını bir kez okuldaki bilgisayarda Vivado'da açmanı öneririm.</li>
+  </ul>
+
+  <h2>Sırada ne var?</h2>
+  <p>Tarayıcıda derleyici: hiçbir şey kurmadan SystemVerilog'dan Basys3 bitstream'ine. O henüz açık değil. <a href="/dewfpga/sim/" hreflang="en">Simülatör</a>, <a href="/dewfpga/sim/tb.html" hreflang="en">testbench çalıştırıcı</a> ve <a href="/dewfpga/cli/" hreflang="en">komut satırı aracı</a> kullanıma açık.</p>
+
+  <h2>Kim yaptı?</h2>
+  <p>Damla Su Bilge, Bilkent CS. Buradaki her şeyi 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve elimdeki Basys3 ile çalıştırdım. Bir adım sende patlarsa terminalin son on satırını ve kaçıncı adımda olduğunu yaz: <a href="https://github.com/nosey-dewdrop/dewfpga/issues">GitHub'da issue</a> açabilirsin ya da <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den ulaşabilirsin.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">kaynak</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">rehber PDF olarak</a></span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dewfpga: CS223 labs on a Mac, without Vivado</title>
+<meta name="description" content="Run CS223 FPGA labs on an Apple Silicon Mac without Vivado. SystemVerilog to a Digilent Basys3 with Icarus Verilog, Yosys, nextpnr-xilinx, prjxray and openFPGALoader. 1.76 GB instead of 50 to 100 GB, a bitstream in under five seconds.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/">
+<link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
+<link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="CS223 labs on a Mac, without Vivado">
+<meta property="og:description" content="SystemVerilog to a Basys3 on Apple Silicon. No Vivado, no virtual machine. Step by step guide.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<style>
+/* dewfpga: one font, one accent, no motion. */
+:root{
+  color-scheme:light dark;
+  --bg:#ffffff; --fg:#141414; --mute:#6a6a6a; --line:#e4e4e4; --code:#f5f5f6;
+  --purple:#5b2fc9; --purple-soft:#efe9fb;
+  --pink:#c23a70; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0f0f11; --fg:#ebebeb; --mute:#9a9a9f; --line:#27272b; --code:#18181b;
+         --purple:#c4a8ff; --purple-soft:#1f1730;
+         --pink:#ffa3c2; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2; }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--fg);
+  font:17px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
+  overflow-x:hidden}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+a{color:var(--purple);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+a:hover{text-decoration-thickness:2px}
+h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:0}
+h1{font-size:2rem;margin:2.6rem 0 .6rem}
+h2{font-size:1.25rem;margin:2.6rem 0 .6rem;color:var(--purple)}
+h3{font-size:1.05rem;margin:1.8rem 0 .4rem}
+p,ul,ol,table,pre{margin:0 0 1rem}
+li{margin:.3rem 0}
+.mute{color:var(--mute)}
+.lead{font-size:1.15rem;color:var(--mute);margin-bottom:1.6rem}
+small,.small{font-size:.9rem}
+hr{border:0;border-top:1px solid var(--line);margin:2.4rem 0}
+
+/* nav + footer */
+nav.top{display:flex;justify-content:flex-start;align-items:baseline;gap:26px;flex-wrap:wrap;
+  padding:22px 0 0;font-size:.95rem}
+nav.top .brand{color:var(--purple);text-decoration:none;font-weight:600;letter-spacing:-.01em}
+nav.top .brand span{font-weight:400;font-size:1.3em;line-height:0;vertical-align:-.05em}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;flex-wrap:wrap}
+nav.top li:last-child{margin-left:auto}
+nav.top a{color:var(--fg);text-decoration:none}
+nav.top li:nth-child(1) a{color:var(--green)}
+nav.top li:nth-child(2) a{color:var(--yellow)}
+nav.top li:nth-child(3) a{color:var(--pink)}
+nav.top li:nth-child(4) a{color:var(--blue)}
+nav.top li:nth-child(5) a{color:var(--purple)}
+nav.top a:hover,nav.top a[aria-current]{color:var(--purple);text-decoration:underline;text-underline-offset:4px}
+nav.top .soon{color:var(--mute);cursor:default}
+nav.top .soon sup{font-size:.6em;color:var(--purple);margin-left:2px}
+footer{margin:4rem 0 3rem;padding-top:1.2rem;border-top:1px solid var(--line);
+  color:var(--mute);font-size:.9rem;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+footer a{color:inherit}
+
+/* code */
+pre,code,kbd{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
+pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:13px 16px;
+  overflow-x:auto;font-size:.86rem;line-height:1.55;position:relative}
+pre code{background:none;padding:0;font-size:inherit;color:inherit}
+code{background:var(--code);padding:.1em .35em;border-radius:4px;font-size:.88em}
+pre .c{color:var(--mute)}
+pre .p{color:var(--green)}
+.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:.75rem;color:var(--mute);
+  background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer}
+.copy:hover{color:var(--purple);border-color:var(--purple)}
+
+/* tables */
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+td,th{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--blue);font-size:.85rem}
+
+/* figures: the numbers row */
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:18px 24px;margin:1.6rem 0 1.2rem}
+.nums b{display:block;font-size:1.5rem;font-weight:600;letter-spacing:-.02em;color:var(--purple)}
+.nums span{color:var(--mute);font-size:.9rem;line-height:1.35;display:block}
+
+/* the primary block on the home page */
+.cta{border-left:3px solid var(--purple);padding:4px 0 4px 18px;margin:1.6rem 0}
+.cta a.big{font-size:1.25rem;font-weight:600;text-decoration:none}
+.cta a.big:hover{text-decoration:underline}
+.cta p{margin:.3rem 0 0;color:var(--mute)}
+
+/* walls / errors list */
+ol.walls{padding-left:1.4rem}
+ol.walls li{margin:.6rem 0}
+ol.walls li b{font-weight:600}
+.err{margin:1.4rem 0;padding-bottom:1.2rem;border-bottom:1px solid var(--line)}
+.err:last-child{border:0}
+.err a.title{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.92rem;word-break:break-word}
+.err p{margin:.35rem 0 0;color:var(--mute)}
+h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.35rem;font-weight:600;word-break:break-word;color:var(--pink);
+  background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:2rem}
+.eyebrow{color:var(--mute);font-size:.9rem;margin:2.4rem 0 -1.2rem}
+.eyebrow a{color:inherit}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0 0 1rem}
+dl.kv dt{color:var(--mute)} dl.kv dd{margin:0}
+
+/* roadmap on home */
+.soonlist{list-style:none;padding:0}
+.soonlist li{display:flex;gap:12px;align-items:baseline;color:var(--mute);margin:.5rem 0}
+.soonlist li b{color:var(--fg);font-weight:600;min-width:9.5rem}
+.soonlist li i{font-style:normal;font-size:.75rem;color:var(--purple);border:1px solid currentColor;border-radius:99px;padding:0 7px}
+
+/* docs page */
+.docs h2{margin-top:3rem}
+.docs h2+p{margin-top:.6rem}
+.docs img{max-width:100%}
+.docs .toc ul{padding-left:1.2rem;columns:1}
+.docs blockquote{margin:0 0 1rem;padding-left:14px;border-left:3px solid var(--line);color:var(--mute)}
+.docbar{display:flex;gap:18px;flex-wrap:wrap;font-size:.9rem;color:var(--mute);margin:-.2rem 0 1.4rem}
+.docbar a{color:inherit}
+
+/* sprinkle: the one bit of play we kept */
+.cf{position:fixed;z-index:30;pointer-events:none;font-size:16px;line-height:1;user-select:none;
+  animation:fall 1s ease-out forwards}
+@keyframes fall{to{transform:translateY(60px) rotate(200deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.cf{display:none}}
+@media (max-width:520px){
+  body{font-size:16px} h1{font-size:1.65rem} .nums b{font-size:1.3rem}
+  nav.top ul{gap:12px} footer{flex-direction:column}
+}
+
+</style>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","name":"dewfpga","url":"https://nosey-dewdrop.github.io/dewfpga/",
+ "description":"Run CS223 FPGA labs on an Apple Silicon Mac without Vivado: SystemVerilog to a Digilent Basys3 with open-source tools.",
+ "author":{"@type":"Person","name":"Damla Su Bilge","url":"https://github.com/nosey-dewdrop"},"inLanguage":["en","tr"]}
+</script>
+</head>
+<body>
+<nav class="top wrap">
+  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <ul>
+    <li><a href="/dewfpga/docs/">docs</a></li>
+    <li><a href="/dewfpga/why/">why</a></li>
+    <li><a href="/dewfpga/errors/">errors</a></li>
+    <li><a href="/dewfpga/sim/">simulator</a></li>
+    <li><a href="/dewfpga/cli/">cli</a></li>
+    <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
+    <li><a href="/dewfpga/tr/" lang="tr" hreflang="tr">türkçe</a></li>
+  </ul>
+</nav>
+
+<main class="wrap">
+  <h1>CS223 labs on a Mac, without Vivado</h1>
+  <p class="lead">Simulate, synthesize and flash your CS223 labs to a Digilent Basys3 from an Apple Silicon Mac, M1 and later. Free, open-source tools. No Vivado, no virtual machine, no Rosetta.</p>
+
+  <p>Start with the <a href="/dewfpga/docs/"><b>setup guide</b></a>: 18 steps, from opening the terminal to an LED blinking on the board, written so that copying a command and pressing Enter is enough. Steps 1 to 9 are the install. The compiling in them is about 4 minutes; the rest is downloads and pasting. The <a href="/dewfpga/docs/#8-what-goes-in-your-project-folder">five project files</a> are downloadable as they are, so nothing has to be typed.</p>
+  <p class="mute">No board and no install? The <a href="/dewfpga/sim/">Basys3 simulator</a> runs your design in the browser, and the <a href="/dewfpga/sim/tb.html">testbench runner</a> runs your testbench with a waveform. Not for: Intel Macs, anything from Vivado's IP Catalog. <a href="#limits">Details below.</a></p>
+
+<pre><code><span class="p">$</span> make sim
+TB passed
+<span class="p">$</span> make bit
+xdc ok: 33 ports, all matched.
+Info: Max frequency for clock 'clk': 209.60 MHz (PASS at 100.00 MHz)
+<span class="p">$</span> make flash
+Load SRAM: [==================================================] 100.00%
+Done
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
+  <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking. 4.6 seconds from <code>.sv</code> to <code>.bit</code>. The whole chain takes 1.76 GB of disk; Vivado asks for 50 to 100 GB.</p>
+  <h2>How does it work?</h2>
+  <p>Vivado does five jobs for a CS223 lab. One open-source tool does each job here, plus a chip database generated once, and a small Makefile runs them in order.</p>
+  <table>
+    <tr><th>stage</th><th>tool</th></tr>
+    <tr><td>simulation</td><td>Icarus Verilog</td></tr>
+    <tr><td>synthesis</td><td>Yosys</td></tr>
+    <tr><td>place and route</td><td>nextpnr-xilinx, built from source</td></tr>
+    <tr><td>bitstream</td><td>prjxray <code>fasm2frames</code> + <code>xc7frames2bit</code></td></tr>
+    <tr><td>chip database</td><td>generated once for the XC7A35T</td></tr>
+    <tr><td>programming</td><td>openFPGALoader over USB</td></tr>
+  </table>
+  <p>Your <code>.sv</code> and <code>.xdc</code> files are the same ones Vivado reads. The course's pin files work as they are, once you uncomment the pins you use.</p>
+
+  <h2>Why does this exist?</h2>
+  <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours, because of six walls that nobody documents in one place. <a href="/dewfpga/why/">The six walls, what each one cost, and whether the result is enough for CS223.</a> When a step fails, the error text is the fastest way in: <a href="/dewfpga/errors/">every error hit during this setup, with the fix</a>.</p>
+
+  <h2 id="limits">What can it not do?</h2>
+  <ul>
+    <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. 35 old CS223 student repos with 240 source files were checked; none of them use any of it.</li>
+    <li>On the Mac chain there is no waveform viewer, schematic or in-chip debugger: <code>make sim</code> writes a <code>.vcd</code> file and stops there. The <a href="/dewfpga/sim/tb.html">testbench runner in the browser</a> draws the waveform instead.</li>
+    <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
+    <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#15-what-should-you-be-concerned-about">What you should be concerned about.</a></li>
+  </ul>
+
+  <h2>What is coming?</h2>
+  <p>A compiler in the browser: SystemVerilog to a Basys3 bitstream without installing anything. Not public yet. The <a href="/dewfpga/sim/">simulator</a>, the <a href="/dewfpga/sim/tb.html">testbench runner</a> and the <a href="/dewfpga/cli/">command-line tool</a> are.</p>
+
+  
+  <h2>Who made this?</h2>
+  <p>Damla Su Bilge, Bilkent CS. Everything here was run on 19 September 2026 on an M2 with 8 GB of RAM, macOS 15 and a Basys3. If a step fails for you, open an <a href="https://github.com/nosey-dewdrop/dewfpga/issues">issue</a> or write on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a> with the last ten lines of the terminal and the step number.</p>
+
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">the guide as a PDF</a></span>
+</footer>
+</body>
+</html>
