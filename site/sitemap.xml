@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-  <url><loc>https://nosey-dewdrop.github.io/dewfpga/</loc><lastmod>2026-09-19</lastmod><xhtml:link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/"/><xhtml:link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/"/></url>
-  <url><loc>https://nosey-dewdrop.github.io/dewfpga/tr/</loc><lastmod>2026-09-19</lastmod><xhtml:link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/"/><xhtml:link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/"/></url>
-  <url><loc>https://nosey-dewdrop.github.io/dewfpga/docs/</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://nosey-dewdrop.github.io/dewfpga/why/</loc><lastmod>2026-09-19</lastmod></url>
+  <url><loc>https://nosey-dewdrop.github.io/dewfpga/</loc><lastmod>2026-09-20</lastmod><xhtml:link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/"/><xhtml:link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/"/></url>
+  <url><loc>https://nosey-dewdrop.github.io/dewfpga/tr/</loc><lastmod>2026-09-20</lastmod><xhtml:link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/"/><xhtml:link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/"/></url>
+  <url><loc>https://nosey-dewdrop.github.io/dewfpga/docs/</loc><lastmod>2026-09-20</lastmod></url>
+  <url><loc>https://nosey-dewdrop.github.io/dewfpga/why/</loc><lastmod>2026-09-20</lastmod></url>
   <url><loc>https://nosey-dewdrop.github.io/dewfpga/errors/</loc><lastmod>2026-09-19</lastmod></url>
   <url><loc>https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/</loc><lastmod>2026-09-19</lastmod></url>
   <url><loc>https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/</loc><lastmod>2026-09-19</lastmod></url>
@@ -17,5 +17,5 @@
   <url><loc>https://nosey-dewdrop.github.io/dewfpga/docs/CS223_Mac_Setup.pdf</loc><lastmod>2026-09-19</lastmod></url>
   <url><loc>https://nosey-dewdrop.github.io/dewfpga/sim/</loc><lastmod>2026-09-19</lastmod></url>
   <url><loc>https://nosey-dewdrop.github.io/dewfpga/sim/tb.html</loc><lastmod>2026-09-19</lastmod></url>
-  <url><loc>https://nosey-dewdrop.github.io/dewfpga/cli/</loc><lastmod>2026-09-19</lastmod></url>
+  <url><loc>https://nosey-dewdrop.github.io/dewfpga/cli/</loc><lastmod>2026-09-20</lastmod></url>
 </urlset>
