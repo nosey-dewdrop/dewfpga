@@ -21,3 +21,7 @@ site/_canva/import/
 site/canva.css
 site/sim/
 top.json
+
+# vercel deploy bundle (deploy.sh)
+out/
+.vercel/
