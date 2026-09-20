@@ -53,8 +53,8 @@
 </tr>
 <tr>
 <td>time after section 1</td>
-<td>one command; about 4 minutes of compiling plus a 1.4 GB download</td>
-<td>5 steps; about 20 minutes plus the same downloads</td>
+<td>one command; 3 min 37 s on the tested machine and fast wifi, 1.4 GB downloaded</td>
+<td>5 steps; about 5 minutes of compiling plus 1.76 GB of full clones, call it 20 minutes</td>
 </tr>
 <tr>
 <td>you get</td>
@@ -63,7 +63,7 @@
 </tr>
 <tr>
 <td>tool versions</td>
-<td>two pinned commits, three Homebrew versions (section 9)</td>
+<td>two pinned commits, Homebrew versions in section 9</td>
 <td>the same two commits, typed by you</td>
 </tr>
 </tbody>
@@ -89,6 +89,7 @@
 
 <hr />
 <h2 id="1-what-do-you-need-before-you-start">1. What do you need before you start?</h2>
+<p><strong>The board.</strong> A Digilent Basys3 and its micro-USB cable. A MacBook Air or Pro from 2016 on has only USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is powered from the cable; leave the JP2 jumper on USB.</p>
 <p><strong>The terminal.</strong> Press Cmd Space, type <code>Terminal</code>, press Enter. Every command in this guide goes into that window: paste it, press Enter, wait until the line ending in <code>%</code> comes back before you paste the next one. Some commands span several lines and end in <code>\</code>; copy the whole grey block at once.</p>
 <p><strong>Apple's command line tools.</strong> They give your Mac <code>git</code>, <code>make</code> and the C compiler.</p>
 <pre class="bash"><code>xcode-select --install</code></pre>
@@ -104,7 +105,7 @@
 <hr />
 <h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
 <pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
-<p>It downloads 1.4 GB and compiles for about 4 minutes; on slow wifi the download takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader and Icarus Verilog through Homebrew, and builds nextpnr-xilinx and prjxray into <code>~/fpga</code> at the two commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
+<p>3 min 37 s on the tested machine with fast wifi, 1.4 GB downloaded; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx and prjxray into <code>~/fpga</code> at the two commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
 <pre><code>all good.
 
 Total: 217 s. Log: /Users/you/fpga/install.log
@@ -126,7 +127,7 @@ bash install.sh</code></pre>
   ✓ venv             /Users/you/fpga/venv/bin/python
   ✓ python pkgs      fasm prjxray pyyaml textx simplejson intervaltree
 all good.</code></pre>
-<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> means the Homebrew "Next steps" lines from section 1 were not pasted; paste them and open a new terminal window.</p>
+<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> has two causes: the Homebrew "Next steps" lines from section 1 were not pasted (paste them, open a new terminal window), or the installer stopped before its last line; scroll up to the first <code>ERROR:</code> line and look it up on the errors page.</p>
 <p>Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power switch) and flip the power switch on. Make the example project and flash it:</p>
 <pre class="bash"><code>dewfpga new blink    # prints: blink/ ready:  cd blink &amp;&amp; dewfpga flash    (VS Code: ⌘⇧B)
 cd blink
@@ -145,14 +146,14 @@ blink.bit  2.2 MB</code></pre>
 <pre><code>Load SRAM: [==================================================] 100.00%
 Done
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-<p><code>done 1</code> means the chip accepted the design. Flip switch 0 on: LED 15 lights and LED 0 blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.</p>
+<p><code>done 1</code> means the chip accepted the design. Flip switch 0 up (SW0, the rightmost of the 16 switches): LED 15 (LD15, leftmost) lights and LED 0 (LD0, rightmost, just above SW0) blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.</p>
 <p>The rules <code>dewfpga</code> follows in a folder:</p>
 <ul>
 <li>Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files. Files ending in <code>_tb.sv</code> are testbenches and stay out of the bitstream. One design per folder.</li>
 <li>The top module is the <code>.sv</code> whose name matches the <code>.xdc</code>; if there is only one <code>.sv</code>, that one. Otherwise name it: <code>dewfpga bit lab4</code>.</li>
 <li>The pin file is <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder. Pins in it that the design does not use are ignored, so a fully uncommented <code>Basys3_Master.xdc</code> is fine.</li>
 <li><code>dewfpga sim</code> needs <code>&lt;top&gt;_tb.sv</code>. <code>bit</code> and <code>flash</code> do not. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
-<li>The top module must have the file's name: <code>lab4.sv</code> holds <code>module lab4</code>.</li>
+<li>The top module must have its file's name: <code>lab4.sv</code> holds <code>module lab4</code>. Submodule files can be named anything.</li>
 <li><code>dewfpga bit</code> writes no bitstream when timing is not met. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
 </ul>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)
@@ -233,8 +234,8 @@ cmake --build build --target xc7frames2bit -j3</code></pre>
 <h2 id="4-what-is-in-the-project-folder">4. What is in the project folder?</h2>
 <p>A project is one folder. Download the files, do not type them:</p>
 <pre class="bash"><code>mkdir -p ~/cs223/blink &amp;&amp; cd ~/cs223/blink
-curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp; unzip blink.zip &amp;&amp; ls
-# Makefile  blink.sv  blink.xdc  blink.zip  blink_tb.sv  check_xdc.py    (and a hidden .vscode folder)</code></pre>
+curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp; unzip -q blink.zip &amp;&amp; rm blink.zip &amp;&amp; ls -A
+# .vscode  Makefile  blink.sv  blink.xdc  blink_tb.sv  check_xdc.py</code></pre>
 <table>
 <thead>
 <tr>
@@ -281,7 +282,7 @@ xc7frames2bit    /Users/you/fpga/prjxray/build/tools/xc7frames2bit
 chipdb           /Users/you/fpga/chipdb/xc7a35t.bin
 fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
 venv             /Users/you/fpga/venv/bin/python</code></pre>
-<p>A line ending in <code>-MISSING-</code> names the step of section 3 to redo. Then:</p>
+<p>Eight lines, each ending in a path, and no <code>-MISSING-</code> anywhere: done. A line such as <code>chipdb           -MISSING-</code> names the step of section 3 to redo (3.4 here). Then:</p>
 <pre class="bash"><code>make sim       # PASS: 3 checks
 make bit       # xdc ok / pnr ok / blink.bit, about 4 seconds
 make flash     # Load SRAM ... done 1</code></pre>
@@ -304,11 +305,11 @@ XDC  := Basys3_Master.xdc</code></pre>
 <hr />
 <h2 id="7-which-course-file-breaks">7. Which course file breaks?</h2>
 <p>One. <code>SevSeg_4digit.sv</code> from the course has a port line that Vivado and Icarus accept and Yosys does not (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">port-neither-input-nor-output</a>).</p>
-<pre class="systemverilog"><code>output [6:0]seg, logic dp,     // dp has no direction</code></pre>
-<p>Write it as two lines and it synthesizes.</p>
+<pre class="systemverilog"><code>output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard</code></pre>
+<p>Yosys does not implement that inheritance. Write it as two lines and it synthesizes.</p>
 <pre class="systemverilog"><code>output [6:0] seg,
 output logic dp,</code></pre>
-<p>What else was tried: four modules from old student repos, together in one design. An FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer and the seven-segment driver above: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features in those files that both Icarus (<code>sim</code>) and Yosys (<code>bit</code>) accepted: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code>. A file named differently from its module, Turkish characters and a BOM in the source, and spaces in the folder path all went through too. That is four files, not the whole course.</p>
+<p>What else was tried: four modules from old student repos, together in one design. An FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer and the seven-segment driver above: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features in those files that both Icarus (<code>sim</code>) and Yosys (<code>bit</code>) accepted: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code>. A submodule file named differently from its module, Turkish characters and a BOM in the source, and spaces in the folder path all went through too. That is four files, not the whole course.</p>
 <hr />
 <h2 id="8-what-can-it-not-do">8. What can it not do?</h2>
 <p>This covers the part of Vivado that CS223 uses, and no more.</p>

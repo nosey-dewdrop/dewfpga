@@ -10,9 +10,9 @@ go in, or the installer refuses your machine.
 | | one line | by hand |
 |---|---|---|
 | do | section 1, then 2, then 5 to 8 | section 1, then 3, then 4 to 8 |
-| time after section 1 | one command; about 4 minutes of compiling plus a 1.4 GB download | 5 steps; about 20 minutes plus the same downloads |
+| time after section 1 | one command; 3 min 37 s on the tested machine and fast wifi, 1.4 GB downloaded | 5 steps; about 5 minutes of compiling plus 1.76 GB of full clones, call it 20 minutes |
 | you get | the `dewfpga` command | the same tools plus a Makefile you own |
-| tool versions | two pinned commits, three Homebrew versions (section 9) | the same two commits, typed by you |
+| tool versions | two pinned commits, Homebrew versions in section 9 | the same two commits, typed by you |
 
 Section 4 is the Makefile project the by-hand path uses. Sections 5 to 8 are for both:
 your own lab, VS Code, the one course file that breaks, what this chain cannot do.
@@ -45,6 +45,10 @@ virtual Basys3, and a testbench view that draws the waveform.
 ---
 
 ## 1. What do you need before you start?
+
+**The board.** A Digilent Basys3 and its micro-USB cable. A MacBook Air or Pro from 2016
+on has only USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is
+powered from the cable; leave the JP2 jumper on USB.
 
 **The terminal.** Press Cmd Space, type `Terminal`, press Enter. Every command in this
 guide goes into that window: paste it, press Enter, wait until the line ending in `%`
@@ -93,13 +97,13 @@ text, and the tools cannot read that.
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 ```
 
-It downloads 1.4 GB and compiles for about 4 minutes; on slow wifi the download takes
+3 min 37 s on the tested machine with fast wifi, 1.4 GB downloaded; on slow wifi it takes
 longer, and it prints progress the whole time. It never asks for a password. It puts the
 `dewfpga` command into `~/.dewfpga` (its sha256 is compared with
 `nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256`, so a broken download stops here),
-links it into Homebrew's bin, installs Yosys, openFPGALoader and Icarus Verilog through
-Homebrew, and builds nextpnr-xilinx and prjxray into `~/fpga` at the two commits in
-section 9. Nothing touches your system Python. The last lines it prints:
+links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build
+tools of section 3.1 through Homebrew, and builds nextpnr-xilinx and prjxray into `~/fpga`
+at the two commits in section 9. Nothing touches your system Python. The last lines it prints:
 
 ```
 all good.
@@ -137,9 +141,10 @@ all good.
 ```
 
 A red `✗` names the missing piece: run the curl line again (it is the same as
-`dewfpga install`), it skips what is done. `dewfpga: command not found` means the
-Homebrew "Next steps" lines from section 1 were not pasted; paste them and open a new
-terminal window.
+`dewfpga install`), it skips what is done. `dewfpga: command not found` has two causes:
+the Homebrew "Next steps" lines from section 1 were not pasted (paste them, open a new
+terminal window), or the installer stopped before its last line; scroll up to the first
+`ERROR:` line and look it up on the errors page.
 
 Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power
 switch) and flip the power switch on. Make the example project and flash it:
@@ -177,7 +182,8 @@ Done
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1
 ```
 
-`done 1` means the chip accepted the design. Flip switch 0 on: LED 15 lights and LED 0
+`done 1` means the chip accepted the design. Flip switch 0 up (SW0, the rightmost of the
+16 switches): LED 15 (LD15, leftmost) lights and LED 0 (LD0, rightmost, just above SW0)
 blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.
 
 The rules `dewfpga` follows in a folder:
@@ -191,7 +197,8 @@ The rules `dewfpga` follows in a folder:
   design does not use are ignored, so a fully uncommented `Basys3_Master.xdc` is fine.
 - `dewfpga sim` needs `<top>_tb.sv`. `bit` and `flash` do not. `flash` builds the `.bit`
   first if it is missing or older than the sources, so `dewfpga flash` alone is enough.
-- The top module must have the file's name: `lab4.sv` holds `module lab4`.
+- The top module must have its file's name: `lab4.sv` holds `module lab4`. Submodule
+  files can be named anything.
 - `dewfpga bit` writes no bitstream when timing is not met. `dewfpga sim` exits with an
   error when the testbench prints `$error` or `$fatal`, so a red run is visible.
 
@@ -354,8 +361,8 @@ A project is one folder. Download the files, do not type them:
 
 ```bash
 mkdir -p ~/cs223/blink && cd ~/cs223/blink
-curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip && unzip blink.zip && ls
-# Makefile  blink.sv  blink.xdc  blink.zip  blink_tb.sv  check_xdc.py    (and a hidden .vscode folder)
+curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip && unzip -q blink.zip && rm blink.zip && ls -A
+# .vscode  Makefile  blink.sv  blink.xdc  blink_tb.sv  check_xdc.py
 ```
 
 | file | what it is |
@@ -390,7 +397,8 @@ fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
 venv             /Users/you/fpga/venv/bin/python
 ```
 
-A line ending in `-MISSING-` names the step of section 3 to redo. Then:
+Eight lines, each ending in a path, and no `-MISSING-` anywhere: done. A line such as
+`chipdb           -MISSING-` names the step of section 3 to redo (3.4 here). Then:
 
 ```bash
 make sim       # PASS: 3 checks
@@ -459,10 +467,10 @@ Yosys does not
 ([port-neither-input-nor-output](https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/)).
 
 ```systemverilog
-output [6:0]seg, logic dp,     // dp has no direction
+output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard
 ```
 
-Write it as two lines and it synthesizes.
+Yosys does not implement that inheritance. Write it as two lines and it synthesizes.
 
 ```systemverilog
 output [6:0] seg,
@@ -474,8 +482,8 @@ with `typedef enum`, a 16x8 RAM, a debouncer and the seven-segment driver above:
 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock,
 bitstream in 4.5 seconds. Language features in those files that both Icarus (`sim`) and Yosys (`bit`) accepted:
 `parameter`, `generate`, `struct packed`, `$clog2`, `unique case`, packed arrays,
-`interface` with `modport`. A file named differently from its module, Turkish characters
-and a BOM in the source, and spaces in the folder path all went through too. That is
+`interface` with `modport`. A submodule file named differently from its module, Turkish
+characters and a BOM in the source, and spaces in the folder path all went through too. That is
 four files, not the whole course.
 
 ---

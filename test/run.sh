@@ -16,7 +16,7 @@ strip() { grep -v '^# nextpnr' "$1" | sort; }
 echo "== static"
 check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh'"
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
-check "no personal paths"     "! grep -rn '/Users/' --exclude-dir=.git --exclude-dir=.rabadon --exclude-dir=node_modules --exclude=run.sh --exclude=.fpga_home '$ROOT'"
+check "no personal paths"     "! grep -rn '/Users/' --exclude-dir=.git --exclude-dir=.rabadon --exclude-dir=node_modules --exclude=run.sh --exclude=.fpga_home '$ROOT' | grep -v '/Users/you/' | grep -q ."
 check "no sudo/eval/curl|sh"  "! grep -nE 'sudo |eval |curl.*\| *(ba)?sh' '$ROOT/install.sh' '$CLI'"
 check "https only"            "! grep -n 'http://' '$ROOT/install.sh'"
 check "--version"             "v=\$('$CLI' --version); [ -n \"\$v\" ] && [ \"\$v\" = \"\$(sed -n 's/.*\"version\": *\"\([^\"]*\)\".*/\1/p' '$ROOT/package.json')\" ]"
