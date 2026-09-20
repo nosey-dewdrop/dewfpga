@@ -1,6 +1,6 @@
 
 !package.json
-!templates/.vscode/tasks.json
+!templates/.vscode/*.json
 !test/golden/*.fasm
 # and CI copies site/. wholesale, so these must not reach the published site
 # build outputs of a design folder

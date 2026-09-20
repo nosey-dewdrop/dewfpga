@@ -57,6 +57,7 @@ cmd_new() {
     cp "$HERE"/templates/{blink.sv,blink_tb.sv,blink.xdc} "$dir/"
     # the template task says `make ...` for the manual (Makefile) setup; here the CLI does the work
     sed 's/"make /"dewfpga /' "$HERE/templates/.vscode/tasks.json" > "$dir/.vscode/tasks.json"
+    cp "$HERE"/templates/.vscode/{settings.json,extensions.json} "$dir/.vscode/"     # iverilog as the linter, the extension recommended
     echo "$dir/ ready:  cd $dir && dewfpga flash    (VS Code: ⌘⇧B)"
 }
 

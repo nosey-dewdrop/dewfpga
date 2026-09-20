@@ -307,7 +307,7 @@ XDC  := Basys3_Master.xdc</code></pre>
 <h2 id="6-how-do-you-set-up-vs-code">6. How do you set up VS Code?</h2>
 <p>Syntax colours and error marks for SystemVerilog:</p>
 <pre class="bash"><code>code --install-extension mshr-h.veriloghdl</code></pre>
-<p><code>dewfpga new</code> and <code>blink.zip</code> both put a <code>.vscode/tasks.json</code> in the project, so Cmd Shift B builds and flashes the open design. For a folder you made yourself, copy <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/tasks.json</code></a> into it; the file says <code>make flash</code>, change that to <code>dewfpga flash</code> if you took the one-line path.</p>
+<p><code>dewfpga new</code> and <code>blink.zip</code> both put a <code>.vscode</code> folder in the project: <code>tasks.json</code> (Cmd Shift B builds and flashes the open design), <code>settings.json</code> (Icarus Verilog as the linter, so a syntax error gets a red underline as you type) and <code>extensions.json</code> (VS Code offers to install the extension above when you open the folder). For a folder you made yourself, copy the three files from <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/</code></a>; <code>tasks.json</code> says <code>make flash</code>, change that to <code>dewfpga flash</code> if you took the one-line path.</p>
 <hr />
 <h2 id="7-which-course-file-breaks">7. Which course file breaks?</h2>
 <p>One. <code>SevSeg_4digit.sv</code> from the course has a port line that Vivado and Icarus accept and Yosys does not (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">port-neither-input-nor-output</a>).</p>

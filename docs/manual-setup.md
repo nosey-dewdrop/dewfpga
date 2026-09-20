@@ -458,11 +458,13 @@ Syntax colours and error marks for SystemVerilog:
 code --install-extension mshr-h.veriloghdl
 ```
 
-`dewfpga new` and `blink.zip` both put a `.vscode/tasks.json` in the project, so
-Cmd Shift B builds and flashes the open design. For a folder you made yourself, copy
-[`templates/.vscode/tasks.json`](https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json)
-into it; the file says `make flash`, change that to `dewfpga flash` if you took the
-one-line path.
+`dewfpga new` and `blink.zip` both put a `.vscode` folder in the project: `tasks.json`
+(Cmd Shift B builds and flashes the open design), `settings.json` (Icarus Verilog as the
+linter, so a syntax error gets a red underline as you type) and `extensions.json` (VS Code
+offers to install the extension above when you open the folder). For a folder you made
+yourself, copy the three files from
+[`templates/.vscode/`](https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json);
+`tasks.json` says `make flash`, change that to `dewfpga flash` if you took the one-line path.
 
 ---
 

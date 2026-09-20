@@ -13,8 +13,8 @@ rm -rf "$OUT"; mkdir -p "$OUT/templates/.vscode" "$OUT/sim"
 npm pack --silent >/dev/null
 cp -R site/. "$OUT/"
 mv dewfpga-*.tgz "$OUT/dewfpga.tgz" && (cd "$OUT" && shasum -a 256 dewfpga.tgz > dewfpga.tgz.sha256)
-cp templates/* "$OUT/templates/" && cp templates/.vscode/tasks.json "$OUT/templates/.vscode/"
-(cd templates && zip -q "../$OUT/blink.zip" blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json)
+cp templates/* "$OUT/templates/" && cp templates/.vscode/*.json "$OUT/templates/.vscode/"
+(cd templates && zip -q "../$OUT/blink.zip" blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json .vscode/settings.json .vscode/extensions.json)
 (cd sim && npm run build --silent >/dev/null 2>&1)
 cp -R sim/dist/. "$OUT/sim/"
 
