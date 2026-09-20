@@ -66,8 +66,11 @@ def scan(files, want=None, xdc_names=(), prefer_tb=False):
     for f in files:
         try: raw = open(f, encoding="utf-8", errors="replace").read()
         except OSError: continue
-        if "\\<const0>" in raw or "\\<const1>" in raw or "(* keep_hierarchy" in raw:
-            problems.append(f"{f} is a netlist Vivado wrote after synthesis (escaped names like \\<const0>), not source code; Yosys cannot read it. Take the original .sv from the course page instead.")
+        head = raw[:2000]
+        if ("\\<const0>" in raw or "\\<const1>" in raw or "(* keep_hierarchy" in raw
+                or "NotValidForBitStream" in head or "write_verilog -mode funcsim" in head
+                or "This verilog netlist is a functional simulation" in head):
+            problems.append(f"{f} is a netlist Vivado wrote after synthesis, not source code (its header says so, and Yosys cannot read it). Delete it from this folder and keep your own .sv files; Vivado writes these under .sim/ and .runs/.")
     for n, d in mods.items():
         inst[n] = set()
         for other in names:
