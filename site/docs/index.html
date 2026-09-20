@@ -107,7 +107,7 @@
 <p>It downloads 1.4 GB and compiles for about 4 minutes; on slow wifi the download takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader and Icarus Verilog through Homebrew, and builds nextpnr-xilinx and prjxray into <code>~/fpga</code> at the two commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
 <pre><code>all good.
 
-Total: 231 s. Log: /Users/you/fpga/install.log
+Total: 217 s. Log: /Users/you/fpga/install.log
 Next:  dewfpga new blink &amp;&amp; cd blink &amp;&amp; dewfpga flash</code></pre>
 <p>To read the script before running it:</p>
 <pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install -o install.sh

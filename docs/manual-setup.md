@@ -104,7 +104,7 @@ section 9. Nothing touches your system Python. The last lines it prints:
 ```
 all good.
 
-Total: 231 s. Log: /Users/you/fpga/install.log
+Total: 217 s. Log: /Users/you/fpga/install.log
 Next:  dewfpga new blink && cd blink && dewfpga flash
 ```
 
