@@ -95,7 +95,7 @@ dewfpga --version
 
 ## Tests
 
-`test/run.sh` (41 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
+`test/run.sh` (42 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
 every error path, idempotent install). `FULL=1 test/run.sh` adds a clean install into a
 temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.

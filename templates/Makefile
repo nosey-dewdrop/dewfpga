@@ -52,7 +52,9 @@ $(TOP).json: $(SRCS)
 # the tool binaries and the chipdb are prerequisites too: after `dewfpga install` (an update) the netlist is re-placed
 $(TOP).fasm: $(TOP).json $(XDC) $(NEXTPNR) $(CHIPDB) $(MAKEFILE_LIST)
 	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
+	@if ! grep -q '^[^#]*create_clock' $(XDC); then echo "note: no create_clock in $(XDC); timing is checked against the Basys3's 100 MHz oscillator (--freq 100)"; fi
 	@"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
+	           $$(grep -q '^[^#]*create_clock' $(XDC) || echo --freq 100) \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log
 	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0} \
 	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); sub(/.*: /,"",m); \
