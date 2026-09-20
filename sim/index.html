@@ -3,27 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dewfpga: Basys3 simulator in the browser</title>
-<meta name="description" content="Write SystemVerilog, press run, watch a virtual Digilent Basys3 light up. Yosys runs in your browser as WebAssembly. No Vivado, no Windows, no board needed.">
+<title>dewfpga: Basys3 simulator and testbench in the browser</title>
+<meta name="description" content="Write SystemVerilog, press run: a virtual Digilent Basys3 lights up, or your testbench runs and draws a waveform. Yosys and Icarus Verilog as WebAssembly. No Vivado, no board needed.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%235cff7a%27/%3E%3C/svg%3E">
 <meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sim/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="dewfpga: Basys3 simulator in the browser">
-<meta property="og:description" content="write systemverilog, press run, watch a virtual basys3 light up. no vivado, no board.">
+<meta property="og:title" content="dewfpga: Basys3 simulator and testbench in the browser">
+<meta property="og:description" content="write systemverilog, press run: a virtual basys3 lights up, or your testbench runs with a waveform. no vivado, no board.">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/sim/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sim/">
-
-<meta name="keywords" content="basys3 simulator, systemverilog online, vivado alternative mac, cs223 bilkent, fpga simulator browser, yosys webassembly, digilent basys3 online">
+<meta name="keywords" content="basys3 simulator, systemverilog online, vivado alternative mac, cs223 bilkent, fpga simulator browser, yosys webassembly, icarus verilog wasm, digilent basys3 online">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
-    {"@type": "WebSite", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "name": "dewfpga", "description": "a browser basys3 simulator and a mac command-line toolchain for bilkent cs223 digital design, without vivado.", "inLanguage": "en"},
-    {"@type": "SoftwareApplication", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#sim", "name": "basys3 simulator", "applicationCategory": "DeveloperApplication", "operatingSystem": "any (browser)", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "description": "simulates systemverilog designs on a virtual digilent basys3 board inside the browser. synthesis by yosys compiled to webassembly, netlist simulation by digitaljs. switches, buttons, 16 leds and the four-digit seven-segment display are interactive.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "isPartOf": {"@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site"}, "featureList": ["systemverilog input (always_ff, always_comb, enum, typedef)", "xdc pin constraints mapped to the board, same as vivado", "interactive switches, buttons, leds, seven-segment display", "shareable links, code lives in the url", "no install, no account"]}
+    {"@type": "WebSite", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "name": "dewfpga", "description": "a browser basys3 simulator, a testbench runner and a mac command-line toolchain for bilkent cs223 digital design, without vivado.", "inLanguage": "en"},
+    {"@type": "SoftwareApplication", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#sim", "name": "basys3 simulator and testbench", "applicationCategory": "DeveloperApplication", "operatingSystem": "any (browser)", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "description": "one set of files, two views: yosys (webassembly) synthesizes the design and digitaljs drives a virtual digilent basys3; icarus verilog (webassembly) runs the testbench and draws the vcd. same design.sv, tb.sv and xdc as the dewfpga command line.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "isPartOf": {"@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site"}, "featureList": ["systemverilog input (always_ff, always_comb, enum, typedef)", "xdc pin constraints mapped to the board, same as vivado", "interactive switches, buttons, leds, seven-segment display", "testbench with $display output and a vcd waveform", "shareable links, code lives in the url", "no install, no account"]}
   ]
 }
 </script>
@@ -41,16 +40,21 @@
 </nav>
 <main>
   <section class="hero">
-    <p class="hi">write systemverilog, press run, watch the board</p>
-    <h1><span data-typed="a basys3 that lives in your browser."></span></h1>
-    <p class="dim">the same .sv and .xdc you would hand to vivado. yosys reads it here, as webassembly, and the board below reacts. nothing to install, nothing to buy.</p>
+    <p class="hi">write systemverilog, press run</p>
+    <h1><span data-typed="a basys3 and a testbench, in your browser."></span></h1>
+    <p class="dim">the same three files the command line works on: design.sv, tb.sv, basys3.xdc. <b>board</b> synthesizes with yosys and drives a virtual basys3. <b>testbench</b> compiles with icarus verilog and draws the waveform. nothing to install, nothing is uploaded.</p>
   </section>
 
   <div class="work">
     <div class="left">
-      <section class="board-wrap" aria-label="board">
+      <div class="viewbar" role="tablist" aria-label="view">
+        <button id="view-board" role="tab">board</button>
+        <button id="view-tb" role="tab">testbench</button>
+        <span class="grow"></span>
+        <span id="status" aria-live="polite"></span>
+      </div>
+      <section id="board-view" class="board-wrap" aria-label="board">
         <svg id="board" tabindex="0" role="img" aria-label="virtual basys3 board"></svg>
-        <div id="status" aria-live="polite"></div>
         <div class="controls">
           <button id="pause">pause</button>
           <button id="step">step one cycle</button>
@@ -58,6 +62,14 @@
           <span id="speed-label"></span>
         </div>
         <p class="dim small">click a switch to flip it, hold a button to press it. with the board focused, arrows and enter are the five buttons.</p>
+      </section>
+      <section id="tb-view" class="tb-view" aria-label="testbench" hidden>
+        <div class="pane">
+          <div class="pane-bar"><span class="dim">$display output</span></div>
+          <div id="out" class="tb-out" aria-live="polite"></div>
+        </div>
+        <div class="wave-wrap"><canvas id="wave"></canvas></div>
+        <p class="dim small">hover the waveform for values, wheel to zoom, drag to pan, double-click to reset.</p>
       </section>
     </div>
     <div class="right">
@@ -72,14 +84,14 @@
         <div id="editors" class="editors"></div>
       </div>
       <div class="pane console-pane">
-        <div class="pane-bar"><span class="dim">yosys</span></div>
+        <div class="pane-bar"><span id="console-label" class="dim">yosys</span></div>
         <div id="console" aria-live="polite"></div>
       </div>
     </div>
   </div>
 </main>
 <footer>
-  <p>made by <a href="https://github.com/nosey-dewdrop">damla su bilge</a> for cs223 at bilkent. open source, runs entirely on your machine, nothing is uploaded anywhere.</p>
+  <p>made by <a href="https://github.com/nosey-dewdrop">damla su bilge</a> for cs223 at bilkent. open source, runs entirely on your machine, nothing is uploaded anywhere. icarus verilog is gpl-2.0; the webassembly build and its patches are published with the site. the same files run on a real board with the <a href="/dewfpga/cli/">command line</a>.</p>
 </footer>
 <script type="module" src="/src/sim/main.js"></script>
 </body>

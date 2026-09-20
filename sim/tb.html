@@ -2,66 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>dewfpga: SystemVerilog testbench in the browser</title>
-<meta name="description" content="Run a SystemVerilog testbench in the browser with Icarus Verilog compiled to WebAssembly. $display output and a waveform viewer, no install, no Vivado.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%235cff7a%27/%3E%3C/svg%3E">
+<title>dewfpga: testbench moved</title>
 <meta name="robots" content="noindex,nofollow">
-<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sim/tb.html">
-<meta property="og:type" content="website">
-<meta property="og:title" content="dewfpga: SystemVerilog testbench in the browser">
-<meta property="og:description" content="icarus verilog as webassembly: compile a testbench, read $display, see the waveform. nothing to install.">
-<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/sim/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
-<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sim/tb.html">
-<meta name="keywords" content="systemverilog testbench online, icarus verilog browser, iverilog wasm, vcd waveform viewer online, vivado simulator alternative, cs223 testbench">
-<script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "testbench runner", "applicationCategory": "DeveloperApplication", "operatingSystem": "any (browser)", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/tb.html", "description": "compiles and runs a systemverilog testbench with icarus verilog (iverilog + vvp) built for webassembly, shows $display output and a vcd waveform, entirely in the browser.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "isPartOf": {"@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site"}}
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sim/">
+<script>
+// the testbench runner is now a view of the simulator page; old share links keep their payload.
+location.replace('./?view=tb' + location.hash);
 </script>
+<meta http-equiv="refresh" content="0; url=./?view=tb">
 </head>
-<body class="pal-night">
-<div id="glyphs" aria-hidden="true"></div>
-<nav class="top" aria-label="Site">
-  <a class="brand" href="/dewfpga/">dewfpga</a>
-  <a class="c-why" href="/dewfpga/why/">why</a>
-  <a class="c-err" href="/dewfpga/errors/">errors</a>
-  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
-  <a class="c-cli" href="/dewfpga/cli/">cli</a>
-  <a class="c-docs" href="/dewfpga/docs/">docs</a>
-  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
-</nav>
-<main>
-  <section class="hero">
-    <p class="hi">the other half of vivado you actually use</p>
-    <h1><span data-typed="a testbench, run where you sit."></span></h1>
-    <p class="dim">icarus verilog, compiled to webassembly. your design.sv is the same file the simulator tab has; write a tb.sv next to it, press run, read the output, hover the waveform.</p>
-  </section>
-  <section class="bench bench-tb" aria-label="workbench">
-    <div class="pane">
-      <div class="pane-bar">
-        <span id="ftabs" class="ftabs"></span>
-        <span class="grow"></span>
-        <select id="examples" aria-label="load an example"><option value="">examples</option></select>
-        <button id="share">share</button>
-        <button id="run" title="⌘↵ on mac, ctrl+enter on windows">run</button>
-      </div>
-      <div id="editors" class="editors"></div>
-    </div>
-    <div class="pane">
-      <div class="pane-bar"><span class="dim">output</span></div>
-      <div id="out" class="tb-out" aria-live="polite"></div>
-      <div id="status" class="pane-bar"></div>
-    </div>
-  </section>
-  <section class="wave-wrap" aria-label="waveform">
-    <canvas id="wave"></canvas>
-  </section>
-</main>
-<footer>
-  <p>made by <a href="https://github.com/nosey-dewdrop">damla su bilge</a> for cs223 at bilkent. icarus verilog is gpl-2.0; the webassembly build and its patches are published with the site.</p>
-</footer>
-<script type="module" src="/src/tb/main.js"></script>
+<body>
+<p>the testbench runner moved: <a href="./?view=tb">open the simulator in testbench view</a>.</p>
 </body>
 </html>

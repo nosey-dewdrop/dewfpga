@@ -157,6 +157,15 @@ kbd{font:inherit;color:var(--accent)}
 .wave-wrap{margin-top:28px;background:var(--bg-soft);border-radius:2px;overflow:hidden}
 .wave-wrap canvas{display:block;cursor:crosshair}
 
+[hidden]{display:none!important}
+/* the view switch above the left column: board | testbench */
+.viewbar{display:flex;gap:14px;align-items:baseline;font-size:14px;margin-bottom:8px;flex-wrap:wrap}
+.viewbar button{color:var(--ink-dim)}.viewbar button.on{color:var(--accent)}
+.viewbar .grow{flex:1}
+.tb-view{display:flex;flex-direction:column;gap:8px}
+.tb-view .pane{min-height:220px}
+.tb-view .tb-out{max-height:40vh;min-height:180px}
+.tb-view .wave-wrap{margin-top:0}
 /* simulator: board on the left, the compiler on the right */
 .work .left{position:sticky;top:20px}
 .work .right{display:flex;flex-direction:column;gap:20px}

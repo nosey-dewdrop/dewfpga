@@ -1,4 +1,9 @@
-// starter designs. every port is bound in the matching xdc, exactly like the real flow.
+// starter projects. each one is the same three files the cli works on: design, testbench, xdc.
+// 'blink' is imported verbatim from templates/, so `dewfpga new blink` and the browser show one file.
+import blinkSv from '../../../templates/blink.sv?raw';
+import blinkTb from '../../../templates/blink_tb.sv?raw';
+import blinkXdc from '../../../templates/blink.xdc?raw';
+
 const X = (lines) => lines.map((l) => {
   const [pin, port] = l.split(' ');
   return `set_property -dict { PACKAGE_PIN ${pin} IOSTANDARD LVCMOS33 } [get_ports { ${port} }]`;
@@ -13,6 +18,11 @@ const segx = (name = 'seg') => SEG.map((p, i) => `${p} ${name}[${i}]`);
 const anx = (name = 'an') => AN.map((p, i) => `${p} ${name}[${i}]`);
 
 export const EXAMPLES = {
+  'blink (dewfpga new blink)': {
+    sv: blinkSv,
+    tb: blinkTb,
+    xdc: blinkXdc,
+  },
   'switches to leds': {
     sv: `// flip a switch, the led above it lights up.
 module top(
@@ -22,27 +32,23 @@ module top(
   assign led = sw;
 endmodule
 `,
-    xdc: X([...swx(16), ...ledx(16)]),
-  },
-  'blink': {
-    sv: `// led 0 blinks from a counter.
-// on the real board the counter is 26 bits (about 1.5 hz at 100 mhz).
-// the simulator defines SIM, so here the divider is small enough to watch.
-module top(
-  input  logic clk,
-  output logic led0
-);
-\`ifdef SIM
-  localparam int W = 8;    // toggles every 128 simulated cycles
-\`else
-  localparam int W = 26;   // ~1.5 hz on the real 100 mhz clock
-\`endif
-  logic [W-1:0] count = '0;
-  always_ff @(posedge clk) count <= count + 1;
-  assign led0 = count[W-1];
+    tb: `// drives sw, checks led, dumps a waveform.
+\`timescale 1ns/1ps
+module tb;
+  logic [15:0] sw, led;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    $dumpfile("wave.vcd"); $dumpvars(0, tb);
+    sw = 16'h0000; #10;
+    sw = 16'h00ff; #10;
+    if (led !== 16'h00ff) $display("FAIL: led = %h", led); else $display("ok: led = %h", led);
+    sw = 16'ha5a5; #10;
+    if (led !== 16'ha5a5) $display("FAIL: led = %h", led); else $display("ok: led = %h", led);
+    $finish;
+  end
 endmodule
 `,
-    xdc: X(['W5 clk', 'U16 led0']),
+    xdc: X([...swx(16), ...ledx(16)]),
   },
   'count on the display': {
     sv: `// press the center button, the number on the display goes up.
@@ -94,6 +100,28 @@ module top(
   end
 endmodule
 `,
+    tb: `// presses the button three times and reads the counter through the hierarchy.
+\`timescale 1ns/1ps
+module tb;
+  logic clk = 0, btnC = 0, btnU = 0;
+  logic [6:0] seg;
+  logic [3:0] an;
+  top dut(.clk(clk), .btnC(btnC), .btnU(btnU), .seg(seg), .an(an));
+  always #5 clk = ~clk;   // 100 mhz
+  task press; begin btnC = 1; repeat (3) @(posedge clk); btnC = 0; repeat (3) @(posedge clk); end endtask
+  initial begin
+    $dumpfile("wave.vcd"); $dumpvars(0, tb);
+    btnU = 1; @(posedge clk); btnU = 0; @(posedge clk);
+    press; press; press;
+    $display("value after 3 presses = %0d", dut.value);
+    if (dut.value !== 3) $display("FAIL: expected 3");
+    // digit 0 is selected when an == 4'b1110; its segments should spell 3 (0110000)
+    wait (an == 4'b1110); #1;
+    $display("an=%b seg=%b (%s)", an, seg, seg == 7'b0110000 ? "3, ok" : "not a 3");
+    $finish;
+  end
+endmodule
+`,
     xdc: X(['W5 clk', 'U18 btnC', 'T18 btnU', ...segx(), ...anx()]),
   },
   'traffic light fsm': {
@@ -140,7 +168,25 @@ module top(
     endcase
 endmodule
 `,
+    tb: `// resets the fsm, releases the sensors, prints every light change.
+\`timescale 1ns/1ps
+module tb;
+  logic clk = 0, btnU = 0;
+  logic [1:0] sw = 2'b11;
+  logic [5:0] led;
+  top dut(.clk(clk), .btnU(btnU), .sw(sw), .led(led));
+  always #5 clk = ~clk;
+  always @(led) $display("t=%0t  la=%b  lb=%b", $time, led[2:0], led[5:3]);
+  initial begin
+    $dumpfile("wave.vcd"); $dumpvars(0, tb);
+    btnU = 1; repeat (3) @(posedge clk); btnU = 0;
+    sw = 2'b00;
+    repeat (2000) @(posedge clk);
+    $finish;
+  end
+endmodule
+`,
     xdc: X(['W5 clk', 'T18 btnU', ...swx(2), ...ledx(6)]),
   },
 };
-export const DEFAULT_EXAMPLE = 'switches to leds';
+export const DEFAULT_EXAMPLE = 'blink (dewfpga new blink)';

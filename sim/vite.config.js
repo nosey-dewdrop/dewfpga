@@ -13,4 +13,6 @@ export default defineConfig({
     },
   },
   worker: { format: 'es' },
+  // examples import templates/blink.* from the repo root, one level above the vite root
+  server: { fs: { allow: ['..'] } },
 });

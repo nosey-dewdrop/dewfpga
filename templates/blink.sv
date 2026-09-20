@@ -11,7 +11,11 @@ module blink (
 );
 
     // count 100 MHz: toggle every 50_000_000 cycles -> ~1 Hz (half period)
+`ifdef SIM
+    localparam int HALF_PERIOD = 64;           // the browser simulator defines SIM: keep the blink watchable
+`else
     localparam int HALF_PERIOD = 50_000_000;
+`endif
 
     logic [25:0] counter = '0;   // 2^26 = 67M, holds 50M
     logic        blink_state = 1'b0;

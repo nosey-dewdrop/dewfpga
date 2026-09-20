@@ -16,7 +16,7 @@ Sections 5 to 8 apply to both: your own lab, VS Code, the course file that break
 what this chain cannot do.
 
 No Mac or no board with you? The [Basys3 simulator](https://nosey-dewdrop.github.io/dewfpga/sim/)
-and the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/tb.html) run the same
+and the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb) run the same
 `.sv` and `.xdc` in the browser, nothing installed.
 
 **If a step fails.** Read the last lines in the terminal. Every error I hit is filed
@@ -269,7 +269,7 @@ make flash     # to the board
 
 `make bit` prints three lines: `xdc ok`, `pnr ok` with the LUT and flip-flop count and
 the clock check, and the `.bit` size. The full nextpnr log is in `blink.log`.
-`make sim` also writes `blink.vcd`; the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/tb.html)
+`make sim` also writes `blink.vcd`; the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb)
 draws it, since no waveform viewer is installed here.
 
 A good `make flash` ends with:
@@ -356,7 +356,7 @@ This covers the part of Vivado that CS223 uses, and no more.
   Wizard, or the BRAM, VGA and UART cores. I searched 35 old student repos and 240
   source files; none of them use any of it.
 - **No GUI.** No waveform viewer, schematic or in-chip debugger. `sim` writes a `.vcd`;
-  the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/tb.html) draws it in the browser.
+  the [testbench runner](https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb) draws it in the browser.
 - **Two parsers.** Icarus reads your code for simulation, Yosys for synthesis, and
   they do not support the same SystemVerilog. Code that passes `sim` can fail in
   `bit`; section 7 is the real example. Rewriting the line more simply has fixed it every time.

@@ -37,7 +37,7 @@
 
   <p>Nereden başlanır: <a href="/dewfpga/docs/"><b>kurulum rehberi</b></a>. İki yol var: <a href="/dewfpga/cli/">tek satır</a> zinciri dört dakikada kurup sana <code>dewfpga</code> komutunu veriyor, ya da yedi adımda elle kurup kendi Makefile'ınla çalışıyorsun. İkisi de aynı yere çıkıyor: <code>.sv</code> yaz, <code>.bit</code> kartta, derleme 4 saniye. Komutu kopyala, Enter'a bas, ekranda ne görmen gerektiğini de yazdım. Rehber İngilizce, ama komutlar zaten dil bilmiyor. <a href="/dewfpga/docs/#4-how-do-you-build-with-the-makefile">Beş proje dosyasını</a> tek tek yazmana da gerek yok, indirip kullanıyorsun.</p>
 
-  <p class="mute">Kart yanında değil mi, hiçbir şey kurmak istemiyor musun? <a href="/dewfpga/sim/" hreflang="en">Basys3 simülatörü</a> tasarımını doğrudan tarayıcıda çalıştırıyor, switch'leri elle çeviriyorsun, LED'ler yanıyor. <a href="/dewfpga/sim/tb.html" hreflang="en">Testbench çalıştırıcı</a> da testbench'ini koşup dalga formunu çiziyor. Şunlar için değil: Intel Mac, Vivado IP Catalog'undan herhangi bir şey. <a href="#limits">Aşağıda hepsi yazıyor.</a></p>
+  <p class="mute">Kart yanında değil mi, hiçbir şey kurmak istemiyor musun? <a href="/dewfpga/sim/" hreflang="en">Basys3 simülatörü</a> tasarımını doğrudan tarayıcıda çalıştırıyor, switch'leri elle çeviriyorsun, LED'ler yanıyor. <a href="/dewfpga/sim/?view=tb" hreflang="en">Testbench çalıştırıcı</a> da testbench'ini koşup dalga formunu çiziyor. Şunlar için değil: Intel Mac, Vivado IP Catalog'undan herhangi bir şey. <a href="#limits">Aşağıda hepsi yazıyor.</a></p>
 
 <pre><code><span class="p">$</span> make sim
 TB: basic checks passed (see the waveform for the toggle)
@@ -70,13 +70,13 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <h2 id="limits">Neyi yapamıyor?</h2>
   <ul>
     <li>Vivado'nun IP Catalog'undan hiçbir şey çalışmıyor: Block Design, MicroBlaze, AXI, Clocking Wizard, hazır BRAM, VGA ve UART blokları yok. 35 eski CS223 öğrenci reposuna, 240 kaynak dosyaya baktım; hiçbiri bunları kullanmıyor, labları elle yazıyoruz zaten.</li>
-    <li>Mac'teki zincirde dalga formu görüntüleyici, şematik ya da çip içi debugger yok: <code>make sim</code> bir <code>.vcd</code> dosyası bırakıp duruyor. Dalga formuna bakmak istersen <a href="/dewfpga/sim/tb.html" hreflang="en">tarayıcıdaki testbench çalıştırıcıyı</a> kullan.</li>
+    <li>Mac'teki zincirde dalga formu görüntüleyici, şematik ya da çip içi debugger yok: <code>make sim</code> bir <code>.vcd</code> dosyası bırakıp duruyor. Dalga formuna bakmak istersen <a href="/dewfpga/sim/?view=tb" hreflang="en">tarayıcıdaki testbench çalıştırıcıyı</a> kullan.</li>
     <li>Sadece Basys3 (XC7A35T) ve sadece Apple Silicon denendi. Intel Mac, Linux ve başka kartlar için bir şey diyemem.</li>
     <li>Bu araçlar resmi değil, AMD'nin yaptığı ya da desteklediği şeyler değil. Lab demosundan önce tasarımını bir kez okuldaki bilgisayarda Vivado'da açmanı öneririm.</li>
   </ul>
 
   <h2>Sırada ne var?</h2>
-  <p>Tarayıcıda derleyici: hiçbir şey kurmadan SystemVerilog'dan Basys3 bitstream'ine. O henüz açık değil. <a href="/dewfpga/sim/" hreflang="en">Simülatör</a>, <a href="/dewfpga/sim/tb.html" hreflang="en">testbench çalıştırıcı</a> ve <a href="/dewfpga/cli/" hreflang="en">komut satırı aracı</a> kullanıma açık.</p>
+  <p>Tarayıcıda derleyici: hiçbir şey kurmadan SystemVerilog'dan Basys3 bitstream'ine. O henüz açık değil. <a href="/dewfpga/sim/" hreflang="en">Simülatör</a>, <a href="/dewfpga/sim/?view=tb" hreflang="en">testbench çalıştırıcı</a> ve <a href="/dewfpga/cli/" hreflang="en">komut satırı aracı</a> kullanıma açık.</p>
 
   <h2>Kim yaptı?</h2>
   <p>Damla Su Bilge, Bilkent CS. Buradaki her şeyi 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve elimdeki Basys3 ile çalıştırdım. Bir adım sende patlarsa terminalin son on satırını ve kaçıncı adımda olduğunu yaz: <a href="https://github.com/nosey-dewdrop/dewfpga/issues">GitHub'da issue</a> açabilirsin ya da <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den ulaşabilirsin.</p>

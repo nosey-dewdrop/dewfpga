@@ -1,22 +1,25 @@
 # sim — cs223 without vivado, the website
 
-four static pages, built with vite. nothing runs on a server.
+one static page, built with vite. nothing runs on a server.
 
-- `index.html` simulator: yosys (webassembly, `@yowasp/yosys`) synthesizes design.sv in a worker, `yosys2digitaljs` + `digitaljs` simulate the netlist, `src/sim/board.js` draws the basys3 and maps ports through the xdc (`src/sim/xdc.js`, pin table generated from `blink/Basys3_Master.xdc`).
-- `tb.html` testbench: icarus verilog compiled to webassembly (`src/tb/wasm/`, built from `~/fpga/iverilog-wasm`, patches and build script there). `$display` output plus a vcd waveform viewer (`src/tb/vcd.js`, `src/tb/wave.js`).
-- `cli.html` the mac command-line chain (mac-fpga installer).
-- `docs.html` how it works, accepted systemverilog, xdc, limits, faq.
+- `index.html` one workspace, the same three files as the cli (design.sv + any other .sv, tb.sv, basys3.xdc), two views:
+  - **board**: yosys (webassembly, `@yowasp/yosys`) synthesizes the design in a worker, `yosys2digitaljs` + `digitaljs` simulate the netlist, `src/sim/board.js` draws the basys3 and maps ports through the xdc (`src/sim/xdc.js`, pin table generated from `Basys3_Master.xdc`).
+  - **testbench**: icarus verilog compiled to webassembly (`src/tb/wasm/`, built from `~/fpga/iverilog-wasm`, patches and build script there) compiles everything including tb.sv. `$display` output plus a vcd waveform viewer (`src/tb/vcd.js`, `src/tb/wave.js`).
+  - `?view=tb` opens the testbench view; switching views re-runs the active tool on the current files.
+- `tb.html` redirects old links to `./?view=tb` and keeps their hash. old share links ({sv, xdc}, {files, tb}) still load.
+- the `blink` example is imported verbatim from `templates/` (`?raw`), so `dewfpga new blink` and the browser show one file. `templates/blink.sv` uses `` `ifdef SIM `` for a watchable divider.
 
 ```
 npm install
 npm run dev        # http://localhost:5173
 npm run build      # dist/  (66 mb yosys core is copied in, that is expected)
-npm run preview    # http://localhost:4173, then: node test/e2e.mjs && node test/e2e-tb.mjs
+npm run preview    # http://localhost:4173, then: node test/e2e.mjs   (BASE=http://localhost:4199/ for another port)
 ```
 
 tests drive a real chromium (playwright; the executable path in test/*.mjs points at the cached build).
-`test/e2e.mjs`: switch → led, blink toggles, three button presses → `0003` on the display, error path, tab pages.
-`test/e2e-tb.mjs`: three testbenches compile and run, waveform has rows, syntax error is reported, a testbench without `$finish` is stopped after 30 s.
+`test/e2e.mjs`, 31 checks: boot is the cli blink template, switch → led, blink toggles, the testbench view runs the
+same files (`basic checks passed`, waveform), an edit reaches both tools, every example runs in both views, multi-file
+design, iverilog and yosys errors land in the console, watchdog for a testbench without `$finish`, old `tb.html` links.
 
 ## notes
 
