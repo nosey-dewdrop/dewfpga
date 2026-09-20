@@ -40,6 +40,11 @@ fi
 check "no warnings in output" "cd '$T/w' && '$CLI' clean && ! '$CLI' bit 2>&1 | grep -qiE 'warning|error'"
 check "bit is deterministic"  "cd '$T/w' && cp blink.frames a && '$CLI' clean && '$CLI' bit >/dev/null && cmp a blink.frames"
 check "flash w/o board: message" "cd '$T/w' && { '$CLI' flash || true; } 2>&1 | grep -qE 'board not found|done'"
+check "flash w/o board: no make trailer" "cd '$T/w' && ! { '$CLI' flash || true; } 2>&1 | grep -q 'make: \*\*\*'"
+check "bit output is short (<=3 lines)" "cd '$T/w' && '$CLI' clean && [ \$('$CLI' bit 2>&1 | wc -l) -le 3 ]"
+check "bit prints xdc, pnr, bit lines" "cd '$T/w' && '$CLI' clean && out=\$('$CLI' bit 2>&1) && grep -q '^xdc ok' <<<\"\$out\" && grep -q '^pnr ok.*PASS' <<<\"\$out\" && grep -q '^blink.bit' <<<\"\$out\""
+check "bit up to date: exit 0, silent" "cd '$T/w' && out=\$('$CLI' bit 2>&1) && [ -z \"\$out\" ]"
+check "full pnr log kept"       "cd '$T/w' && grep -q 'Max frequency' blink.log"
 
 echo "== multi-file design"
 mkdir -p "$T/m"; cd "$T/m"
@@ -62,8 +67,9 @@ check "install: no network -> clear error" "rm -rf '$T/e'; { GIT_CONFIG_COUNT=1 
 check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1; [ \$(( \$(date +%s) - s )) -lt 10 ]"
 
 echo "== project template"
-check "new + make bit"        "'$CLI' new '$T/p' && cd '$T/p' && make bit && [ -s blink.bit ]"
-check "new + make check"      "cd '$T/p' && ! make check | grep -q MISSING"
+check "new + dewfpga bit"     "'$CLI' new '$T/p' && cd '$T/p' && '$CLI' bit && [ -s blink.bit ]"
+check "new: no Makefile, task uses dewfpga" "cd '$T/p' && [ ! -e Makefile ] && grep -q '\"dewfpga flash\"' .vscode/tasks.json && ! grep -q 'make ' .vscode/tasks.json"
+check "manual path: templates/Makefile"  "mkdir '$T/mk' && cp '$ROOT'/templates/{blink.sv,blink_tb.sv,blink.xdc,check_xdc.py,Makefile} '$T/mk/' && cd '$T/mk' && make -s bit > out.txt && grep -q '^pnr ok' out.txt && [ -s blink.bit ] && ! make check | grep -q MISSING"
 
 if [ "${FULL:-}" = 1 ]; then
     echo "== clean install into temp FPGA_HOME"

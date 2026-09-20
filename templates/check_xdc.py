@@ -45,4 +45,4 @@ if extra:
 
 if missing or extra:
     sys.exit(1)
-print(f"XDC check OK: {len(ports)} ports, all mapped.")
+print(f"xdc ok: {len(ports)} ports, all mapped.")

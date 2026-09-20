@@ -1,7 +1,7 @@
 # Basys3 on macOS without Vivado (dewfpga)
 #
 #   make sim    -> simulate (iverilog)
-#   make bit    -> build the bitstream (~4 s)
+#   make bit    -> build the bitstream (~4 s); full place-and-route log in <top>.log
 #   make flash  -> program the board (SRAM: cleared on power cycle)
 #   make check  -> are the tools in place
 #   make clean
@@ -21,6 +21,9 @@ PY      := $(FPGA)/venv/bin/python
 F2F     := $(FPGA)/prjxray/utils/fasm2frames.py
 F2B     := $(FPGA)/prjxray/build/tools/xc7frames2bit
 CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
+
+SHELL := bash
+.SHELLFLAGS := -o pipefail -c
 
 .PHONY: all sim synth bit flash clean check
 
@@ -44,21 +47,24 @@ $(TOP).json: $(SRCS)
 
 $(TOP).fasm: $(TOP).json $(XDC)
 	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
-	"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
-	           --write $(TOP)_routed.json --fasm $@
+	@"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
+	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log
+	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0} \
+	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); sub(/.*: /,"",m); printf "pnr ok: %s LUT, %s FF, %s   (full log: $(TOP).log)\n",l,f,m}' $(TOP).log
 
 $(TOP).frames: $(TOP).fasm
 	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
 
 bit: $(TOP).bit
 $(TOP).bit: $(TOP).frames
-	"$(F2B)" --part_file "$(XRAYDB)/$(PART)/part.yaml" --part_name $(PART) \
+	@"$(F2B)" --part_file "$(XRAYDB)/$(PART)/part.yaml" --part_name $(PART) \
 	       --frm_file $< --output_file $@
-	@ls -lh $@
+	@LC_ALL=C awk -v f=$@ '{printf "%s  %.1f MB\n", f, $$1/1e6}' <<< "$$(stat -f%z $@)"
 
 flash: $(TOP).bit
-	@openFPGALoader -b basys3 $(TOP).bit || { echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?"; exit 1; }
+	@openFPGALoader -b basys3 $(TOP).bit | grep -v '^empty$$' \
+	  || { echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?" >&2; exit 1; }
 
 clean:
 	rm -f $(TOP)_sim $(TOP).vcd $(TOP).json $(TOP)_routed.json \
-	      $(TOP).fasm $(TOP).frames $(TOP).bit
+	      $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log
