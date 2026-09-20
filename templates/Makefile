@@ -83,8 +83,8 @@ $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	# the course's Basys3_Master.xdc ends in five [current_design] lines nextpnr does not know; they are
 	# harmless and would print on every build, so they are dropped here (the full text is in $(TOP).log)
 	@awk '/^Info:[[:space:]]+SLICE_LUTX:/{l=$$3} /^Info:[[:space:]]+SLICE_FFX:/{f=$$3} \
-	      /Max frequency for clock/{ v=$$0; sub(/.*for clock[[:space:]]+\047/,"",v); c=v; sub(/\047.*/,"",c); sub(/^[^:]*:[[:space:]]*/,"",v); freq[c]=v; if (v ~ /FAIL/) bad=1 } \
-	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); k=0; for (c in freq) k++; m=""; \
+	      /Max frequency for clock/{ v=$$0; sub(/.*for clock[[:space:]]+\047/,"",v); c=v; sub(/\047.*/,"",c); sub(/^[^:]*:[[:space:]]*/,"",v); freq[c]=v } \
+	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); k=0; for (c in freq) { k++; if (freq[c] ~ /FAIL/) bad=1 } m=""; \
 	          for (c in freq) m = m (m==""?"":", ") (k>1 ? c " " : "") freq[c]; \
 	          if (m == "") m = "no clocked paths, timing not applicable"; \
 	          if (bad) { printf "ERROR: timing not met: %s. The design cannot run at the clock the XDC asks for; no bitstream written. Details: $(TOP).log\n",m > "/dev/stderr"; exit 2 } \
