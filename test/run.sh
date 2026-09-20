@@ -39,7 +39,10 @@ else
 fi
 check "no warnings in output" "cd '$T/w' && '$CLI' clean && ! '$CLI' bit 2>&1 | grep -qiE 'warning|error'"
 check "bit is deterministic"  "cd '$T/w' && cp blink.frames a && '$CLI' clean && '$CLI' bit >/dev/null && cmp a blink.frames"
+# programming a board that happens to be plugged in is not something a test suite should do unless asked
+if [ "${DEWFPGA_TEST_BOARD:-}" = 1 ] || ! system_profiler SPUSBDataType 2>/dev/null | grep -q 'Digilent'; then
 check "flash w/o board: message" "cd '$T/w' && { '$CLI' flash || true; } 2>&1 | grep -qE 'board not found|done'"
+else echo "  SKIP flash: a Digilent board is plugged in; DEWFPGA_TEST_BOARD=1 to program it"; fi
 check "flash w/o board: no make trailer" "cd '$T/w' && ! { '$CLI' flash || true; } 2>&1 | grep -q 'make: \*\*\*'"
 check "bit output is short (<=3 lines)" "cd '$T/w' && '$CLI' clean && [ \$('$CLI' bit 2>&1 | wc -l) -le 3 ]"
 check "bit prints xdc, pnr, bit lines" "cd '$T/w' && '$CLI' clean && out=\$('$CLI' bit 2>&1) && grep -q '^xdc ok' <<<\"\$out\" && grep -q '^pnr ok.*PASS' <<<\"\$out\" && grep -q '^blink.bit' <<<\"\$out\""
@@ -65,6 +68,9 @@ check "sim w/o testbench"     "cd '$T/m' && { '$CLI' sim top || true; } 2>&1 | g
 check "failing testbench -> exit 1" "mkdir -p '$T/ft' && sed 's/assign led = .*/assign led = 16'\\''hFFFF;/' '$ROOT/templates/blink.sv' > '$T/ft/blink.sv' && cp '$ROOT/templates/blink_tb.sv' '$T/ft/' && cd '$T/ft' && ! '$CLI' sim >out 2>&1 && grep -q '^FAIL: 2 of 3' out && grep -q 'reported errors' out"
 check "timing not met -> error, no bit" "mkdir -p '$T/tm' && cp '$ROOT/templates/blink.sv' '$T/tm/' && sed 's/-period 10.00/-period 0.50/; s/-waveform {0 5}/-waveform {0 0.25}/' '$ROOT/templates/blink.xdc' > '$T/tm/blink.xdc' && cd '$T/tm' && ! '$CLI' bit >out 2>&1 && grep -q 'timing not met' out && [ ! -e blink.bit ] && [ ! -e blink.fasm ]"
 check "file name with a space -> clear error" "mkdir -p '$T/spc' && cp '$ROOT/templates/blink.sv' '$T/spc/my blink.sv' && cp '$ROOT/templates/blink.xdc' '$T/spc/my blink.xdc' && cd '$T/spc' && ! '$CLI' bit >out 2>&1 && grep -q 'spaces are not supported' out"
+check "unused xdc pins are ignored" "mkdir -p '$T/xa' && cp '$ROOT/templates/blink.sv' '$T/xa/' && sed 's/^#set_property/set_property/' '$ROOT/templates/Basys3_Master.xdc' > '$T/xa/blink.xdc' && cd '$T/xa' && '$CLI' bit >out 2>&1 && grep -q 'unused pins in the XDC ignored' out && [ -s blink.bit ]"
+check "bit blink.sv works like bit blink" "cd '$T/w' && '$CLI' bit blink.sv"
+check "help has no comment marks" "! '$CLI' --help | grep -q '^#'"
 check "port missing in xdc"   "cd '$T/w' && sed '/led\[15\]/d' blink.xdc > bad.xdc && cp blink.sv b.sv && mkdir x && mv b.sv x/blink.sv && cp bad.xdc x/blink.xdc && cd x && { '$CLI' bit || true; } 2>&1 | grep -q 'led\[15\]'"
 check "install: refuses sudo" "mkdir -p '$T/fb' && printf '#!/bin/sh\n[ \"\$1\" = -u ] && echo 0 || /usr/bin/id \"\$@\"\n' > '$T/fb/id' && chmod +x '$T/fb/id' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'sudo'"
 check "install: refuses x86"  "rm -f '$T/fb/id'; printf '#!/bin/sh\n[ \"\$1\" = -m ] && echo x86_64 || /usr/bin/uname \"\$@\"\n' > '$T/fb/uname' && chmod +x '$T/fb/uname' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'arm64'"

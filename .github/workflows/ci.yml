@@ -24,6 +24,7 @@ jobs:
       - name: web installer against the freshly built package
         run: |
           mkdir -p /tmp/site && cp site/install /tmp/site/ && cp dewfpga-*.tgz /tmp/site/dewfpga.tgz
+          (cd /tmp/site && shasum -a 256 dewfpga.tgz > dewfpga.tgz.sha256)
           DEWFPGA_URL=file:///tmp/site DEWFPGA_DIR=/tmp/cli bash site/install
           /tmp/cli/bin/dewfpga check
       - uses: actions/setup-node@v4
@@ -35,6 +36,7 @@ jobs:
         run: |
           mkdir -p out/templates/.vscode
           cp -R site/. out/ && cp dewfpga-*.tgz out/dewfpga.tgz
+          (cd out && shasum -a 256 dewfpga.tgz > dewfpga.tgz.sha256)
           cp templates/* out/templates/ && cp templates/.vscode/tasks.json out/templates/.vscode/
           (cd templates && zip -q ../out/blink.zip blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json)
           mkdir -p out/sim && cp -R sim/dist/. out/sim/

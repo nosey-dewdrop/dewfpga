@@ -37,8 +37,9 @@ One line, no Node needed:
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 ```
 
-It puts the CLI in `~/.dewfpga`, links `dewfpga` into Homebrew's bin and runs
-`dewfpga install`. Re-run the same line to update. Requirements: macOS on Apple Silicon,
+It puts the CLI in `~/.dewfpga` (verified against the published sha256), links `dewfpga` into
+Homebrew's bin and runs `dewfpga install`. Re-run the same line to update; `dewfpga uninstall`
+removes `~/fpga`, `~/.dewfpga` and the link. Requirements: macOS on Apple Silicon,
 Xcode Command Line Tools, Homebrew. Switching to the npm package later: remove
 `$(brew --prefix)/bin/dewfpga` first, npm wants that path.
 
@@ -78,6 +79,7 @@ dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
 dewfpga new <dir>                   blink example with a VS Code task (⌘⇧B = flash)
+dewfpga uninstall                   remove ~/fpga, ~/.dewfpga and the link (brew packages stay)
 dewfpga --version
 ```
 
@@ -86,12 +88,14 @@ dewfpga --version
 - Board: Digilent **Basys3** (XC7A35T-1CPG236C). Other 7-series boards: change `DEVICE`
   in `install.sh` and regenerate the chipdb; untested.
 - Platform: **macOS arm64**. Intel Mac and Linux are untested and refused by the script.
-- The course's XDC files work as-is (`PACKAGE_PIN` + `IOSTANDARD`).
+- The course's XDC files work as-is (`PACKAGE_PIN` + `IOSTANDARD`); pins the design does not use are ignored.
+- Memories become distributed RAM (`-nobram`): fine at lab sizes, a VGA framebuffer would not fit.
+- `bit` refuses to write a bitstream when timing is not met; `sim` exits 1 when the testbench prints `$error`/`$fatal`.
 - `flash` writes SRAM: the design is gone after a power cycle.
 
 ## Tests
 
-`test/run.sh` (33 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
+`test/run.sh` (41 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
 every error path, idempotent install). `FULL=1 test/run.sh` adds a clean install into a
 temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.

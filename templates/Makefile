@@ -6,7 +6,8 @@
 #   make check  -> are the tools in place
 #   make clean
 #
-# New module: change TOP/SRCS/XDC. Copy pins from Basys3_Master.xdc.
+# New module: change TOP/SRCS/XDC. Copy pins from Basys3_Master.xdc (unused pins are ignored).
+# -nobram: memories become distributed RAM (LUTs). Fine at lab sizes; a large framebuffer would not fit.
 
 TOP  := blink
 SRCS := blink.sv
@@ -34,6 +35,8 @@ check:
 	@printf "%-16s " nextpnr-xilinx; [ -x "$(NEXTPNR)" ] && echo "$(NEXTPNR)" || echo "-MISSING-"
 	@printf "%-16s " xc7frames2bit;  [ -x "$(F2B)" ]     && echo "$(F2B)"     || echo "-MISSING-"
 	@printf "%-16s " chipdb;         [ -s "$(CHIPDB)" ]  && echo "$(CHIPDB)"  || echo "-MISSING-"
+	@printf "%-16s " fasm2frames;    [ -s "$(F2F)" ]     && echo "$(F2F)"     || echo "-MISSING-"
+	@printf "%-16s " venv;           "$(PY)" -c "import fasm, prjxray" 2>/dev/null && echo "$(PY)" || echo "-MISSING-"
 
 # the testbench's $error/$fatal lines make sim fail, so a red run is visible to make, VS Code and CI
 sim: $(TOP)_sim
@@ -46,12 +49,14 @@ synth: $(TOP).json
 $(TOP).json: $(SRCS)
 	yosys -q -p "synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); write_json $@" $(SRCS)
 
-$(TOP).fasm: $(TOP).json $(XDC)
+# the tool binaries and the chipdb are prerequisites too: after `dewfpga install` (an update) the netlist is re-placed
+$(TOP).fasm: $(TOP).json $(XDC) $(NEXTPNR) $(CHIPDB) $(MAKEFILE_LIST)
 	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
 	@"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log
 	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0} \
 	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); sub(/.*: /,"",m); \
+	          if (m == "") m = "no create_clock in the XDC, timing not checked"; \
 	          if (m ~ /FAIL/) { printf "ERROR: timing not met: %s. The design cannot run at the clock the XDC asks for; no bitstream written. Details: $(TOP).log\n",m > "/dev/stderr"; exit 2 } \
 	          printf "pnr ok: %s LUT, %s FF, %s   (full log: $(TOP).log)\n",l,f,m}' $(TOP).log || { rm -f $@; exit 2; }
 
@@ -65,9 +70,11 @@ $(TOP).bit: $(TOP).frames
 	@LC_ALL=C awk -v f=$@ '{printf "%s  %.1f MB\n", f, $$1/1e6}' <<< "$$(stat -f%z $@)"
 
 flash: $(TOP).bit
-	@openFPGALoader -b basys3 $(TOP).bit | grep -v '^empty$$' \
-	  || { echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?" >&2; exit 1; }
+	@openFPGALoader -b basys3 $(TOP).bit > $(TOP)_flash.out 2>&1; rc=$$?; grep -v '^empty$$' $(TOP)_flash.out || true; \
+	  if [ $$rc -ne 0 ]; then \
+	    if grep -q 'unable to open ftdi device' $(TOP)_flash.out; then echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?" >&2; \
+	    else echo "ERROR: openFPGALoader failed (exit $$rc), see the lines above" >&2; fi; exit 1; fi
 
 clean:
-	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
+	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log

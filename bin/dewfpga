@@ -6,6 +6,7 @@
 #                                    work on the .sv files in the current folder. top = the .sv that has a
 #                                    matching .xdc, or the only .sv; else name it. pins = <top>.xdc or the only .xdc
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
+#   dewfpga uninstall               remove ~/fpga, ~/.dewfpga and the link in Homebrew's bin (brew packages stay)
 #   dewfpga --version
 # The toolchain lives in $FPGA_HOME (default ~/fpga). Build outputs land next to the .sv; <top>.log has the full place-and-route log.
 set -euo pipefail
@@ -15,7 +16,7 @@ SELF="$(resolve "${BASH_SOURCE[0]}")"
 HERE="$(cd "$(dirname "$SELF")/.." && pwd)"
 FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
 
-usage()   { sed -n '2,10p' "$SELF"; exit "${1:-0}"; }
+usage()   { sed -n '2,11s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
 version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
 die()     { echo "ERROR: $*" >&2; exit 1; }
 
@@ -58,6 +59,15 @@ cmd_new() {
     echo "$dir/ ready:  cd $dir && dewfpga flash    (VS Code: ⌘⇧B)"
 }
 
+cmd_uninstall() {
+    local link; link="$(brew --prefix 2>/dev/null || echo /opt/homebrew)/bin/dewfpga"
+    echo "removing: $FPGA_HOME  $HOME/.dewfpga  $link"
+    echo "kept: the Homebrew packages (brew uninstall yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14 if you want them gone)"
+    rm -rf "$FPGA_HOME" "$HOME/.dewfpga"
+    [ -L "$link" ] && rm -f "$link"
+    echo "done."
+}
+
 cmd_build() {  # <target> [top]
     local target=$1 top=${2:-} xdc
     if [ -z "$top" ]; then
@@ -71,6 +81,7 @@ cmd_build() {  # <target> [top]
         elif [ ${#svs[@]} -eq 1 ];     then top=${svs[0]%.sv}
         else die "cannot tell which module is top (${#svs[@]} .sv files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
     fi
+    top=${top%.sv}; top=${top%.v}
     [ -f "$top.sv" ] || [ -f "$top.v" ] || die "$top.sv not found"
     xdc="$top.xdc"
     # every source in the folder is synthesized (submodules may live in their own files); testbenches excluded
@@ -96,12 +107,13 @@ cmd_build() {  # <target> [top]
     esac
     # make's own "*** [target] Error 1" trailer adds nothing to the message the recipe already printed.
     # One merged stream keeps the lines in order; sed always exits 0, so pipefail (set above) hands back make's exit code.
-    make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" "$target" 2>&1 \
+    make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
         | sed '/^make: \*\*\* /d'
 }
 
 case "${1:-}" in
-    install) shift; exec bash "$HERE/install.sh" "$@" ;;
+    install) [ $# -eq 1 ] || die "dewfpga install takes no arguments (FPGA_HOME=/elsewhere dewfpga install to relocate)"; exec bash "$HERE/install.sh" ;;
+    uninstall) cmd_uninstall ;;
     check)   cmd_check ;;
     new)     shift; cmd_new "$@" ;;
     sim|bit|flash|clean) cmd_build "$@" ;;

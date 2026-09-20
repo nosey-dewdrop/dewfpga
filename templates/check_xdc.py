@@ -38,11 +38,11 @@ if missing:
     print(f"ERROR: these ports have NO pin in the XDC ({tname}):")
     for p in missing: print(f"   - {p}")
     print("   -> copy the matching lines from Basys3_Master.xdc.")
-if extra:
-    print("ERROR: port in the XDC but NOT in the code (typo?):")
-    for p in extra: print(f"   - {p}")
-    print("   -> make the XDC name match the module port name.")
-
-if missing or extra:
+if missing:
     sys.exit(1)
-print(f"xdc ok: {len(ports)} ports, all mapped.")
+# pins in the XDC that the design does not use are fine (nextpnr ignores them); a whole
+# uncommented Basys3_Master.xdc is the normal lab setup. Only a near-miss looks like a typo.
+typos = [p for p in extra if any(p.split("[")[0].lower() == q.split("[")[0].lower() and p != q for q in ports)]
+for p in typos:
+    print(f"warning: the XDC names '{p}' but the design has no such port (case or index differs from a real port)")
+print(f"xdc ok: {len(ports)} ports, all mapped" + (f", {len(extra)} unused pins in the XDC ignored." if extra else "."))

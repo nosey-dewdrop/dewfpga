@@ -17,7 +17,7 @@
 blink.json
 dist/
 node_modules/
-site/_canva/import/
+_canva/import/
 site/canva.css
 site/sim/
 top.json

@@ -7,7 +7,6 @@
   "scripts": { "test": "test/run.sh" },
   "os": ["darwin"],
   "cpu": ["arm64"],
-  "engines": { "node": ">=18" },
   "repository": { "type": "git", "url": "https://github.com/nosey-dewdrop/dewfpga.git" },
   "license": "MIT",
   "keywords": ["fpga", "basys3", "artix-7", "xilinx", "yosys", "nextpnr", "macos", "systemverilog"]

@@ -1,31 +1,38 @@
 #!/usr/bin/env bash
 # dewfpga web installer.
 #   curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
-# Downloads the CLI into ~/.dewfpga, links `dewfpga` into Homebrew's bin, then runs
-# `dewfpga install` (the toolchain, ~4 min). Re-run the same line to update.
+# Downloads the CLI into ~/.dewfpga (checked against the published sha256), links `dewfpga` into
+# Homebrew's bin, then runs `dewfpga install` (the toolchain, ~4 min). Re-run the same line to update.
+# The whole script is one function, so a download that stops halfway runs nothing.
 set -euo pipefail
-BASE="${DEWFPGA_URL:-https://nosey-dewdrop.github.io/dewfpga}"
-DIR="${DEWFPGA_DIR:-$HOME/.dewfpga}"
-die() { echo "ERROR: $*" >&2; exit 1; }
+main() {
+    local BASE="${DEWFPGA_URL:-https://nosey-dewdrop.github.io/dewfpga}"
+    local DIR="${DEWFPGA_DIR:-$HOME/.dewfpga}"
+    die() { echo "ERROR: $*" >&2; exit 1; }
 
-[ "$(uname -s)" = Darwin ] || die "dewfpga is for macOS."
-[ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is supported for now."
-[ "$(id -u)" -ne 0 ]       || die "do not run with sudo."
-command -v brew >/dev/null || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
+    [ "$(uname -s)" = Darwin ] || die "dewfpga is for macOS."
+    [ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is supported for now."
+    [ "$(id -u)" -ne 0 ]       || die "do not run with sudo."
+    command -v brew >/dev/null || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
 
-tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
-echo "downloading $BASE/dewfpga.tgz"
-curl -fsSL "$BASE/dewfpga.tgz" -o "$tmp/dewfpga.tgz" || die "download failed"
-mkdir -p "$DIR"
-tar -xzf "$tmp/dewfpga.tgz" -C "$DIR" --strip-components 1 || die "extract failed"
-chmod +x "$DIR/bin/dewfpga" "$DIR/install.sh"
+    local tmp; tmp=$(mktemp -d)
+    echo "downloading $BASE/dewfpga.tgz"
+    curl -fsSL "$BASE/dewfpga.tgz"        -o "$tmp/dewfpga.tgz"        || { rm -rf "$tmp"; die "download failed"; }
+    curl -fsSL "$BASE/dewfpga.tgz.sha256" -o "$tmp/dewfpga.tgz.sha256" || { rm -rf "$tmp"; die "checksum download failed"; }
+    (cd "$tmp" && shasum -a 256 -c dewfpga.tgz.sha256 >/dev/null) || { rm -rf "$tmp"; die "checksum mismatch: the download is corrupt or tampered with. Try again."; }
+    rm -rf "$DIR"; mkdir -p "$DIR"                                   # a fresh tree: files removed upstream do not linger
+    tar -xzf "$tmp/dewfpga.tgz" -C "$DIR" --strip-components 1 || { rm -rf "$tmp"; die "extract failed"; }
+    rm -rf "$tmp"
+    chmod +x "$DIR/bin/dewfpga" "$DIR/install.sh"
 
-BIN="$(brew --prefix)/bin"
-if [ -w "$BIN" ]; then
-    ln -sfn "$DIR/bin/dewfpga" "$BIN/dewfpga"
-    echo "dewfpga $("$DIR/bin/dewfpga" --version) -> $BIN/dewfpga"
-else
-    echo "$BIN is not writable. Add to your PATH:  export PATH=\"$DIR/bin:\$PATH\""
-fi
-echo
-exec "$DIR/bin/dewfpga" install
+    local BIN; BIN="$(brew --prefix)/bin"
+    if [ -w "$BIN" ]; then
+        ln -sfn "$DIR/bin/dewfpga" "$BIN/dewfpga"
+        echo "dewfpga $("$DIR/bin/dewfpga" --version) -> $BIN/dewfpga   (sha256 ok)"
+    else
+        echo "$BIN is not writable. Add to your PATH:  export PATH=\"$DIR/bin:\$PATH\""
+    fi
+    echo
+    exec "$DIR/bin/dewfpga" install
+}
+main "$@"

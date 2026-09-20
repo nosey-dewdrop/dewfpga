@@ -34,88 +34,119 @@
 </nav>
 <main class="wrap docs">
 <h1 id="how-do-you-run-cs223-labs-on-a-mac-without-vivado">How do you run CS223 labs on a Mac without Vivado?</h1>
-<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="/dewfpga/templates/Makefile">the five project files</a><span>section 1 is the one-line install, 2 to 4 the setup by hand, 5 to 8 your lab and the limits</span></p>
-<p>Apple Silicon Mac (M1 or later), Digilent Basys3, free tools. Tested on an M2 with 8 GB of RAM and macOS 15 on 19 September 2026. Intel Macs are untested.</p>
-<p>There are two ways in. Both end at the same place: <code>.sv</code> in, <code>.bit</code> on the board, about 4 seconds a build.</p>
+<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="/dewfpga/templates/Makefile">the five project files</a><span>section 1 prerequisites, 2 the one-line install, 3 the setup by hand, 4 to 8 your lab and the limits</span></p>
+<p>Apple Silicon Mac (M1 or later), a Digilent Basys3, free tools. Everything here was run on an M2 with 8 GB of RAM and macOS 15 on 19 September 2026. Intel Macs are untested and the installer refuses them.</p>
+<p>Two ways in. <strong>Take the one line.</strong> Build by hand only if you want to see each tool go in, or the installer refuses your machine.</p>
 <table>
 <thead>
 <tr>
 <th></th>
-<th>One line</th>
-<th>By hand</th>
+<th>one line</th>
+<th>by hand</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>time</td>
-<td>~4 min, one command</td>
-<td>~20 min, 7 steps</td>
+<td>do</td>
+<td>section 1, then section 2</td>
+<td>section 1, then section 3</td>
+</tr>
+<tr>
+<td>time after section 1</td>
+<td>about 4 minutes, one command</td>
+<td>about 20 minutes, 6 steps, mostly downloads</td>
 </tr>
 <tr>
 <td>you get</td>
 <td>the <code>dewfpga</code> command</td>
-<td>a Makefile you own and understand</td>
+<td>the same tools plus a Makefile you own</td>
 </tr>
 <tr>
-<td>read</td>
-<td><a href="#1-how-do-you-install-it-in-one-line">section 1</a></td>
-<td><a href="#2-what-do-you-need-before-you-start">sections 2 to 4</a></td>
+<td>tool versions</td>
+<td>pinned to the ones tested here</td>
+<td>the same pinned commits, typed by you</td>
 </tr>
 </tbody>
 </table>
-<p>Sections 5 to 8 apply to both: your own lab, VS Code, the course file that breaks, what this chain cannot do.</p>
-<p>No Mac or no board with you? The <a href="https://nosey-dewdrop.github.io/dewfpga/sim/">Basys3 simulator</a> and the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">testbench runner</a> run the same <code>.sv</code> and <code>.xdc</code> in the browser, nothing installed.</p>
-<p><strong>If a step fails.</strong> Read the last lines in the terminal. Every error I hit is filed under its exact text on the <a href="https://nosey-dewdrop.github.io/dewfpga/errors/">errors page</a>, with the fix. If yours is not there, send me the last ten lines and the section number on LinkedIn.</p>
+<p>Sections 4 to 8 are for both: the project files, your own lab, VS Code, the one course file that breaks, what this chain cannot do.</p>
+<p><strong>If a step fails.</strong> Read the last lines in the terminal. Every error hit during this setup is filed under its exact text, with the fix: <a href="https://nosey-dewdrop.github.io/dewfpga/errors/">nosey-dewdrop.github.io/dewfpga/errors</a>. Not there? Open an issue at <a href="https://github.com/nosey-dewdrop/dewfpga/issues">github.com/nosey-dewdrop/dewfpga/issues</a> with the last ten lines and the section number.</p>
+<p>No Mac or no board with you? The <a href="https://nosey-dewdrop.github.io/dewfpga/sim/">browser simulator</a> runs the same three files (<code>design.sv</code>, <code>tb.sv</code>, the <code>.xdc</code>) with nothing installed: a virtual Basys3, and a testbench view that draws the waveform.</p>
 <!-- toc -->
 
 <h2 id="contents">Contents</h2>
 <ul>
-<li><a href="#1-how-do-you-install-it-in-one-line">1. How do you install it in one line?</a></li>
-<li><a href="#2-what-do-you-need-before-you-start">2. What do you need before you start?</a></li>
+<li><a href="#1-what-do-you-need-before-you-start">1. What do you need before you start?</a></li>
+<li><a href="#2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</a></li>
 <li><a href="#3-how-do-you-build-the-chain-by-hand">3. How do you build the chain by hand?</a></li>
-<li><a href="#4-how-do-you-build-with-the-makefile">4. How do you build with the Makefile?</a></li>
+<li><a href="#4-what-is-in-the-project-folder">4. What is in the project folder?</a></li>
 <li><a href="#5-how-do-you-use-it-for-your-own-lab">5. How do you use it for your own lab?</a></li>
 <li><a href="#6-how-do-you-set-up-vs-code">6. How do you set up VS Code?</a></li>
 <li><a href="#7-which-course-file-breaks">7. Which course file breaks?</a></li>
 <li><a href="#8-what-can-it-not-do">8. What can it not do?</a></li>
-<li><a href="#9-which-versions-did-i-use">9. Which versions did I use?</a></li>
+<li><a href="#9-which-versions-were-tested">9. Which versions were tested?</a></li>
 </ul>
 <!-- /toc -->
 
 <hr />
-<h2 id="1-how-do-you-install-it-in-one-line">1. How do you install it in one line?</h2>
-<p>You need Xcode Command Line Tools and Homebrew (section 2 has both, two commands). Then:</p>
-<pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 min, 1.4 GB, once</code></pre>
-<p>It puts the CLI in <code>~/.dewfpga</code>, the tools in <code>~/fpga</code>, and links <code>dewfpga</code> into Homebrew's bin. Re-run the same line to update. Nothing touches your system Python.</p>
-<p>Make the example project and flash it:</p>
+<h2 id="1-what-do-you-need-before-you-start">1. What do you need before you start?</h2>
+<p><strong>The terminal.</strong> Press Cmd Space, type <code>Terminal</code>, press Enter. Every command in this guide goes into that window: paste it, press Enter, wait until the line ending in <code>%</code> comes back before you paste the next one. Some commands span several lines and end in <code>\</code>; copy the whole grey block at once.</p>
+<p><strong>Apple's command line tools.</strong> They give your Mac <code>git</code>, <code>make</code> and the C compiler.</p>
+<pre class="bash"><code>xcode-select --install</code></pre>
+<p>A window pops up; click Install and wait. If the terminal says the tools are already installed, that is fine. Check:</p>
+<pre class="bash"><code>xcode-select -p
+# /Library/Developer/CommandLineTools</code></pre>
+<p><strong>Homebrew.</strong> It installs developer tools by name.</p>
+<pre class="bash"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;</code></pre>
+<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those into the terminal too, or the next command answers <code>command not found</code>. Check:</p>
+<pre class="bash"><code>brew --version
+# Homebrew 4.x</code></pre>
+<p><strong>VS Code.</strong> Download it from code.visualstudio.com. Then in VS Code press Cmd Shift P, type <code>shell command</code>, choose "Install 'code' command in PATH". After that <code>code .</code> in the terminal opens the current folder. Do not edit these files in TextEdit; it saves rich text, and the tools cannot read that.</p>
+<hr />
+<h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
+<pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
+<p>About 4 minutes, 1.4 GB. It downloads the <code>dewfpga</code> command into <code>~/.dewfpga</code> (checked against a published sha256), links it into Homebrew's bin, and installs the six tools into <code>~/fpga</code> at the exact versions in section 9. Nothing touches your system Python. Re-run the same line to update.</p>
+<p>To read the script before running it:</p>
+<pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install -o install.sh   # open install.sh, then:
+bash install.sh</code></pre>
+<p>Check that every piece is there:</p>
+<pre class="bash"><code>dewfpga check</code></pre>
+<p>Nine lines, each starting with a green <code>✓</code>, then <code>all good.</code> A red <code>✗</code> names the missing piece; run <code>dewfpga install</code> again, it skips what is done.</p>
+<p>Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power switch) and flip the power switch on. Make the example project and flash it:</p>
 <pre class="bash"><code>dewfpga new blink
 cd blink
-dewfpga sim      # simulation: PASS: 3 checks
+dewfpga sim      # simulation
 dewfpga bit      # .sv -&gt; .bit
-dewfpga flash    # to the board: LED 15 follows switch 0, LED 0 blinks</code></pre>
-<p>What <code>dewfpga bit</code> prints, in full:</p>
+dewfpga flash    # .bit -&gt; the board</code></pre>
+<p>What each one prints when it works. <code>dewfpga sim</code>:</p>
+<pre><code>VCD info: dumpfile blink.vcd opened for output.
+PASS: 3 checks (see the waveform for the toggle)
+blink_tb.sv:35: $finish called at 200000 (1ps)</code></pre>
+<p><code>dewfpga bit</code>, three lines: the pin check, place and route, the bitstream. The full place-and-route log is in <code>blink.log</code>.</p>
 <pre><code>xdc ok: 33 ports, all mapped.
 pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB</code></pre>
-<p>The three lines are the pin check, place and route, and the bitstream. The full nextpnr log goes to <code>blink.log</code> so you can read it when something is off.</p>
-<p>That is the whole tool. In any folder, every <code>.sv</code> and <code>.v</code> is synthesized, so submodules can live in their own files. The top module is the <code>.sv</code> with a matching <code>.xdc</code>; if that is ambiguous, name it: <code>dewfpga flash &lt;top&gt;</code>. <code>sim</code> needs <code>&lt;top&gt;_tb.sv</code>.</p>
+<p><code>dewfpga flash</code>:</p>
+<pre><code>Load SRAM: [==================================================] 100.00%
+Done
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
+<p><code>done 1</code> means the chip accepted the design. Flip switch 0 on: LED 15 lights and LED 0 blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.</p>
+<p>The rules <code>dewfpga</code> follows in a folder:</p>
+<ul>
+<li>Every <code>.sv</code> and <code>.v</code> in the folder is synthesized, so submodules can live in their own files. Files ending in <code>_tb.sv</code> are testbenches and stay out of the bitstream. One design per folder.</li>
+<li>The top module is the <code>.sv</code> whose name matches the <code>.xdc</code>; if there is only one <code>.sv</code>, that one. Otherwise name it: <code>dewfpga bit lab4</code>.</li>
+<li>The pin file is <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder. Pins in it that the design does not use are ignored, so a fully uncommented <code>Basys3_Master.xdc</code> is fine.</li>
+<li><code>dewfpga sim</code> needs <code>&lt;top&gt;_tb.sv</code>. <code>bit</code> and <code>flash</code> do not.</li>
+<li><code>dewfpga bit</code> writes no bitstream when timing is not met. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
+</ul>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
-dewfpga new &lt;dir&gt;                   blink example with a VS Code task (⌘⇧B = flash)</code></pre>
-<p>If you took this path, skip to <a href="#5-how-do-you-use-it-for-your-own-lab">section 5</a>.</p>
-<hr />
-<h2 id="2-what-do-you-need-before-you-start">2. What do you need before you start?</h2>
-<p>Open the terminal: Cmd Space, type Terminal, Enter. Every command below goes there. Paste one, press Enter, wait for the prompt to come back.</p>
-<p><strong>Apple's command line tools</strong> give you <code>git</code> and <code>clang</code>.</p>
-<pre class="bash"><code>xcode-select --install</code></pre>
-<p><strong>Homebrew</strong> installs developer tools by name.</p>
-<pre class="bash"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;</code></pre>
-<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those too, or the next command answers <code>command not found</code>. Check with <code>brew --version</code>.</p>
-<p><strong>A code editor.</strong> VS Code, from code.visualstudio.com. Not TextEdit, which saves rich text the tools cannot read.</p>
+dewfpga new &lt;dir&gt;                   blink example with a VS Code task (Cmd Shift B = flash)
+dewfpga uninstall                   remove ~/fpga, ~/.dewfpga and the link; brew packages stay</code></pre>
+<p>Continue with <a href="#5-how-do-you-use-it-for-your-own-lab">section 5</a>.</p>
 <hr />
 <h2 id="3-how-do-you-build-the-chain-by-hand">3. How do you build the chain by hand?</h2>
-<p>Vivado does five jobs. One free tool does each one here:</p>
+<p>These are the commands the installer runs, at the same pinned commits. Vivado does six jobs for a lab; one free tool does each one here:</p>
 <pre><code>your_design.sv
   |-&gt; Icarus Verilog   -&gt; simulation
   |-&gt; Yosys            -&gt; synthesis
@@ -123,36 +154,37 @@ dewfpga new &lt;dir&gt;                   blink example with a VS Code task (⌘
   |-&gt; fasm2frames      -&gt; configuration frames
   |-&gt; xc7frames2bit    -&gt; your_design.bit
   `-&gt; openFPGALoader   -&gt; the board, over USB</code></pre>
-<p>Three come from Homebrew. Two you compile. One database you generate. Everything lands in <code>~/fpga</code>, 1.76 GB in total. Vivado asks for 50 to 100 GB.</p>
+<p>Three come from Homebrew, two you compile, one is a Python script inside the prjxray checkout. nextpnr also needs a chip database that you generate once. Everything lands in <code>~/fpga</code>: 1.4 GB with the installer's shallow clones, 1.76 GB with the full clones below.</p>
 <h3 id="31-homebrew-packages">3.1 Homebrew packages</h3>
-<pre class="bash"><code>brew install yosys openfpgaloader icarus-verilog \
-     cmake ninja boost eigen pkg-config libomp python</code></pre>
-<p>The first three are tools from the diagram. The rest are what the next two builds need. A few hundred MB.</p>
-<p>Check:</p>
+<pre class="bash"><code>brew install yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14</code></pre>
+<p>The first three are tools from the diagram; the rest are what the two builds below need. A few hundred MB. Check:</p>
 <pre class="bash"><code>yosys -V                   # Yosys 0.69+post
 openFPGALoader --Version   # v1.1.1
 iverilog -V | head -1      # Icarus Verilog version 13.0 (stable)</code></pre>
-<p>Newer numbers are fine.</p>
+<p>Newer numbers are expected; only the ones in section 9 were tested.</p>
 <h3 id="32-python-venv">3.2 Python venv</h3>
 <p>Two steps of the chain are Python scripts. Homebrew's Python refuses a plain <code>pip install</code> (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/">externally-managed-environment</a>), so they get a private one.</p>
 <pre class="bash"><code>mkdir -p ~/fpga
-python3 -m venv ~/fpga/venv
-~/fpga/venv/bin/pip install fasm pyyaml textx simplejson intervaltree</code></pre>
+&quot;$(brew --prefix)/opt/python@3.14/bin/python3.14&quot; -m venv ~/fpga/venv
+~/fpga/venv/bin/pip install fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 intervaltree==3.2.1 numpy==2.5.3 pyjson5==2.0.1</code></pre>
+<p>Check (prints nothing when it works):</p>
+<pre class="bash"><code>~/fpga/venv/bin/python -c &quot;import fasm, yaml, textx, simplejson, intervaltree&quot;</code></pre>
 <h3 id="33-nextpnr-xilinx">3.3 nextpnr-xilinx</h3>
-<p>Place and route. Homebrew has no macOS build, so you compile it. About 1.5 minutes.</p>
+<p>Place and route. Homebrew has no macOS build, so you compile it. The clone is most of the download; the compile is about 1.5 minutes on this machine.</p>
 <pre class="bash"><code>cd ~/fpga
-git clone --recursive --depth 1 https://github.com/openXC7/nextpnr-xilinx.git
+git clone --recursive https://github.com/openXC7/nextpnr-xilinx.git
 cd nextpnr-xilinx
+git checkout 3fd78784c7788f93f276358edf5477221cc6c179
+git submodule update --init --recursive
 cmake -B build -G Ninja \
   -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release \
   -DUSE_OPENMP=OFF -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
-ninja -C build -j3</code></pre>
-<p><code>-DUSE_OPENMP=OFF</code> is required: Apple's compiler has no OpenMP (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/fopenmp/">fopenmp</a>). <code>-j3</code> fits 8 GB of RAM; raise it on 16 GB or more.</p>
-<p>Check:</p>
+ninja -C build -j3 nextpnr-xilinx bbasm</code></pre>
+<p><code>-DUSE_OPENMP=OFF</code> is required: Apple's compiler has no OpenMP (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/fopenmp/">fopenmp</a>). <code>-j3</code> fits 8 GB of RAM; with 16 GB or more use <code>-j$(sysctl -n hw.ncpu)</code>. Check:</p>
 <pre class="bash"><code>~/fpga/nextpnr-xilinx/build/nextpnr-xilinx --version
 # &quot;nextpnr-xilinx&quot; -- Next Generation Place and Route (Version 0.9.6)</code></pre>
 <h3 id="34-chip-database">3.4 Chip database</h3>
-<p>nextpnr needs a description of the XC7A35T. It is not in the download; you generate it once (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">no-chipdb</a>). About 40 seconds.</p>
+<p>nextpnr needs a description of the XC7A35T. It is not in the download; you generate it once (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">no-chipdb</a>). About 40 seconds and 900 MB of RAM while it runs.</p>
 <pre class="bash"><code>mkdir -p ~/fpga/chipdb
 cd ~/fpga/nextpnr-xilinx
 ~/fpga/venv/bin/python xilinx/python/bbaexport.py \
@@ -161,25 +193,31 @@ cd ~/fpga/nextpnr-xilinx
   --device xc7a35tcpg236-1 \
   --constids xilinx/constids.inc \
   --bba ~/fpga/chipdb/xc7a35t.bba
-build/bbasm -l ~/fpga/chipdb/xc7a35t.bba ~/fpga/chipdb/xc7a35t.bin</code></pre>
-<p>Another 7-series board: change <code>--device</code>. Untested.</p>
-<h3 id="35-prjxray">3.5 prjxray</h3>
-<p>Turns nextpnr's text output into the binary <code>.bit</code>. One Python script, one compiled tool. About 2 minutes.</p>
-<pre class="bash"><code>cd ~/fpga
-git clone --recursive --depth 1 https://github.com/f4pga/prjxray.git
-cd prjxray
-~/fpga/venv/bin/pip install -e .
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
-cmake --build build --target xc7frames2bit -j3</code></pre>
-<p><code>--recursive</code> is required (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/yaml-cpp-not-built/">yaml-cpp-not-built</a>). <code>-DCMAKE_POLICY_VERSION_MINIMUM=3.5</code> is required (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/">cmake-policy-version-minimum</a>). prjxray's own README says to install Vivado 2017.2. Ignore it; that is for mapping a new chip, and ours is mapped.</p>
+build/bbasm -l ~/fpga/chipdb/xc7a35t.bba ~/fpga/chipdb/xc7a35t.bin
+rm ~/fpga/chipdb/xc7a35t.bba</code></pre>
 <p>Check:</p>
-<pre class="bash"><code>ls ~/fpga/prjxray/build/tools/xc7frames2bit</code></pre>
-<p>Prints the path back: the toolchain is installed.</p>
+<pre class="bash"><code>ls -lh ~/fpga/chipdb/xc7a35t.bin
+# about 90 MB</code></pre>
+<p>Another 7-series board would need its own <code>--device</code>. Untested.</p>
+<h3 id="35-prjxray">3.5 prjxray</h3>
+<p>Turns nextpnr's text output into the binary <code>.bit</code>: one Python script, one compiled tool. About 2 minutes.</p>
+<pre class="bash"><code>cd ~/fpga
+git clone --recursive https://github.com/f4pga/prjxray.git
+cd prjxray
+git checkout c9f02d8576042325425824647ab5555b1bc77833
+git submodule update --init --recursive
+~/fpga/venv/bin/pip install --no-deps -e .
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPRJXRAY_BUILD_TESTING=OFF
+cmake --build build --target xc7frames2bit -j3</code></pre>
+<p><code>--recursive</code> is required (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/yaml-cpp-not-built/">yaml-cpp-not-built</a>). <code>-DCMAKE_POLICY_VERSION_MINIMUM=3.5</code> is required (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/">cmake-policy-version-minimum</a>). prjxray's own README says to install Vivado 2017.2; that is for mapping a new chip, and ours is mapped. Ignore it. Check:</p>
+<pre class="bash"><code>ls ~/fpga/prjxray/build/tools/xc7frames2bit ~/fpga/prjxray/utils/fasm2frames.py</code></pre>
+<p>Both paths print back. The full check is <code>make check</code> in the next section, one line per tool.</p>
 <hr />
-<h2 id="4-how-do-you-build-with-the-makefile">4. How do you build with the Makefile?</h2>
-<p>Your project is a folder with five files. Download them, do not type them:</p>
+<h2 id="4-what-is-in-the-project-folder">4. What is in the project folder?</h2>
+<p>A project is one folder. Download the files, do not type them:</p>
 <pre class="bash"><code>mkdir -p ~/cs223/blink &amp;&amp; cd ~/cs223/blink
-curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp; unzip blink.zip</code></pre>
+curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp; unzip blink.zip &amp;&amp; ls
+# Makefile  blink.sv  blink.xdc  blink.zip  blink_tb.sv  check_xdc.py    (and a hidden .vscode folder)</code></pre>
 <table>
 <thead>
 <tr>
@@ -194,11 +232,11 @@ curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp
 </tr>
 <tr>
 <td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/blink_tb.sv"><code>blink_tb.sv</code></a></td>
-<td>the testbench <code>make sim</code> runs</td>
+<td>the testbench: three checks, prints <code>PASS</code> or <code>FAIL</code></td>
 </tr>
 <tr>
 <td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/blink.xdc"><code>blink.xdc</code></a></td>
-<td>the pin file. Digilent's Basys3 master XDC with the 33 pin lines for <code>clk</code>, <code>sw</code> and <code>led</code> uncommented. Works as-is in Vivado too</td>
+<td>Digilent's Basys3 master XDC with the 33 pin lines for <code>clk</code>, <code>sw</code> and <code>led</code> uncommented. Vivado reads the same file</td>
 </tr>
 <tr>
 <td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/check_xdc.py"><code>check_xdc.py</code></a></td>
@@ -206,35 +244,37 @@ curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp
 </tr>
 <tr>
 <td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/Makefile"><code>Makefile</code></a></td>
-<td>runs the five tools in order. <code>--seed 1</code> makes every build identical</td>
+<td>runs the six tools in order. <code>--seed 1</code> makes every build byte-identical</td>
+</tr>
+<tr>
+<td><code>.vscode/tasks.json</code></td>
+<td>Cmd Shift B in VS Code runs <code>make flash</code></td>
 </tr>
 </tbody>
 </table>
+<p><code>dewfpga new blink</code> gives the same <code>blink.sv</code>, <code>blink_tb.sv</code> and <code>blink.xdc</code> without the Makefile; the command replaces it.</p>
 <p>If you copied the Makefile from somewhere else and <code>make</code> says <code>missing separator</code>, the tabs became spaces: <a href="https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/">missing-separator</a>.</p>
-<p>Plug the board in over USB, switch it on, then:</p>
-<pre class="bash"><code>make check     # one line per tool; none should say MISSING
+<p>Plug the board in over USB, switch it on, then from inside the folder:</p>
+<pre class="bash"><code>make check     # one line per tool, a path after each; -MISSING- names what is absent
 make sim       # PASS: 3 checks
-make bit       # .sv -&gt; .bit, ~4 seconds
-make flash     # to the board</code></pre>
-<p><code>make bit</code> prints three lines: <code>xdc ok</code>, <code>pnr ok</code> with the LUT and flip-flop count and the clock check, and the <code>.bit</code> size. The full nextpnr log is in <code>blink.log</code>. <code>make sim</code> also writes <code>blink.vcd</code>; the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">testbench runner</a> draws it, since no waveform viewer is installed here.</p>
-<p>A good <code>make flash</code> ends with:</p>
-<pre><code>Load SRAM: [==================================================] 100.00%
-Done
-ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-<p><code>done 1</code> means the chip accepted the design. Switch 0 on: LED 15 lights, LED 0 blinks. The design lives in SRAM, so a power cycle clears it and you flash again.</p>
+make bit       # xdc ok / pnr ok / blink.bit, about 4 seconds
+make flash     # Load SRAM ... done 1</code></pre>
+<p>The outputs are the same three blocks shown in section 2. <code>make sim</code> also writes <code>blink.vcd</code>. No waveform viewer is installed by this guide; to look at the waveform, open the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> and paste the same <code>blink.sv</code> and <code>blink_tb.sv</code> there, it draws it.</p>
 <hr />
 <h2 id="5-how-do-you-use-it-for-your-own-lab">5. How do you use it for your own lab?</h2>
-<p><strong>With <code>dewfpga</code>:</strong> put your <code>.sv</code> files and the <code>.xdc</code> in one folder and run <code>dewfpga flash</code>. The top module is the <code>.sv</code> whose name matches the <code>.xdc</code>.</p>
-<p><strong>With the Makefile:</strong> copy <code>Makefile</code> and <code>check_xdc.py</code> into the lab folder and change the first three lines.</p>
+<p><strong>The pin file.</strong> The course hands out <code>Basys3_Master.xdc</code> with every line commented out. Copy it into your lab folder and delete the leading <code>#</code> on the <code>set_property</code> lines for the pins your module uses. Uncommenting all of them is fine too: pins the design does not use are ignored. The port names in your top module must match the names in that file: <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code>. If your module says <code>clock</code>, change the name inside <code>[get_ports ...]</code> on that line. The <code>xdc</code> check that runs before place and route lists every port that has no pin.</p>
+<p><strong>With <code>dewfpga</code>:</strong> put the <code>.sv</code> files and the <code>.xdc</code> in one folder, <code>cd</code> into it, <code>dewfpga flash</code>. With <code>lab4.sv</code> and <code>Basys3_Master.xdc</code> in the folder that is all. With several <code>.sv</code> files, name the top: <code>dewfpga flash lab4</code>.</p>
+<p><strong>With the Makefile:</strong> copy <code>Makefile</code> and <code>check_xdc.py</code> from section 4 into the lab folder and change the first three lines.</p>
 <pre class="makefile"><code>TOP  := traffic_light
 SRCS := traffic_light.sv debounce.sv
-XDC  := lab4.xdc</code></pre>
-<p>Either way, the port names in your top module must match the names in the pin file: Digilent's file says <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code>. If your module says <code>clock</code>, change the name inside <code>[get_ports ...]</code> on that line. The <code>xdc</code> check names every mismatch before place and route starts. Simulation looks for <code>&lt;top&gt;_tb.sv</code>.</p>
+XDC  := Basys3_Master.xdc</code></pre>
+<p><code>TOP</code> is the top module's name, <code>SRCS</code> every <code>.sv</code> in the design, <code>XDC</code> the pin file.</p>
+<p>Either way, simulation looks for <code>&lt;top&gt;_tb.sv</code>; the bitstream does not need one.</p>
 <hr />
 <h2 id="6-how-do-you-set-up-vs-code">6. How do you set up VS Code?</h2>
+<p>Syntax colours and error marks for SystemVerilog:</p>
 <pre class="bash"><code>code --install-extension mshr-h.veriloghdl</code></pre>
-<p>If <code>code</code> is not found: in VS Code, Cmd Shift P, "Shell Command: Install 'code' command in PATH".</p>
-<p><code>dewfpga new</code> and <code>blink.zip</code> both include <code>.vscode/tasks.json</code>, so Cmd Shift B builds and flashes the open design. For your own folder, copy that file from <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/tasks.json</code></a>.</p>
+<p><code>dewfpga new</code> and <code>blink.zip</code> both put a <code>.vscode/tasks.json</code> in the project, so Cmd Shift B builds and flashes the open design. For a folder you made yourself, copy <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/tasks.json</code></a> into it; the file says <code>make flash</code>, change that to <code>dewfpga flash</code> if you took the one-line path.</p>
 <hr />
 <h2 id="7-which-course-file-breaks">7. Which course file breaks?</h2>
 <p>One. <code>SevSeg_4digit.sv</code> from the course has a port line that Vivado and Icarus accept and Yosys does not (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">port-neither-input-nor-output</a>).</p>
@@ -242,28 +282,29 @@ XDC  := lab4.xdc</code></pre>
 <p>Write it as two lines and it synthesizes.</p>
 <pre class="systemverilog"><code>output [6:0] seg,
 output logic dp,</code></pre>
-<p>Everything else from CS223 went through with zero errors. I ran real student code from old repos: an FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer, the seven-segment driver. All four together: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features that passed: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code>. File names that differ from the module name, Turkish characters, a BOM and spaces in the path all passed too.</p>
+<p>What else was tried: four modules from old student repos, together in one design. An FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer and the seven-segment driver above: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features in those files that went through: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code>. A file named differently from its module, Turkish characters and a BOM in the source, and spaces in the folder path all went through too. That is four files, not the whole course.</p>
 <hr />
 <h2 id="8-what-can-it-not-do">8. What can it not do?</h2>
 <p>This covers the part of Vivado that CS223 uses, and no more.</p>
 <ul>
-<li><strong>Nothing from Vivado's IP Catalog.</strong> No Block Design, MicroBlaze, AXI, Clocking Wizard, or the BRAM, VGA and UART cores. I searched 35 old student repos and 240 source files; none of them use any of it.</li>
-<li><strong>No GUI.</strong> No waveform viewer, schematic or in-chip debugger. <code>sim</code> writes a <code>.vcd</code>; the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">testbench runner</a> draws it in the browser.</li>
-<li><strong>Two parsers.</strong> Icarus reads your code for simulation, Yosys for synthesis, and they do not support the same SystemVerilog. Code that passes <code>sim</code> can fail in <code>bit</code>; section 7 is the real example. Rewriting the line more simply has fixed it every time.</li>
-<li><strong>The timing number is an estimate</strong> from nextpnr's model. Vivado's report is the official one. At 100 MHz with lab-sized designs the margin is large.</li>
-<li><strong>Unofficial tools.</strong> AMD does not make or support them; prjxray worked out the bitstream format without AMD's documentation. Every lab I tried worked. If a lab is graded in Vivado, open it in Vivado once before the demo.</li>
-<li><strong>Arrays become distributed RAM</strong> (<code>-nobram</code>). Fine at lab sizes. Big multipliers and DSP blocks are untested.</li>
+<li><strong>Nothing from Vivado's IP Catalog.</strong> No Block Design, MicroBlaze, AXI, Clocking Wizard, or the BRAM, VGA and UART cores. 35 old student repos with 240 source files were searched for those; none use any of it. (Searched, not synthesized.)</li>
+<li><strong>No GUI.</strong> No waveform viewer, schematic or in-chip debugger. <code>sim</code> writes a <code>.vcd</code>; the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> draws the waveform for the same files.</li>
+<li><strong>Two parsers.</strong> Icarus reads your code for simulation, Yosys for synthesis, and they do not support the same SystemVerilog. Code that passes <code>sim</code> can fail in <code>bit</code>; section 7 is the one case hit so far, and rewriting the line fixed it.</li>
+<li><strong>The timing number is nextpnr's estimate.</strong> Vivado's report is the official one. In the two designs above the margin was 1.5x (four modules) and 2.8x (blink) over 100 MHz.</li>
+<li><strong>Unofficial tools.</strong> AMD does not make or support them; prjxray worked out the bitstream format without AMD's documentation. If a lab is graded in Vivado, open it in Vivado once before the demo.</li>
+<li><strong>Memories become distributed RAM</strong> (<code>-nobram</code>). The 16x8 RAM in section 7 mapped to four RAM32M cells. A large memory such as a VGA framebuffer would not fit this way; big multipliers and DSP blocks are untested.</li>
 <li><strong>One board, one platform.</strong> Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and other boards are untested and the installer refuses them.</li>
-<li><strong>Not verified on hardware:</strong> the combined four-module test above went as far as a bitstream. Loaded and confirmed on the board: <code>blink</code>, switches-to-LEDs, and the Lab 2 adder/subtractor.</li>
+<li><strong>Confirmed on the board:</strong> <code>blink</code>, switches-to-LEDs, and the Lab 2 adder/subtractor. The four-module design in section 7 went as far as a bitstream and was not loaded.</li>
 </ul>
 <hr />
-<h2 id="9-which-versions-did-i-use">9. Which versions did I use?</h2>
-<p>The one-line installer pins nextpnr-xilinx and prjxray to the exact commits below. <code>git clone</code> by hand brings the newest; if a step that worked for me fails for you, that is the first thing to suspect.</p>
+<h2 id="9-which-versions-were-tested">9. Which versions were tested?</h2>
+<p>The installer pins nextpnr-xilinx and prjxray to these commits; section 3 checks out the same ones. Homebrew packages cannot be pinned; the versions below are what was tested.</p>
 <pre><code>Yosys              0.69+post (git 143eb14f)
-nextpnr-xilinx     0.9.6      (openXC7, commit 3fd7878)
-prjxray            commit c9f02d8, prjxray-db 0.9.1-30-g1768fb3 (artix7)
+nextpnr-xilinx     0.9.6, openXC7 commit 3fd7878
+prjxray            commit c9f02d8; prjxray-db 0.9.1-30-g1768fb3 (artix7)
 openFPGALoader     1.1.1
 Icarus Verilog     13.0 (stable)
+Python             3.14 (Homebrew), venv under ~/fpga
 
 Board              Digilent Basys3, Artix-7 XC7A35T-1CPG236C
 Machine            Apple M2, 8 GB RAM, macOS 15 (Darwin 24.2.0)</code></pre>

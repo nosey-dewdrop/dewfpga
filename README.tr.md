@@ -67,6 +67,7 @@ dewfpga check                   altı parça yerinde mi
 dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
 dewfpga --version
 dewfpga new <dizin>             blink örneği + VS Code görevi (⌘⇧B = flash)
+dewfpga uninstall               ~/fpga, ~/.dewfpga ve linki kaldır (brew paketleri kalır)
 ```
 
 Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `dewfpga`'yı brew bin'e bağlar.
