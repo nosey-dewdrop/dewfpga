@@ -25,36 +25,25 @@
 </script>
 </head>
 <body>
-<nav class="top wrap">
+<nav class="top" aria-label="Site">
   <a class="brand" href="/dewfpga/">dewfpga</a>
-  <ul>
-    <li><a href="/dewfpga/why/">why</a></li>
-    <li><a href="/dewfpga/errors/">errors</a></li>
-    <li><a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
-  </ul>
-  <ul class="right">
-    <li><a href="/dewfpga/cli/">cli</a></li>
-    <li><a class="c-docs" href="/dewfpga/docs/">docs</a></li>
-    <li><a class="c-sim" href="/dewfpga/sim/">simulator</a></li>
-    <li><a href="/dewfpga/tr/" lang="tr" hreflang="tr">türkçe</a></li>
-  </ul>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
 </nav>
 
-<main class="wrap">
-  <h1>CS223 labs on Mac<br>without Vivado</h1>
-  <div class="hero hero-art">
-    <div class="hero-macs" aria-hidden="true">
-      <picture><source srcset="/dewfpga/art/mac-grey.webp" type="image/webp"><img src="/dewfpga/art/mac-grey.png" alt="" width="560" height="532" class="mac-grey"></picture>
-      <picture><source srcset="/dewfpga/art/mac-pink.webp" type="image/webp"><img src="/dewfpga/art/mac-pink.png" alt="" width="520" height="299" class="mac-pink"></picture>
-    </div>
-    <div class="hero-text">
+<div class="hero-art">
+    <div class="a11y">
+      <h1>CS223 labs on Mac<br>without Vivado</h1>
       <p class="lead">Simulate, synthesize and flash your CS223 labs to a Digilent Basys3 from an Apple Silicon Mac, M1 and later.</p>
       <p class="sub">Free, open-source tools. No Vivado, no virtual machine, no Rosetta.</p>
     </div>
-    <div class="hero-board">
-      <picture><source srcset="/dewfpga/art/basys3.webp" type="image/webp"><img src="/dewfpga/art/basys3.png" alt="A Digilent Basys3 FPGA board" width="660" height="432"></picture>
-    </div>
   </div>
+
+<main class="wrap">
 
   <p>Start with the <a href="/dewfpga/docs/"><b>setup guide</b></a>: 18 steps, from opening the terminal to an LED blinking on the board, written so that copying a command and pressing Enter is enough. Steps 1 to 9 are the install. The compiling in them is about 4 minutes; the rest is downloads and pasting. The <a href="/dewfpga/docs/#8-what-goes-in-your-project-folder">five project files</a> are downloadable as they are, so nothing has to be typed.</p>
   <p class="mute">No board and no install? The <a href="/dewfpga/sim/">Basys3 simulator</a> runs your design in the browser, and the <a href="/dewfpga/sim/tb.html">testbench runner</a> runs your testbench with a waveform. Not for: Intel Macs, anything from Vivado's IP Catalog. <a href="#limits">Details below.</a></p>

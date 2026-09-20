@@ -1,22 +1,23 @@
-# build outputs of a design folder
-*.bit
-*.frames
-*.fasm
-*.vcd
-*_sim
-*_routed.json
-blink.json
-top.json
-node_modules/
-*.tgz
-.rabadon/
-# keep
-!test/golden/*.fasm
+
 !package.json
 !templates/.vscode/tasks.json
-dist/
-
-# the abandoned Canva import attempt: the shell is coded in site/s.css now,
+!test/golden/*.fasm
 # and CI copies site/. wholesale, so these must not reach the published site
+# build outputs of a design folder
+# keep
+# the abandoned Canva import attempt: the shell is coded in site/s.css now,
+*.bit
+*.fasm
+*.frames
+*.tgz
+*.vcd
+*_routed.json
+*_sim
+.rabadon/
+blink.json
+dist/
+node_modules/
 site/_canva/import/
 site/canva.css
+site/sim/
+top.json

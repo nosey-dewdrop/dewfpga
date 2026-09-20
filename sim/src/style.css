@@ -39,7 +39,7 @@ select{color:var(--ink-dim)}select:hover{color:var(--accent)}
 code{font:inherit;color:var(--ink)}
 pre{background:var(--bg-soft);padding:14px 18px;border-radius:2px;overflow-x:auto;line-height:1.6;font-size:14px;margin:8px 0 20px;max-width:900px}
 pre .c{color:var(--ink-dim)}
-main,header.site,footer{max-width:1366px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
+main,footer{max-width:1366px;margin:0 auto;padding:0 32px;position:relative;z-index:1}
 
 main{padding-bottom:0}
 footer{padding-bottom:56px;color:var(--ink-dim);font-size:14px;margin-top:84px}
@@ -51,7 +51,7 @@ footer{padding-bottom:56px;color:var(--ink-dim);font-size:14px;margin-top:84px}
 
 /* ---- header: wordmark + tabs + palette ---- */
 
-@media(max-width:700px){.board-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}svg#board{min-width:860px}header.site{gap:14px}.site-right{flex-direction:row;gap:14px;align-items:baseline;flex:1;justify-content:space-between}}
+@media(max-width:700px){.board-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}svg#board{min-width:860px}.site-right{flex-direction:row;gap:14px;align-items:baseline;flex:1;justify-content:space-between}}
 
 .wordmark:hover{transform:none}
 .wordmark .led{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 1.4s steps(1) infinite}
@@ -168,33 +168,31 @@ kbd{font:inherit;color:var(--accent)}
 .small{font-size:.9rem}
 @media(max-width:1000px){.work .left{position:static}}
 
-/* ---------- the shell's nav, same chips as the rest of the site ---------- */
-header.site{display:flex;align-items:center;gap:17px;flex-wrap:wrap;padding:75px 0 0}
-.wordmark{font-family:var(--wordmark);font-size:40px;line-height:1;color:#f5e5e8;
-  text-decoration:none;letter-spacing:.02em;margin-right:14px;white-space:nowrap;
-  display:inline-flex;align-items:center;gap:10px;margin-right:104px}
-.wordmark:hover{color:#fff;transform:none}
-.wordmark span{display:none}
-nav.tabs{display:flex;gap:17px;align-items:center;flex-wrap:wrap;font-size:1rem}
-nav.tabs.right{margin-left:auto}
-nav.tabs a{display:inline-flex;align-items:center;justify-content:center;
-  min-height:53px;min-width:74px;padding:0 13px;border-radius:11px;
-  font-family:var(--body);font-size:1rem;font-weight:700;
-  color:#000;text-decoration:none;white-space:nowrap;background:var(--chip-blue);
-  transition:transform .12s ease,box-shadow .12s ease,filter .12s ease}
-nav.tabs a:hover{color:#000;transform:translateY(-2px);filter:brightness(1.06);
-  box-shadow:0 6px 18px rgba(0,0,0,.4)}
-nav.tabs a.c-github{background:var(--chip-lilac)}
-nav.tabs a.c-docs{background:var(--chip-pink)}
-nav.tabs a.c-sim{background:linear-gradient(95deg,#c8daf9,#bee3f0 52%,#addcb2);
-  font-size:.88rem;letter-spacing:-.01em}
-nav.tabs a.on{font-size:1rem;box-shadow:0 0 0 2px var(--accent)}
-nav.tabs a.on::before{content:none}
-@media(max-width:900px){
-  nav.tabs.right{margin-left:0}
-  .wordmark{font-size:32px;margin-right:0}
-  nav.tabs a{min-height:44px;padding:0 15px;font-size:.92rem;border-radius:8px}
-}
+/* ---------- the shell's nav ----------
+   The same artboard strip the rest of the site carries, at the same
+   measured coordinates, so the chips sit in one place on every page. */
+:root{--u:1px}
+@media (max-width:1366px){:root{--u:calc(100% / 1366)}}
+html{width:100%}
+nav.top{position:relative;width:calc(1366*var(--u));max-width:100%;
+  margin:0 auto;aspect-ratio:1366/160;display:block;
+  background:url(/dewfpga/art/nav.png) center/100% 100% no-repeat}
+nav.top a{position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
+  border-radius:calc(11*var(--u));
+  font-size:0;color:transparent;-webkit-text-fill-color:transparent;
+  text-decoration:none;transition:filter .12s ease,transform .12s ease}
+nav.top a.brand{top:calc(80*var(--u));left:calc(48*var(--u));
+  width:calc(161.5*var(--u));height:calc(45*var(--u));border-radius:calc(4*var(--u))}
+nav.top a.c-why{left:calc(247.3*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-err{left:calc(356.8*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-github{left:calc(466.3*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-cli{left:calc(936.2*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-docs{left:calc(1045.7*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-sim{left:calc(1155.2*var(--u));width:calc(104.9*var(--u))}
+nav.top a:hover{filter:brightness(1.08);transform:translateY(calc(-2*var(--u)))}
+nav.top a:focus-visible{outline:calc(2*var(--u)) solid var(--accent);
+  outline-offset:calc(2*var(--u))}
+
 /* headings in the shell's display face */
 .hero{text-align:center;margin:46px 0 40px}
 .hero h1{font-family:var(--display);font-size:clamp(1.6rem,3.4vw,2.9rem);
