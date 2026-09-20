@@ -29,17 +29,21 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 9</span>nextpnr-xilinx, at the start of place and route</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">5</span>nextpnr-xilinx, at the start of place and route</p>
   <h1 class="mono">ERROR: port led[0] of type PAD has no IOSTANDARD property</h1>
 <p><code>make bit</code> got past synthesis and nextpnr stopped with this line. The port it names looks fine in your pin file.</p>
 <h2>Why does it happen?</h2>
 <p>Some port of your top module has no line in the <code>.xdc</code>, either because the line is still commented out with <code>#</code> or because of a typo in the name. nextpnr notices, but the port it reports is not the broken one. In the guide's test, misspelling <code>led</code> as <code>ledd</code> in the pin file produced exactly the message above, which points at a port that was correct.</p>
 <h2>What is the fix?</h2>
 <p>Run the pin check before nextpnr. <code>check_xdc.py</code> compares the ports of your synthesized design with the <code>.xdc</code> and names the real mistake.</p>
-<pre><code>No pin assignment in the xdc for (blink):
-   - led[15]</code></pre>
-<p>Then open the <code>.xdc</code> and remove the <code>#</code> from every line your design uses, or fix the name inside <code>[get_ports ...]</code>. For the blink example that is the two <code>clk</code> lines, sixteen <code>sw</code> lines and sixteen <code>led</code> lines, 34 lines in total. Digilent's pin file calls the ports <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code> and so on; your module has to use the same names.</p>
-<p>The checker is one of the five project files and the guide's Makefile runs it automatically: <a href="/dewfpga/templates/check_xdc.py">check_xdc.py</a>, <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">step 8</a>.</p>
+<pre><code>ERROR: these ports have NO pin in the XDC (blink):
+   - led[15]
+   -&gt; the port names in the module must match the names in the XDC (the course file uses
+      clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an). Rename the port in the module,
+      or change the name inside [get_ports ...] on that line of the XDC.
+      A line that still starts with # is commented out and does not count.</code></pre>
+<p>Then open the <code>.xdc</code> and remove the <code>#</code> from every line your design uses, or fix the name inside <code>[get_ports ...]</code>. For the blink example that is the two <code>clk</code> lines, sixteen <code>sw</code> lines and sixteen <code>led</code> lines: 33 pin lines plus the <code>create_clock</code> line. Digilent's pin file calls the ports <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code> and so on; your module has to use the same names.</p>
+<p>The checker is one of the five project files and the guide's Makefile runs it automatically: <a href="/dewfpga/templates/check_xdc.py">check_xdc.py</a>, <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">section 4</a>.</p>
 </main>
 
 <footer class="wrap">

@@ -4,11 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>How do you run CS223 labs on a Mac without Vivado? The guide</title>
-<meta name="description" content="Yosys, nextpnr-xilinx, prjxray, Icarus Verilog and openFPGALoader on an Apple Silicon Mac: one line, or seven steps by hand, from the terminal to an LED blinking on a Digilent Basys3. Every command, what you should see, and every error with its fix.">
+<meta name="description" content="Yosys, nextpnr-xilinx, prjxray, Icarus Verilog and openFPGALoader on an Apple Silicon Mac: one line, or five steps by hand, from the terminal to an LED blinking on a Digilent Basys3. Every command, what you should see, and every error with its fix.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/">
 <meta property="og:type" content="article">
 <meta property="og:title" content="How do you run CS223 labs on a Mac without Vivado?">
-<meta property="og:description" content="One line or seven steps by hand, from the terminal to an LED blinking on a Basys3. Apple Silicon, no Vivado, no VM.">
+<meta property="og:description" content="One line or five steps by hand, from the terminal to an LED blinking on a Basys3. Apple Silicon, no Vivado, no VM.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -34,8 +34,8 @@
 </nav>
 <main class="wrap docs">
 <h1 id="how-do-you-run-cs223-labs-on-a-mac-without-vivado">How do you run CS223 labs on a Mac without Vivado?</h1>
-<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="/dewfpga/templates/Makefile">the five project files</a><span>section 1 prerequisites, 2 the one-line install, 3 the setup by hand, 4 to 8 your lab and the limits</span></p>
-<p>Apple Silicon Mac (M1 or later), a Digilent Basys3, free tools. Everything here was run on an M2 with 8 GB of RAM and macOS 15 on 19 September 2026. Intel Macs are untested and the installer refuses them.</p>
+<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="#4-what-is-in-the-project-folder">the five project files</a><span>section 1 prerequisites, 2 the one-line install, 3 the setup by hand, 4 to 8 your lab and the limits</span></p>
+<p>Apple Silicon Mac (M1 or later), a Digilent Basys3, free tools. Everything here was run on an M2 with 8 GB of RAM and macOS 15 on 19 and 20 September 2026. Intel Macs are untested and the installer refuses them.</p>
 <p>Two ways in. <strong>Take the one line.</strong> Build by hand only if you want to see each tool go in, or the installer refuses your machine.</p>
 <table>
 <thead>
@@ -162,7 +162,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
 <li><code>dewfpga sim</code> needs <code>&lt;top&gt;_tb.sv</code>. <code>bit</code> and <code>flash</code> do not. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
 <li>The top module must have its file's name: <code>lab4.sv</code> holds <code>module lab4</code>. Submodule files can be named anything.</li>
 <li><code>dewfpga bit</code> writes no bitstream when timing is not met. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
-<li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>) and <code>sim</code> leaves <code>&lt;top&gt;_sim</code> and <code>&lt;top&gt;.vcd</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
+<li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>), <code>sim</code> leaves <code>&lt;top&gt;_sim</code>, <code>&lt;top&gt;_sim.out</code> and <code>&lt;top&gt;.vcd</code>, <code>flash</code> leaves <code>&lt;top&gt;_flash.out</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
 </ul>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
@@ -172,7 +172,7 @@ dewfpga uninstall                   remove the tools in ~/fpga, ~/.dewfpga and t
 <p>Continue with <a href="#5-how-do-you-use-it-for-your-own-lab">section 5</a>.</p>
 <hr />
 <h2 id="3-how-do-you-build-the-chain-by-hand">3. How do you build the chain by hand?</h2>
-<p>These are the commands the installer runs, at the same pinned commits. Vivado does six jobs for a lab; one free tool does each one here:</p>
+<p>These are the commands the installer runs, at the same pinned commits. Vivado does five jobs for a lab; six free tools do them here, two of them for the bitstream:</p>
 <pre><code>your_design.sv
   |-&gt; Icarus Verilog   -&gt; simulation
   |-&gt; Yosys            -&gt; synthesis
@@ -210,7 +210,7 @@ ninja -C build -j3 nextpnr-xilinx bbasm</code></pre>
 <pre class="bash"><code>~/fpga/nextpnr-xilinx/build/nextpnr-xilinx --version
 # &quot;nextpnr-xilinx&quot; -- Next Generation Place and Route (Version 0.9.6)</code></pre>
 <h3 id="34-chip-database">3.4 Chip database</h3>
-<p>nextpnr needs a description of the XC7A35T. It is not in the download; you generate it once (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">no-chipdb</a>). About 40 seconds and 900 MB of RAM while it runs.</p>
+<p>nextpnr needs a description of the XC7A35T. It is not in the download; you generate it once (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">no-chipdb</a>). About 35 seconds and 860 MB of RAM while it runs.</p>
 <pre class="bash"><code>mkdir -p ~/fpga/chipdb
 cd ~/fpga/nextpnr-xilinx
 ~/fpga/venv/bin/python xilinx/python/bbaexport.py \
@@ -294,12 +294,12 @@ venv             /Users/you/fpga/venv/bin/python</code></pre>
 <pre class="bash"><code>make sim       # PASS: 3 checks
 make bit       # xdc ok / pnr ok / blink.bit, about 4 seconds
 make flash     # Load SRAM ... done 1</code></pre>
-<p>The outputs are the same three blocks shown in section 2. <code>make sim</code> also writes <code>blink.vcd</code>. No waveform viewer is installed by this guide; to look at the waveform, open the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> and paste the same <code>blink.sv</code> and <code>blink_tb.sv</code> there, it draws it.</p>
+<p>The outputs are the same three blocks shown in section 2. <code>make sim</code> also writes <code>blink.vcd</code>. No waveform viewer is installed by this guide; to look at the waveform, open the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> and paste the same <code>blink.sv</code> and <code>blink_tb.sv</code> there, and it draws it.</p>
 <hr />
 <h2 id="5-how-do-you-use-it-for-your-own-lab">5. How do you use it for your own lab?</h2>
 <p><strong>The pin file.</strong> The course hands out <code>Basys3_Master.xdc</code> with every line commented out. If you do not have it, this puts a copy into the current folder:</p>
 <pre class="bash"><code>curl -fsSL -o Basys3_Master.xdc https://nosey-dewdrop.github.io/dewfpga/templates/Basys3_Master.xdc</code></pre>
-<p>Copy it into your lab folder and delete the leading <code>#</code> on the <code>set_property</code> lines for the pins your module uses. Uncommenting all of them is fine too: pins the design does not use are ignored. The port names in your top module must match the names in that file: <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code>. If your module says <code>clock</code>, change the name inside <code>[get_ports ...]</code> on that line. The <code>xdc</code> check that runs before place and route lists every port that has no pin, and names the XDC line to fix.</p>
+<p>Copy it into your lab folder and delete the leading <code>#</code> on the <code>set_property</code> lines for the pins your module uses. Uncommenting all of them is fine too: pins the design does not use are ignored. The port names in your top module must match the names in that file: <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code>. If your module says <code>clock</code>, change the name inside <code>[get_ports ...]</code> on that line. The <code>xdc</code> check that runs before place and route lists every port that has no pin and says what to rename.</p>
 <p>A design without a clock (<code>assign led = sw;</code>) prints <code>Warning: No clocks found in design</code> and <code>no clocked paths, timing not applicable</code>; that is correct, not a problem. With the whole file uncommented and no <code>clk</code> port, <code>create_clock: target [get_ports clk] matched nothing</code> is the same thing said by nextpnr.</p>
 <p><strong>With <code>dewfpga</code>:</strong> put the <code>.sv</code> files and the <code>.xdc</code> in one folder, <code>cd</code> into it, <code>dewfpga flash</code>. With <code>lab4.sv</code> and <code>Basys3_Master.xdc</code> in the folder that is all. With several <code>.sv</code> files, name the top: <code>dewfpga flash lab4</code>.</p>
 <p><strong>With the Makefile:</strong> copy <code>Makefile</code> and <code>check_xdc.py</code> from section 4 into the lab folder and change the first three lines.</p>
@@ -310,7 +310,7 @@ XDC  := Basys3_Master.xdc</code></pre>
 <p>Either way, simulation looks for <code>&lt;top&gt;_tb.sv</code>; the bitstream does not need one. If <code>bit</code> stops on the course's <code>SevSeg_4digit.sv</code>, section 7 has the one-line fix.</p>
 <hr />
 <h2 id="6-how-do-you-set-up-vs-code">6. How do you set up VS Code?</h2>
-<p>Syntax colours and error marks for SystemVerilog:</p>
+<p>Syntax colors and error marks for SystemVerilog:</p>
 <pre class="bash"><code>code --install-extension mshr-h.veriloghdl</code></pre>
 <p><code>dewfpga new</code> and <code>blink.zip</code> both put a <code>.vscode</code> folder in the project: <code>tasks.json</code> (Cmd Shift B builds and flashes the open design), <code>settings.json</code> (Icarus Verilog as the linter, so a syntax error gets a red underline when you save) and <code>extensions.json</code> (VS Code offers to install the extension above when you open the folder). For a folder you made yourself, copy the <code>.vscode</code> folder out of a <code>dewfpga new</code> project; its three tasks already say <code>dewfpga</code>. On the Makefile path, take the three files from <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/</code></a> instead; there the tasks say <code>make</code>.</p>
 <hr />
@@ -332,7 +332,7 @@ output logic dp,</code></pre>
 <li><strong>Unofficial tools.</strong> AMD does not make or support them; prjxray worked out the bitstream format without AMD's documentation. If a lab is graded in Vivado, open it in Vivado once before the demo.</li>
 <li><strong>Memories become distributed RAM</strong> (<code>-nobram</code>). The 16x8 RAM in section 7 mapped to four RAM32M cells. A large memory such as a VGA framebuffer would not fit this way; big multipliers and DSP blocks are untested.</li>
 <li><strong>One board, one platform.</strong> Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and other boards are untested and the installer refuses them.</li>
-<li><strong>Confirmed on the board</strong> (19 and 20 September): <code>blink</code>, switches-to-LEDs, the Lab 2 adder/subtractor, and the simulator's three examples (button counter on the display, traffic-light FSM with sensor hold, switches to LEDs). The four-module design in section 7 went as far as a bitstream and was not loaded.</li>
+<li><strong>Confirmed on the board</strong> (19 and 20 September): five designs: <code>blink</code>, switches to LEDs, the Lab 2 adder/subtractor, the button counter on the display and the traffic-light FSM with sensor hold (the last three are the simulator's examples). The four-module design in section 7 went as far as a bitstream and was not loaded.</li>
 <li><strong><code>`ifdef SIM</code>.</strong> The browser simulator defines <code>SIM</code>; the command line does not. A design can use it to shorten a clock divider for the browser and keep the real value for the board, as <code>blink.sv</code> does.</li>
 </ul>
 <hr />

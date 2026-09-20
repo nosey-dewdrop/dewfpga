@@ -1,7 +1,7 @@
 # How do you run CS223 labs on a Mac without Vivado?
 
 Apple Silicon Mac (M1 or later), a Digilent Basys3, free tools. Everything here was run
-on an M2 with 8 GB of RAM and macOS 15 on 19 September 2026. Intel Macs are untested
+on an M2 with 8 GB of RAM and macOS 15 on 19 and 20 September 2026. Intel Macs are untested
 and the installer refuses them.
 
 Two ways in. **Take the one line.** Build by hand only if you want to see each tool
@@ -214,8 +214,8 @@ The rules `dewfpga` follows in a folder:
 - `dewfpga bit` writes no bitstream when timing is not met. `dewfpga sim` exits with an
   error when the testbench prints `$error` or `$fatal`, so a red run is visible.
 - `bit` leaves its working files next to the sources (`.json`, `.fasm`, `.frames`, `.log`,
-  `_routed.json`) and `sim` leaves `<top>_sim` and `<top>.vcd`. `dewfpga clean` removes all
-  of them and the `.bit`; the `.sv` and `.xdc` stay. Run it before you hand a lab in.
+  `_routed.json`), `sim` leaves `<top>_sim`, `<top>_sim.out` and `<top>.vcd`, `flash` leaves
+  `<top>_flash.out`. `dewfpga clean` removes all of them and the `.bit`; the `.sv` and `.xdc` stay. Run it before you hand a lab in.
 
 ```
 dewfpga install                     install the toolchain (safe to re-run)
@@ -231,8 +231,8 @@ Continue with [section 5](#5-how-do-you-use-it-for-your-own-lab).
 
 ## 3. How do you build the chain by hand?
 
-These are the commands the installer runs, at the same pinned commits. Vivado does six
-jobs for a lab; one free tool does each one here:
+These are the commands the installer runs, at the same pinned commits. Vivado does five
+jobs for a lab; six free tools do them here, two of them for the bitstream:
 
 ```
 your_design.sv
@@ -314,8 +314,8 @@ RAM; with 16 GB or more use `-j$(sysctl -n hw.ncpu)`. Check:
 ### 3.4 Chip database
 
 nextpnr needs a description of the XC7A35T. It is not in the download; you generate it
-once ([no-chipdb](https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/)). About 40
-seconds and 900 MB of RAM while it runs.
+once ([no-chipdb](https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/)). About 35
+seconds and 860 MB of RAM while it runs.
 
 ```bash
 mkdir -p ~/fpga/chipdb
@@ -424,7 +424,7 @@ make flash     # Load SRAM ... done 1
 The outputs are the same three blocks shown in section 2. `make sim` also writes
 `blink.vcd`. No waveform viewer is installed by this guide; to look at the waveform, open
 the [browser testbench](https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb) and paste
-the same `blink.sv` and `blink_tb.sv` there, it draws it.
+the same `blink.sv` and `blink_tb.sv` there, and it draws it.
 
 ---
 
@@ -442,7 +442,7 @@ the pins your module uses. Uncommenting all of them is fine too: pins the design
 use are ignored. The port names in your top module must match the names in that file:
 `clk`, `sw[0]`, `led[0]`, `seg[0]`, `an[0]`, `btnC`. If your module says `clock`, change
 the name inside `[get_ports ...]` on that line. The `xdc` check that runs before place and
-route lists every port that has no pin, and names the XDC line to fix.
+route lists every port that has no pin and says what to rename.
 
 A design without a clock (`assign led = sw;`) prints `Warning: No clocks found in design`
 and `no clocked paths, timing not applicable`; that is correct, not a problem. With the
@@ -471,7 +471,7 @@ stops on the course's `SevSeg_4digit.sv`, section 7 has the one-line fix.
 
 ## 6. How do you set up VS Code?
 
-Syntax colours and error marks for SystemVerilog:
+Syntax colors and error marks for SystemVerilog:
 
 ```bash
 code --install-extension mshr-h.veriloghdl
@@ -539,9 +539,9 @@ This covers the part of Vivado that CS223 uses, and no more.
   multipliers and DSP blocks are untested.
 - **One board, one platform.** Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and
   other boards are untested and the installer refuses them.
-- **Confirmed on the board** (19 and 20 September): `blink`, switches-to-LEDs, the Lab 2
-  adder/subtractor, and the simulator's three examples (button counter on the display,
-  traffic-light FSM with sensor hold, switches to LEDs). The four-module design in
+- **Confirmed on the board** (19 and 20 September): five designs: `blink`, switches to LEDs,
+  the Lab 2 adder/subtractor, the button counter on the display and the traffic-light FSM
+  with sensor hold (the last three are the simulator's examples). The four-module design in
   section 7 went as far as a bitstream and was not loaded.
 - **`` `ifdef SIM ``.** The browser simulator defines `SIM`; the command line does not.
   A design can use it to shorten a clock divider for the browser and keep the real

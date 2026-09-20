@@ -1,7 +1,7 @@
 # Basys3 on macOS without Vivado (dewfpga)
 #
 #   make sim    -> simulate (iverilog); fails if the testbench prints $error/$fatal
-#   make bit    -> build the bitstream (~4 s); full place-and-route log in <top>.log
+#   make bit    -> build the bitstream (~5 s); full place-and-route log in <top>.log
 #   make flash  -> program the board (SRAM: cleared on power cycle)
 #   make check  -> are the tools in place
 #   make clean
@@ -24,7 +24,7 @@ F2B     := $(FPGA)/prjxray/build/tools/xc7frames2bit
 CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
 
 SHELL := bash
-.DELETE_ON_ERROR:          # a recipe that fails must not leave a half-written target behind (make 3.81 honours this)
+.DELETE_ON_ERROR:          # a recipe that fails must not leave a half-written target behind (make 3.81 honors this)
 
 .PHONY: all sim synth bit flash clean check
 

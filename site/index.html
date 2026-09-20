@@ -45,7 +45,7 @@
 
 <main class="wrap">
 
-  <p>Start with the <a href="/dewfpga/docs/"><b>setup guide</b></a>. Two ways in: <a href="/dewfpga/cli/">one line</a> that installs the chain in about 4 minutes and gives you the <code>dewfpga</code> command, or seven steps by hand that leave you with a Makefile you own. Both end at <code>.sv</code> in, <code>.bit</code> on the board, 4 seconds a build. The <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">five project files</a> are downloadable as they are, so nothing has to be typed.</p>
+  <p>Start with the <a href="/dewfpga/docs/"><b>setup guide</b></a>. Two ways in: <a href="/dewfpga/cli/">one line</a> that installs the chain in about 4 minutes and gives you the <code>dewfpga</code> command, or five steps by hand that leave you with a Makefile you own. Both end at <code>.sv</code> in, <code>.bit</code> on the board, under five seconds a build. The <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">five project files</a> are downloadable as they are, so nothing has to be typed.</p>
   <p class="mute">No board and no install? The <a href="/dewfpga/sim/">Basys3 simulator</a> runs your design in the browser, and the <a href="/dewfpga/sim/?view=tb">testbench runner</a> runs your testbench with a waveform. Not for: Intel Macs, anything from Vivado's IP Catalog. <a href="#limits">Details below.</a></p>
 
 <pre><code><span class="p">$</span> make sim
@@ -81,7 +81,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
     <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. 35 old CS223 student repos with 240 source files were checked; none of them use any of it.</li>
     <li>On the Mac chain there is no waveform viewer, schematic or in-chip debugger: <code>make sim</code> writes a <code>.vcd</code> file and stops there. The <a href="/dewfpga/sim/?view=tb">testbench runner in the browser</a> draws the waveform instead.</li>
     <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
-    <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#8-what-can-it-not-do">What you should be concerned about.</a></li>
+    <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#8-what-can-it-not-do">The limits, in detail.</a></li>
   </ul>
 
   <h2>What is coming?</h2>

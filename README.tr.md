@@ -75,10 +75,10 @@ Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `dewfpga`'yı br
 ## Kapsam
 
 - Kart: Digilent **Basys3** (XC7A35T-1CPG236C). Başka 7-serisi kart için
-  `install.sh` içinde `DEVICE` değişir ve chipdb yeniden üretilir; test edilmedi.
+  `install.sh` içinde `DEVICE`, Makefile'da `PART` ve `CHIPDB`, openFPGALoader kart adı değişir ve chipdb yeniden üretilir; test edilmedi.
 - Platform: **macOS arm64**. Intel Mac ve Linux test edilmedi, script reddeder.
 - Dersin verdiği XDC dosyaları olduğu gibi çalışır (`PACKAGE_PIN` + `IOSTANDARD`).
-- `make flash` SRAM'a yazar: kartın gücü kesilince silinir.
+- `flash` SRAM'a yazar: kartın gücü kesilince silinir.
 
 ## Testler (19 Eyl 2026, M2 8 GB, macOS 15)
 
@@ -99,7 +99,7 @@ Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `dewfpga`'yı br
 | Klasörde iki `.sv` / `.xdc` yok / testbench yok / zincir kurulmamış | tek satır HATA, exit 1 |
 | `top.sv` + `counter.sv` (alt modül ayrı dosyada) | top `.xdc`'den bulundu, `top.bit` üretildi |
 | `sudo ./install.sh` / boş disk < 4 GB / bozuk venv (Python güncellemesi) | HATA ile durur / HATA ile durur / venv yeniden kurulur |
-| Kodda olup XDC'de olmayan port | derlemeden önce `HATA: ... led[15]` ile durur, exit 2 |
+| Kodda olup XDC'de olmayan port | derlemeden önce `ERROR: these ports have NO pin in the XDC` ile durur, exit 1 |
 
 Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makinede `make flash`.
 
@@ -107,5 +107,5 @@ Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makine
 
 19 Eyl 2026: elle kurulan zincirle Basys3'te LED yandı. Bu script ile temiz dizine
 kurulan zincir aynı `.frames` dosyasını üretiyor (yukarıdaki tablo).
-Test paketi: `test/run.sh` (27 kontrol). CI her push'ta temiz bir macOS-15 (Apple Silicon)
+Test paketi: `test/run.sh` (46 kontrol). CI her push'ta temiz bir macOS-15 (Apple Silicon)
 GitHub makinesinde sıfırdan kurulum + testler + npm paketi koşuyor.

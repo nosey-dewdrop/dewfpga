@@ -1,7 +1,7 @@
 # dewfpga
 
 Write SystemVerilog on an Apple Silicon Mac and flash a Digilent **Basys3**. No Vivado,
-no virtual machine, no Rosetta. `.sv` → `.bit` → board in about 4 seconds.
+no virtual machine, no Rosetta. `.sv` → `.bit` → board in under five seconds.
 
 [Türkçe](README.tr.md)
 
@@ -13,7 +13,7 @@ Then in any folder with `blink.sv` + `blink.xdc`:
 
 ```bash
 dewfpga sim      # iverilog
-dewfpga bit      # .sv -> .bit   (~4 s)
+dewfpga bit      # .sv -> .bit   (4.6 s)
 dewfpga flash    # program the board: the LED blinks
 ```
 
@@ -96,14 +96,14 @@ dewfpga --version
 
 ## Tests
 
-`test/run.sh` (42 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
+`test/run.sh` (46 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
 every error path, idempotent install). `FULL=1 test/run.sh` adds a clean install into a
 temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.
 
-Measured 2026-09-19 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
+Measured 2026-09-19 and 20 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
 1.4 GB; second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.
-On the board, 20 September: the blink template and the simulator's three examples (display counter,
-traffic-light FSM, switches to LEDs), each built with `dewfpga flash`.
+On the board, 19 and 20 September, five designs: the blink template, switches to LEDs, the Lab 2
+adder/subtractor, the display counter and the traffic-light FSM, each built with `dewfpga flash`.
 With yosys 0.69 the chain built by the script produces byte-identical `.frames` to the hand-built
 chain that lit the LED; with another yosys the netlist differs and only the I/O placement is compared.

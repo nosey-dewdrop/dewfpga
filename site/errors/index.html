@@ -29,42 +29,42 @@
 
 <main class="wrap">
   <h1>Which error did you get?</h1>
-  <p class="lead">Every wall hit while setting up the chain on a Mac, in the order of the guide, filed under the exact line the terminal printed. Press Cmd F and paste a piece of your error. Two of them, steps 3 and 6, print no error line; they are the places you get stuck with nothing to search for.</p>
+  <p class="lead">Every wall hit while setting up the chain on a Mac, in the order of the guide, filed under the exact line the terminal printed. Press Cmd F and paste a piece of your error. Two of them, sections 3.1 and 3.4, print no error line; they are the places you get stuck with nothing to search for.</p>
 
   <div class="err">
-    <span class="step">step 3</span><a class="title" href="/dewfpga/errors/oss-cad-suite-no-nextpnr-xilinx/">oss-cad-suite has no nextpnr-xilinx</a>
+    <span class="step">3.1</span><a class="title" href="/dewfpga/errors/oss-cad-suite-no-nextpnr-xilinx/">oss-cad-suite has no nextpnr-xilinx</a>
     <p>the obvious first try, 497 MB later. YosysHQ&#x27;s bundle ships nextpnr for ice40, ecp5, nexus and Gowin. Not Xilinx.</p>
   </div>
   <div class="err">
-    <span class="step">step 4</span><a class="title" href="/dewfpga/errors/externally-managed-environment/">error: externally-managed-environment</a>
+    <span class="step">3.2</span><a class="title" href="/dewfpga/errors/externally-managed-environment/">error: externally-managed-environment</a>
     <p>pip, with Homebrew&#x27;s Python on macOS. PEP 668. Homebrew&#x27;s Python refuses a plain pip install. The chain needs a venv.</p>
   </div>
   <div class="err">
-    <span class="step">step 5</span><a class="title" href="/dewfpga/errors/fopenmp/">clang++: error: unsupported option &#x27;-fopenmp&#x27;</a>
+    <span class="step">3.3</span><a class="title" href="/dewfpga/errors/fopenmp/">clang++: error: unsupported option &#x27;-fopenmp&#x27;</a>
     <p>nextpnr-xilinx, while compiling on macOS. nextpnr&#x27;s default build asks Apple&#x27;s clang for OpenMP, which it does not have.</p>
   </div>
   <div class="err">
-    <span class="step">step 6</span><a class="title" href="/dewfpga/errors/no-chipdb/">nextpnr-xilinx: where is the chip database for the XC7A35T?</a>
+    <span class="step">3.4</span><a class="title" href="/dewfpga/errors/no-chipdb/">nextpnr-xilinx: where is the chip database for the XC7A35T?</a>
     <p>nextpnr-xilinx, the first time you run it. There is no prebuilt chipdb. It is generated per device from the prjxray data.</p>
   </div>
   <div class="err">
-    <span class="step">step 7</span><a class="title" href="/dewfpga/errors/yaml-cpp-not-built/">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</a>
+    <span class="step">3.5</span><a class="title" href="/dewfpga/errors/yaml-cpp-not-built/">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</a>
     <p>CMake, while configuring prjxray. prjxray was cloned without --recursive, so its submodules are empty.</p>
   </div>
   <div class="err">
-    <span class="step">step 7</span><a class="title" href="/dewfpga/errors/cmake-policy-version-minimum/">Compatibility with CMake &lt; 3.5 has been removed from CMake</a>
+    <span class="step">3.5</span><a class="title" href="/dewfpga/errors/cmake-policy-version-minimum/">Compatibility with CMake &lt; 3.5 has been removed from CMake</a>
     <p>CMake 4, while configuring prjxray. prjxray is written for an older CMake. CMake 4 refuses it without a policy flag.</p>
   </div>
   <div class="err">
-    <span class="step">step 8</span><a class="title" href="/dewfpga/errors/missing-separator/">Makefile:29: *** missing separator.  Stop.</a>
+    <span class="step">4</span><a class="title" href="/dewfpga/errors/missing-separator/">Makefile:29: *** missing separator.  Stop.</a>
     <p>make, on a Makefile copied from a PDF or a web page. The recipe lines lost their Tab characters when you copied them.</p>
   </div>
   <div class="err">
-    <span class="step">step 9</span><a class="title" href="/dewfpga/errors/no-iostandard-property/">ERROR: port led[0] of type PAD has no IOSTANDARD property</a>
+    <span class="step">5</span><a class="title" href="/dewfpga/errors/no-iostandard-property/">ERROR: port led[0] of type PAD has no IOSTANDARD property</a>
     <p>nextpnr-xilinx, at the start of place and route. A port in your design has no pin in the .xdc file. nextpnr names the wrong port.</p>
   </div>
   <div class="err">
-    <span class="step">step 12</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
+    <span class="step">7</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
     <p>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv. The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
   </div>
   <div class="err">
@@ -72,8 +72,8 @@
     <p>openFPGALoader, when you program the board. The Mac does not see the Basys3 on the USB bus: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper.</p>
   </div>
   <h2>Your error is not here?</h2>
-  <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the step number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
-  <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#9-which-versions-were-tested">step 17 of the guide</a>. Newer versions can move the walls.</p>
+  <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the section number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
+  <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#9-which-versions-were-tested">section 9 of the guide</a>. Newer versions can move the walls.</p>
 </main>
 
 <footer class="wrap">

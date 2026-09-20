@@ -29,7 +29,7 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 5</span>nextpnr-xilinx, while compiling on macOS</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.3</span>nextpnr-xilinx, while compiling on macOS</p>
   <h1 class="mono">clang++: error: unsupported option &#x27;-fopenmp&#x27;</h1>
 <p>You ran <code>ninja</code> (or <code>make</code>) to build <a href="https://github.com/openXC7/nextpnr-xilinx">nextpnr-xilinx</a> on a Mac and the first file died with this line.</p>
 <h2>Why does it happen?</h2>
@@ -43,11 +43,11 @@
   -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
 
 ninja -C build -j3</code></pre>
-<p>OpenMP only parallelises part of the placer; the blink build in the guide takes 4.6 s without it. <code>-j3</code> keeps an 8 GB Mac from swapping; with 16 GB or more you can raise it.</p>
+<p>OpenMP only parallelizes part of the placer; the blink build in the guide takes 4.6 s without it. <code>-j3</code> keeps an 8 GB Mac from swapping; with 16 GB or more you can raise it.</p>
 <h2>What should you see?</h2>
 <pre><code>~/fpga/nextpnr-xilinx/build/nextpnr-xilinx --version
 # "nextpnr-xilinx" -- Next Generation Place and Route (Version 0.9.6)</code></pre>
-<p>Step 5 of the guide walks through the whole build: <a href="/dewfpga/docs/#33-nextpnr-xilinx">How do you build nextpnr-xilinx?</a></p>
+<p>Section 3.3 of the guide walks through the whole build: <a href="/dewfpga/docs/#33-nextpnr-xilinx">nextpnr-xilinx</a>.</p>
 </main>
 
 <footer class="wrap">

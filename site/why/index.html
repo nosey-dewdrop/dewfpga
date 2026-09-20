@@ -38,7 +38,7 @@
 
   <h2>Is it enough for CS223?</h2>
   <p>Real lab code from old student repos went through: an FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer with a carry chain, and the course's seven-segment module. All four together synthesize to 136 LUTs and 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, and the bitstream is ready in 4.5 seconds. <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays and <code>interface</code> with <code>modport</code> all synthesized with zero errors.</p>
-  <p>Nothing from Vivado's IP Catalog is available, and that is the real limit. 35 old CS223 student repos with 240 source files were checked for it; none of them use any of it. The course has you write clock dividers and memory by hand, which is the part this chain handles. What is untested is in the guide: <a href="/dewfpga/docs/#8-what-can-it-not-do">what it cannot do</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">what you should be concerned about</a>.</p>
+  <p>Nothing from Vivado's IP Catalog is available, and that is the real limit. 35 old CS223 student repos with 240 source files were checked for it; none of them use any of it. The course has you write clock dividers and memory by hand, which is the part this chain handles. What is untested is in the guide: <a href="/dewfpga/docs/#8-what-can-it-not-do">what it cannot do</a>.</p>
 
   <h2>What does it cost, compared with Vivado?</h2>
   <table>

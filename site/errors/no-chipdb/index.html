@@ -29,7 +29,7 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 6</span>nextpnr-xilinx, the first time you run it</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.4</span>nextpnr-xilinx, the first time you run it</p>
   <h1 class="mono">nextpnr-xilinx: where is the chip database for the XC7A35T?</h1>
 <p>nextpnr-xilinx built fine, and now it wants <code>--chipdb</code> pointing at a <code>.bin</code> file that does not exist anywhere on your disk or in the download.</p>
 <h2>Why does it happen?</h2>
@@ -48,7 +48,7 @@ cd ~/fpga/nextpnr-xilinx
 
 build/bbasm -l ~/fpga/chipdb/xc7a35t.bba ~/fpga/chipdb/xc7a35t.bin</code></pre>
 <p>The first command takes about 35 seconds and writes a 256 MB text file. The second takes 3 seconds and packs it into the 89 MB binary that nextpnr reads. Peak memory during generation was 859 MB. For a different 7-series board, change <code>--device</code> to that board's chip name; <code>openFPGALoader --list-boards</code> prints it.</p>
-<p>Step 6 of the guide: <a href="/dewfpga/docs/#34-chip-database">How do you make the chip database?</a></p>
+<p>Section 3.4 of the guide: <a href="/dewfpga/docs/#34-chip-database">Chip database</a>.</p>
 </main>
 
 <footer class="wrap">

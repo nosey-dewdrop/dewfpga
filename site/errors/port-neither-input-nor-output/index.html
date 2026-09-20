@@ -29,7 +29,7 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 12</span>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">7</span>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv</p>
   <h1 class="mono">ERROR: Module port &#x27;dp&#x27; is neither input nor output</h1>
 <p>The first lab that uses the seven-segment display stops in synthesis with this line. Simulation was fine.</p>
 <h2>Why does it happen?</h2>
@@ -40,7 +40,7 @@
 <pre data-copy="1"><code>output [6:0] seg,
 output logic dp,</code></pre>
 <p>After the change the module synthesizes to 46 cells and the rest of the lab goes through unchanged.</p>
-<p>This is the one course file that breaks. It is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-course-file-breaks">Step 12</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">step 15</a> of the guide.</p>
+<p>This is the one course file that breaks. It is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-course-file-breaks">Section 7</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">section 8</a> of the guide.</p>
 </main>
 
 <footer class="wrap">

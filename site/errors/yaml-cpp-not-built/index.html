@@ -29,7 +29,7 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 7</span>CMake, while configuring prjxray</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.5</span>CMake, while configuring prjxray</p>
   <h1 class="mono">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</h1>
 <p>You ran <code>cmake -B build</code> inside <a href="https://github.com/f4pga/prjxray">prjxray</a> and CMake stopped with this error. If you fix yaml-cpp by hand, the next run fails on googletest, then on abseil.</p>
 <h2>Why does it happen?</h2>
@@ -37,15 +37,17 @@
 <h2>What is the fix?</h2>
 <p>Clone with <code>--recursive</code>.</p>
 <pre data-copy="1"><code>cd ~/fpga
-git clone --recursive --depth 1 https://github.com/f4pga/prjxray.git
-cd prjxray</code></pre>
+git clone --recursive https://github.com/f4pga/prjxray.git
+cd prjxray
+git checkout c9f02d8576042325425824647ab5555b1bc77833
+git submodule update --init --recursive</code></pre>
 <p>If you already have a clone, fill in the submodules instead of cloning again.</p>
 <pre data-copy="1"><code>git submodule update --init --recursive</code></pre>
 <p>Then configure again. On a current CMake you also need the policy flag, which is <a href="/dewfpga/errors/cmake-policy-version-minimum/">the next wall</a>.</p>
-<pre data-copy="1"><code>cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+<pre data-copy="1"><code>cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DPRJXRAY_BUILD_TESTING=OFF
 cmake --build build --target xc7frames2bit -j3</code></pre>
 <p>The same flag matters for nextpnr-xilinx: its <code>--recursive</code> clone is what brings the raw chip data that the chip database is generated from.</p>
-<p>Step 7 of the guide: <a href="/dewfpga/docs/#35-prjxray">How do you build the prjxray tools?</a></p>
+<p>Section 3.5 of the guide: <a href="/dewfpga/docs/#35-prjxray">prjxray</a>.</p>
 </main>
 
 <footer class="wrap">

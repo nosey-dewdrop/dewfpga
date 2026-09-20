@@ -35,7 +35,7 @@
   <p class="lead">Vivado'nun Mac sürümü yok. Ben de dersin kullandığı kadarını açık kaynak araçlarla kurdum: M1 ve sonrası bir Mac'te SystemVerilog yaz, simüle et, sentezle, Basys3'e yükle.</p>
   <p class="sub">Sanal makine yok, Rosetta yok.</p>
 
-  <p>Nereden başlanır: <a href="/dewfpga/docs/"><b>kurulum rehberi</b></a>. İki yol var: <a href="/dewfpga/cli/">tek satır</a> zinciri dört dakikada kurup sana <code>dewfpga</code> komutunu veriyor, ya da yedi adımda elle kurup kendi Makefile'ınla çalışıyorsun. İkisi de aynı yere çıkıyor: <code>.sv</code> yaz, <code>.bit</code> kartta, derleme 4 saniye. Komutu kopyala, Enter'a bas, ekranda ne görmen gerektiğini de yazdım. Rehber İngilizce, ama komutlar zaten dil bilmiyor. <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">Beş proje dosyasını</a> tek tek yazmana da gerek yok, indirip kullanıyorsun.</p>
+  <p>Nereden başlanır: <a href="/dewfpga/docs/"><b>kurulum rehberi</b></a>. İki yol var: <a href="/dewfpga/cli/">tek satır</a> zinciri dört dakikada kurup sana <code>dewfpga</code> komutunu veriyor, ya da beş adımda elle kurup kendi Makefile'ınla çalışıyorsun. İkisi de aynı yere çıkıyor: <code>.sv</code> yaz, <code>.bit</code> kartta, derleme beş saniyeden az. Komutu kopyala, Enter'a bas, ekranda ne görmen gerektiğini de yazdım. Rehber İngilizce, ama komutlar zaten dil bilmiyor. <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">Beş proje dosyasını</a> tek tek yazmana da gerek yok, indirip kullanıyorsun.</p>
 
   <p class="mute">Kart yanında değil mi, hiçbir şey kurmak istemiyor musun? <a href="/dewfpga/sim/" hreflang="en">Basys3 simülatörü</a> tasarımını doğrudan tarayıcıda çalıştırıyor, switch'leri elle çeviriyorsun, LED'ler yanıyor. <a href="/dewfpga/sim/?view=tb" hreflang="en">Testbench çalıştırıcı</a> da testbench'ini koşup dalga formunu çiziyor. Şunlar için değil: Intel Mac, Vivado IP Catalog'undan herhangi bir şey. <a href="#limits">Aşağıda hepsi yazıyor.</a></p>
 
@@ -66,7 +66,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <p>Yazdığın <code>.sv</code> ve <code>.xdc</code>, Vivado'ya vereceğin dosyaların aynısı. Dersin verdiği pin dosyaları da olduğu gibi çalışıyor; sadece kullandığın pinlerin başındaki <code>#</code>'i kaldırıyorsun.</p>
 
   <h2>Neden böyle bir şey yaptım?</h2>
-  <p>Vivado'nun macOS sürümü yok, sanal makine de M serisi Mac'te işe yaramıyor. Zinciri elle kurmak altı saatimi aldı; sebebi, hiçbiri tek yerde yazmayan altı duvardı. <a href="/dewfpga/why/" hreflang="en">Altı duvarın her biri, bana neye mal olduğu ve sonucun CS223'e yetip yetmediği burada</a> (İngilizce). Bir adım patlarsa en hızlı yol hata metnini aramak: <a href="/dewfpga/errors/" hreflang="en">kurulumda karşıma çıkan her hata, çözümüyle</a> (İngilizce).</p>
+  <p>Vivado'nun macOS sürümü yok, sanal makine de istemedim. Zinciri elle kurmak altı saatimi aldı; sebebi, hiçbiri tek yerde yazmayan altı duvardı. <a href="/dewfpga/why/" hreflang="en">Altı duvarın her biri, bana neye mal olduğu ve sonucun CS223'e yetip yetmediği burada</a> (İngilizce). Bir adım patlarsa en hızlı yol hata metnini aramak: <a href="/dewfpga/errors/" hreflang="en">kurulumda karşıma çıkan her hata, çözümüyle</a> (İngilizce).</p>
 
   <h2 id="limits">Neyi yapamıyor?</h2>
   <ul>

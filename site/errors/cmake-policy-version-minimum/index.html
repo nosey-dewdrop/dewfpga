@@ -29,7 +29,7 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 7</span>CMake 4, while configuring prjxray</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.5</span>CMake 4, while configuring prjxray</p>
   <h1 class="mono">Compatibility with CMake &lt; 3.5 has been removed from CMake</h1>
 <p>You ran <code>cmake -B build</code> inside prjxray with a current Homebrew CMake (version 4 or later) and it stopped at <code>cmake_minimum_required</code> with this message.</p>
 <h2>Why does it happen?</h2>
@@ -42,7 +42,7 @@ cmake --build build --target xc7frames2bit -j3</code></pre>
 <h2>What should you see?</h2>
 <pre><code>ls ~/fpga/prjxray/build/tools/xc7frames2bit</code></pre>
 <p>If it prints the path back, the tool is built.</p>
-<p class="mute small">The message above is CMake 4's wording. The guide was written against the same CMake and describes the failure without quoting it: <a href="/dewfpga/docs/#35-prjxray">step 7</a>.</p>
+<p class="mute small">The message above is CMake 4's wording. The guide was written against the same CMake and describes the failure without quoting it: <a href="/dewfpga/docs/#35-prjxray">section 3.5</a>.</p>
 </main>
 
 <footer class="wrap">

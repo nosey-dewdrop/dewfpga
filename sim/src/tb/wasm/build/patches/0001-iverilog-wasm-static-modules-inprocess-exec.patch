@@ -1,0 +1,508 @@
+diff --git a/driver/main.c b/driver/main.c
+index ab90e5d..7f0409a 100644
+--- a/driver/main.c
++++ b/driver/main.c
+@@ -97,6 +97,13 @@ extern const char*optarg;
+ #endif
+ 
+ # include  "globals.h"
++#if defined(__EMSCRIPTEN__)
++/* No fork/exec in WebAssembly: ivlpp and ivl are linked into this
++   program and dispatched in-process by ivl_wasm_system(). */
++extern int ivl_wasm_system(const char*cmd);
++# define system(cmd) ivl_wasm_system(cmd)
++#endif
++
+ #include "cfparse_misc.h"   /* cfparse() */
+ #include "ivl_alloc.h"
+ 
+diff --git a/ivl_dlfcn.h b/ivl_dlfcn.h
+index ebbc04e..b3633e2 100644
+--- a/ivl_dlfcn.h
++++ b/ivl_dlfcn.h
+@@ -19,7 +19,14 @@
+  *    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+  */
+ 
+-#if defined(__MINGW32__)
++#if defined(__EMSCRIPTEN__)
++#if defined(__cplusplus)
++# include <cstdio>
++#else
++# include <stdio.h>
++# include <stdbool.h>
++#endif
++#elif defined(__MINGW32__)
+ # include <windows.h>
+ #if defined(__cplusplus)
+ # include <cstdio>
+@@ -35,7 +42,28 @@ typedef void* ivl_dll_t;
+ typedef shl_t ivl_dll_t;
+ #endif
+ 
+-#if defined(__MINGW32__)
++#if defined(__EMSCRIPTEN__)
++/* WebAssembly build: there is no dlopen(). Targets (tgt-vvp) and the
++   builtin VPI modules are linked statically and resolved by name. */
++typedef void* ivl_dll_t;
++#if defined(__cplusplus)
++extern "C" {
++#endif
++extern ivl_dll_t ivl_static_dlopen(const char*name);
++extern void* ivl_static_dlsym(ivl_dll_t dll, const char*sym);
++extern const char* ivl_static_dlerror(void);
++#if defined(__cplusplus)
++}
++#endif
++static inline ivl_dll_t ivl_dlopen(const char*name, bool global_flag)
++{ (void)global_flag; return ivl_static_dlopen(name); }
++static inline void* ivl_dlsym(ivl_dll_t dll, const char*nm)
++{ return ivl_static_dlsym(dll, nm); }
++static inline void ivl_dlclose(ivl_dll_t dll)
++{ (void)dll; }
++static inline const char*dlerror(void)
++{ return ivl_static_dlerror(); }
++#elif defined(__MINGW32__)
+ static inline ivl_dll_t ivl_dlopen(const char *name, bool global_flag)
+ {
+       static char full_name[4096];
+diff --git a/ivlpp/main.c b/ivlpp/main.c
+index fb50b95..737cc86 100644
+--- a/ivlpp/main.c
++++ b/ivlpp/main.c
+@@ -239,6 +239,11 @@ static int flist_read_names(const char*path)
+       return 0;
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++/* In the WebAssembly build this program is linked into the iverilog
++   driver, which calls it in-process instead of via system(). */
++# define main ivlpp_main
++#endif
+ int main(int argc, char*argv[])
+ {
+       int opt, idx;
+diff --git a/main.cc b/main.cc
+index 99c080e..54c5c24 100644
+--- a/main.cc
++++ b/main.cc
+@@ -910,6 +910,12 @@ static void EOC_cleanup(void)
+       filename_strings.cleanup();
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++/* In the WebAssembly build this program is linked into the iverilog
++   driver, which calls it in-process instead of via system(). */
++extern "C" int ivl_main(int argc, char*argv[]);
++# define main ivl_main
++#endif
+ int main(int argc, char*argv[])
+ {
+       bool help_flag = false;
+diff --git a/pform.cc b/pform.cc
+index c7e337b..2cb0514 100644
+--- a/pform.cc
++++ b/pform.cc
+@@ -3421,6 +3421,12 @@ void pform_check_net_data_type(const struct vlltype&loc, NetNet::Type net_type,
+ 
+ FILE*vl_input = 0;
+ extern void reset_lexor();
++#if defined(__EMSCRIPTEN__)
++# include <unistd.h>
++extern "C" int ivl_wasm_system(const char*cmd);
++static char pp_tmp_path[64];
++static unsigned pp_tmp_seq = 0;
++#endif
+ 
+ int pform_parse(const char*path)
+ {
+@@ -3438,7 +3444,18 @@ int pform_parse(const char*path)
+ 	    if (verbose_flag)
+ 		  cerr << "Executing: " << cmdline << endl<< flush;
+ 
++#if defined(__EMSCRIPTEN__)
++	      /* No popen() in WebAssembly: run the builtin preprocessor
++		 in-process into a temporary file and read that. */
++	    snprintf(pp_tmp_path, sizeof pp_tmp_path, "/tmp/ivl_pp_%u", ++pp_tmp_seq);
++	    cmdline = static_cast<char*>(realloc(cmdline, strlen(cmdline) + strlen(pp_tmp_path) + 8));
++	    strcat(cmdline, " > \"");
++	    strcat(cmdline, pp_tmp_path);
++	    strcat(cmdline, "\"");
++	    vl_input = (ivl_wasm_system(cmdline) == 0) ? fopen(pp_tmp_path, "r") : 0;
++#else
+ 	    vl_input = popen(cmdline, "r");
++#endif
+ 	    if (vl_input == 0) {
+ 		  cerr << "Unable to preprocess " << path << "." << endl;
+ 		  return 1;
+@@ -3487,10 +3504,16 @@ int pform_parse(const char*path)
+       int rc = VLparse();
+ 
+       if (vl_input != stdin) {
++#if defined(__EMSCRIPTEN__)
++	    fclose(vl_input);
++	    if (ivlpp_string)
++		  unlink(pp_tmp_path);
++#else
+ 	    if (ivlpp_string)
+ 		  pclose(vl_input);
+ 	    else
+ 		  fclose(vl_input);
++#endif
+       }
+ 
+       if (rc) {
+diff --git a/vpi/sys_table.c b/vpi/sys_table.c
+index 1067b23..812df2f 100644
+--- a/vpi/sys_table.c
++++ b/vpi/sys_table.c
+@@ -198,6 +198,9 @@ static void sys_lxt_or_vcd_register(void)
+       }
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_system
++#endif
+ void (*vlog_startup_routines[])(void) = {
+       sys_convert_register,
+       sys_countdrivers_register,
+diff --git a/vpi/v2005_math.c b/vpi/v2005_math.c
+index 3a1a6bd..4e12b6d 100644
+--- a/vpi/v2005_math.c
++++ b/vpi/v2005_math.c
+@@ -376,6 +376,9 @@ static void sys_v2005_math_register(void)
+  */
+ extern void sys_clog2_register(void);
+ 
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_v2005_math
++#endif
+ void (*vlog_startup_routines[])(void) = {
+     sys_v2005_math_register,
+     sys_clog2_register,
+diff --git a/vpi/v2009_table.c b/vpi/v2009_table.c
+index 010801a..862499f 100644
+--- a/vpi/v2009_table.c
++++ b/vpi/v2009_table.c
+@@ -24,6 +24,9 @@ extern void v2009_bitvec_register(void);
+ extern void v2009_enum_register(void);
+ extern void v2009_string_register(void);
+ 
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_v2009
++#endif
+ void (*vlog_startup_routines[])(void) = {
+       v2009_array_register,
+       v2009_bitvec_register,
+diff --git a/vpi/va_math.c b/vpi/va_math.c
+index 8357f0f..95857cd 100644
+--- a/vpi/va_math.c
++++ b/vpi/va_math.c
+@@ -401,6 +401,9 @@ static void va_math_register(void)
+ /*
+  * Hook to get Icarus Verilog to find the registration function.
+  */
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_va_math
++#endif
+ void (*vlog_startup_routines[])(void) = {
+     va_math_register,
+     0
+diff --git a/vpi/vhdl_table.c b/vpi/vhdl_table.c
+index 3f9f5df..bee2e12 100644
+--- a/vpi/vhdl_table.c
++++ b/vpi/vhdl_table.c
+@@ -288,6 +288,9 @@ static void vhdl_register(void)
+       vpi_register_cb(&cb);
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_vhdl_sys
++#endif
+ void (*vlog_startup_routines[])(void) = {
+       vhdl_register,
+       0
+diff --git a/vpi/vhdl_textio.c b/vpi/vhdl_textio.c
+index 5da433d..0633a20 100644
+--- a/vpi/vhdl_textio.c
++++ b/vpi/vhdl_textio.c
+@@ -1029,6 +1029,9 @@ static void vhdl_register(void)
+     }
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_vhdl_textio
++#endif
+ void (*vlog_startup_routines[])(void) = {
+     vhdl_register,
+     0
+diff --git a/vpi/vpi_debug.c b/vpi/vpi_debug.c
+index 278b8db..ff23fcc 100644
+--- a/vpi/vpi_debug.c
++++ b/vpi/vpi_debug.c
+@@ -111,6 +111,9 @@ void sys_register(void)
+       vpip_make_systf_system_defined(res);
+ }
+ 
++#if defined(__EMSCRIPTEN__)
++# define vlog_startup_routines vlog_startup_routines_vpi_debug
++#endif
+ void (*vlog_startup_routines[])(void) = {
+       sys_register,
+       0
+diff --git a/vvp/vpi_modules.cc b/vvp/vpi_modules.cc
+index 9257447..cdb9036 100644
+--- a/vvp/vpi_modules.cc
++++ b/vvp/vpi_modules.cc
+@@ -155,6 +155,14 @@ void vpip_load_module(const char*name)
+       const char sep = '/';
+ #endif
+ 
++#if defined(__EMSCRIPTEN__)
++	/* WebAssembly: modules are linked statically, there is no file
++	   to stat(). Hand the bare name to the static resolver. */
++      ivl_dll_t dll = 0;
++      (void)sb; (void)rc; (void)sep;
++      strncpy(buf, name, sizeof(buf)-1);
++      buf[sizeof(buf)-1] = 0;
++#else
+       ivl_dll_t dll = 0;
+       buf[0] = 0;                     /* terminate the string */
+ #ifdef __MINGW32__
+@@ -217,6 +225,8 @@ void vpip_load_module(const char*name)
+ 
+       }
+ 
++#endif /* __EMSCRIPTEN__ */
++
+       /* must have found some file that could possibly be a vpi module
+        * try to open it as a shared object.
+        */
+diff --git a/wasm/ivl_static_modules.cc b/wasm/ivl_static_modules.cc
+new file mode 100644
+index 0000000..2b1d8a9
+--- /dev/null
++++ b/wasm/ivl_static_modules.cc
+@@ -0,0 +1,92 @@
++/*
++ * WebAssembly build support: static replacement for dlopen()/dlsym().
++ *
++ * The code generator (tgt-vvp) and the builtin VPI modules are linked
++ * into the ivl / vvp executables. ivl_dlopen() accepts any path whose
++ * basename (minus .tgt/.vpi/.vpl) is in the table below and ivl_dlsym()
++ * resolves the well known entry points by (module, symbol) name.
++ *
++ * Compile with -DIVL_STATIC_TARGETS for the ivl executable (which needs
++ * the tgt-vvp entry points), without it for vvp.
++ */
++#include <cstring>
++#include <cstdio>
++
++extern "C" {
++#ifdef IVL_STATIC_TARGETS
++extern int target_design(void*);
++extern const char* target_query(const char*);
++#endif
++typedef void (*startup_fn)(void);
++extern startup_fn vlog_startup_routines_system[];
++extern startup_fn vlog_startup_routines_v2005_math[];
++extern startup_fn vlog_startup_routines_v2009[];
++extern startup_fn vlog_startup_routines_va_math[];
++extern startup_fn vlog_startup_routines_vhdl_sys[];
++extern startup_fn vlog_startup_routines_vhdl_textio[];
++extern startup_fn vlog_startup_routines_vpi_debug[];
++}
++
++struct static_sym { const char*module; const char*symbol; void*ptr; };
++
++static const static_sym static_syms[] = {
++#ifdef IVL_STATIC_TARGETS
++      { "vvp",         "target_design",         (void*)&target_design },
++      { "vvp",         "target_query",          (void*)&target_query },
++#endif
++      { "system",      "vlog_startup_routines", (void*)vlog_startup_routines_system },
++      { "v2005_math",  "vlog_startup_routines", (void*)vlog_startup_routines_v2005_math },
++      { "v2009",       "vlog_startup_routines", (void*)vlog_startup_routines_v2009 },
++      { "va_math",     "vlog_startup_routines", (void*)vlog_startup_routines_va_math },
++      { "vhdl_sys",    "vlog_startup_routines", (void*)vlog_startup_routines_vhdl_sys },
++      { "vhdl_textio", "vlog_startup_routines", (void*)vlog_startup_routines_vhdl_textio },
++      { "vpi_debug",   "vlog_startup_routines", (void*)vlog_startup_routines_vpi_debug },
++      { 0, 0, 0 }
++};
++
++static char last_error[256];
++
++/* Reduce "/usr/local/lib/ivl/system.vpi" to "system". */
++static void module_basename(const char*path, char*out, size_t len)
++{
++      const char*base = strrchr(path, '/');
++      base = base ? base + 1 : path;
++      strncpy(out, base, len - 1);
++      out[len - 1] = 0;
++      char*dot = strrchr(out, '.');
++      if (dot && (strcmp(dot, ".tgt") == 0 || strcmp(dot, ".vpi") == 0
++                  || strcmp(dot, ".vpl") == 0))
++	    *dot = 0;
++}
++
++extern "C" void* ivl_static_dlopen(const char*name)
++{
++      char base[256];
++      module_basename(name, base, sizeof base);
++      for (const static_sym*cur = static_syms; cur->module; cur += 1) {
++	    if (strcmp(cur->module, base) == 0)
++		  return (void*)cur->module;
++      }
++      snprintf(last_error, sizeof last_error,
++	       "'%s' is not linked into this WebAssembly build "
++	       "(only builtin modules are available)", name);
++      return 0;
++}
++
++extern "C" void* ivl_static_dlsym(void*dll, const char*sym)
++{
++      if (dll == 0) return 0;
++      const char*module = (const char*)dll;
++      if (sym[0] == '_') sym += 1;
++      for (const static_sym*cur = static_syms; cur->module; cur += 1) {
++	    if (strcmp(cur->module, module) == 0 && strcmp(cur->symbol, sym) == 0)
++		  return cur->ptr;
++      }
++      snprintf(last_error, sizeof last_error, "symbol '%s' not found in builtin module '%s'", sym, module);
++      return 0;
++}
++
++extern "C" const char* ivl_static_dlerror(void)
++{
++      return last_error;
++}
+diff --git a/wasm/ivl_wasm_system.c b/wasm/ivl_wasm_system.c
+new file mode 100644
+index 0000000..e3524cb
+--- /dev/null
++++ b/wasm/ivl_wasm_system.c
+@@ -0,0 +1,124 @@
++/*
++ * WebAssembly build support: in-process replacement for the system()
++ * calls made by the iverilog driver. The driver builds shell command
++ * lines of the forms
++ *
++ *     <dir>/ivlpp -V
++ *     <dir>/ivl -V -C"..." -C"..."
++ *     <dir>/ivlpp ... -F"..." -f"..." -p"..." > "out"
++ *     <dir>/ivlpp ... -F"..." -f"..." -p"..." |<dir>/ivl ... -C"..." -- -
++ *
++ * There is no fork/exec/pipe in WebAssembly, so the command line is
++ * tokenised here (double quotes, '|' and '>' are understood), the pipe is
++ * replaced by a temporary file (ivlpp -o <tmp>; ivl reads <tmp> instead
++ * of "-"), and the statically linked ivlpp_main()/ivl_main() are called.
++ */
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <getopt.h>
++
++extern int ivlpp_main(int argc, char*argv[]);
++extern int ivl_main(int argc, char*argv[]);
++
++#define MAX_ARGS 4096
++
++static int tokenize(const char*cmd, char**argv)
++{
++      int argc = 0;
++      char*buf = malloc(strlen(cmd) + 1);
++      char*out = buf;
++      const char*cp = cmd;
++      while (*cp) {
++	    while (*cp == ' ' || *cp == '\t') cp += 1;
++	    if (*cp == 0) break;
++	    if (*cp == '|' || *cp == '>') {
++		  argv[argc] = out; *out++ = *cp++; *out++ = 0; argc += 1;
++		  continue;
++	    }
++	    argv[argc] = out;
++	    int quote = 0;
++	    while (*cp && (quote || (*cp != ' ' && *cp != '\t' && *cp != '|' && *cp != '>'))) {
++		  if (*cp == '"') { quote = !quote; cp += 1; continue; }
++		  *out++ = *cp++;
++	    }
++	    *out++ = 0;
++	    argc += 1;
++	    if (argc >= MAX_ARGS - 4) break;
++      }
++      argv[argc] = 0;
++      return argc;
++}
++
++static const char*base_name(const char*path)
++{
++      const char*s = strrchr(path, '/');
++      return s ? s + 1 : path;
++}
++
++static int run_stage(int argc, char**argv)
++{
++      const char*prog = base_name(argv[0]);
++      int rc;
++      optind = 0;  /* musl getopt: full reset */
++      fflush(stdout); fflush(stderr);
++      if (strcmp(prog, "ivlpp") == 0)
++	    rc = ivlpp_main(argc, argv);
++      else if (strcmp(prog, "ivl") == 0)
++	    rc = ivl_main(argc, argv);
++      else {
++	    fprintf(stderr, "iverilog(wasm): cannot run \"%s\": only ivlpp and ivl are built in.\n", argv[0]);
++	    rc = 127;
++      }
++      fflush(stdout); fflush(stderr);
++      return rc;
++}
++
++int ivl_wasm_system(const char*cmd)
++{
++      static char*argv[MAX_ARGS];
++      int argc = tokenize(cmd, argv);
++      char pipe_path[64];
++      int have_pipe = 0;
++      int rc = 0;
++
++      snprintf(pipe_path, sizeof pipe_path, "/tmp/ivlpp_pipe_%d", (int)getpid());
++
++	/* Split into stages at '|'. */
++      int start = 0;
++      while (start < argc && rc == 0) {
++	    int end = start;
++	    while (end < argc && strcmp(argv[end], "|") != 0) end += 1;
++	    int next_is_pipe = (end < argc);
++	    char*stage[MAX_ARGS];
++	    int n = 0;
++	    stage[n++] = argv[start];
++	      /* stdout redirection ("> file" or a pipe) becomes "-o file",
++		 placed before the positional arguments for getopt's sake. */
++	    if (next_is_pipe) {
++		  stage[n++] = "-o"; stage[n++] = pipe_path;
++	    }
++	    for (int i = start + 1; i < end; i += 1) {
++		  if (strcmp(argv[i], ">") == 0 && i + 1 < end) {
++			stage[n++] = "-o"; stage[n++] = argv[i+1]; i += 1;
++			continue;
++		  }
++		  stage[n++] = argv[i];
++	    }
++	    if (have_pipe) {
++		    /* the previous stage's output becomes this stage's stdin */
++		  if (freopen(pipe_path, "r", stdin) == 0) {
++			fprintf(stderr, "iverilog(wasm): cannot reopen stdin on %s\n", pipe_path);
++			rc = 1;
++			break;
++		  }
++	    }
++	    stage[n] = 0;
++	    rc = run_stage(n, stage);
++	    have_pipe = next_is_pipe;
++	    start = end + 1;
++      }
++      unlink(pipe_path);
++      return (rc & 0xff) << 8;   /* wait(2) status as the driver expects */
++}

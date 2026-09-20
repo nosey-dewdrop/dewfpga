@@ -29,7 +29,7 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 4</span>pip, with Homebrew&#x27;s Python on macOS</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.2</span>pip, with Homebrew&#x27;s Python on macOS</p>
   <h1 class="mono">error: externally-managed-environment</h1>
 <p>You ran <code>pip install fasm</code> (or <code>pip install -e .</code> inside prjxray) with Homebrew's Python and pip refused with a long message that starts with this line and mentions PEP 668.</p>
 <h2>Why does it happen?</h2>
@@ -37,11 +37,11 @@
 <h2>What is the fix?</h2>
 <p>Make a venv, a private Python where you are free to install things, and use it for every Python command in the chain. The guide keeps it next to everything else in <code>~/fpga</code>.</p>
 <pre data-copy="1"><code>mkdir -p ~/fpga
-python3 -m venv ~/fpga/venv
-~/fpga/venv/bin/pip install fasm pyyaml textx simplejson intervaltree</code></pre>
-<p>Later, prjxray is installed into the same venv with <code>~/fpga/venv/bin/pip install -e .</code>, and the Makefile calls <code>~/fpga/venv/bin/python</code> instead of <code>python3</code>.</p>
+"$(brew --prefix)/opt/python@3.14/bin/python3.14" -m venv ~/fpga/venv
+~/fpga/venv/bin/pip install fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 intervaltree==3.2.1 numpy==2.5.3 pyjson5==2.0.1</code></pre>
+<p>Later, prjxray is installed into the same venv with <code>~/fpga/venv/bin/pip install --no-deps -e .</code>, and the Makefile calls <code>~/fpga/venv/bin/python</code> instead of <code>python3</code>.</p>
 <p>Do not use <code>--break-system-packages</code>. It does what it says.</p>
-<p>Step 4 of the guide: <a href="/dewfpga/docs/#32-python-venv">Why do you need a Python environment?</a></p>
+<p>Section 3.2 of the guide: <a href="/dewfpga/docs/#32-python-venv">Python venv</a>.</p>
 </main>
 
 <footer class="wrap">

@@ -11,7 +11,7 @@
 set -euo pipefail
 
 export FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
-# one compile job per ~3 GB of RAM (a nextpnr object peaks near that), never more than the cores. 8 GB -> 3 jobs.
+# one compile job per ~3 GB of RAM (a nextpnr object peaks near that), never more than the cores. 8 GB -> 2 jobs.
 if [ -z "${JOBS:-}" ]; then
     MEM_GB=$(( $(sysctl -n hw.memsize 2>/dev/null || echo 0) / 1073741824 )); NCPU=$(sysctl -n hw.ncpu 2>/dev/null || echo 4)
     JOBS=$(( MEM_GB / 3 )); [ "$JOBS" -ge 1 ] || JOBS=1; [ "$JOBS" -le "$NCPU" ] || JOBS=$NCPU
@@ -91,7 +91,7 @@ PY3="$BREW_PREFIX/opt/python@3.14/bin/python3.14"
 
 # ---------------------------------------------------------------- 2. nextpnr-xilinx
 # oss-cad-suite does NOT ship nextpnr-xilinx (497 MB wasted). Build from source.
-step 2 "nextpnr-xilinx (from source, ~2 min)"
+step 2 "nextpnr-xilinx (from source, ~1.5 min)"
 NEXTPNR_DIR="$FPGA_HOME/nextpnr-xilinx"
 clone_pinned "$NEXTPNR_URL" "$NEXTPNR_SHA" "$NEXTPNR_DIR"
 if [ -x "$NEXTPNR_DIR/build/nextpnr-xilinx" ] && [ -x "$NEXTPNR_DIR/build/bbasm" ]; then
@@ -163,7 +163,7 @@ else
         --xray xilinx/external/prjxray-db/artix7 \
         --metadata xilinx/external/nextpnr-xilinx-meta/artix7 \
         --device "$DEVICE" --constids xilinx/constids.inc --bba "$BBA" )
-    "$NEXTPNR_DIR/build/bbasm" --l "$BBA" "$CHIPDB_BIN"
+    "$NEXTPNR_DIR/build/bbasm" -l "$BBA" "$CHIPDB_BIN"
     rm -f "$BBA"                         # 268 MB intermediate; .bin is all we need
     echo "$NEXTPNR_SHA" > "$CHIPDB_DIR/.sha"
     ok "$CHIPDB_BIN ($(du -h "$CHIPDB_BIN" | cut -f1))"

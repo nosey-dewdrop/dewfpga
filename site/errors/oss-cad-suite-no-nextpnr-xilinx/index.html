@@ -29,23 +29,24 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">step 3</span>the obvious first try, 497 MB later</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.1</span>the obvious first try, 497 MB later</p>
   <h1 class="mono">oss-cad-suite has no nextpnr-xilinx</h1>
 <p>You want Yosys and nextpnr on a Mac. <a href="https://github.com/YosysHQ/oss-cad-suite-build">oss-cad-suite</a> is YosysHQ's ready-made bundle with a macOS build, so it looks like the whole answer. You download it, unpack it, and there is no <code>nextpnr-xilinx</code> inside.</p>
 <h2>Why does it happen?</h2>
 <p>The bundle ships nextpnr for the architectures that live in the main nextpnr repository: ice40, ecp5, nexus and Gowin. Xilinx support lives in a separate project, <a href="https://github.com/openXC7/nextpnr-xilinx">openXC7/nextpnr-xilinx</a>, and it is not part of the bundle. For the Basys3's Artix-7 you need that one, and Homebrew has no formula for it either.</p>
 <h2>What is the fix?</h2>
 <p>Take Yosys, Icarus Verilog and openFPGALoader from Homebrew, and build nextpnr-xilinx from source.</p>
-<pre data-copy="1"><code>brew install yosys openfpgaloader icarus-verilog \
-     cmake ninja boost eigen pkg-config libomp python</code></pre>
+<pre data-copy="1"><code>brew install yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14</code></pre>
 <pre data-copy="1"><code>cd ~/fpga
-git clone --recursive --depth 1 https://github.com/openXC7/nextpnr-xilinx.git
+git clone --recursive https://github.com/openXC7/nextpnr-xilinx.git
 cd nextpnr-xilinx
+git checkout 3fd78784c7788f93f276358edf5477221cc6c179
+git submodule update --init --recursive
 cmake -B build -G Ninja -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release \
   -DUSE_OPENMP=OFF -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
-ninja -C build -j3</code></pre>
+ninja -C build -j3 nextpnr-xilinx bbasm</code></pre>
 <p>The build takes about a minute and a half on an M2. Two flags in there each remove a wall of their own: <a href="/dewfpga/errors/fopenmp/">-DUSE_OPENMP=OFF</a> and <code>--recursive</code>, which brings the raw chip data for <a href="/dewfpga/errors/no-chipdb/">the chip database</a>.</p>
-<p>Steps 3 and 5 of the guide: <a href="/dewfpga/docs/#31-homebrew-packages">Which tools come ready-made?</a> and <a href="/dewfpga/docs/#33-nextpnr-xilinx">How do you build nextpnr-xilinx?</a></p>
+<p>Sections 3.1 and 3.3 of the guide: <a href="/dewfpga/docs/#31-homebrew-packages">Homebrew packages</a> and <a href="/dewfpga/docs/#33-nextpnr-xilinx">nextpnr-xilinx</a>.</p>
 </main>
 
 <footer class="wrap">
