@@ -15,3 +15,8 @@ node_modules/
 !package.json
 !templates/.vscode/tasks.json
 dist/
+
+# the abandoned Canva import attempt: the shell is coded in site/s.css now,
+# and CI copies site/. wholesale, so these must not reach the published site
+site/_canva/import/
+site/canva.css
