@@ -90,7 +90,7 @@
 <p>Make the example project and flash it:</p>
 <pre class="bash"><code>dewfpga new blink
 cd blink
-dewfpga sim      # simulation: TB: basic checks passed
+dewfpga sim      # simulation: PASS: 3 checks
 dewfpga bit      # .sv -&gt; .bit
 dewfpga flash    # to the board: LED 15 follows switch 0, LED 0 blinks</code></pre>
 <p>What <code>dewfpga bit</code> prints, in full:</p>
@@ -213,7 +213,7 @@ curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp
 <p>If you copied the Makefile from somewhere else and <code>make</code> says <code>missing separator</code>, the tabs became spaces: <a href="https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/">missing-separator</a>.</p>
 <p>Plug the board in over USB, switch it on, then:</p>
 <pre class="bash"><code>make check     # one line per tool; none should say MISSING
-make sim       # TB: basic checks passed
+make sim       # PASS: 3 checks
 make bit       # .sv -&gt; .bit, ~4 seconds
 make flash     # to the board</code></pre>
 <p><code>make bit</code> prints three lines: <code>xdc ok</code>, <code>pnr ok</code> with the LUT and flip-flop count and the clock check, and the <code>.bit</code> size. The full nextpnr log is in <code>blink.log</code>. <code>make sim</code> also writes <code>blink.vcd</code>; the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">testbench runner</a> draws it, since no waveform viewer is installed here.</p>

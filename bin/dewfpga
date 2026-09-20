@@ -3,8 +3,8 @@
 #   dewfpga install                 install the toolchain into ~/fpga (safe to re-run)
 #   dewfpga check                   verify every piece is in place
 #   dewfpga sim | bit | flash | clean [top]
-#                                    work on the .sv files in the current folder; top = the .sv
-#                                    that has a matching .xdc (or the only .sv); else name it
+#                                    work on the .sv files in the current folder. top = the .sv that has a
+#                                    matching .xdc, or the only .sv; else name it. pins = <top>.xdc or the only .xdc
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
 #   dewfpga --version
 # The toolchain lives in $FPGA_HOME (default ~/fpga). Build outputs land next to the .sv; <top>.log has the full place-and-route log.
@@ -59,7 +59,7 @@ cmd_new() {
 }
 
 cmd_build() {  # <target> [top]
-    local target=$1 top=${2:-}
+    local target=$1 top=${2:-} xdc
     if [ -z "$top" ]; then
         # top = the .sv that has a matching .xdc; if ambiguous, the only .sv in the folder
         local f svs=() withxdc=()
@@ -72,20 +72,31 @@ cmd_build() {  # <target> [top]
         else die "cannot tell which module is top (${#svs[@]} .sv files, ${#withxdc[@]} with a matching .xdc). Name it:  dewfpga $target <top>"; fi
     fi
     [ -f "$top.sv" ] || [ -f "$top.v" ] || die "$top.sv not found"
+    xdc="$top.xdc"
     # every source in the folder is synthesized (submodules may live in their own files); testbenches excluded
     local srcs=()
-    for f in *.sv *.v; do [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] && srcs+=("$f"); done
+    for f in *.sv *.v; do
+        [ -f "$f" ] && [[ $f != *_tb.sv && $f != *_tb.v ]] || continue
+        [[ $f != *[[:space:]]* ]] || die "'$f': file names with spaces are not supported by the tools. Rename it (e.g. ${f// /_})"
+        srcs+=("$f")
+    done
     case $target in
         sim)
             [ -f "${top}_tb.sv" ] || die "${top}_tb.sv not found. Simulation needs a testbench (see: dewfpga new example)" ;;
         bit|flash)
-            [ -f "$top.xdc" ] || die "$top.xdc not found. Copy the pins you use from:  $HERE/templates/Basys3_Master.xdc"
+            # the pin file: <top>.xdc, or the only .xdc in the folder (a lab folder usually has Basys3_Master.xdc)
+            if [ ! -f "$xdc" ]; then
+                local xdcs=(); for f in *.xdc; do [ -f "$f" ] && xdcs+=("$f"); done
+                if   [ ${#xdcs[@]} -eq 1 ]; then xdc=${xdcs[0]}
+                elif [ ${#xdcs[@]} -eq 0 ]; then die "no .xdc pin file in this folder. Copy $HERE/templates/Basys3_Master.xdc here and uncomment the pins you use"
+                else die "${#xdcs[@]} .xdc files here and none is named $top.xdc. Keep one, or name it $top.xdc"; fi
+            fi
             [ -s "$FPGA_HOME/chipdb/xc7a35t.bin" ] && [ -x "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" ] \
                 || die "toolchain not installed. Run:  dewfpga install   (status: dewfpga check)" ;;
     esac
     # make's own "*** [target] Error 1" trailer adds nothing to the message the recipe already printed.
     # One merged stream keeps the lines in order; sed always exits 0, so pipefail (set above) hands back make's exit code.
-    make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$top.xdc" "$target" 2>&1 \
+    make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" "$target" 2>&1 \
         | sed '/^make: \*\*\* /d'
 }
 

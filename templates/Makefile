@@ -1,6 +1,6 @@
 # Basys3 on macOS without Vivado (dewfpga)
 #
-#   make sim    -> simulate (iverilog)
+#   make sim    -> simulate (iverilog); fails if the testbench prints $error/$fatal
 #   make bit    -> build the bitstream (~4 s); full place-and-route log in <top>.log
 #   make flash  -> program the board (SRAM: cleared on power cycle)
 #   make check  -> are the tools in place
@@ -35,8 +35,9 @@ check:
 	@printf "%-16s " xc7frames2bit;  [ -x "$(F2B)" ]     && echo "$(F2B)"     || echo "-MISSING-"
 	@printf "%-16s " chipdb;         [ -s "$(CHIPDB)" ]  && echo "$(CHIPDB)"  || echo "-MISSING-"
 
+# the testbench's $error/$fatal lines make sim fail, so a red run is visible to make, VS Code and CI
 sim: $(TOP)_sim
-	./$(TOP)_sim
+	@./$(TOP)_sim | tee $(TOP)_sim.out; ! grep -qE '^(ERROR|FATAL):' $(TOP)_sim.out || { echo "ERROR: the testbench reported errors (see above)" >&2; exit 1; }
 
 $(TOP)_sim: $(SRCS) $(TOP)_tb.sv
 	iverilog -g2012 -o $@ $(SRCS) $(TOP)_tb.sv
@@ -50,7 +51,9 @@ $(TOP).fasm: $(TOP).json $(XDC)
 	@"$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log
 	@awk '/SLICE_LUTX:/{l=$$3} /SLICE_FFX:/{f=$$3} /Max frequency/{m=$$0} \
-	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); sub(/.*: /,"",m); printf "pnr ok: %s LUT, %s FF, %s   (full log: $(TOP).log)\n",l,f,m}' $(TOP).log
+	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); sub(/.*: /,"",m); \
+	          if (m ~ /FAIL/) { printf "ERROR: timing not met: %s. The design cannot run at the clock the XDC asks for; no bitstream written. Details: $(TOP).log\n",m > "/dev/stderr"; exit 2 } \
+	          printf "pnr ok: %s LUT, %s FF, %s   (full log: $(TOP).log)\n",l,f,m}' $(TOP).log || { rm -f $@; exit 2; }
 
 $(TOP).frames: $(TOP).fasm
 	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
@@ -66,5 +69,5 @@ flash: $(TOP).bit
 	  || { echo "ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?" >&2; exit 1; }
 
 clean:
-	rm -f $(TOP)_sim $(TOP).vcd $(TOP).json $(TOP)_routed.json \
+	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log

@@ -26,7 +26,7 @@ check "check passes"          "'$CLI' check"
 
 echo "== build (folder with only .sv + .xdc)"
 mkdir -p "$T/w"; cp "$ROOT"/templates/{blink.sv,blink.xdc,blink_tb.sv} "$T/w/"
-check "sim"                   "cd '$T/w' && '$CLI' sim | grep -q 'basic checks passed'"
+check "sim"                   "cd '$T/w' && '$CLI' sim | grep -q '^PASS: 3 checks'"
 check "bit"                   "cd '$T/w' && '$CLI' bit && [ -s blink.bit ]"
 # The golden .fasm is exact only for the yosys version it was made with (brew can't be pinned).
 # With another yosys the netlist differs, so only the I/O placement (IOB lines = XDC pins) is compared.
@@ -52,6 +52,8 @@ printf 'module counter #(parameter int HALF=50_000_000)(input logic clk, output 
 printf "module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n logic t; counter u(.clk(clk),.tick(t)); assign led={sw[0],14'b0,t&sw[0]};\nendmodule\n" > top.sv
 sed 's/blink/top/' "$ROOT/templates/blink.xdc" > top.xdc
 check "top found from xdc"    "cd '$T/m' && '$CLI' bit && [ -s top.bit ]"
+check "lab layout: lab4.sv + Basys3_Master.xdc" "mkdir -p '$T/lab' && sed 's/module blink/module lab4/' '$ROOT/templates/blink.sv' > '$T/lab/lab4.sv' && cp '$ROOT/templates/blink.xdc' '$T/lab/Basys3_Master.xdc' && cd '$T/lab' && '$CLI' bit >out 2>&1 && [ -s lab4.bit ] && grep -q '^xdc ok' out"
+check "no xdc -> says what to copy" "mkdir -p '$T/nox' && cp '$ROOT/templates/blink.sv' '$T/nox/' && cd '$T/nox' && ! '$CLI' bit >out 2>&1 && grep -q 'Basys3_Master.xdc' out"
 check "ambiguous top -> error" "cd '$T/m' && rm top.xdc && { '$CLI' bit || true; } 2>&1 | grep -q 'cannot tell' && ! '$CLI' bit 2>/dev/null"
 
 echo "== error paths"
@@ -60,6 +62,9 @@ check "unknown command"       "! '$CLI' nope 2>/dev/null"
 check "check w/ empty home"   "! FPGA_HOME='$T/none' '$CLI' check >/dev/null"
 check "bit w/o toolchain"     "cd '$T/w' && { FPGA_HOME='$T/none' '$CLI' bit || true; } 2>&1 | grep -q 'not installed'"
 check "sim w/o testbench"     "cd '$T/m' && { '$CLI' sim top || true; } 2>&1 | grep -q 'testbench'"
+check "failing testbench -> exit 1" "mkdir -p '$T/ft' && sed 's/assign led = .*/assign led = 16'\\''hFFFF;/' '$ROOT/templates/blink.sv' > '$T/ft/blink.sv' && cp '$ROOT/templates/blink_tb.sv' '$T/ft/' && cd '$T/ft' && ! '$CLI' sim >out 2>&1 && grep -q '^FAIL: 2 of 3' out && grep -q 'reported errors' out"
+check "timing not met -> error, no bit" "mkdir -p '$T/tm' && cp '$ROOT/templates/blink.sv' '$T/tm/' && sed 's/-period 10.00/-period 0.50/; s/-waveform {0 5}/-waveform {0 0.25}/' '$ROOT/templates/blink.xdc' > '$T/tm/blink.xdc' && cd '$T/tm' && ! '$CLI' bit >out 2>&1 && grep -q 'timing not met' out && [ ! -e blink.bit ] && [ ! -e blink.fasm ]"
+check "file name with a space -> clear error" "mkdir -p '$T/spc' && cp '$ROOT/templates/blink.sv' '$T/spc/my blink.sv' && cp '$ROOT/templates/blink.xdc' '$T/spc/my blink.xdc' && cd '$T/spc' && ! '$CLI' bit >out 2>&1 && grep -q 'spaces are not supported' out"
 check "port missing in xdc"   "cd '$T/w' && sed '/led\[15\]/d' blink.xdc > bad.xdc && cp blink.sv b.sv && mkdir x && mv b.sv x/blink.sv && cp bad.xdc x/blink.xdc && cd x && { '$CLI' bit || true; } 2>&1 | grep -q 'led\[15\]'"
 check "install: refuses sudo" "mkdir -p '$T/fb' && printf '#!/bin/sh\n[ \"\$1\" = -u ] && echo 0 || /usr/bin/id \"\$@\"\n' > '$T/fb/id' && chmod +x '$T/fb/id' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'sudo'"
 check "install: refuses x86"  "rm -f '$T/fb/id'; printf '#!/bin/sh\n[ \"\$1\" = -m ] && echo x86_64 || /usr/bin/uname \"\$@\"\n' > '$T/fb/uname' && chmod +x '$T/fb/uname' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'arm64'"

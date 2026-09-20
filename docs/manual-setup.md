@@ -58,7 +58,7 @@ Make the example project and flash it:
 ```bash
 dewfpga new blink
 cd blink
-dewfpga sim      # simulation: TB: basic checks passed
+dewfpga sim      # simulation: PASS: 3 checks
 dewfpga bit      # .sv -> .bit
 dewfpga flash    # to the board: LED 15 follows switch 0, LED 0 blinks
 ```
@@ -262,7 +262,7 @@ Plug the board in over USB, switch it on, then:
 
 ```bash
 make check     # one line per tool; none should say MISSING
-make sim       # TB: basic checks passed
+make sim       # PASS: 3 checks
 make bit       # .sv -> .bit, ~4 seconds
 make flash     # to the board
 ```

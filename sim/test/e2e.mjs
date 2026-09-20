@@ -40,7 +40,7 @@ await waitStatus(/compile \d+ ms|failed|stopped/, 120000);
 check('tb view on', await page.locator('#view-tb').getAttribute('class') === 'on');
 check('board hidden', await page.locator('#board-view').isHidden());
 const out = await page.locator('#out').innerText();
-check('blink_tb prints basic checks passed', out.includes('basic checks passed'), out.split('\n').slice(0, 3).join(' | '));
+check('blink_tb prints PASS: 3 checks', out.includes('PASS: 3 checks'), out.split('\n').slice(0, 3).join(' | '));
 check('waveform has rows', (await page.locator('#wave').evaluate((c) => c.height)) > 50, String(await page.locator('#wave').evaluate((c) => c.height)));
 check('status has signals', /signals/.test(await status()), await status());
 check('console label iverilog', (await page.locator('#console-label').innerText()) === 'iverilog');
