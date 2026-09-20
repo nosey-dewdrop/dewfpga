@@ -50,7 +50,7 @@ cmake -B build -G Ninja -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release \
   -DUSE_OPENMP=OFF -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
 ninja -C build -j3</code></pre>
 <p>The build takes about a minute and a half on an M2. Two flags in there each remove a wall of their own: <a href="/dewfpga/errors/fopenmp/">-DUSE_OPENMP=OFF</a> and <code>--recursive</code>, which brings the raw chip data for <a href="/dewfpga/errors/no-chipdb/">the chip database</a>.</p>
-<p>Steps 3 and 5 of the guide: <a href="/dewfpga/docs/#3-which-tools-come-ready-made">Which tools come ready-made?</a> and <a href="/dewfpga/docs/#5-how-do-you-build-nextpnr-xilinx">How do you build nextpnr-xilinx?</a></p>
+<p>Steps 3 and 5 of the guide: <a href="/dewfpga/docs/#31-homebrew-packages">Which tools come ready-made?</a> and <a href="/dewfpga/docs/#33-nextpnr-xilinx">How do you build nextpnr-xilinx?</a></p>
 </main>
 
 <footer class="wrap">

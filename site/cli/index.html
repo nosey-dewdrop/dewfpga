@@ -23,7 +23,7 @@
 
 <main class="wrap">
   <h1>One command from SystemVerilog to a Basys3</h1>
-  <p class="lead">The 18-step guide, done for you. One line installs the chain; after that, <code>dewfpga</code> builds whatever <code>.sv</code> files are in the folder.</p>
+  <p class="lead">The by-hand setup, done for you. One line installs the chain; after that, <code>dewfpga</code> builds whatever <code>.sv</code> files are in the folder.</p>
   <p class="mute">No Mac or no board with you? The <a href="/dewfpga/sim/">Basys3 simulator</a> and the <a href="/dewfpga/sim/tb.html">testbench runner</a> do the same first two steps in a browser, with nothing installed.</p>
 
 <pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, 1.4 GB, once</span></code></pre>
@@ -40,7 +40,7 @@ dewfpga flash    <span class="c"># program the board: the LED blinks</span></cod
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
-dewfpga new &lt;dir&gt;                   example project with Makefile + VS Code task
+dewfpga new &lt;dir&gt;                   blink example with a VS Code task (⌘⇧B = flash)
 dewfpga --version</code></pre>
 
   <h2>What does it install?</h2>
@@ -64,7 +64,7 @@ dewfpga --version</code></pre>
     <dt><code>bit</code></dt><dd>4.6 s, peak 552 MB RAM</dd>
     <dt>chipdb generation</dt><dd>peak 859 MB RAM</dd>
     <dt>output</dt><dd>byte-identical <code>.frames</code> to the hand-built chain that lit the LED</dd>
-    <dt>tests</dt><dd>27 checks in <code>test/run.sh</code>; CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
+    <dt>tests</dt><dd>33 checks in <code>test/run.sh</code>; CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
   </dl>
 
   <h2>Scope</h2>

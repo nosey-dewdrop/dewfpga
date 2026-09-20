@@ -17,6 +17,14 @@ dewfpga bit      # .sv -> .bit   (~4 s)
 dewfpga flash    # program the board: the LED blinks
 ```
 
+`dewfpga bit` prints three lines and keeps the full place-and-route log in `<top>.log`:
+
+```
+xdc ok: 33 ports, all mapped.
+pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
+blink.bit  2.2 MB
+```
+
 No Makefile, no project layout. Every `.sv`/`.v` in the folder is synthesized (submodules
 can live in their own files). The top module is the `.sv` with a matching `.xdc`; if that
 is ambiguous, `dewfpga flash <top>`. `sim` needs `<top>_tb.sv`. Example: `dewfpga new blink`.
@@ -69,7 +77,7 @@ Re-running the script skips finished steps. Log: `~/fpga/install.log`.
 dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
-dewfpga new <dir>                   example project with Makefile + VS Code task (⌘⇧B = flash)
+dewfpga new <dir>                   blink example with a VS Code task (⌘⇧B = flash)
 dewfpga --version
 ```
 
@@ -83,7 +91,7 @@ dewfpga --version
 
 ## Tests
 
-`test/run.sh` (27 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
+`test/run.sh` (33 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
 every error path, idempotent install). `FULL=1 test/run.sh` adds a clean install into a
 temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.

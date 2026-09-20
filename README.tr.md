@@ -17,6 +17,14 @@ dewfpga bit      # .sv -> .bit  (~4 sn)
 dewfpga flash    # karta yükle: LED yanar
 ```
 
+`dewfpga bit` üç satır basar, tam place-and-route logu `<top>.log`'da kalır:
+
+```
+xdc ok: 33 ports, all mapped.
+pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
+blink.bit  2.2 MB
+```
+
 Makefile yok, proje yapısı yok. Klasördeki bütün `.sv`/`.v` dosyaları sentezlenir
 (alt modüller ayrı dosyada olabilir). Top modül: `.xdc`'si olan dosya; belirsizse
 `dewfpga flash <top>`. Simülasyon `<top>_tb.sv` ister. Örnek: `dewfpga new blink`.
@@ -58,7 +66,7 @@ dewfpga install                 zinciri kur (yeniden çalıştırmak güvenli)
 dewfpga check                   altı parça yerinde mi
 dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
 dewfpga --version
-dewfpga new <dizin>             örnek proje: blink.sv + xdc + Makefile + VS Code görevi (⌘⇧B = flash)
+dewfpga new <dizin>             blink örneği + VS Code görevi (⌘⇧B = flash)
 ```
 
 Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `dewfpga`'yı brew bin'e bağlar.
