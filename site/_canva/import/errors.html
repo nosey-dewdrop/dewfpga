@@ -14,138 +14,159 @@
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <style>
-/* dewfpga: one font, one accent, no motion. */
+/* dewfpga — Canva shell look: dark ground, pixel display type, coloured nav chips. */
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Inter:ital,wght@0,400;0,600;1,700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 :root{
-  color-scheme:light dark;
-  --bg:#ffffff; --fg:#141414; --mute:#6a6a6a; --line:#e4e4e4; --code:#f5f5f6;
-  --purple:#5b2fc9; --purple-soft:#efe9fb;
-  --pink:#c23a70; --green:#357422; --yellow:#8a5f00; --blue:#1f5c9e;
-}
-@media (prefers-color-scheme:dark){
-  :root{ --bg:#0f0f11; --fg:#ebebeb; --mute:#9a9a9f; --line:#27272b; --code:#18181b;
-         --purple:#c4a8ff; --purple-soft:#1f1730;
-         --pink:#ffa3c2; --green:#9fe8c3; --yellow:#ffe08a; --blue:#93d6f2; }
+  color-scheme:dark;
+  --bg:#343434; --fg:#ffffff; --mute:#b8b8b8; --line:#4a4a4a;
+  --code:#1e1e1e; --accent:#7edaf2; --brand:#f5e5e8; --purple:#5b2fc9;
+  --chip-docs:#bfe3f5; --chip-why:#cdc4f7; --chip-errors:#f6ccd8;
+  --chip-sim:#c7eecd; --chip-cli:#bcd9f7; --chip-gh:#b79df0; --chip-tr:#f3dfa8;
+  --display:'VT323',ui-monospace,Menlo,monospace;
+  --body:'Inter',-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--fg);
-  font:17px/1.6 -apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,sans-serif;
-  overflow-x:hidden}
-.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
-a{color:var(--purple);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+  font:17px/1.65 var(--body);overflow-x:hidden}
+.wrap{max-width:1180px;margin:0 auto;padding:0 40px}
+a{color:var(--accent);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
 a:hover{text-decoration-thickness:2px}
-h1,h2,h3{font-weight:600;letter-spacing:-.015em;line-height:1.25;margin:0}
-h1{font-size:2rem;margin:2.6rem 0 .6rem}
-h2{font-size:1.25rem;margin:2.6rem 0 .6rem;color:var(--purple)}
-h3{font-size:1.05rem;margin:1.8rem 0 .4rem}
-p,ul,ol,table,pre{margin:0 0 1rem}
-li{margin:.3rem 0}
+p,ul,ol,table,pre,dl{margin:0 0 1.1rem}
+li{margin:.35rem 0}
 .mute{color:var(--mute)}
-.lead{font-size:1.15rem;color:var(--mute);margin-bottom:1.6rem}
-small,.small{font-size:.9rem}
-hr{border:0;border-top:1px solid var(--line);margin:2.4rem 0}
+small,.small{font-size:.88rem}
+hr{border:0;border-top:1px solid var(--line);margin:2.6rem 0}
 
-/* nav + footer */
-nav.top{display:flex;justify-content:flex-start;align-items:baseline;gap:26px;flex-wrap:wrap;
-  padding:22px 0 0;font-size:.95rem}
-nav.top .brand{color:var(--purple);text-decoration:none;font-weight:600;letter-spacing:-.01em}
-nav.top .brand span{font-weight:400;font-size:1.3em;line-height:0;vertical-align:-.05em}
-nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:18px;flex-wrap:wrap}
+/* ---- nav: brand left, coloured clickable chips ---- */
+nav.top{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:30px 0 10px}
+nav.top .brand{font-family:var(--display);font-size:2.6rem;line-height:1;
+  color:var(--brand);text-decoration:none;letter-spacing:.02em;margin-right:10px}
+nav.top .brand span{color:var(--accent)}
+nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+nav.top li{margin:0}
+nav.top ul a{display:inline-block;padding:7px 16px;border-radius:7px;
+  font-size:.82rem;font-weight:600;letter-spacing:.01em;
+  color:#1a1a1a;text-decoration:none;transition:transform .12s ease,filter .12s ease}
+nav.top ul a:hover{transform:translateY(-2px);filter:brightness(1.08)}
+nav.top ul a[aria-current]{outline:2px solid var(--accent);outline-offset:2px}
+nav.top li:nth-child(1) a{background:var(--chip-docs)}
+nav.top li:nth-child(2) a{background:var(--chip-why)}
+nav.top li:nth-child(3) a{background:var(--chip-errors)}
+nav.top li:nth-child(4) a{background:var(--chip-sim)}
+nav.top li:nth-child(5) a{background:var(--chip-cli)}
+nav.top li:nth-child(6) a{background:var(--chip-gh)}
+nav.top li:nth-child(7) a{background:var(--chip-tr)}
 nav.top li:last-child{margin-left:auto}
-nav.top a{color:var(--fg);text-decoration:none}
-nav.top li:nth-child(1) a{color:var(--green)}
-nav.top li:nth-child(2) a{color:var(--yellow)}
-nav.top li:nth-child(3) a{color:var(--pink)}
-nav.top li:nth-child(4) a{color:var(--blue)}
-nav.top li:nth-child(5) a{color:var(--purple)}
-nav.top a:hover,nav.top a[aria-current]{color:var(--purple);text-decoration:underline;text-underline-offset:4px}
 nav.top .soon{color:var(--mute);cursor:default}
-nav.top .soon sup{font-size:.6em;color:var(--purple);margin-left:2px}
-footer{margin:4rem 0 3rem;padding-top:1.2rem;border-top:1px solid var(--line);
-  color:var(--mute);font-size:.9rem;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
-footer a{color:inherit}
 
-/* code */
-pre,code,kbd{font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace}
-pre{background:var(--code);border:1px solid var(--line);border-radius:8px;padding:13px 16px;
-  overflow-x:auto;font-size:.86rem;line-height:1.55;position:relative}
-pre code{background:none;padding:0;font-size:inherit;color:inherit}
-code{background:var(--code);padding:.1em .35em;border-radius:4px;font-size:.88em}
-pre .c{color:var(--mute)}
-pre .p{color:var(--green)}
-.copy{position:absolute;top:8px;right:8px;font:inherit;font-size:.75rem;color:var(--mute);
-  background:var(--bg);border:1px solid var(--line);border-radius:5px;padding:2px 8px;cursor:pointer}
-.copy:hover{color:var(--purple);border-color:var(--purple)}
-
-/* tables */
-table{border-collapse:collapse;width:100%;font-size:.95rem}
-td,th{text-align:left;padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-weight:600;color:var(--blue);font-size:.85rem}
-
-/* figures: the numbers row */
-.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:18px 24px;margin:1.6rem 0 1.2rem}
-.nums b{display:block;font-size:1.5rem;font-weight:600;letter-spacing:-.02em;color:var(--purple)}
-.nums span{color:var(--mute);font-size:.9rem;line-height:1.35;display:block}
-
-/* the primary block on the home page */
-.cta{border-left:3px solid var(--purple);padding:4px 0 4px 18px;margin:1.6rem 0}
-.cta a.big{font-size:1.25rem;font-weight:600;text-decoration:none}
-.cta a.big:hover{text-decoration:underline}
-.cta p{margin:.3rem 0 0;color:var(--mute)}
-
-/* walls / errors list */
-ol.walls{padding-left:1.4rem}
-ol.walls li{margin:.6rem 0}
-ol.walls li b{font-weight:600}
-.err{margin:1.4rem 0;padding-bottom:1.2rem;border-bottom:1px solid var(--line)}
-.err:last-child{border:0}
-.err a.title{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:.92rem;word-break:break-word}
-.err p{margin:.35rem 0 0;color:var(--mute)}
-h1.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-size:1.35rem;font-weight:600;word-break:break-word;color:var(--pink);
-  background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-top:2rem}
-.eyebrow{color:var(--mute);font-size:.9rem;margin:2.4rem 0 -1.2rem}
+/* ---- display type ---- */
+h1,h2,h3{font-weight:600;line-height:1.2;margin:0}
+h1{font-family:var(--display);font-weight:400;
+  font-size:clamp(2.6rem,6.4vw,5.1rem);line-height:.94;letter-spacing:.01em;
+  color:var(--accent);margin:2.2rem 0 1rem;text-transform:uppercase}
+h2{font-family:var(--display);font-weight:400;
+  font-size:clamp(1.9rem,3.4vw,2.9rem);line-height:1;letter-spacing:.01em;
+  color:var(--accent);margin:3.2rem 0 .8rem;text-transform:uppercase}
+h3{font-size:1.06rem;margin:1.9rem 0 .4rem;color:var(--fg)}
+h1.mono{font-family:var(--mono);text-transform:none;font-size:1.3rem;font-weight:500;
+  color:#f6ccd8;background:var(--code);border:1px solid var(--line);
+  border-radius:9px;padding:15px 18px;line-height:1.45;word-break:break-word}
+.lead{font-family:var(--body);font-style:italic;font-weight:700;
+  font-size:clamp(1.18rem,1.75vw,1.5rem);line-height:1.28;
+  color:var(--fg);margin:0 0 1.6rem;max-width:62ch}
+.eyebrow{color:var(--mute);font-size:.9rem;margin:2.6rem 0 -1.2rem}
 .eyebrow a{color:inherit}
-dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:6px 18px;margin:0 0 1rem}
+
+/* ---- code ---- */
+pre,code,kbd{font-family:var(--mono)}
+pre{background:var(--code);border:1px solid #5b2fc9;border-radius:11px;
+  padding:18px 20px;overflow-x:auto;font-size:.855rem;line-height:1.62;position:relative}
+pre code{background:none;padding:0;font-size:inherit;color:#d6e9ef}
+code{background:var(--code);padding:.12em .38em;border-radius:4px;font-size:.88em;color:#d6e9ef}
+pre .c{color:#8f8f8f}
+pre .p{color:#9fe8c3}
+.copy{position:absolute;top:10px;right:10px;font:inherit;font-size:.72rem;
+  color:var(--mute);background:var(--bg);border:1px solid var(--line);
+  border-radius:6px;padding:3px 9px;cursor:pointer}
+.copy:hover{color:var(--accent);border-color:var(--accent)}
+
+/* ---- tables ---- */
+table{border-collapse:collapse;width:100%;font-size:.95rem}
+td,th{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--accent);font-size:.8rem;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---- blocks ---- */
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:20px 26px;margin:1.8rem 0 1.3rem}
+.nums b{display:block;font-family:var(--display);font-weight:400;font-size:2.1rem;
+  letter-spacing:.01em;color:var(--accent);line-height:1}
+.nums span{color:var(--mute);font-size:.9rem;line-height:1.4;display:block;margin-top:4px}
+.cta{border-left:3px solid var(--accent);padding:6px 0 6px 20px;margin:1.8rem 0}
+.cta a.big{font-size:1.28rem;font-weight:600;text-decoration:none}
+.cta a.big:hover{text-decoration:underline}
+.cta p{margin:.35rem 0 0;color:var(--mute)}
+ol.walls{padding-left:1.4rem}
+ol.walls li{margin:.75rem 0}
+ol.walls li b{font-weight:600;color:var(--fg)}
+.err{margin:1.5rem 0;padding-bottom:1.3rem;border-bottom:1px solid var(--line)}
+.err:last-of-type{border:0}
+.err .step{display:inline-block;font-size:.7rem;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:#1a1a1a;background:var(--chip-errors);
+  border-radius:5px;padding:3px 9px;margin-right:10px;vertical-align:2px}
+.err a.title{font-family:var(--mono);font-size:.93rem;word-break:break-word}
+.err p{margin:.45rem 0 0;color:var(--mute)}
+dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:8px 22px}
 dl.kv dt{color:var(--mute)} dl.kv dd{margin:0}
-
-/* roadmap on home */
 .soonlist{list-style:none;padding:0}
-.soonlist li{display:flex;gap:12px;align-items:baseline;color:var(--mute);margin:.5rem 0}
+.soonlist li{display:flex;gap:14px;align-items:baseline;color:var(--mute);margin:.55rem 0}
 .soonlist li b{color:var(--fg);font-weight:600;min-width:9.5rem}
-.soonlist li i{font-style:normal;font-size:.75rem;color:var(--purple);border:1px solid currentColor;border-radius:99px;padding:0 7px}
+.soonlist li i{font-style:normal;font-size:.72rem;color:var(--accent);
+  border:1px solid currentColor;border-radius:99px;padding:1px 9px}
 
-/* docs page */
-.docs h2{margin-top:3rem}
+/* ---- docs ---- */
+.docs h2{margin-top:3.2rem}
 .docs h2+p{margin-top:.6rem}
 .docs img{max-width:100%}
-.docs .toc ul{padding-left:1.2rem;columns:1}
-.docs blockquote{margin:0 0 1rem;padding-left:14px;border-left:3px solid var(--line);color:var(--mute)}
-.docbar{display:flex;gap:18px;flex-wrap:wrap;font-size:.9rem;color:var(--mute);margin:-.2rem 0 1.4rem}
+.docs .toc ul{padding-left:1.2rem}
+.docs blockquote{margin:0 0 1.1rem;padding-left:16px;border-left:3px solid var(--line);color:var(--mute)}
+.docbar{display:flex;gap:20px;flex-wrap:wrap;font-size:.88rem;color:var(--mute);margin:-.2rem 0 1.6rem}
 .docbar a{color:inherit}
 
-/* sprinkle: the one bit of play we kept */
-.cf{position:fixed;z-index:30;pointer-events:none;font-size:16px;line-height:1;user-select:none;
-  animation:fall 1s ease-out forwards}
+/* ---- footer ---- */
+footer{margin:4.5rem 0 3.4rem;padding-top:1.4rem;border-top:1px solid var(--line);
+  color:var(--mute);font-size:.88rem;display:flex;justify-content:space-between;
+  gap:14px;flex-wrap:wrap}
+footer a{color:inherit}
+
+/* ---- the falling sprinkle ---- */
+.cf{position:fixed;z-index:30;pointer-events:none;font-size:16px;line-height:1;
+  user-select:none;animation:fall 1s ease-out forwards}
 @keyframes fall{to{transform:translateY(60px) rotate(200deg);opacity:0}}
 @media (prefers-reduced-motion:reduce){.cf{display:none}}
-@media (max-width:520px){
-  body{font-size:16px} h1{font-size:1.65rem} .nums b{font-size:1.3rem}
-  nav.top ul{gap:12px} footer{flex-direction:column}
+
+@media (max-width:760px){
+  .wrap{padding:0 22px}
+  nav.top .brand{font-size:2.1rem}
+  nav.top li:last-child{margin-left:0}
+  .lead{max-width:none}
+  footer{flex-direction:column}
 }
 
 </style>
 </head>
 <body>
 <nav class="top wrap">
-  <a class="brand" href="/dewfpga/">dewfpga <span>⋆</span></a>
+  <a class="brand" href="index.html">dewfpga <span>⋆</span></a>
   <ul>
-    <li><a href="/dewfpga/docs/">docs</a></li>
-    <li><a href="/dewfpga/why/">why</a></li>
-    <li><a href="/dewfpga/errors/" aria-current="page">errors</a></li>
-    <li><a href="/dewfpga/sim/">simulator</a></li>
-    <li><a href="/dewfpga/cli/">cli</a></li>
+    <li><a href="docs.html">docs</a></li>
+    <li><a href="why.html">why</a></li>
+    <li><a href="errors.html" aria-current="page">errors</a></li>
+    <li><a href="https://nosey-dewdrop.github.io/dewfpga/sim/">simulator</a></li>
+    <li><a href="cli.html">cli</a></li>
     <li><a href="https://github.com/nosey-dewdrop/dewfpga">github</a></li>
-    <li><a href="/dewfpga/tr/" lang="tr" hreflang="tr">türkçe</a></li>
+    <li><a href="tr.html" lang="tr" hreflang="tr">türkçe</a></li>
   </ul>
 </nav>
 
@@ -154,49 +175,49 @@ dl.kv dt{color:var(--mute)} dl.kv dd{margin:0}
   <p class="lead">Every wall hit while setting up the chain on a Mac, in the order of the guide, filed under the exact line the terminal printed. Press Cmd F and paste a piece of your error. Two of them, steps 3 and 6, print no error line; they are the places you get stuck with nothing to search for.</p>
 
   <div class="err">
-    <span class="step">step 3</span><a class="title" href="/dewfpga/errors/oss-cad-suite-no-nextpnr-xilinx/">oss-cad-suite has no nextpnr-xilinx</a>
+    <span class="step">step 3</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/oss-cad-suite-no-nextpnr-xilinx/">oss-cad-suite has no nextpnr-xilinx</a>
     <p>the obvious first try, 497 MB later. YosysHQ&#x27;s bundle ships nextpnr for ice40, ecp5, nexus and Gowin. Not Xilinx.</p>
   </div>
   <div class="err">
-    <span class="step">step 4</span><a class="title" href="/dewfpga/errors/externally-managed-environment/">error: externally-managed-environment</a>
+    <span class="step">step 4</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/externally-managed-environment/">error: externally-managed-environment</a>
     <p>pip, with Homebrew&#x27;s Python on macOS. PEP 668. Homebrew&#x27;s Python refuses a plain pip install. The chain needs a venv.</p>
   </div>
   <div class="err">
-    <span class="step">step 5</span><a class="title" href="/dewfpga/errors/fopenmp/">clang++: error: unsupported option &#x27;-fopenmp&#x27;</a>
+    <span class="step">step 5</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/fopenmp/">clang++: error: unsupported option &#x27;-fopenmp&#x27;</a>
     <p>nextpnr-xilinx, while compiling on macOS. nextpnr&#x27;s default build asks Apple&#x27;s clang for OpenMP, which it does not have.</p>
   </div>
   <div class="err">
-    <span class="step">step 6</span><a class="title" href="/dewfpga/errors/no-chipdb/">nextpnr-xilinx: where is the chip database for the XC7A35T?</a>
+    <span class="step">step 6</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-chipdb/">nextpnr-xilinx: where is the chip database for the XC7A35T?</a>
     <p>nextpnr-xilinx, the first time you run it. There is no prebuilt chipdb. It is generated per device from the prjxray data.</p>
   </div>
   <div class="err">
-    <span class="step">step 7</span><a class="title" href="/dewfpga/errors/yaml-cpp-not-built/">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</a>
+    <span class="step">step 7</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/yaml-cpp-not-built/">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</a>
     <p>CMake, while configuring prjxray. prjxray was cloned without --recursive, so its submodules are empty.</p>
   </div>
   <div class="err">
-    <span class="step">step 7</span><a class="title" href="/dewfpga/errors/cmake-policy-version-minimum/">Compatibility with CMake &lt; 3.5 has been removed from CMake</a>
+    <span class="step">step 7</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/">Compatibility with CMake &lt; 3.5 has been removed from CMake</a>
     <p>CMake 4, while configuring prjxray. prjxray is written for an older CMake. CMake 4 refuses it without a policy flag.</p>
   </div>
   <div class="err">
-    <span class="step">step 8</span><a class="title" href="/dewfpga/errors/missing-separator/">Makefile:29: *** missing separator.  Stop.</a>
+    <span class="step">step 8</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/">Makefile:29: *** missing separator.  Stop.</a>
     <p>make, on a Makefile copied from a PDF or a web page. The recipe lines lost their Tab characters when you copied them.</p>
   </div>
   <div class="err">
-    <span class="step">step 9</span><a class="title" href="/dewfpga/errors/no-iostandard-property/">ERROR: port led[0] of type PAD has no IOSTANDARD property</a>
+    <span class="step">step 9</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-iostandard-property/">ERROR: port led[0] of type PAD has no IOSTANDARD property</a>
     <p>nextpnr-xilinx, at the start of place and route. A port in your design has no pin in the .xdc file. nextpnr names the wrong port.</p>
   </div>
   <div class="err">
-    <span class="step">step 12</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
+    <span class="step">step 12</span><a class="title" href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
     <p>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv. The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
   </div>
   <h2>Your error is not here?</h2>
   <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the step number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
-  <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#17-which-versions-did-i-use">step 17 of the guide</a>. Newer versions can move the walls.</p>
+  <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="docs.html#17-which-versions-did-i-use">step 17 of the guide</a>. Newer versions can move the walls.</p>
 </main>
 
 <footer class="wrap">
   <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
-  <span><a href="/dewfpga/">home</a></span>
+  <span><a href="index.html">home</a></span>
 </footer>
 </body>
 </html>
