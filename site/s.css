@@ -44,7 +44,7 @@ body{margin:0;background:var(--bg);color:var(--fg);
   -webkit-font-smoothing:antialiased}
 
 /* the artboard is 1366 wide with a 48px gutter; the measure is held there */
-.wrap{max-width:1270px;margin:0 auto;padding:0 48px}
+.wrap{max-width:1366px;margin:0 auto;padding:0 32px}
 
 a{color:var(--accent);text-decoration:underline;
   text-decoration-thickness:1px;text-underline-offset:3px}
@@ -60,16 +60,16 @@ hr{border:0;border-top:1px solid var(--line);margin:2.6rem 0}
    measured: wordmark at x=48 y=77, 42.67px, #f5e5e8, display face.
    six chips at y=77, height 53, radius 8.5, black text.
    left group why/errors/github, right group cli/docs/simulator. */
-nav.top{display:flex;align-items:center;gap:17px;flex-wrap:wrap;padding:28px 0 6px}
+nav.top{display:flex;align-items:center;gap:17px;flex-wrap:wrap;padding:75px 0 0}
 nav.top .brand{font-family:var(--wordmark);font-size:40px;line-height:1;
   color:var(--brand);text-decoration:none;letter-spacing:.02em;
-  margin-right:14px;white-space:nowrap}
+  margin-right:104px;white-space:nowrap}
 nav.top .brand:hover{color:#fff}
 nav.top ul{list-style:none;margin:0;padding:0;display:flex;gap:17px;
   flex-wrap:wrap;align-items:center}
 nav.top li{margin:0}
 nav.top ul a{display:inline-flex;align-items:center;justify-content:center;
-  min-height:53px;padding:0 20px;border-radius:11px;
+  min-height:53px;min-width:74px;padding:0 13px;border-radius:11px;
   font-family:var(--body);font-size:1rem;font-weight:700;
   color:#000;text-decoration:none;white-space:nowrap;
   background:var(--chip-blue);
@@ -81,9 +81,11 @@ nav.top ul a[aria-current="page"]{box-shadow:0 0 0 2px var(--accent)}
 /* the measured chip colours, in the design's order */
 nav.top a.c-github{background:var(--chip-lilac)}
 nav.top a.c-docs{background:var(--chip-pink)}
-nav.top a.c-sim{background:linear-gradient(95deg,#c8daf9,#bee3f0 52%,#addcb2)}
+nav.top a.c-sim{background:linear-gradient(95deg,#c8daf9,#bee3f0 52%,#addcb2);
+  font-size:.88rem;letter-spacing:-.01em}
 /* the design splits the nav into two groups, pinned left and right */
 nav.top .right{margin-left:auto}
+nav.top .right li:last-child{margin-left:9px}
 @media (max-width:900px){nav.top .right{margin-left:0}}
 
 /* ---------- display type ----------
@@ -92,9 +94,9 @@ nav.top .right{margin-left:auto}
    Jersey 10 is a pixel face: the shadow offsets stay integers so the
    glyph edges never blur. */
 h1,h2,h3{font-weight:400;line-height:1.2;margin:0}
-h1{font-family:var(--display);
-  font-size:clamp(1.95rem,3.62vw,3.2rem);line-height:1.22;letter-spacing:-.015em;
-  color:var(--accent);margin:34px 0 14px;text-align:center;
+h1{position:relative;z-index:2;font-family:var(--display);
+  font-size:clamp(2.35rem,5.61vw,5.21rem);line-height:.838;letter-spacing:-.055em;
+  color:var(--accent);margin:58px 0 0;text-align:center;
   text-shadow:2px 0 0 var(--split-a), -2px 0 0 var(--split-b)}
 h2{font-family:var(--display);
   font-size:clamp(1.3rem,2.05vw,1.78rem);line-height:1.3;letter-spacing:-.01em;
@@ -110,47 +112,59 @@ h1.mono{font-family:var(--mono);font-size:clamp(1.05rem,1.9vw,1.32rem);
 
 /* lead: measured 38.13px bold italic white, line-height 1.05 */
 .lead{font-family:var(--body);font-style:italic;font-weight:700;
-  font-size:clamp(1.25rem,2.1vw,1.72rem);line-height:1.1;
+  font-size:clamp(1.15rem,2.42vw,2.18rem);line-height:1.05;
   color:var(--fg);margin:0 0 1.1rem;max-width:46ch}
 /* the small line under the lead: measured 21px, line-height 1.35, ls .024em */
-.sub{font-size:1rem;line-height:1.35;letter-spacing:.024em;color:var(--fg);
+.sub{font-size:clamp(.92rem,1.46vw,1.35rem);line-height:1.35;letter-spacing:.024em;color:var(--fg);
   max-width:52ch;margin:0 0 1.15rem}
 .eyebrow{color:var(--mute);font-size:.9rem;margin:2.6rem 0 -1rem}
 .eyebrow a{color:inherit}
 
-/* the hero: macs on the left, the text in the middle, the board on the right.
-   measured from the artboard — macs occupy x=32..336, the text starts at
-   x=371, the board sits at x=993..1323 and is tilted -6.66deg. */
+/* the hero, as the artboard composes it — the pieces overlap.
+   Every number below is that element's box in the 1366x768 artboard,
+   expressed as a percentage so the whole scene scales as one.
+     macs   x  32..336   y 220..509  and  x 32..307 y 549..707
+     board  x 993..1323  y 354..556, tilted -6.66deg
+     text   x 371..950   y 384..618
+   The headline sits above them all and is allowed to cross the mac. */
 .hero{display:grid;grid-template-columns:1fr;gap:1.2rem;margin:0 0 2.6rem;
   align-items:center}
 .hero-macs,.hero-board{display:none}
 .hero img{display:block;max-width:100%;height:auto}
 
 @media (min-width:980px){
-  .hero-art{grid-template-columns:24% minmax(0,44%) 1fr;gap:0 2%;
-    align-items:center;margin:-6px 0 2.6rem}
-  .hero-macs{display:block;position:relative;align-self:center}
-  .hero-macs .mac-grey{width:100%;max-width:290px}
-  .hero-macs .mac-pink{width:88%;max-width:262px;margin-top:11%}
-  .hero-board{display:block;align-self:center;margin-top:0}
-  .hero-board img{width:100%;max-width:392px;
-    transform:rotate(-6.66deg);   /* the measured tilt */
+  /* one scene, 1366:768, everything placed inside it */
+  .hero-art{display:block;position:relative;width:100%;
+    aspect-ratio:1366/586;          /* the artboard below the headline */
+    margin:-121px 0 0;              /* the headline overlaps the scene */
+    grid-template-columns:none;gap:0}
+  .hero-art>*{position:absolute}
+  .hero-macs{display:block;left:2.34%;top:6.5%;width:22.2%}
+  .hero-macs .mac-grey{width:100%;max-width:none}
+  .hero-macs .mac-pink{width:90.5%;max-width:none;margin-top:17%}
+  .hero-board{display:block;left:72.7%;top:29.5%;width:24.15%}
+  .hero-board img{width:100%;max-width:none;
+    transform:rotate(-6.66deg);     /* the measured tilt */
     filter:drop-shadow(0 14px 28px rgba(0,0,0,.5))}
-  .hero-text{align-self:center}
-  .hero .lead{max-width:26ch}
-  .hero .sub{max-width:30ch;margin-bottom:0}
+  .hero-text{left:27.2%;top:34.7%;width:42.4%}
+  .hero .lead{max-width:none}
+  .hero .sub{max-width:none;margin-bottom:0}
 }
 
 /* ---------- entrance ----------
-   the shell's elements arrive in the order the eye reads them: wordmark and
-   chips, then the headline, then the sentence, then the hardware. Each one
-   fades up over its own short window; nothing moves after 1.1s.
+   Canva's "küpür": the pieces slide in from the edge they sit nearest,
+   no rotation, no scale — position and opacity only. The nav comes down,
+   the macs come from the left, the board from the right, the text from
+   below. Everything has settled by 0.95s; nothing moves after that.
    Anyone who asks for less motion gets the page already in place. */
-@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
-@keyframes riseBoard{from{opacity:0;transform:translateY(18px) rotate(-6.66deg)}
-                     to{opacity:1;transform:rotate(-6.66deg)}}
-nav.top .brand,nav.top li,h1,.hero-text .lead,.hero-text .sub,
-.hero-macs picture,.hero-board img{animation:rise .5s cubic-bezier(.22,.7,.3,1) both}
+@keyframes slideDown{from{opacity:0;transform:translateY(-22px)}to{opacity:1;transform:none}}
+@keyframes slideLeft{from{opacity:0;transform:translateX(-46px)}to{opacity:1;transform:none}}
+@keyframes slideUp{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+/* the board keeps its measured tilt through the slide */
+@keyframes slideRightTilt{from{opacity:0;transform:translateX(52px) rotate(-6.66deg)}
+                          to{opacity:1;transform:rotate(-6.66deg)}}
+
+nav.top .brand,nav.top li{animation:slideDown .5s cubic-bezier(.22,.7,.3,1) both}
 nav.top .brand{animation-delay:.02s}
 nav.top li:nth-child(1){animation-delay:.07s}
 nav.top li:nth-child(2){animation-delay:.11s}
@@ -160,15 +174,20 @@ nav.top ul.right li:nth-child(1){animation-delay:.09s}
 nav.top ul.right li:nth-child(2){animation-delay:.13s}
 nav.top ul.right li:nth-child(3){animation-delay:.17s}
 nav.top ul.right li:nth-child(4){animation-delay:.21s}
-h1{animation-delay:.26s;animation-duration:.6s}
-.hero-text .lead{animation-delay:.40s}
-.hero-text .sub{animation-delay:.48s}
-.hero-macs picture:nth-of-type(1){animation-delay:.54s}
-.hero-macs picture:nth-of-type(2){animation-delay:.62s}
-.hero-board img{animation:riseBoard .6s cubic-bezier(.22,.7,.3,1) both;animation-delay:.58s}
+
+h1{animation:slideUp .58s cubic-bezier(.22,.7,.3,1) both;animation-delay:.26s}
+.hero-text .lead{animation:slideUp .5s cubic-bezier(.22,.7,.3,1) both;animation-delay:.42s}
+.hero-text .sub{animation:slideUp .5s cubic-bezier(.22,.7,.3,1) both;animation-delay:.50s}
+.hero-macs picture{animation:slideLeft .55s cubic-bezier(.22,.7,.3,1) both}
+.hero-macs picture:nth-of-type(1){animation-delay:.34s}
+.hero-macs picture:nth-of-type(2){animation-delay:.44s}
+.hero-board img{animation:slideRightTilt .58s cubic-bezier(.22,.7,.3,1) both;
+  animation-delay:.38s}
+
 @media (prefers-reduced-motion:reduce){
   nav.top .brand,nav.top li,h1,.hero-text .lead,.hero-text .sub,
-  .hero-macs picture,.hero-board img{animation:none}
+  .hero-macs picture{animation:none}
+  .hero-board img{animation:none;transform:rotate(-6.66deg)}
 }
 
 /* ---------- code ---------- */
