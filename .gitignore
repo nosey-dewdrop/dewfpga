@@ -26,3 +26,7 @@ top.json
 out/
 .vercel/
 .fpga_home
+
+# 2409workflow run: plan and script stay local (strategy, not product)
+2409workflow.md
+.claude/
