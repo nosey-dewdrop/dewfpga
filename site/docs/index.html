@@ -34,7 +34,7 @@
 </nav>
 <main class="wrap docs">
 <h1 id="how-do-you-run-cs223-labs-on-a-mac-without-vivado">How do you run CS223 labs on a Mac without Vivado?</h1>
-<p class="docbar"><span>19 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="#4-what-is-in-the-project-folder">the five project files</a><span>section 1 prerequisites, 2 the one-line install, 3 the setup by hand, 4 to 8 your lab and the limits</span></p>
+<p class="docbar"><span>19 and 20 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="#4-what-is-in-the-project-folder">the five project files</a><span>section 1 prerequisites, 2 the one-line install, 3 the setup by hand, 4 to 8 your lab and the limits, 9 the tested versions</span></p>
 <p>Apple Silicon Mac (M1 or later), a Digilent Basys3, free tools. Everything here was run on an M2 with 8 GB of RAM and macOS 15 on 19 and 20 September 2026. Intel Macs are untested and the installer refuses them.</p>
 <p>Two ways in. <strong>Take the one line.</strong> Build by hand only if you want to see each tool go in, or the installer refuses your machine.</p>
 <table>
@@ -160,7 +160,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
 <li>The top module is the design module that no other module instantiates, as Vivado picks it. When two modules qualify, <code>dewfpga</code> names both and you choose: <code>dewfpga bit lab4</code> (a module name, or a file name). With several files, <code>bit</code> prints the top it chose.</li>
 <li>The pin file is <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder. Pins in it that the design does not use are ignored, so a fully uncommented <code>Basys3_Master.xdc</code> is fine.</li>
 <li><code>dewfpga sim</code> needs a testbench that instantiates the top; <code>&lt;top&gt;_tb.sv</code> is the usual name but any name works. <code>bit</code> and <code>flash</code> do not need one. A testbench that never reaches <code>$finish</code> is stopped after 120 s with an error; <code>SIM_TIMEOUT=600 dewfpga sim</code> waits longer. <code>$stop</code> ends the run like <code>$finish</code>. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
-<li>Two things Vivado lets through and Yosys does not are handled for you: the course's <code>SevenSegmentDisplay.sv</code> port line (<code>output [6:0] seg, logic dp</code>) gets its direction written in, with a note naming the line; an instance without a name (<code>clk_div(clk, out);</code>) and a latch in an <code>always_comb</code> stop with the line and the fix. Section 7 has the details.</li>
+<li>Code that Vivado lets through and Yosys refuses: the course's <code>SevSeg_4digit.sv</code> port line (<code>output [6:0]seg, logic dp</code>) gets its direction written in, with a note naming the line. The other cases, such as an instance without a name (<code>clk_div(clk, out);</code>) or a latch in an <code>always_comb</code>, stop with the line and the fix. Section 7 lists them.</li>
 <li><code>dewfpga bit</code> writes no bitstream when timing is not met, and a build that fails removes the previous <code>.bit</code>, so <code>flash</code> can never load yesterday's design by mistake. When nothing changed, <code>bit</code> prints one line saying so. <code>$display</code> in synthesizable code is dropped, as Vivado does. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
 <li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>), <code>sim</code> leaves <code>&lt;top&gt;_sim</code>, <code>&lt;top&gt;_sim.out</code> and <code>&lt;top&gt;.vcd</code>, <code>flash</code> leaves <code>&lt;top&gt;_flash.out</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
 </ul>
@@ -168,7 +168,9 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
 dewfpga new &lt;dir&gt;                   blink example with a VS Code task (Cmd Shift B = flash)
-dewfpga uninstall                   remove the tools in ~/fpga, ~/.dewfpga and the link; brew packages stay</code></pre>
+dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link;
+                                    your files in ~/fpga and the brew packages stay
+dewfpga --version</code></pre>
 <p>Continue with <a href="#5-how-do-you-use-it-for-your-own-lab">section 5</a>.</p>
 <hr />
 <h2 id="3-how-do-you-build-the-chain-by-hand">3. How do you build the chain by hand?</h2>
@@ -319,7 +321,7 @@ XDC  := Basys3_Master.xdc</code></pre>
 <pre class="systemverilog"><code>output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard</code></pre>
 <p>Yosys does not implement that inheritance. <code>dewfpga bit</code> writes the direction in before synthesis and tells you so:</p>
 <pre><code>note: SevSeg_4digit.sv:4: wrote the port direction in:  output [6:0]seg, output logic dp,   (Yosys needs it; Vivado accepts both)</code></pre>
-<p>Vivado accepts the changed line too, so the file still works at the lab computer. Two more things Vivado lets through and Yosys refuses came up in old student repos; both stop the build with the line and the fix, because the code is yours to change:</p>
+<p>Vivado accepts the changed line too, so the file still works at the lab computer. More things Vivado lets through and Yosys refuses came up in old student repos. One more port-line shape is fixed the same way; everything else below stops the build with the line and the fix, because the code is yours to change:</p>
 <ul>
 <li>An instance without a name, <code>trans_3s_clock(clk, reset, out);</code>. The standard requires a name: <code>trans_3s_clock u1(clk, reset, out);</code>.</li>
 <li>A latch in an <code>always_comb</code> block: a signal not assigned on every path (an <code>if</code> without <code>else</code>, a <code>case</code> without <code>default</code>). Vivado builds a latch and warns; Yosys refuses. Give the signal a default value at the top of the block.</li>
@@ -334,7 +336,7 @@ XDC  := Basys3_Master.xdc</code></pre>
 <ul>
 <li><strong>Nothing from Vivado's IP Catalog.</strong> No Block Design, MicroBlaze, AXI, Clocking Wizard, or the BRAM, VGA and UART cores. 35 old student repos with 240 source files were searched for those; none use any of it. (Searched, not synthesized.)</li>
 <li><strong>No GUI.</strong> No waveform viewer, schematic or in-chip debugger. <code>sim</code> writes a <code>.vcd</code>; the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> draws the waveform for the same files.</li>
-<li><strong>Two parsers.</strong> Icarus reads your code for simulation, Yosys for synthesis, and they do not support the same SystemVerilog. Code that passes <code>sim</code> can fail in <code>bit</code>; section 7 is the one case hit so far, and rewriting the line fixed it.</li>
+<li><strong>Two parsers.</strong> Icarus reads your code for simulation, Yosys for synthesis, and they do not support the same SystemVerilog. Code that passes <code>sim</code> can fail in <code>bit</code>; section 7 lists the cases hit so far and the fix for each.</li>
 <li><strong>The timing number is nextpnr's estimate.</strong> Vivado's report is the official one. In the two designs above the margin was 1.5x (four modules) and 2.8x (blink) over 100 MHz.</li>
 <li><strong>Unofficial tools.</strong> AMD does not make or support them; prjxray worked out the bitstream format without AMD's documentation. If a lab is graded in Vivado, open it in Vivado once before the demo.</li>
 <li><strong>Memories become distributed RAM</strong> (<code>-nobram</code>). The 16x8 RAM in section 7 mapped to four RAM32M cells. A large memory such as a VGA framebuffer would not fit this way; big multipliers and DSP blocks are untested.</li>

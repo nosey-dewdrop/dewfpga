@@ -6,7 +6,8 @@
 #                                    work on the .sv files in the current folder. top = the module nothing else
 #                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
-#   dewfpga uninstall               remove ~/fpga, ~/.dewfpga and the link in Homebrew's bin (brew packages stay)
+#   dewfpga uninstall               remove what install built in ~/fpga (nextpnr-xilinx, prjxray, chipdb, venv, log),
+#                                    the CLI in ~/.dewfpga and its link in Homebrew's bin. Your files and brew packages stay
 #   dewfpga --version
 # The toolchain lives in $FPGA_HOME (default ~/fpga). Build outputs land next to the .sv; <top>.log has the full place-and-route log.
 set -euo pipefail
@@ -17,7 +18,7 @@ HERE="$(cd "$(dirname "$SELF")/.." && pwd)"
 FPGA_HOME="${FPGA_HOME:-$(cat "$HERE/.fpga_home" 2>/dev/null || echo "$HOME/fpga")}"   # install.sh records where it put the tools
 [[ $HERE != *[[:space:]]* && $FPGA_HOME != *[[:space:]]* ]] || { echo "ERROR: a path with a space ($HERE / $FPGA_HOME): the FPGA tools cannot handle that. Move the folder or set FPGA_HOME." >&2; exit 1; }
 
-usage()   { sed -n '2,11s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
+usage()   { sed -n '2,12s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
 version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
 die()     { echo "ERROR: $*" >&2; exit 1; }
 
@@ -65,13 +66,18 @@ cmd_new() {
 
 cmd_uninstall() {
     local link; link="$(brew --prefix 2>/dev/null || echo /opt/homebrew)/bin/dewfpga"
-    echo "removing: $FPGA_HOME  $HOME/.dewfpga  $link"
+    local built=(nextpnr-xilinx prjxray chipdb venv install.log) gone=() e
+    case "$FPGA_HOME" in "$HOME"|/|"") die "FPGA_HOME is $FPGA_HOME; refusing to delete that. Remove the five entries by hand: ${built[*]}" ;; esac
+    # only what install.sh put there: anything else in FPGA_HOME (your own projects) is left alone
+    for e in "${built[@]}"; do [ -e "$FPGA_HOME/$e" ] && gone+=("$FPGA_HOME/$e"); done
+    [ "$HERE" = "$HOME/.dewfpga" ] && gone+=("$HOME/.dewfpga")      # a git clone of the CLI is yours; it stays
+    [ -L "$link" ] && [ "$(resolve "$link")" = "$SELF" ] && gone+=("$link")      # only a link to this CLI
+    if [ ${#gone[@]} -eq 0 ]; then echo "nothing to remove: no dewfpga install found in $FPGA_HOME"; return; fi
+    printf 'removing: %s\n' "${gone[@]}"
+    rm -rf "${gone[@]}"
+    if rmdir "$FPGA_HOME" 2>/dev/null; then echo "removed: $FPGA_HOME (it was empty)"
+    elif [ -d "$FPGA_HOME" ]; then echo "kept: $FPGA_HOME (other files live there)"; fi
     echo "kept: the Homebrew packages (brew uninstall yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14 if you want them gone)"
-    case "$FPGA_HOME" in "$HOME"|/|"") die "FPGA_HOME is $FPGA_HOME; refusing to delete that. Remove the five entries by hand: nextpnr-xilinx prjxray chipdb venv install.log" ;; esac
-    rm -rf "$FPGA_HOME/nextpnr-xilinx" "$FPGA_HOME/prjxray" "$FPGA_HOME/chipdb" "$FPGA_HOME/venv" "$FPGA_HOME/install.log"
-    rmdir "$FPGA_HOME" 2>/dev/null || true      # only if nothing else lives there
-    [ "$HERE" = "$HOME/.dewfpga" ] && rm -rf "$HOME/.dewfpga"
-    [ -L "$link" ] && rm -f "$link"
     echo "done."
 }
 

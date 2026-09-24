@@ -54,7 +54,7 @@ mkdir -p "$T/m"; cd "$T/m"
 printf 'module counter #(parameter int HALF=50_000_000)(input logic clk, output logic tick);\n logic [25:0] c=0; always_ff @(posedge clk) if (c==HALF-1) begin c<=0; tick<=~tick; end else c<=c+1;\nendmodule\n' > counter.sv
 printf "module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n logic t; counter u(.clk(clk),.tick(t)); assign led={sw[0],14'b0,t&sw[0]};\nendmodule\n" > top.sv
 sed 's/blink/top/' "$ROOT/templates/blink.xdc" > top.xdc
-check "top found from xdc"    "cd '$T/m' && '$CLI' bit && [ -s top.bit ]"
+check "top found from the hierarchy (submodule in its own file)" "cd '$T/m' && '$CLI' bit && [ -s top.bit ]"
 check "lab layout: lab4.sv + Basys3_Master.xdc" "mkdir -p '$T/lab' && sed 's/module blink/module lab4/' '$ROOT/templates/blink.sv' > '$T/lab/lab4.sv' && cp '$ROOT/templates/blink.xdc' '$T/lab/Basys3_Master.xdc' && cd '$T/lab' && '$CLI' bit >out 2>&1 && [ -s lab4.bit ] && grep -q '^xdc ok' out"
 check "no xdc -> says what to copy" "mkdir -p '$T/nox' && cp '$ROOT/templates/blink.sv' '$T/nox/' && cd '$T/nox' && ! '$CLI' bit >out 2>&1 && grep -q 'Basys3_Master.xdc' out"
 check "no xdc: top still found from the hierarchy, then a clear pin-file error" "cd '$T/m' && rm top.xdc && { '$CLI' bit || true; } 2>&1 | grep -q 'no .xdc pin file' && ! '$CLI' bit 2>/dev/null"

@@ -1,23 +1,23 @@
 # dewfpga
 
-[English](README.md)
+Apple Silicon Mac'te SystemVerilog yaz, Digilent **Basys3**'e yükle. Vivado yok, sanal
+makine yok, Rosetta yok. `.sv` → `.bit` → kart, beş saniyenin altında.
 
-macOS Apple Silicon'da **Vivado olmadan** SystemVerilog yazıp Basys3'e yükle.
-Sanal makine yok, Rosetta yok. `.sv` → `.bit` → kart, ~4 saniye.
+[English](README.md)
 
 ```bash
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 dk, 1.4 GB, tek sefer
 ```
 
-Sonra herhangi bir klasörde `blink.sv` + `blink.xdc` yaz ve:
+Sonra `blink.sv` + `blink.xdc` olan herhangi bir klasörde:
 
 ```bash
 dewfpga sim      # iverilog
-dewfpga bit      # .sv -> .bit  (~4 sn)
-dewfpga flash    # karta yükle: LED yanar
+dewfpga bit      # .sv -> .bit   (4.6 sn)
+dewfpga flash    # karta yükle: LED yanıp söner
 ```
 
-`dewfpga bit` üç satır basar, tam place-and-route logu `<top>.log`'da kalır:
+`dewfpga bit` üç satır basar, place-and-route logunun tamamı `<top>.log`'da kalır:
 
 ```
 xdc ok: 33 ports, all mapped.
@@ -25,9 +25,26 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-Makefile yok, proje yapısı yok. Klasördeki bütün `.sv`/`.v` dosyaları sentezlenir
-(alt modüller ayrı dosyada olabilir). Top modül: `.xdc`'si olan dosya; belirsizse
-`dewfpga flash <top>`. Simülasyon `<top>_tb.sv` ister. Örnek: `dewfpga new blink`.
+Makefile yok, proje yapısı yok. Klasördeki her `.sv`/`.v` sentezlenir (alt modüller kendi
+dosyalarında olabilir, dosya adı serbest). Top modül, başka hiçbir modülün instantiate
+etmediği modüldür, Vivado'daki gibi; iki modül uyuyorsa `dewfpga flash <top>`. Portu olmayan
+ya da `$finish` çağıran modül `sim` için testbench'tir. Örnek: `dewfpga new blink`.
+
+## Kurulum
+
+Tek satır, Node gerekmez:
+
+```bash
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
+```
+
+CLI'ı `~/.dewfpga`'ya koyar (sha256 `dewfpga.tgz.sha256` ile karşılaştırılır; bu bir bütünlük
+kontrolü, imza değil), `dewfpga`'yı Homebrew'un bin klasörüne bağlar ve `dewfpga install`'u
+çalıştırır. Güncellemek için aynı satırı tekrar çalıştır. `dewfpga uninstall` kurulumun
+`~/fpga`'da ürettiklerini (nextpnr-xilinx, prjxray, chipdb, venv, log), `~/.dewfpga`'yı ve
+linki siler; `~/fpga`'daki başka dosyalara dokunmaz. Gerekenler: Apple Silicon'da macOS,
+Xcode Command Line Tools, Homebrew. Sonradan npm paketine geçeceksen önce
+`$(brew --prefix)/bin/dewfpga`'yı sil, npm aynı yolu istiyor.
 
 ## Ne kuruyor?
 
@@ -41,71 +58,55 @@ Makefile yok, proje yapısı yok. Klasördeki bütün `.sv`/`.v` dosyaları sent
 | chipdb XC7A35T | `bbaexport` + `bbasm` | üretilir (~90 MB) |
 | karta yükleme | openFPGALoader | brew |
 
-Vivado'nun tek pencerede yaptığı beş işi beş açık kaynak araç yapıyor;
-`install.sh` bunları kurup birbirine bağlıyor.
+Vivado beş işi tek pencerede yapıyor; burada beş açık kaynak araç yapıyor, `install.sh`
+bunları birbirine bağlıyor.
 
-## Neden bu script var?
+## Neden bir script?
 
-Bu zinciri elle kurmak 6 saat sürdü. Hiçbiri tek yerde yazılı olmayan altı duvar:
+Bu zinciri elle kurmak altı saat sürdü. Hiçbiri tek bir yerde yazılı olmayan altı duvar:
 
-1. **oss-cad-suite'te nextpnr-xilinx yok.** 497 MB indirip içinde ice40/ecp5/gowin
-   olduğunu, Xilinx olmadığını öğrenirsin. Kaynaktan derlemek şart.
-2. **Apple clang `-fopenmp` bilmiyor.** nextpnr `-DUSE_OPENMP=OFF` ister.
-3. **PEP 668.** Homebrew Python'a `pip install` yasak; venv şart.
-4. **prjxray `--recursive` ister.** Yoksa yaml-cpp / googletest / abseil gelmez, cmake patlar.
-5. **cmake 4 prjxray'i reddediyor.** `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` ister.
-6. **Hazır chipdb yok.** Cihaz başına `bbaexport.py` + `bbasm` ile elle üretilir.
+1. **oss-cad-suite'te nextpnr-xilinx yok.** 497 MB indirip içinde yalnızca
+   ice40/ecp5/gowin olduğunu öğreniyorsun. Kaynaktan derlemek şart.
+2. **Apple clang'de `-fopenmp` yok.** nextpnr `-DUSE_OPENMP=OFF` istiyor.
+3. **PEP 668.** Homebrew Python'a `pip install` reddediliyor; venv şart.
+4. **prjxray `--recursive` istiyor.** Yoksa yaml-cpp / googletest / abseil eksik kalıyor, cmake patlıyor.
+5. **cmake 4 prjxray'i reddediyor.** `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` istiyor.
+6. **Hazır chipdb yok.** Cihaz başına `bbaexport.py` + `bbasm` ile üretiliyor.
 
-Script her adımı bitince işaretler; yeniden çalıştırınca biten adımlar atlanır.
-Log: `~/fpga/install.log`.
+Script'i tekrar çalıştırınca biten adımlar atlanır. Log: `~/fpga/install.log`.
 
 ## Komutlar
 
 ```
-dewfpga install                 zinciri kur (yeniden çalıştırmak güvenli)
-dewfpga check                   altı parça yerinde mi
-dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları + <top>.xdc
+dewfpga install                     zinciri kur (tekrar çalıştırmak güvenli)
+dewfpga check                       her parça yerinde mi
+dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları
+dewfpga new <dizin>                 VS Code görevli blink örneği (⌘⇧B = flash)
+dewfpga uninstall                   kurulumun ürettiklerini, CLI'ı ve linki sil (senin dosyaların ve brew paketleri kalır)
 dewfpga --version
-dewfpga new <dizin>             blink örneği + VS Code görevi (⌘⇧B = flash)
-dewfpga uninstall               ~/fpga, ~/.dewfpga ve linki kaldır (brew paketleri kalır)
 ```
-
-Kaynaktan: `git clone … && ./install.sh` de aynı işi yapar; `dewfpga`'yı brew bin'e bağlar.
 
 ## Kapsam
 
-- Kart: Digilent **Basys3** (XC7A35T-1CPG236C). Başka 7-serisi kart için
-  `install.sh` içinde `DEVICE`, Makefile'da `PART` ve `CHIPDB`, openFPGALoader kart adı değişir ve chipdb yeniden üretilir; test edilmedi.
+- Kart: yalnızca Digilent **Basys3** (XC7A35T-1CPG236C). Başka bir 7-serisi kart kendi
+  chipdb'sini (`install.sh`'de `DEVICE`), parça adını (Makefile'da `PART`, `CHIPDB`) ve
+  openFPGALoader kart adını ister; hiçbiri bağlanmadı, test edilmedi.
 - Platform: **macOS arm64**. Intel Mac ve Linux test edilmedi, script reddeder.
-- Dersin verdiği XDC dosyaları olduğu gibi çalışır (`PACKAGE_PIN` + `IOSTANDARD`).
-- `flash` SRAM'a yazar: kartın gücü kesilince silinir.
+- Dersin XDC dosyaları olduğu gibi çalışır (`PACKAGE_PIN` + `IOSTANDARD`); tasarımın kullanmadığı pinler yok sayılır.
+- Bellekler dağıtık RAM olur (`-nobram`): lab boyutunda sorun yok, bir VGA framebuffer sığmaz.
+- `bit` timing tutmazsa bitstream yazmaz; `sim` testbench `$error`/`$fatal` basınca 1 ile çıkar.
+- `flash` SRAM'a yazar: kartın gücü kesilince tasarım silinir.
 
-## Testler (19 Eyl 2026, M2 8 GB, macOS 15)
+## Testler
 
-| Test | Sonuç |
-|---|---|
-| Temiz kurulum (boş `FPGA_HOME`) | exit 0, **4 dk 17 s**, 1.4 GB. Adımlar: nextpnr 77 s · venv 5 s · prjxray 114 s · chipdb 58 s |
-| Aynı kurulum, boşluklu yola (`sp ace/fpga`) | exit 0, 4 dk 11 s, `make bit` geçti |
-| İkinci koşu (idempotency) | exit 0, **2.7 s**, 15 adım "zaten var" ile atlandı |
-| Çıktı eşitliği | Taze zincirin `.frames` dosyası elle kurulan zincirle **bayt bayt aynı**; `.bit` yalnızca başlıktaki saat damgasında 4 byte farklı |
-| Sabitleme | nextpnr-xilinx `3fd7878`, prjxray `c9f02d8` ve tüm submodule SHA'ları elle kurulanla aynı |
-| `make bit` | 4.6 s, tepe 552 MB RAM · `make check` 0.08 s · chipdb üretimi tepe 859 MB RAM |
-| shellcheck (`-S style`) | temiz |
-| gitleaks | sızıntı yok; repoda kişisel yol / e-posta yok |
-| Script hijyeni | `sudo`, `eval`, `curl \| sh` yok; 3 URL hepsi https; yazma yalnız `FPGA_HOME` + brew |
-| Intel Mac / brew yok / ağ yok | üçü de tek satır `HATA:` ile exit 1, yarım durum bırakmaz (yarım klon sonraki koşuda yeniden çekilir) |
-| `new` var olan dizine / bilinmeyen komut / eksik zincirde `check` | exit 1 |
-| npm: `npm pack` → `npm install -g` → boş klasörde `dewfpga bit` | `.fasm` elle kurulanla aynı; `npm uninstall -g` temiz kaldırır |
-| Klasörde iki `.sv` / `.xdc` yok / testbench yok / zincir kurulmamış | tek satır HATA, exit 1 |
-| `top.sv` + `counter.sv` (alt modül ayrı dosyada) | top `.xdc`'den bulundu, `top.bit` üretildi |
-| `sudo ./install.sh` / boş disk < 4 GB / bozuk venv (Python güncellemesi) | HATA ile durur / HATA ile durur / venv yeniden kurulur |
-| Kodda olup XDC'de olmayan port | derlemeden önce `ERROR: these ports have NO pin in the XDC` ile durur, exit 1 |
+`test/run.sh` (46 kontrol: statik analiz, golden `.fasm`, determinizm, çok dosyalı tasarımlar,
+her hata yolu, idempotent kurulum). `FULL=1 test/run.sh` geçici bir klasöre temiz kurulumu da
+ekler. CI her push'ta temiz bir `macos-15` (Apple Silicon) GitHub makinesinde temiz kurulumu,
+test paketini ve npm paketini koşar.
 
-Test edilmedi: Intel Mac, Linux, Basys3 dışı kart, kartın olmadığı makinede `make flash`.
-
-## Kanıt
-
-19 Eyl 2026: elle kurulan zincirle Basys3'te LED yandı. Bu script ile temiz dizine
-kurulan zincir aynı `.frames` dosyasını üretiyor (yukarıdaki tablo).
-Test paketi: `test/run.sh` (46 kontrol). CI her push'ta temiz bir macOS-15 (Apple Silicon)
-GitHub makinesinde sıfırdan kurulum + testler + npm paketi koşuyor.
+2026-09-19 ve 20'de 8 GB'lık bir M2'de ölçüldü: temiz kurulum 3 dk 37 sn ile 4 dk 17 sn
+arası (üç koşu), 1.4 GB; ikinci koşu 2.7 sn; `bit` 4.6 sn, tepe 552 MB RAM; chipdb üretimi
+tepe 859 MB RAM. Kartta, 19 ve 20 Eylül'de beş tasarım: blink şablonu, anahtardan LED'e,
+Lab 2 toplayıcı/çıkarıcı, ekran sayacı ve trafik ışığı FSM'i, her biri `dewfpga flash` ile.
+yosys 0.69 ile script'in kurduğu zincir, LED'i yakan elle kurulmuş zincirle bayt bayt aynı
+`.frames` üretiyor; başka bir yosys ile netlist değişir ve yalnızca I/O yerleşimi karşılaştırılır.

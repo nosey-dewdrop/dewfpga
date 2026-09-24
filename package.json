@@ -1,6 +1,6 @@
 {
   "name": "dewfpga",
-  "version": "0.1.0",
+  "version": "1.2.0",
   "description": "Basys3 on macOS Apple Silicon without Vivado: write SystemVerilog, flash the board.",
   "bin": { "dewfpga": "bin/dewfpga" },
   "files": ["bin/", "install.sh", "templates/", "README.md", "LICENSE"],

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>dewfpga: Mac'te Vivado olmadan CS223</title>
-<meta name="description" content="Apple Silicon Mac'te Vivado olmadan CS223 FPGA labları. SystemVerilog'dan Digilent Basys3'e: Icarus Verilog, Yosys, nextpnr-xilinx, prjxray ve openFPGALoader. 50 ila 100 GB yerine 1.76 GB, bitstream 5 saniyenin altında.">
+<meta name="description" content="Apple Silicon Mac'te Vivado olmadan CS223 FPGA labları. SystemVerilog'dan Digilent Basys3'e: Icarus Verilog, Yosys, nextpnr-xilinx, prjxray ve openFPGALoader. 50 ila 100 GB yerine 1.4 GB, bitstream 5 saniyenin altında.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
 <link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
 <link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
@@ -50,7 +50,7 @@ Load SRAM: [==================================================] 100.00%
 Done
 Shift IR 35
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-  <p class="mute small">Yukarıdaki, 8 GB'lık M2'mde blink örneğinin gerçek çıktısı. Son satırdaki <code>done 1</code>, çipin tasarımı kabul ettiği anlamına geliyor; o an LED 0 yanıp sönmeye başlıyor. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Bütün zincir diskte 1.76 GB yer kaplıyor, Vivado 50 ila 100 GB istiyor.</p>
+  <p class="mute small">Yukarıdaki, 8 GB'lık M2'mde blink örneğinin gerçek çıktısı. Son satırdaki <code>done 1</code>, çipin tasarımı kabul ettiği anlamına geliyor; o an LED 0 yanıp sönmeye başlıyor. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Zincir diskte 1.4 GB yer kaplıyor (elle kurarsan 1.76 GB), Vivado 50 ila 100 GB istiyor.</p>
 
   <h2>Nasıl çalışıyor?</h2>
   <p>Vivado bir CS223 labı için aslında beş ayrı iş yapıyor. Burada her işi ayrı bir açık kaynak araç yapıyor, bir de bir kez üretilen chip database var; küçük bir Makefile hepsini sırayla çalıştırıyor.</p>

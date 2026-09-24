@@ -214,10 +214,10 @@ The rules `dewfpga` follows in a folder:
   never reaches `$finish` is stopped after 120 s with an error; `SIM_TIMEOUT=600 dewfpga sim` waits
   longer. `$stop` ends the run like `$finish`. `flash` builds the `.bit`
   first if it is missing or older than the sources, so `dewfpga flash` alone is enough.
-- Two things Vivado lets through and Yosys does not are handled for you: the course's
-  `SevenSegmentDisplay.sv` port line (`output [6:0] seg, logic dp`) gets its direction written
-  in, with a note naming the line; an instance without a name (`clk_div(clk, out);`) and a
-  latch in an `always_comb` stop with the line and the fix. Section 7 has the details.
+- Code that Vivado lets through and Yosys refuses: the course's `SevSeg_4digit.sv` port line
+  (`output [6:0]seg, logic dp`) gets its direction written in, with a note naming the line.
+  The other cases, such as an instance without a name (`clk_div(clk, out);`) or a latch in an
+  `always_comb`, stop with the line and the fix. Section 7 lists them.
 - `dewfpga bit` writes no bitstream when timing is not met, and a build that fails removes the
   previous `.bit`, so `flash` can never load yesterday's design by mistake. When nothing changed,
   `bit` prints one line saying so. `$display` in synthesizable code is dropped, as Vivado does. `dewfpga sim` exits with an
@@ -231,7 +231,9 @@ dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
 dewfpga new <dir>                   blink example with a VS Code task (Cmd Shift B = flash)
-dewfpga uninstall                   remove the tools in ~/fpga, ~/.dewfpga and the link; brew packages stay
+dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link;
+                                    your files in ~/fpga and the brew packages stay
+dewfpga --version
 ```
 
 Continue with [section 5](#5-how-do-you-use-it-for-your-own-lab).
@@ -515,9 +517,10 @@ synthesis and tells you so:
 note: SevSeg_4digit.sv:4: wrote the port direction in:  output [6:0]seg, output logic dp,   (Yosys needs it; Vivado accepts both)
 ```
 
-Vivado accepts the changed line too, so the file still works at the lab computer. Two more
-things Vivado lets through and Yosys refuses came up in old student repos; both stop the build
-with the line and the fix, because the code is yours to change:
+Vivado accepts the changed line too, so the file still works at the lab computer. More things
+Vivado lets through and Yosys refuses came up in old student repos. One more port-line shape
+is fixed the same way; everything else below stops the build with the line and the fix,
+because the code is yours to change:
 
 - An instance without a name, `trans_3s_clock(clk, reset, out);`. The standard requires a
   name: `trans_3s_clock u1(clk, reset, out);`.
@@ -554,7 +557,7 @@ This covers the part of Vivado that CS223 uses, and no more.
   waveform for the same files.
 - **Two parsers.** Icarus reads your code for simulation, Yosys for synthesis, and they
   do not support the same SystemVerilog. Code that passes `sim` can fail in `bit`;
-  section 7 is the one case hit so far, and rewriting the line fixed it.
+  section 7 lists the cases hit so far and the fix for each.
 - **The timing number is nextpnr's estimate.** Vivado's report is the official one. In
   the two designs above the margin was 1.5x (four modules) and 2.8x (blink) over 100 MHz.
 - **Unofficial tools.** AMD does not make or support them; prjxray worked out the

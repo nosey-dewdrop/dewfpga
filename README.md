@@ -40,7 +40,8 @@ curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 
 It puts the CLI in `~/.dewfpga` (sha256 compared with `dewfpga.tgz.sha256`, an integrity check, not a signature), links `dewfpga` into
 Homebrew's bin and runs `dewfpga install`. Re-run the same line to update; `dewfpga uninstall`
-removes `~/fpga`, `~/.dewfpga` and the link. Requirements: macOS on Apple Silicon,
+removes what the installer built in `~/fpga` (nextpnr-xilinx, prjxray, chipdb, venv, the log),
+`~/.dewfpga` and the link, and leaves anything else in `~/fpga`. Requirements: macOS on Apple Silicon,
 Xcode Command Line Tools, Homebrew. Switching to the npm package later: remove
 `$(brew --prefix)/bin/dewfpga` first, npm wants that path.
 
@@ -80,7 +81,7 @@ dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
 dewfpga new <dir>                   blink example with a VS Code task (⌘⇧B = flash)
-dewfpga uninstall                   remove ~/fpga, ~/.dewfpga and the link (brew packages stay)
+dewfpga uninstall                   remove what install built, the CLI and its link (your files and brew packages stay)
 dewfpga --version
 ```
 

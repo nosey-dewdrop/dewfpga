@@ -18,7 +18,7 @@ npm run preview    # http://localhost:4173, then: node test/e2e.mjs   (BASE=http
 
 tests drive a real chromium (playwright; the executable path in test/*.mjs points at the cached build).
 `test/e2e.mjs`, 31 checks: boot is the cli blink template, switch → led, blink toggles, the testbench view runs the
-same files (`basic checks passed`, waveform), an edit reaches both tools, every example runs in both views, multi-file
+same files (`PASS: 3 checks`, waveform), an edit reaches both tools, every example runs in both views, multi-file
 design, iverilog and yosys errors land in the console, watchdog for a testbench without `$finish`, old `tb.html` links.
 
 ## notes
