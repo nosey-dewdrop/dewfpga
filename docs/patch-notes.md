@@ -2755,6 +2755,8 @@ is the line quoted in the numbers.
   not say; the product now orders it); Vivado's exact behaviour on `39` (no corpus log; the message states
   the IEEE rule).
 
+**CI.** The first CI run of #3 was red on `95b`: the message named the two files in the other order (`design_old.sv:2 and design.sv:1`). The CLI's file list came from the shell glob, whose order follows the locale (on the CI runner `_` sorts before `.`), so the tools read the files in a different order on different machines and messages named them differently. The list is sorted with `LC_ALL=C` now, and the twice-defined message sorts its pair; the second CI run is the one that counts.
+
 **Orchestration, for the record.** One workflow: 3 build agents in their own worktrees, one integrator,
 2 breakers × 2 rounds, up to 3 fix agents per round, 14 agents in 3 h 0 min, then the harness killed the
 last integrator (a 20-probe run is silent for more than 3 minutes; it had already applied both fixes).
