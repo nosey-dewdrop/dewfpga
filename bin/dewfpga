@@ -96,6 +96,10 @@ cmd_build() {  # <target> [top]
         files+=("$f")
     done
     [ ${#files[@]} -gt 0 ] || die "no .sv or .v file in $PWD. cd into the folder with your design, or start one:  dewfpga new blink"
+    # the glob's order follows the locale (design_old.sv sorts before design.sv on one macOS and after it on another);
+    # the tools read the files in this order and the messages name them in it, so it is fixed here. No spaces in names (checked above)
+    # shellcheck disable=SC2207
+    files=($(printf '%s\n' "${files[@]}" | LC_ALL=C sort))
     # what is what: the scanner reads the modules. The top is the design module nothing else instantiates
     # (or the one named on the command line, by module or by file); a testbench is a module without ports;
     # file names are free, and never decide the top. One ERROR= line means it could not decide; PROBLEM=

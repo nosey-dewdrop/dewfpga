@@ -167,7 +167,8 @@ def scan(files, want=None, xdc_names=()):
             line = src.count("\n", 0, m.start()) + 1
             if name in mods:            # a backup next to the file (lab4_old.sv): the last one read would win silently
                 d = mods[name]
-                problems.append(f"module {name} is defined twice: {d['file']}:{d['line']} and {f}:{line}. Keep one, or move the backup out of this folder")
+                (f1, l1), (f2, l2) = sorted([(d['file'], d['line']), (f, line)])     # the same order on every machine
+                problems.append(f"module {name} is defined twice: {f1}:{l1} and {f2}:{l2}. Keep one, or move the backup out of this folder")
                 continue
             head = body.split(";", 1)[0]
             ports = re.search(r"\)\s*$", head) and re.sub(r"#\s*\(.*?\)", "", head, flags=re.S)
