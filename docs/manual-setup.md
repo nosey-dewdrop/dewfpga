@@ -15,7 +15,7 @@ go in, or the installer refuses your machine.
 | tool versions | two pinned commits, Homebrew versions in section 9 | the same two commits, typed by you |
 
 Section 4 is the Makefile project the by-hand path uses. Sections 5 to 8 are for both:
-your own lab, VS Code, the one course file that breaks, what this chain cannot do.
+your own lab, VS Code, the course files that break, what this chain cannot do.
 
 **If a step fails.** Read the last lines in the terminal. Every error hit during this
 setup is filed under its exact text, with the fix:
@@ -200,13 +200,19 @@ goes through them in order.
 
 The rules `dewfpga` follows in a folder:
 
-- Every `.sv` and `.v` in the folder is synthesized, so submodules can live in their own
-  files, and a file can be named anything: `lab5.sv` may hold `module top_design`. A module
-  without ports, or one that calls `$finish`, is a testbench and stays out of the bitstream.
+- Every `.sv` and `.v` in the folder that holds a module is synthesized, so submodules can live
+  in their own files, and a file can be named anything: `lab5.sv` may hold `module top_design`.
+  A file that holds no module (a package, an interface, or typedefs at file scope, alone in
+  their file) is left out, for now. A module without ports,
+  or one that calls `$finish` or `$stop`, is a testbench and stays out of the bitstream, so for
+  now a design module that calls either is taken for one too: keep them in the testbench.
   One design per folder.
 - The top module is the design module that no other module instantiates, as Vivado picks
   it. When two modules qualify, `dewfpga` names both and you choose: `dewfpga bit lab4`
-  (a module name, or a file name). With several files, `bit` prints the top it chose.
+  (a module name, or a file name). For now there is one exception: when one of the two is named
+  like the `.xdc` or like its own file (`counter.sv` holding `module counter`), `dewfpga` takes
+  that one without asking, even when your Vivado project names the other, so name the top
+  whenever two qualify. With several files, `bit` prints the top it chose.
 - The pin file is `<top>.xdc`, or the only `.xdc` in the folder. Pins in it that the
   design does not use are ignored, so a fully uncommented `Basys3_Master.xdc` is fine.
 - `dewfpga sim` needs a testbench that instantiates the top; `<top>_tb.sv` is the usual name
@@ -215,11 +221,17 @@ The rules `dewfpga` follows in a folder:
   longer. `$stop` ends the run like `$finish`. `flash` builds the `.bit`
   first if it is missing or older than the sources, so `dewfpga flash` alone is enough.
 - Code that Vivado lets through and Yosys refuses: the course's `SevSeg_4digit.sv` port line
-  (`output [6:0]seg, logic dp`) gets its direction written in, with a note naming the line.
-  The other cases, such as an instance without a name (`clk_div(clk, out);`) or a latch in an
-  `always_comb`, stop with the line and the fix. Section 7 lists them.
+  (`output [6:0]seg, logic dp`) gets its direction written in by `bit`, with a note naming the
+  line. Some other cases stop with the line and the fix, such as an instance without a name
+  (`clk_div(clk, out);`) or a latch in an `always_comb`. Others stop with no line, or with advice
+  that does not fit, and some build a bitstream that does not do what the code says, with no
+  error. Section 7 lists what the course's files and old student repos hit; section 8 links the
+  full measurement.
 - `dewfpga bit` writes no bitstream when timing is not met, and a build that fails removes the
-  previous `.bit`, so `flash` can never load yesterday's design by mistake. When nothing changed,
+  previous `.bit`, so `flash` can never load yesterday's design by mistake. Without a
+  `create_clock` in the XDC every clock is checked at 100 MHz, a divided one too, which Vivado
+  does not time; a multiplier that Yosys puts in a DSP48E1 with a register inside is not timed
+  at all (nextpnr-xilinx). When nothing changed,
   `bit` prints one line saying so. `$display` in synthesizable code is dropped, as Vivado does. `dewfpga sim` exits with an
   error when the testbench prints `$error` or `$fatal`, so a red run is visible.
 - `bit` leaves its working files next to the sources (`.json`, `.fasm`, `.frames`, `.log`,
@@ -476,8 +488,9 @@ XDC  := Basys3_Master.xdc
 `TOP` is the top module's name, `SRCS` every `.sv` in the design, `XDC` the pin file.
 
 Either way, simulation looks for a testbench (with the Makefile: `<top>_tb.sv`); the bitstream
-does not need one. The course's `SevSeg_4digit.sv` builds as it is; section 7 says what was
-changed and why.
+does not need one. The course's `SevSeg_4digit.sv` builds as it is when it is source code
+(`bit` writes one port direction in); the course also hands it out in netlist form, which the
+CLI refuses for now. Section 7 says what was changed and why.
 
 ---
 
@@ -502,9 +515,16 @@ instead; there the tasks say `make`.
 
 ## 7. Which course file breaks?
 
-One, and it is fixed for you. `SevSeg_4digit.sv` (also handed out as `SevenSegmentDisplay.sv`)
-has a port line that Vivado and Icarus accept and Yosys does not
+Two. One is fixed for you: `SevSeg_4digit.sv` (also handed out as `SevenSegmentDisplay.sv`),
+as source code, has a port line that Vivado and Icarus accept and Yosys does not
 ([port-neither-input-nor-output](https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/)).
+The other is not fixed yet: the ready modules the course hands out in netlist form (LUT
+primitives, `\<const0>`, `(* keep_hierarchy *)`), `SevSeg_4digit.sv` among them, build in
+Vivado, but the CLI takes them for a netlist Vivado left behind and stops `sim` and `bit` with
+"Delete it from this folder". 5 of the
+89 folders measured from old student repos hold such a module: 4 are one repo's copy of the
+course's handout folder (its example projects and ready modules), 1 is a student's project that
+copied the modules in.
 
 ```systemverilog
 output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard
@@ -517,37 +537,54 @@ synthesis and tells you so:
 note: SevSeg_4digit.sv:4: wrote the port direction in:  output [6:0]seg, output logic dp,   (Yosys needs it; Vivado accepts both)
 ```
 
-Vivado accepts the changed line too, so the file still works at the lab computer. More things
-Vivado lets through and Yosys refuses came up in old student repos. One more port-line shape
-is fixed the same way; everything else below stops the build with the line and the fix,
-because the code is yours to change:
+Vivado accepts the changed line too, so the file still works at the lab computer. The fix
+misses the line when a comment sits between `seg,` and `logic dp` (at the end of the `seg,`
+line, on a line of its own, or a `/* */` between the two), or when a comment in the port list
+holds a `;`; then Yosys stops with ``Module port `\dp' is neither input nor output.`` and no fix,
+so move the comment out of the way. More things Vivado lets through and Yosys refuses came
+up in old student repos. One more port-line shape is fixed the same way, by `bit`; the rest
+stop the build and name the line, except where the item says otherwise:
 
 - An instance without a name, `trans_3s_clock(clk, reset, out);`. The standard requires a
   name: `trans_3s_clock u1(clk, reset, out);`.
 - A latch in an `always_comb` block: a signal not assigned on every path (an `if` without
   `else`, a `case` without `default`). Vivado builds a latch and warns; Yosys refuses. Give the
   signal a default value at the top of the block.
-- A port list where a later port only has a range, `input logic [7:0] d, [2:0] s`: the direction
-  is written in for you, like the seven-segment line above.
-- A reset branch that assigns something other than a constant in an `always_ff` with
-  `posedge reset`, and a signal written on both clock edges: both stop with the line and the fix.
+- A port list where a later port only has a range, `input logic [7:0] d, [2:0] s`: `bit` writes
+  the direction in, like the seven-segment line above; `sim` does not. When such an output is
+  written in an `always` block (`output logic [6:0] seg, [3:0] an`), `sim` stops with "'an' is
+  not a valid l-value" until a `bit` has rewritten the line.
+- A reset branch that loads a signal, not a constant, in an `always_ff` with `posedge reset`:
+  the bitstream is built with Yosys warnings only, and while the reset is held the board does
+  not do what `sim` shows. A register written on both clock edges stops the build, with no
+  line number.
+- An asynchronous reset ORed with a synchronous clear, `always_ff @(posedge clk, posedge reset)
+  if (reset || clear)`: the build stops with "Multiple edge sensitive events found for this
+  signal!", no line number, and advice about two always blocks that does not fit one.
+- A statement after the reset's `if`/`else` in an `always_ff` with an asynchronous reset: the
+  build stops with "Async reset ... yields non-constant value", no line number, and advice about
+  the reset branch.
 - A file Vivado wrote after synthesis (`\<const0>`, `keep_hierarchy`) copied in as if it were
-  source: named, with "take the original .sv".
+  source: the build stops, names the file and says to delete it. The same check also stops the
+  course's netlist-form modules above, and a module with UG901's own
+  `(* keep_hierarchy = "yes" *)` attribute.
 
 What else was tried: four modules from old student repos, together in one design. An FSM
 with `typedef enum`, a 16x8 RAM, a debouncer and the seven-segment driver above:
 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock,
 bitstream in 4.5 seconds. Language features in those files that both Icarus (`sim`) and Yosys (`bit`) accepted:
 `parameter`, `generate`, `struct packed`, `$clog2`, `unique case`, packed arrays,
-`interface` with `modport`. A submodule file named differently from its module, Turkish
-characters and a BOM in the source, and spaces in the folder path all went through too. That is
-four files, not the whole course.
+`interface` with `modport` (Icarus 13 accepts one only while no module port is typed with it;
+a port like `sum_if.prod bus` fails `sim` and builds in `bit`). A submodule file named
+differently from its module, Turkish characters in comments, and spaces in the folder path
+went through too. A file saved as "UTF-8 with BOM" stops the build, with the command that
+removes the mark. That is four files, not the whole course.
 
 ---
 
 ## 8. What can it not do?
 
-This covers the part of Vivado that CS223 uses, and no more.
+This covers the part of Vivado that CS223 uses, not all of it yet, and nothing beyond it.
 
 - **Nothing from Vivado's IP Catalog.** No Block Design, MicroBlaze, AXI, Clocking
   Wizard, or the BRAM, VGA and UART cores. 35 old student repos with 240 source files
@@ -555,9 +592,25 @@ This covers the part of Vivado that CS223 uses, and no more.
 - **No GUI.** No waveform viewer, schematic or in-chip debugger. `sim` writes a `.vcd`;
   the [browser testbench](https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb) draws the
   waveform for the same files.
+- **SystemVerilog that Vivado compiles and this chain does not, yet.** `test/sv` in the
+  repository holds one probe for each construct measured so far, each run through `sim`, `bit`
+  and a simulation of the synthesized netlist, next to what Vivado does and the source for it
+  ([`expect.tsv`](https://github.com/nosey-dewdrop/dewfpga/blob/main/test/sv/expect.tsv)). It is
+  not every construct: each round of testing has found more. On 26 September, 82 of the 111
+  constructs Vivado supports failed a stage: 58 stop before a bitstream (Yosys refuses them, or
+  the CLI, place and route or its timing check does), 12 fail only in `sim` (Icarus 13 refuses
+  them or has no model), 2 (an MMCM, and a memory marked as a block RAM) build but have no model
+  to check them against, and 10 build a bitstream that does not do what the code says, with no
+  error: a hierarchical name such as `u_fsm.state`, `$isunknown`, the members of an interface
+  used from the module that instantiates it (`bus.a`, with or without ports, or in an array of
+  interfaces: 3 probes), a package in its own file, reading an `inout` pin the design sets to a
+  constant `z`, a design module that calls `$finish`, a packed 2-D `localparam` whose type is a
+  `typedef` (the table comes out as zeros), and two modules nothing instantiates where one is
+  named like its own file (the CLI builds that one, not the top your project names).
 - **Two parsers.** Icarus reads your code for simulation, Yosys for synthesis, and they
   do not support the same SystemVerilog. Code that passes `sim` can fail in `bit`;
-  section 7 lists the cases hit so far and the fix for each.
+  section 7 lists what the course's files and old student repos hit, and `expect.tsv`
+  above every construct measured.
 - **The timing number is nextpnr's estimate.** Vivado's report is the official one. In
   the two designs above the margin was 1.5x (four modules) and 2.8x (blink) over 100 MHz.
 - **Unofficial tools.** AMD does not make or support them; prjxray worked out the
@@ -565,7 +618,10 @@ This covers the part of Vivado that CS223 uses, and no more.
   Vivado once before the demo.
 - **Memories become distributed RAM** (`-nobram`). The 16x8 RAM in section 7 mapped to
   four RAM32M cells. A large memory such as a VGA framebuffer would not fit this way; big
-  multipliers and DSP blocks are untested.
+  multipliers and DSP blocks are untested. The one exception is a memory the code asks to be a
+  block RAM, `(* ram_style = "block" *)` or `(* rom_style = "block" *)`: Yosys builds a
+  RAMB18E1 then, which the timing check does not time and the test suite cannot simulate
+  (`97_ram_style_block`).
 - **One board, one platform.** Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and
   other boards are untested and the installer refuses them.
 - **Confirmed on the board** (19 and 20 September): five designs: `blink`, switches to LEDs,

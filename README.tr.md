@@ -25,10 +25,14 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-Makefile yok, proje yapısı yok. Klasördeki her `.sv`/`.v` sentezlenir (alt modüller kendi
-dosyalarında olabilir, dosya adı serbest). Top modül, başka hiçbir modülün instantiate
-etmediği modüldür, Vivado'daki gibi; iki modül uyuyorsa `dewfpga flash <top>`. Portu olmayan
-ya da `$finish` çağıran modül `sim` için testbench'tir. Örnek: `dewfpga new blink`.
+Makefile yok, proje yapısı yok. Klasörde modül tutan her `.sv`/`.v` sentezlenir (alt modüller
+kendi dosyalarında olabilir, dosya adı serbest; içinde modül olmayan bir dosya, yani tek başına bir
+package, interface ya da dosya düzeyinde typedef, şimdilik dışarıda kalıyor). Top modül, başka hiçbir modülün instantiate
+etmediği modüldür, Vivado'daki gibi; iki modül uyuyorsa adını ver: `dewfpga flash <top>` (şimdilik CLI, `.xdc` ile
+ya da kendi dosyasıyla aynı adı taşıyanı sormadan seçiyor). Portu olmayan
+ya da `$finish` veya `$stop` çağıran modül `sim` için testbench'tir, bu yüzden bunlardan birini
+çağıran bir tasarım modülü de şimdilik testbench sayılıyor: `$finish` ile `$stop`'u testbench'te
+tut. Örnek: `dewfpga new blink`.
 
 ## Kurulum
 
@@ -93,8 +97,11 @@ dewfpga --version
   openFPGALoader kart adını ister; hiçbiri bağlanmadı, test edilmedi.
 - Platform: **macOS arm64**. Intel Mac ve Linux test edilmedi, script reddeder.
 - Dersin XDC dosyaları olduğu gibi çalışır (`PACKAGE_PIN` + `IOSTANDARD`); tasarımın kullanmadığı pinler yok sayılır.
-- Bellekler dağıtık RAM olur (`-nobram`): lab boyutunda sorun yok, bir VGA framebuffer sığmaz.
-- `bit` timing tutmazsa bitstream yazmaz; `sim` testbench `$error`/`$fatal` basınca 1 ile çıkar.
+- Bellekler dağıtık RAM olur (`-nobram`): lab boyutunda sorun yok, bir VGA framebuffer sığmaz. `(* ram_style = "block" *)`
+  ya da `(* rom_style = "block" *)` ile işaretli bir bellek block RAM olur ve onun zamanlaması ölçülmez.
+- `bit` timing tutmazsa bitstream yazmaz. XDC'de `create_clock` yoksa bölünmüş saat dahil her saat
+  100 MHz'de kontrol edilir; Vivado bölünmüş saati kontrol etmez. Yosys'un içinde register olan bir DSP48E1'e koyduğu çarpıcının
+  timing'i hiç kontrol edilmez (nextpnr-xilinx). `sim` testbench `$error`/`$fatal` basınca 1 ile çıkar.
 - `flash` SRAM'a yazar: kartın gücü kesilince tasarım silinir.
 
 ## Testler

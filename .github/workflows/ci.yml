@@ -9,8 +9,12 @@ jobs:
       - run: brew install shellcheck
       - name: install toolchain from scratch
         run: ./install.sh
-      - name: test suite
+      - name: test suite (CLI, then the SystemVerilog probes in test/sv)
         run: test/run.sh
+        env: { SV_OUT: "${{ runner.temp }}/sv-results.tsv" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: sv-results, path: "${{ runner.temp }}/sv-results.tsv" }
       - name: npm package installs and runs
         run: |
           npm pack

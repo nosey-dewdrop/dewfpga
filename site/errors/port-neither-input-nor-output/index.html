@@ -34,13 +34,13 @@
 <p>The first lab that uses the seven-segment display stops in synthesis with this line. Simulation was fine.</p>
 <h2>Why does it happen?</h2>
 <p>The <code>SevSeg_4digit.sv</code> module that the course hands out declares its ports like this.</p>
-<pre><code>output [6:0]seg, logic dp,     // dp ends up with no direction</code></pre>
-<p>Whoever wrote it meant <code>output logic dp</code>, but the language does not read it that way. Vivado accepts the line anyway, and so does Icarus Verilog, which is why <code>make sim</code> passes. Yosys reads the standard more strictly and stops.</p>
+<pre><code>output [6:0]seg, logic dp,     // dp takes output from seg, per the standard</code></pre>
+<p>The standard reads it as <code>output logic dp</code>: a port without a direction takes the one before it. Vivado accepts the line, and so does Icarus Verilog, which is why <code>make sim</code> passes. Yosys does not implement that inheritance and stops.</p>
 <h2>What is the fix?</h2>
 <pre data-copy="1"><code>output [6:0] seg,
 output logic dp,</code></pre>
 <p>After the change the module synthesizes to 46 cells and the rest of the lab goes through unchanged.</p>
-<p>This is the one course file that breaks. It is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-course-file-breaks">Section 7</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">section 8</a> of the guide.</p>
+<p><code>dewfpga bit</code> makes this change for you and prints a note, unless a comment sits between <code>seg,</code> and <code>logic dp</code>, or a comment in the port list holds a <code>;</code>; then move that comment out. The course's ready modules in netlist form are the other course files that break (<a href="/dewfpga/docs/#7-which-course-file-breaks">section 7</a>). This one is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-course-file-breaks">Section 7</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">section 8</a> of the guide.</p>
 </main>
 
 <footer class="wrap">

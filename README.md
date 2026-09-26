@@ -25,10 +25,13 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-No Makefile, no project layout. Every `.sv`/`.v` in the folder is synthesized (submodules
-can live in their own files, named anything). The top is the module nothing else instantiates,
-as in Vivado; if two qualify, `dewfpga flash <top>`. A module without ports or with `$finish`
-is the testbench for `sim`. Example: `dewfpga new blink`.
+No Makefile, no project layout. Every `.sv`/`.v` in the folder that holds a module is
+synthesized (submodules can live in their own files, named anything; a file that holds no module,
+such as a package, an interface or typedefs at file scope, is left out, for now). The top is the module nothing else instantiates,
+as in Vivado; if two qualify, name it: `dewfpga flash <top>` (for now the CLI takes one named like the `.xdc` or
+like its own file without asking). A module without ports or with `$finish` or
+`$stop` is the testbench for `sim`, so for now a design module that calls either is taken for
+one too: keep `$finish` and `$stop` in the testbench. Example: `dewfpga new blink`.
 
 ## Install
 
@@ -92,8 +95,11 @@ dewfpga --version
   board name; nothing of that is wired up or tested.
 - Platform: **macOS arm64**. Intel Mac and Linux are untested and refused by the script.
 - The course's XDC files work as-is (`PACKAGE_PIN` + `IOSTANDARD`); pins the design does not use are ignored.
-- Memories become distributed RAM (`-nobram`): fine at lab sizes, a VGA framebuffer would not fit.
-- `bit` refuses to write a bitstream when timing is not met; `sim` exits 1 when the testbench prints `$error`/`$fatal`.
+- Memories become distributed RAM (`-nobram`): fine at lab sizes, a VGA framebuffer would not fit. A memory marked
+  `(* ram_style = "block" *)` or `(* rom_style = "block" *)` becomes a block RAM, which is not timed.
+- `bit` refuses to write a bitstream when timing is not met. Without a `create_clock` in the XDC every clock is
+  checked at 100 MHz, a divided one too, which Vivado does not time; a multiplier that Yosys puts in a DSP48E1
+  with a register inside is not timed at all (nextpnr-xilinx). `sim` exits 1 when the testbench prints `$error`/`$fatal`.
 - `flash` writes SRAM: the design is gone after a power cycle.
 
 ## Tests
