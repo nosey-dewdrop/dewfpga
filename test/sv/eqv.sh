@@ -31,9 +31,21 @@ fi
 grep -q '^module top_net(' net_eqv.v || { echo "EQV FAIL: net_eqv.v has no 'module top_net('"; exit 1; }
 # the RTL's registers and their resets, so the bench starts them as the board does (eqv.py rtl_starts);
 # flatten brings a submodule's registers into top, where rtl_starts looks for them
+# Two readers, as the product's build (templates/Makefile): yosys' own read_verilog first, and when it refuses
+# the code and slang.so is installed, yosys-slang lists the same registers; the netlist under test was built
+# from that reading. SLANG names the plugin as it does for the Makefile.
+SLANG=${SLANG:-${FPGA_HOME:-$HOME/fpga}/yosys-slang/build/slang.so}
+regs="hierarchy -top top; proc; flatten; memory_collect; opt_dff; write_json rtl_regs.json"
 # shellcheck disable=SC2086   # file names without spaces
-yosys -q -p "read_verilog -sv $rtl; hierarchy -top top; proc; flatten; memory_collect; opt_dff; write_json rtl_regs.json" > rtl_regs.log 2>&1 \
-    || { cat rtl_regs.log; echo "EQV FAIL: yosys could not list the RTL's registers"; exit 1; }
+if ! yosys -q -p "read_verilog -sv $rtl; $regs" > rtl_regs.log 2>&1; then
+    # shellcheck disable=SC2086
+    if [ -f "$SLANG" ] && yosys -m "$SLANG" -q -l rtl_regs_slang.log -p "read_slang $rtl; $regs" > /dev/null 2>&1; then
+        echo "note: the RTL's registers listed by yosys-slang (yosys' own reader refused this code)"
+    else
+        cat rtl_regs.log; [ ! -f rtl_regs_slang.log ] || grep -E '^(ERROR|[^ ]+:[0-9]+:[0-9]+: (error|fatal error):)' rtl_regs_slang.log
+        echo "EQV FAIL: yosys could not list the RTL's registers"; exit 1
+    fi
+fi
 python3 "$HERE/eqv.py" "$json" rtl_regs.json > eqv.sv || { echo "EQV FAIL: eqv.py could not write the bench"; exit 1; }
 # shellcheck disable=SC2086   # file names without spaces
 bench() { iverilog -g2012 -s eqv -o eqv.vvp $rtl net_eqv.v eqv.sv "$CELLS" > eqv_build.log 2>&1; }

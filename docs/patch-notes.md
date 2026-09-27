@@ -2763,3 +2763,154 @@ last integrator (a 20-probe run is silent for more than 3 minutes; it had alread
 Lessons written into the script: at most 5 probes per call, fix agents copy the integrated product into
 their worktree first (each spent 10 minutes discovering that their worktree was at HEAD), one scratch folder
 per agent (two overwrote each other's repro), a judge with a reproduced criticism before the close.
+
+### #4 · What Vivado accepts compiles: yosys-slang as the second reader · 27 September
+
+**In numbers.** Vivado-supported probes passing all four stages 32/111 → 59/111; all four stages 33/133 → 64/133; synthesis 57/133 → 108/133; known gaps 79 → 52; silent wrongs 2 → 2 (`35`, `97`, no simulation model). `test/run.sh`: 187 passed before, 213 passed, 0 failed after (13 min 48 s; the probe stage is longer, every refused design now runs through two readers). `dewfpga bit` on blink: 4.1 s → 3.8 s (the first reader builds it; a design that falls to the second reader pays one more yosys run). `dewfpga check` has a tenth row, `yosys-slang`, and the install grew by one step.
+
+**The reader decision, measured first (4a).** One agent ran the synthesis stage of all 133 probes under
+four front ends: (A) yosys' `read_verilog -sv`, today's; (B) `read_slang` (the yosys-slang plugin, commit
+`9676786`, 23 September 2026); (C) slang first, `read_verilog` when slang refuses; (D) `read_verilog`
+first, slang when it refuses. Counted: Vivado-supported probes whose netlist is right (the testbench passes
+on the netlist and `eqv.sh` finds it equal to the RTL). A 50, B 80, C 87, D 88. B alone loses 8 that A
+builds right (`21`, `31`, `31b`, `32`, `33`, `34`, `54`, `84`): slang refuses a blocking assignment after a
+non-blocking one and `repeat` in `always_comb`, emits `$aldff` for a *constant* async reset (which #3's guard
+read as a load from a signal), and lowers `assign JA[7:1] = 'z` to a `$buf` of x, so `33` reads x from the
+pin. D has none of these (they take the first path) and gains 38 the first reader refuses. The rule was
+fixed before the run: most right netlists with zero regressions among the 33 all-pass probes; D. Its holes,
+named in the same report and closed here: `60` (`ref` arguments, which slang drops: a silent wrong), the
+two-driver and async-load guards on slang's output, `01` (slang builds an `always_comb` latch as a LUT loop,
+not a latch). Install cost: one more `cmake` build in `install.sh`, 2 min 59 s for the whole `install.sh` re-run on this machine (every other step stamped, so that is the clone and the build), 8.9 MB of `slang.so`.
+
+**What the student sees.** `16b_func_return` (`return` inside a function), `dewfpga bit`, before:
+```
+design.sv:3: ERROR: syntax error, unexpected TOK_ID
+exit 2
+```
+after:
+```
+note: top read with yosys-slang (yosys' own reader refused this code)
+pnr ok: 7 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)
+top.bit  2.2 MB
+exit 0
+```
+`58_hier_name` (`assign led[1:0] = u_fsm.state;`) was #3's error; now `pnr ok: 3 LUT, 2 FF, 420.88 MHz`,
+`top.bit  2.2 MB`, and the netlist equals the RTL. `01_latch_comb` (an `if` without `else` in `always_comb`)
+stopped with "Give q a default value"; now:
+```
+warning: design.sv:3: latch inferred for q (an if without else in always_comb); Vivado builds it too, with the same warning; if you meant a register use always_ff, if a latch use always_latch
+pnr ok: 0 LUT, 1 FF ...   top.bit  2.2 MB
+```
+with one LDCE in the netlist, as Vivado builds it (UG901 Ch.5, Latches). `02_unnamed_inst`
+(`inv(sw[0], led[0]);`) was an error; now the CLI writes the name into the file, as it already did for the
+course's seven-segment port line, and says so:
+```
+note: design.sv:5: named the instance:  inv u_inv(sw[0], led[0]);   (the standard and Yosys need it; Vivado accepts both)
+```
+`11_enum_methods` (`s.next()`) is still refused, now by both readers, and the student gets slang's line:
+```
+yosys' reader:  design.sv:5: ERROR: Can't resolve function name `\s.first'.
+ERROR: design.sv:5: s.next() is an enum method that steps through the values (next/prev). yosys does not build enum methods, and yosys-slang builds first()/last() only. Write the step out as a case on s ...
+```
+
+**What changed.**
+- *Two readers, one recipe* (`templates/Makefile`). The first path is #3's: the scans, `read_verilog -sv`
+  for `.sv` and plain `read_verilog` for `.v` (Verilog-2005 in Vivado too: `bit` and `final` are names
+  there, `74`), `hierarchy`, `proc`, `top.il`, synthesis, the awk guards. When it fails for any reason and
+  `$FPGA_HOME/yosys-slang/build/slang.so` exists, the second path reads the same files with `read_slang`
+  (`--map-keyword-version 1364-2005` for the `.v` files) and runs the same synthesis and the same guards on
+  its output; a success prints `note: top read with yosys-slang (yosys' own reader refused this code)`. When
+  both refuse, the student sees yosys' ERROR line and slang's diagnostic with `file:line:col`, the source
+  line and the caret (slang writes it only into the `-l` log under `-q`). When slang is not installed and
+  the refusal is one slang may resolve, a note names the missing reader and `dewfpga install`.
+- *Guards on the second path.* `$aldff` after `proc` is the #3 error only when its async value is not a
+  constant (slang emits `$aldff` for constant resets too; `31`, `31b`, `32` build). Two drivers: slang keeps
+  `src` on both `$dff` cells, so the lines are named, sorted. `ref` arguments: a scan before either reader
+  stops at the line (`60`; yosys does not read `ref`, slang drops it and the caller's variable never
+  changes). A latch on the slang path: slang lowers an `always_comb` `if` without `else` (or a `case` without
+  `default`) to a `$mux`/`$pmux` that reads its own output, and `synth_xilinx` reports a logic loop through a
+  `$procmux` cell with the `if`'s or the `case`'s line; that is an ERROR now, not a LUT loop in the bitstream
+  (break rounds 1 and 2 found both shapes; the same design on the first path is the latch warning above).
+- *The first path builds the latch.* yosys 0.69's `proc_dlatch` refuses a latch in a process carrying the
+  `always_comb` attribute (`log_error`), so the attribute is unset before `proc`; the warning names the line
+  from the `src` attribute, `synth_xilinx` maps the `$dlatch` to an LDCE. `always_latch` builds the same way.
+- *The scanner* (`templates/check_xdc.py`, `bin/dewfpga`). `--fix-ports` now also names unnamed instances
+  (`u_inv`, `u_inv_2`, ..., never a name the file already has; `#(...)` blocks, instances inside `generate`,
+  `.v` files), before sim and bit; strings, comments and testbenches are left alone, and a file with CRLF
+  keeps CRLF (the old rewrite turned every line ending into LF). The port-direction fix sees through comments
+  in the port list, including one holding a `;` (`08b`), and the range-only item in an always block (`08c`).
+  A module named `display`, or a module name inside a `$display` string, is not an instance any more (`40`,
+  `40b`); an instance is looked for only where a module item can start, so a function or a call that carries a
+  module's name (`function logic [3:0] inv(`, `= inv(sw)`) is not rewritten (break round 1 found the
+  rewrite corrupting such a file; fixed). The netlist detector refuses only what yosys cannot read (Vivado's
+  funcsim headers) and lets the course's ready modules in netlist form through (`57`).
+- *The toolchain* (`install.sh`, `dewfpga check`, CI, the guide). Step 6 clones yosys-slang at the pinned
+  commit and builds it into `build.new/`; `build/` is replaced only once `yosys -m` loads the new `.so` (a
+  build that fails leaves the plugin you have; the judge found the first version deleting it before
+  rebuilding). A hand-built `slang.so` that loads is stamped instead of rebuilt. `dewfpga check` loads the
+  plugin each time and tells a missing one from one built for another yosys (after `brew upgrade yosys`); CI
+  checks that the plugin loads. The guide's by-hand path has the step with its real output.
+
+**Tried and did not work.** `tribuf -logic` before `synth_xilinx` for the internal tri bus (`52`, `33c`):
+nextpnr still finds `$_TBUF_` cells (a buffer that reaches a port is kept); `70`'s `$and`/`$or` from
+`wor`/`wand` and `94`'s `$pow` were not reached (all three stay #5's "does not fit" message). Rewriting only
+the "Latch inferred" line as a warning: yosys raises it as an error for `always_comb`, so the design fell to
+slang and built the LUT loop. The first latch rule matched `$mux` only; a `case` without `default` is a
+`$pmux` (round 2). The first `ref` scan and the `$isunknown` scan fired inside strings and block comments
+(fixed: the `$isunknown` scan reads yosys' preprocessor dump; the `ref` scan is still text-based and a
+`$display` string holding `, ref x` stops the build: open, #5). `23c` on the slang path was not measured raw:
+the package scan stops it before either reader, since the CLI hands both readers the module files only.
+
+**Break rounds and the judge.** Round 1: the student breaker died after three tool calls (the disk filled:
+see below); the regression reader sent 3 in-scope reports (the slang-path latch as a LUT loop, high; the
+function-named-like-a-module rewrite, medium; `ref` in a string, low), all reproduced, the first two fixed.
+Round 2: 2 + 3 reports (a `case` latch on the slang path, high; a `.v` next to a `.sv` that needs slang read
+as SystemVerilog, medium; the plugin dormant as installed, medium; the wording "an if without else" for a
+`case`; a task call named as an instance, low); the first three fixed, the `case` wording fixed with the
+`$pmux` rule. The judge (an agent that did not build any of it) returned `fix` with 10 criticisms: the
+`$pmux` latch not yet in the main tree (it was in a worktree the disk-full integrator could not apply), the
+metric blind to a wrong slang netlist (below), the installer deleting a working plugin first, `11`'s row
+stale, a `slang.so` that exists but does not load, and the guide quoting a 217 s install next to a step that
+adds 4 minutes. Its process criticisms are in the orchestration note below. What held, in the breakers'
+words: a latch in a submodule in its own file on the slang path (ERROR with `hold.sv:3`), `always_latch` on
+the slang path (builds, 1 FF), four unnamed instances in one file with `#(.N(4))` and a `generate`, an
+unnamed instance in a `.v` with the course port line, two always blocks and an async load on the slang path
+(both ERRORs with lines), `$isunknown` on a design only slang reads, nested and generated latches, an
+interface design with a constant async reset (4 FDCE, no false `$aldff` error), the 47 protect probes and
+the 6 canaries unchanged.
+
+**The metric was blind, and the suite changed for it.** `test/sv/eqv.sh` listed the RTL's registers with
+`read_verilog -sv` alone, so for every probe only slang can read it printed `EQV FAIL: yosys could not list
+the RTL's registers` after the testbench had passed on the netlist, and 33 slang-built rows were recorded as
+bit=pass, netlist=fail: the suite's silent-wrong count went from 2 to 35 while the netlists were right (a
+scratch copy of `eqv.sh` with `read_slang` as the fallback: 16 `EQV PASS`, 16 `EQV SKIP` where iverilog
+cannot compile the RTL, 1 still unreadable, `74`). The judge called it: for those 33 a wrong slang netlist
+would pass the suite as the recorded state. `eqv.sh` now lists the registers with the same two readers as the
+product, so the netlist stage sees slang-built designs. 45 rows of `expect.tsv` were then rewritten from the logs of a run with the fixed `eqv.sh`: the stage columns and a `today` column quoting what the product prints (the `note: top read with yosys-slang` line, the `pnr ok` line, the `EQV PASS` line, or the ERROR that stops it).
+
+**Tests.** The full suite ran three times in the main session after the integration: the first run found 45 rows to rewrite and 7 CLI checks the product change had turned (an unnamed instance is a note now, not an error; a `.v` with SystemVerilog inside stops, as in Vivado; the runner's self-checks that planted their mutation on `01`'s and `02`'s old messages plant it on the new ones, `st_score` plants its gap on `11`); the second found 5 rows whose quotes the runner's parser cut at a backtick, a double quote or a home path; the third passed 213 and failed 1, the self-check `st_fixtext`, whose mutation string had a colon the source does not have: fixed and reproduced by hand (the mutated copy prints the expected `no stage printed it` line); CI's run is the fourth. `test/sv/eqv.sh` lists the RTL's registers with both readers. `.claude/rows-from-logs.py` rewrites a probe's row from the logs of a `KEEP=1` run (used for the 45 rows; it cuts a quote at an apostrophe, a backtick, a double quote and `/Users/`, which the runner's quote parser and the personal-path check would trip on).
+
+**Found and left to later updates.**
+- #4 (later): `11` enum `next()`/`prev()` (slang builds `first()`/`last()` only); `52`, `33c`, `70`, `94`'s
+  cells; `74` in `eqv.sh` (a `.v` with `bit`/`final` as names: `eqv.sh` reads it with `-sv`); `23c` with the
+  package file handed to slang; a `.svh` not `` `include``d that declares a 2-D typedef (the scan would fire).
+- #5: the `ref` scan on strings; the "does not fit" messages for the cells above; a `slang.so` that exists
+  but does not load prints a dlopen error instead of the student's diagnostic; the guide quotes a 217 s
+  install total next to the 4-minute step.
+- #6: a test that the bitstream of `01` holds an LDCE; `test/run.sh`'s check ".v file with SystemVerilog
+  inside builds" now passes through slang (read_verilog refuses `logic` in a `.v`, slang reads it): the check
+  says the opposite of Vivado and should turn.
+- Not verified: `11`'s UG901 row is the one #2 recorded; slang's `first()`/`last()` netlists were measured
+  on a scratch design, not a probe.
+
+**Orchestration, for the record.** 19 agents, 1 h 58 min: 3 build (45, 30, 30 minutes), 1 integrator, 2
+break rounds, 3 + 2 fix agents, a judge, 3 fix agents on the judge's findings. The machine's data volume hit
+100% during break round 1: 40 GB of `.vcd` files that #2's breakers had left in a scratch folder on 25
+September, 26 GB of `KEEP=1` work folders under `$TMPDIR`, 5 GB of the 4a measurement's probe copies; the
+round-1 student, the round-2 and round-3 integrators and the judge ran without a shell (`ENOSPC` on the
+harness's own output file). The round-2 and round-3 fixes were applied by hand from their worktrees in the
+main session after the disk was cleared. The judge's process notes, applied to the next update: the
+integrator must run the demo probes itself and quote them (11's row went out stale); a probe belongs to one
+task (08b was on two lists); a fix agent commits to a branch so the integrator merges commits, not worktree
+files; the guard must be measurable by the suite before the run (the eqv.sh reader was not); a 4 GB free-disk
+check before the run, and `KEEP=1` work folders deleted by the agent that made them.

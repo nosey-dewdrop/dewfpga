@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # dewfpga install: Basys3 (XC7A35T) toolchain on macOS Apple Silicon, no Vivado.
 #
-#   SystemVerilog -> yosys -> nextpnr-xilinx -> prjxray -> openFPGALoader -> Basys3
+#   SystemVerilog -> yosys (+ yosys-slang) -> nextpnr-xilinx -> prjxray -> openFPGALoader -> Basys3
 #
 # One command. Safe to re-run: finished steps are skipped.
 # Everything goes under $FPGA_HOME (default ~/fpga). System Python is never touched.
+# Steps: 0 environment, 1 Homebrew packages, 2 nextpnr-xilinx, 3 Python venv, 4 prjxray,
+#        5 chipdb, 6 yosys-slang (the SystemVerilog reader plugin for yosys), 7 verify.
 #
 # Usage:  ./install.sh            (or: dewfpga install)
 #         FPGA_HOME=/elsewhere ./install.sh
+#         ./install.sh --help
 set -euo pipefail
+case "${1:-}" in -h|--help|help) sed -n '2,13s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;; esac
 
 export FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
 # one compile job per ~3 GB of RAM (a nextpnr object peaks near that), never more than the cores. 8 GB -> 2 jobs.
@@ -24,6 +28,9 @@ NEXTPNR_URL="https://github.com/openXC7/nextpnr-xilinx.git"
 NEXTPNR_SHA="3fd78784c7788f93f276358edf5477221cc6c179"
 PRJXRAY_URL="https://github.com/f4pga/prjxray.git"
 PRJXRAY_SHA="c9f02d8576042325425824647ab5555b1bc77833"
+# yosys-slang: the brew yosys 0.69 has no read_slang ("No such command or cell type: read_slang"), the plugin adds it.
+SLANG_URL="https://github.com/povik/yosys-slang.git"
+SLANG_SHA="96767863835f3c862cea9c63052b2ce9d0b55884"
 
 BREW_PKGS=(yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14)
 # Versions that worked on 2026-09-19. Brew packages can't be pinned (tested with yosys 0.69, openFPGALoader 1.1.1, iverilog 13.0).
@@ -169,8 +176,54 @@ else
     ok "$CHIPDB_BIN ($(du -h "$CHIPDB_BIN" | cut -f1))"
 fi
 
-# ---------------------------------------------------------------- 6. verify
-step 6 "Verify"
+# ---------------------------------------------------------------- 6. yosys-slang
+# The plugin is compiled against the brew yosys's headers (yosys-config), so it is rebuilt when brew
+# moves yosys: the stamp next to slang.so holds the `yosys -V` line it was built for.
+# A rebuild never removes the slang.so that works today: it compiles into build.new/ and build/ is
+# replaced only once yosys loads the new .so. A build that fails (no disk, no network, a compiler error)
+# leaves the earlier plugin in place, and the next  dewfpga install  resumes in build.new/.
+step 6 "yosys-slang (SystemVerilog reader plugin, from source, ~3 min)"
+SLANG_DIR="$FPGA_HOME/yosys-slang"
+SLANG_SO="$SLANG_DIR/build/slang.so"
+SLANG_STAMP="$SLANG_DIR/build/.dewfpga-yosys"
+SLANG_NEW="$SLANG_DIR/build.new"
+clone_pinned "$SLANG_URL" "$SLANG_SHA" "$SLANG_DIR"
+YOSYS_ID=$(yosys -V)
+YOSYS_SHORT=$(cut -d' ' -f1-2 <<< "$YOSYS_ID")
+# the one test a built plugin must pass. The help text is grepped: `yosys -p 'help read_slang'` exits 0 with no plugin loaded
+# (grep without -q: with pipefail, -q would close the pipe early and yosys' SIGPIPE would count as a failed load)
+slang_loads() { yosys -m "$1" -p 'help read_slang' 2>&1 | grep '^ *read_slang \[' >/dev/null; }
+if [ -s "$SLANG_SO" ] && [ "$(cat "$SLANG_STAMP" 2>/dev/null)" = "$YOSYS_ID" ]; then
+    skip "slang.so (built for $YOSYS_SHORT)"
+elif [ -s "$SLANG_SO" ] && [ ! -e "$SLANG_STAMP" ] && slang_loads "$SLANG_SO"; then
+    # a slang.so from before the stamp existed, or built by hand (section 3.6 of the manual): it passes the
+    # same load test a fresh build must pass, so it is stamped for this yosys instead of built again
+    echo "$YOSYS_ID" > "$SLANG_STAMP"
+    ok "slang.so already loads in $YOSYS_SHORT (read_slang); stamped, not rebuilt"
+else
+    # cmake runs INSIDE the checkout (cmake -B build.new .): slang's cmake asks `git remote get-url origin` in
+    # the current directory for the GitHub prefix of its boost download; from any other directory the download
+    # is the bare 'MikePopoloski/regex.git' and the configure stops.
+    # Not fatal: the five steps above are complete without it; dewfpga check shows the row MISSING and
+    # dewfpga install retries only this step (the clone is stamped, the build is not).
+    if ( cd "$SLANG_DIR" && cmake -B build.new . -DCMAKE_BUILD_TYPE=Release -DBUILD_AS_PLUGIN=ON \
+                                  -DYOSYS_CONFIG="$BREW_PREFIX/bin/yosys-config" \
+         && make -C build.new -j"$JOBS" ) \
+       && slang_loads "$SLANG_NEW/slang.so"; then
+        rm -rf "$SLANG_DIR/build" && mv "$SLANG_NEW" "$SLANG_DIR/build"
+        echo "$YOSYS_ID" > "$SLANG_STAMP"
+        ok "slang.so built, loads in $YOSYS_SHORT (read_slang)"
+    elif [ -s "$SLANG_SO" ] && slang_loads "$SLANG_SO"; then
+        printf '    %s✗%s yosys-slang did not rebuild for %s (the compiler lines above; log: %s). The slang.so built for %s is kept\n      at %s and dewfpga uses it as before; run  dewfpga install  again to retry only this step.\n' \
+            "$R" "$N" "$YOSYS_SHORT" "$LOG" "$(cut -d' ' -f1-2 "$SLANG_STAMP" 2>/dev/null || echo 'an earlier yosys')" "$SLANG_SO"
+    else
+        printf '    %s✗%s yosys-slang did not build (the compiler lines above; log: %s). The rest of the chain is complete.\n      dewfpga check will show yosys-slang MISSING; run  dewfpga install  again to retry only this step.\n' "$R" "$N" "$LOG"
+        [ ! -s "$SLANG_SO" ] || echo "      (the slang.so at $SLANG_SO does not load in $YOSYS_SHORT, so dewfpga check lists it but the reader will not run until a rebuild succeeds)"
+    fi
+fi
+
+# ---------------------------------------------------------------- 7. verify
+step 7 "Verify"
 CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/dewfpga"
 echo "$FPGA_HOME" > "$(dirname "$CLI")/../.fpga_home"       # the CLI reads this, so FPGA_HOME=/elsewhere sticks
 BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: user-writable, on PATH

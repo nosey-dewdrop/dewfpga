@@ -18,7 +18,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"TechArticle","headline":"How do you run CS223 labs on a Mac without Vivado?",
  "url":"https://nosey-dewdrop.github.io/dewfpga/docs/","author":{"@type":"Person","name":"Damla Su Bilge"},
- "datePublished":"2026-09-19","dateModified":"2026-09-24","inLanguage":"en","proficiencyLevel":"Beginner",
+ "datePublished":"2026-09-19","dateModified":"2026-09-26","inLanguage":"en","proficiencyLevel":"Beginner",
  "about":["Basys3","Vivado alternative macOS","nextpnr-xilinx","Yosys","prjxray","openFPGALoader","SystemVerilog"]}
 </script>
 </head>
@@ -53,8 +53,8 @@
 </tr>
 <tr>
 <td>time after section 1</td>
-<td>one command; 3 min 37 s to 4 min 17 s on the tested machine, 1.4 GB downloaded</td>
-<td>5 steps; about 5 minutes of compiling plus 1.76 GB of full clones, call it 20 minutes</td>
+<td>one command; 3 min 37 s to 4 min 17 s on the tested machine plus about 4 minutes for yosys-slang, 1.4 GB downloaded</td>
+<td>6 steps; about 8 minutes of compiling plus 1.76 GB of full clones, call it 25 minutes</td>
 </tr>
 <tr>
 <td>you get</td>
@@ -63,8 +63,8 @@
 </tr>
 <tr>
 <td>tool versions</td>
-<td>two pinned commits, Homebrew versions in section 9</td>
-<td>the same two commits, typed by you</td>
+<td>three pinned commits, Homebrew versions in section 9</td>
+<td>the same three commits, typed by you</td>
 </tr>
 </tbody>
 </table>
@@ -105,7 +105,7 @@
 <hr />
 <h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
 <pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
-<p>3 min 37 s to 4 min 17 s over three runs on the tested machine, 1.4 GB downloaded; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx and prjxray into <code>~/fpga</code> at the two commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
+<p>3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of compiling), 1.4 GB downloaded; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx, prjxray and the yosys-slang plugin (section 3.6) into <code>~/fpga</code> at the three commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
 <pre><code>all good.
 
 Total: 217 s. Log: /Users/you/fpga/install.log
@@ -118,6 +118,7 @@ bash install.sh</code></pre>
 <pre class="bash"><code>dewfpga check</code></pre>
 <pre><code>dewfpga check  (FPGA_HOME=/Users/you/fpga)
   ✓ yosys            /opt/homebrew/bin/yosys
+  ✓ yosys-slang      /Users/you/fpga/yosys-slang/build/slang.so
   ✓ iverilog         /opt/homebrew/bin/iverilog
   ✓ openFPGALoader   /opt/homebrew/bin/openFPGALoader
   ✓ nextpnr-xilinx   /Users/you/fpga/nextpnr-xilinx/build/nextpnr-xilinx
@@ -177,12 +178,12 @@ dewfpga --version</code></pre>
 <p>These are the commands the installer runs, at the same pinned commits. Vivado does five jobs for a lab; six free tools do them here, two of them for the bitstream:</p>
 <pre><code>your_design.sv
   |-&gt; Icarus Verilog   -&gt; simulation
-  |-&gt; Yosys            -&gt; synthesis
+  |-&gt; Yosys            -&gt; synthesis (reads SystemVerilog through the yosys-slang plugin)
   |-&gt; nextpnr-xilinx   -&gt; place and route
   |-&gt; fasm2frames      -&gt; configuration frames
   |-&gt; xc7frames2bit    -&gt; your_design.bit
   `-&gt; openFPGALoader   -&gt; the board, over USB</code></pre>
-<p>Three come from Homebrew, two you compile, and fasm2frames is a Python script inside the prjxray checkout. nextpnr also needs a chip database, generated once by another Python script. Everything lands in <code>~/fpga</code>: 1.4 GB with the installer's shallow clones, 1.76 GB with the full clones below. The Makefile in section 4 expects exactly this layout: <code>~/fpga/venv</code>, <code>~/fpga/nextpnr-xilinx/build</code>, <code>~/fpga/chipdb/xc7a35t.bin</code>, <code>~/fpga/prjxray</code>.</p>
+<p>Three come from Homebrew, three you compile (nextpnr-xilinx, prjxray, and the yosys-slang plugin that Yosys loads to read SystemVerilog), and fasm2frames is a Python script inside the prjxray checkout. nextpnr also needs a chip database, generated once by another Python script. Everything lands in <code>~/fpga</code>: 1.4 GB with the installer's shallow clones, 1.76 GB with the full clones below. The Makefile in section 4 expects exactly this layout: <code>~/fpga/venv</code>, <code>~/fpga/nextpnr-xilinx/build</code>, <code>~/fpga/chipdb/xc7a35t.bin</code>, <code>~/fpga/prjxray</code>, <code>~/fpga/yosys-slang/build/slang.so</code>.</p>
 <h3 id="31-homebrew-packages">3.1 Homebrew packages</h3>
 <pre class="bash"><code>brew install yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14</code></pre>
 <p>The first three are tools from the diagram; the rest are what the two builds below need. A few hundred MB. Check:</p>
@@ -239,7 +240,24 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DP
 cmake --build build --target xc7frames2bit -j3</code></pre>
 <p><code>--recursive</code> is required (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/yaml-cpp-not-built/">yaml-cpp-not-built</a>). <code>-DCMAKE_POLICY_VERSION_MINIMUM=3.5</code> is required (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/">cmake-policy-version-minimum</a>). prjxray's own README says to install Vivado 2017.2; that is for mapping a new chip, and ours is mapped. Ignore it. Check:</p>
 <pre class="bash"><code>ls ~/fpga/prjxray/build/tools/xc7frames2bit ~/fpga/prjxray/utils/fasm2frames.py</code></pre>
-<p>Both paths print back. The full check is <code>make check</code> in the next section, one line per tool.</p>
+<p>Both paths print back. The full check is <code>make check</code> in section 4, one line per tool.</p>
+<h3 id="36-yosys-slang">3.6 yosys-slang</h3>
+<p>The SystemVerilog reader. Homebrew's Yosys 0.69 has no <code>read_slang</code> (<code>yosys -p 'help read_slang'</code> prints <code>No such command or cell type: read_slang</code>), so the plugin is compiled against it. About 4 minutes: the clone with its slang submodule, then 2 min 53 s of compiling with <code>-j2</code>.</p>
+<pre class="bash"><code>cd ~/fpga
+git clone --recursive https://github.com/povik/yosys-slang.git
+cd yosys-slang
+git checkout 96767863835f3c862cea9c63052b2ce9d0b55884
+git submodule update --init --recursive
+cmake -B build . -DCMAKE_BUILD_TYPE=Release -DBUILD_AS_PLUGIN=ON \
+  -DYOSYS_CONFIG=&quot;$(brew --prefix)/bin/yosys-config&quot;
+make -C build -j2</code></pre>
+<p>Run <code>cmake</code> from inside the checkout, as written (<code>.</code> is the source): slang's own cmake asks <code>git remote get-url origin</code> in the current directory for the GitHub address of a header it downloads, and from any other directory the configure stops with <code>Failed to clone repository: 'MikePopoloski/regex.git'</code>. The last lines of the build:</p>
+<pre><code>[100%] Linking CXX shared library ../slang.so
+[100%] Built target yosys-slang</code></pre>
+<p>Check that Yosys loads it:</p>
+<pre class="bash"><code>yosys -m ~/fpga/yosys-slang/build/slang.so -p &#39;help read_slang&#39; | grep &#39;read_slang \[&#39;
+#     read_slang [options] [filename]</code></pre>
+<p>The plugin is tied to the Yosys it was built against: after <code>brew upgrade yosys</code>, build it again (<code>rm -rf build</code>, then the <code>cmake</code> and <code>make</code> lines). The installer does this by itself: it keeps the <code>yosys -V</code> line it built for in <code>build/.dewfpga-yosys</code>, compiles the new plugin into <code>build.new/</code> and replaces <code>build/</code> only once Yosys loads the new <code>slang.so</code>, so a build that fails (no disk, no network) leaves the plugin you have in place. A <code>slang.so</code> built by hand with the lines above has no stamp; the installer loads it with <code>yosys -m</code>, and if <code>read_slang</code> is there it writes the stamp instead of building again. <code>dewfpga check</code> loads the plugin the same way each time it runs: a plugin that is there but no longer loads prints <code>does not load in Yosys 0.69+post (built for another yosys? dewfpga install rebuilds it)</code>, a missing one prints <code>MISSING (the SystemVerilog reader: dewfpga install builds it, about 4 min)</code>, and either way the check ends with <code>something is missing -&gt; dewfpga install</code> and exit 1. Without the plugin <code>make bit</code> still runs, on Yosys' own reader alone.</p>
 <hr />
 <h2 id="4-what-is-in-the-project-folder">4. What is in the project folder?</h2>
 <p>A project is one folder. Download the files, do not type them:</p>
@@ -349,10 +367,11 @@ XDC  := Basys3_Master.xdc</code></pre>
 </ul>
 <hr />
 <h2 id="9-which-versions-were-tested">9. Which versions were tested?</h2>
-<p>The installer pins nextpnr-xilinx and prjxray to these commits; section 3 checks out the same ones. Homebrew packages cannot be pinned; the versions below are what was tested.</p>
+<p>The installer pins nextpnr-xilinx, prjxray and yosys-slang to these commits; section 3 checks out the same ones. Homebrew packages cannot be pinned; the versions below are what was tested.</p>
 <pre><code>Yosys              0.69+post (git 143eb14f)
 nextpnr-xilinx     0.9.6, openXC7 commit 3fd7878
 prjxray            commit c9f02d8; prjxray-db 0.9.1-30-g1768fb3 (artix7)
+yosys-slang        commit 9676786 (slang 11.0.0+e222e7d), built against the Yosys above
 openFPGALoader     1.1.1
 Icarus Verilog     13.0 (stable)
 Python             3.14 (Homebrew), venv under ~/fpga

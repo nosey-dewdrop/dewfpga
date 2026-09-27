@@ -1,46 +1,105 @@
 #!/usr/bin/env python3
 """Compare the design's ports with the XDC; fail with a readable message BEFORE place-and-route.
 Usage: check_xdc.py <top.json> <top.xdc>
-       check_xdc.py --fix-ports <file.sv>...   (before synthesis: the course's SevenSegmentDisplay port line)"""
+       check_xdc.py --fix-ports <file.sv>...   (before the tools run: the two lines Vivado accepts and yosys refuses
+                                                are written into the student's file, and each changed line is printed)"""
 import json, re, sys
 
-def fix_ports(files):
-    """The course's SevenSegmentDisplay.sv declares `output [6:0] seg, logic dp,`: per the standard dp
-    inherits `output` from the previous port. Vivado and Icarus accept that, Yosys does not (it reports
-    "Module port `dp' is neither input nor output"). Every CS223 lab from lab 5 on carries this file, so the
-    direction is written in for the student, and the changed line is printed. Nothing else is touched."""
+_MODULE = re.compile(r"\bmodule\s+([A-Za-z_]\w*)(.*?)\bendmodule\b", re.S)
+_ITEM_START = re.compile(r"(?:^|;|\)|\b(?:begin|end|else|generate|endgenerate)\b|\b(?:begin|end)\s*:\s*[A-Za-z_]\w*|`\w+[^\n]*\n)\s*$")
+
+def _instances(other, body):
+    """Where module `other` is instantiated in a module body (comments and strings blanked): `inv u_inv (`,
+    `inv #(.N(4)) u_inv (`, an instance array `inv u_inv [3:0] (`, and the unnamed `inv (`. group(1) is the
+    parameter block, group(2) the instance name (None when there is none). Not `$display(` next to a module
+    named display. An instantiation is a module item, so an unnamed one has to start after `;`, `begin`,
+    `end`, `)` (a generate if/for, an (* attribute *)), `else`, `generate`, a `begin : label` or a
+    preprocessor line; a function that carries a module's name (IEEE 1800-2017 3.13: the two name spaces do
+    not clash) is declared after its return type (`function logic [3:0] inv(`) and called after `=`, `(`,
+    `,` or an operator (`= inv(sw)`), and nothing inside a function or task is an instance, so their bodies
+    are blanked for this search (offsets kept)."""
+    ibody = re.sub(r"\b(function|task)\b.*?\bend\1\b", lambda t: re.sub(r"[^\n]", " ", t.group(0)), body, flags=re.S)
+    for m in re.finditer(r"(?<![\w.$])" + re.escape(other) + r"\b(\s*#\s*\([^;]*?\))?\s*([A-Za-z_]\w*)?\s*(\[[^\]]*\]\s*)?\(", ibody):
+        if not m.group(2) and not _ITEM_START.search(ibody[:m.start()]): continue
+        yield m
+
+def _port_list(head):
+    """(start, end) of the text inside the port list's parentheses of a module head (the text up to the first
+    `;`), or None. The port list is the last (...) of the head: a #(...) parameter block comes before it."""
+    end = head.rstrip().rfind(")")
+    if end < 0 or head[end + 1:].strip(): return None
+    depth = 0
+    for i in range(end, -1, -1):
+        if head[i] == ")": depth += 1
+        elif head[i] == "(":
+            depth -= 1
+            if depth == 0: return i + 1, end
+    return None
+
+def fix_source(files):
+    """Two things every CS223 lab may carry, that Vivado accepts and the standard and yosys refuse, are written
+    into the student's file, and each changed line is printed as a note (nothing else in the file changes: comments,
+    strings and the testbench stay, a CRLF file keeps its CRLF):
+      - the course's SevenSegmentDisplay.sv declares `output [6:0] seg, logic dp,`: per the standard dp inherits
+        `output` from the previous port. Vivado and Icarus accept that, yosys does not ("Module port `dp' is
+        neither input nor output"), and a range-only item (`output logic [6:0] seg, [3:0] an`) written in an
+        always block is a net to Icarus ("not a valid l-value"). The direction (and type) is written in.
+      - an instance without a name (`inv(sw[0], led[0]);`): Vivado builds it, yosys and Icarus stop. A name is
+        written in: u_<module>, then u_<module>_2 ... when that name is already in the file. A testbench (a
+        module without ports) is left alone: yosys never reads it.
+    The text is searched with comments and string literals blanked out (same length, same offsets), so a comment
+    in the port list (one with a `;` in it) or a module name inside a $display string is not code."""
     # an item that starts with a type (`logic dp`) or with a range (`[3:0] an`) and no direction of its own
-    item = re.compile(r"(,\s*\n?\s*)((?:(?:logic|wire|reg|bit)\b\s*(?:\[[^\]]*\]\s*)?|\[[^\]]*\]\s*)[A-Za-z_]\w*)")
+    item = re.compile(r"(,\s*)((?:(?:logic|wire|reg|bit)\b\s*(?:\[[^\]]*\]\s*)?|\[[^\]]*\]\s*)[A-Za-z_]\w*)")
+    srcs, views = {}, {}
     for f in files:
-        try: src = open(f, encoding="utf-8", errors="surrogateescape").read()
+        try: srcs[f] = open(f, encoding="utf-8", errors="surrogateescape", newline="").read()   # CRLF kept as is
         except OSError: continue
-        out, changed = [], []
-        pos = 0
-        for m in re.finditer(r"\bmodule\b[^;]*?\(([^;]*?)\)\s*;", src, re.S):   # each port list
-            plist = m.group(1); new = plist
-            def repl(mm):
-                # the direction (and type) in force is the last input/output/inout before this position
-                before = plist[:mm.start()]
-                dirs = list(re.finditer(r"\b(input|output|inout)\b(\s*(logic|wire|reg|bit)\b)?", before))
-                if not dirs: return mm.group(0)
+        views[f] = _blank(srcs[f])
+    modules = set()
+    for v in views.values(): modules.update(m.group(1) for m in _MODULE.finditer(v))
+    for f, src in srcs.items():
+        view = views[f]; edits = {}          # offset into src -> (text to insert there, what the note says)
+        for m in _MODULE.finditer(view):
+            name, body, off = m.group(1), m.group(2), m.start(2)
+            head = body.split(";", 1)[0]
+            pl = _port_list(head)
+            if not pl or not head[pl[0]:pl[1]].strip(): continue      # no ports: a testbench
+            plist = head[pl[0]:pl[1]]
+            for mm in item.finditer(plist):
+                # the direction (and type) in force is the last input/output/inout before this item
+                dirs = list(re.finditer(r"\b(input|output|inout)\b(\s*(logic|wire|reg|bit)\b)?", plist[:mm.start()]))
+                if not dirs: continue
                 d = dirs[-1]; typ = (d.group(3) + " ") if d.group(3) and mm.group(2).startswith("[") else ""
-                return mm.group(1) + d.group(1) + " " + typ + mm.group(2)
-            new = item.sub(repl, plist)
-            if new != plist:
-                out.append(src[pos:m.start(1)]); out.append(new); pos = m.end(1)
-                changed.append(plist)
-        if changed:
-            out.append(src[pos:]); text = "".join(out)
-            open(f, "w", encoding="utf-8", errors="surrogateescape").write(text)
-            for i, (a, b) in enumerate(zip(src.splitlines(), text.splitlines()), 1):
-                if a != b: print(f"note: {f}:{i}: wrote the port direction in:  {b.strip()}   (Yosys needs it; Vivado accepts both)")
+                edits[off + pl[0] + mm.start(2)] = (d.group(1) + " " + typ, "wrote the port direction in")
+            for other in modules:
+                if other == name: continue
+                # `inv (`, `inv #(.N(4)) (`: an instance with no name between the module name and the port list
+                for im in _instances(other, body):
+                    if im.group(2): continue
+                    n, new = 1, "u_" + other
+                    while re.search(r"(?<![\w$])" + re.escape(new) + r"\b", view) or new in (e[0].strip() for e in edits.values()):
+                        n += 1; new = f"u_{other}_{n}"
+                    edits[off + (im.end(1) if im.group(1) else im.start() + len(other))] = (" " + new, "named the instance")
+        if not edits: continue
+        text, notes = src, {}
+        for at in sorted(edits, reverse=True):
+            text = text[:at] + edits[at][0] + text[at:]
+            notes[src.count("\n", 0, at) + 1] = edits[at][1]
+        open(f, "w", encoding="utf-8", errors="surrogateescape", newline="").write(text)
+        for i, (a, b) in enumerate(zip(src.splitlines(), text.splitlines()), 1):
+            if a != b: print(f"note: {f}:{i}: {notes.get(i, 'changed')}:  {b.strip()}   (the standard and Yosys need it; Vivado accepts both)")
     return 0
 
-def _strip_comments(src):
-    """Comments blanked out but every newline kept, so offsets still map to line numbers."""
-    def blank(m): return re.sub(r"[^\n]", " ", m.group(0))
-    src = re.sub(r"/\*.*?\*/", blank, src, flags=re.S)
-    return re.sub(r"//[^\n]*", blank, src)
+def _blank(src):
+    """Comments and the text of string literals blanked out (the quotes stay), every newline kept, so offsets
+    and line numbers still map to the file: a `;` in a comment is not a statement's end, and a module name
+    inside a $display string is not an instance."""
+    def blank(m):
+        t = m.group(0)
+        if t[0] == '"': return '"' + re.sub(r"[^\n]", " ", t[1:-1]) + '"'
+        return re.sub(r"[^\n]", " ", t)
+    return re.sub(r'"(?:[^"\\\n]|\\.)*"|/\*.*?\*/|//[^\n]*', blank, src, flags=re.S)
 
 def _synth_view(src):
     """The text as the synthesis preprocessor hands it on: yosys' read_verilog defines SYNTHESIS, as Vivado does
@@ -159,7 +218,7 @@ def scan(files, want=None, xdc_names=()):
     for f in files:
         try: raw = open(f, encoding="utf-8", errors="replace").read()
         except OSError: continue
-        src = _strip_comments(raw)
+        src = _blank(raw)               # comments and string texts blanked, same offsets
         typedefs = [n for _, _, n in _typedefs(src)]
         synth = _synth_view(src)        # same length as src: a module's span is the same in both
         for m in re.finditer(r"\bmodule\s+([A-Za-z_]\w*)(.*?)\bendmodule\b", src, re.S):
@@ -188,17 +247,21 @@ def scan(files, want=None, xdc_names=()):
     for f in files:
         try: raw = open(f, encoding="utf-8", errors="replace").read()
         except OSError: continue
+        # only the header Vivado writes on a funcsim netlist (write_verilog -mode funcsim, under .sim/ and .runs/)
+        # names the file a leftover: its cells (IBUF, OBUF, the clock buffers) are the pins' own, and it is not the
+        # student's design. The course's "ready modules" come in netlist form too ((* keep_hierarchy *), \<const0>,
+        # GND, LUT2 ...) with no such header, and yosys reads and builds them (probe 57), so they pass.
         head = raw[:2000]
-        if ("\\<const0>" in raw or "\\<const1>" in raw or "(* keep_hierarchy" in raw
-                or "NotValidForBitStream" in head or "write_verilog -mode funcsim" in head
+        if ("NotValidForBitStream" in head or "write_verilog -mode funcsim" in head
                 or "This verilog netlist is a functional simulation" in head):
             problems.append(f"{f} is a netlist Vivado wrote after synthesis, not source code (its header says so, and Yosys cannot read it). Delete it from this folder and keep your own .sv files; Vivado writes these under .sim/ and .runs/.")
     for n, d in mods.items():
         inst[n] = set()
         for other in names:
             if other == n: continue
-            # `inv u_inv (`, `inv #(.N(4)) u_inv (`, and an instance array `inv u_inv [3:0] (`
-            for m in re.finditer(r"(?<![\w.])" + re.escape(other) + r"\s*(#\s*\([^;]*?\))?\s*([A-Za-z_]\w*)?\s*(\[[^\]]*\]\s*)?\(", d["body"]):
+            # every instance of `other` (see _instances). An instance without a name is named by --fix-ports
+            # before this scan runs; one that is still here is reported.
+            for m in _instances(other, d["body"]):
                 inst[n].add(other)
                 if not m.group(2) and not d["tb"]:
                     line = d["line"] + d["body"].count("\n", 0, m.start())
@@ -240,7 +303,7 @@ def scan(files, want=None, xdc_names=()):
     return 0
 
 if len(sys.argv) >= 2 and sys.argv[1] == "--fix-ports":
-    sys.exit(fix_ports(sys.argv[2:]))
+    sys.exit(fix_source(sys.argv[2:]))
 if len(sys.argv) >= 2 and sys.argv[1] == "--scan":
     # --scan [--top NAME] [--xdc name,name] files...
     args = sys.argv[2:]; want = None; xn = ()

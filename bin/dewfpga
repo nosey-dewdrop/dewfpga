@@ -6,7 +6,7 @@
 #                                    work on the .sv files in the current folder. top = the module nothing else
 #                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
-#   dewfpga uninstall               remove what install built in ~/fpga (nextpnr-xilinx, prjxray, chipdb, venv, log),
+#   dewfpga uninstall               remove what install built in ~/fpga (nextpnr-xilinx, yosys-slang, prjxray, chipdb, venv, log),
 #                                    the CLI in ~/.dewfpga and its link in Homebrew's bin. Your files and brew packages stay
 #   dewfpga --version
 # The toolchain lives in $FPGA_HOME (default ~/fpga). Build outputs land next to the .sv; <top>.log has the full place-and-route log.
@@ -36,6 +36,12 @@ cmd_check() {
     }
     echo "dewfpga check  (FPGA_HOME=$FPGA_HOME)"
     row yosys           yosys                                            c
+    # the SystemVerilog reader plugin, compiled against the yosys above: after `brew upgrade yosys` it no longer loads.
+    # grep without -q: with pipefail, -q closes the pipe early and yosys' SIGPIPE would read as a failed load
+    local so="$FPGA_HOME/yosys-slang/build/slang.so"
+    if [ ! -s "$so" ]; then printf '  \033[31m✗\033[0m %-16s MISSING (the SystemVerilog reader: dewfpga install builds it, about 4 min)\n' yosys-slang; fail=1
+    elif yosys -m "$so" -p 'help read_slang' 2>&1 | grep '^ *read_slang \[' >/dev/null; then printf '  \033[32m✓\033[0m %-16s %s\n' yosys-slang "$so"
+    else printf '  \033[31m✗\033[0m %-16s %s does not load in %s (built for another yosys? dewfpga install rebuilds it)\n' yosys-slang "$so" "$(yosys -V 2>/dev/null | cut -d' ' -f1-2)"; fail=1; fi
     row iverilog        iverilog                                         c
     row openFPGALoader  openFPGALoader                                   c
     row nextpnr-xilinx  "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" x
@@ -66,8 +72,8 @@ cmd_new() {
 
 cmd_uninstall() {
     local link; link="$(brew --prefix 2>/dev/null || echo /opt/homebrew)/bin/dewfpga"
-    local built=(nextpnr-xilinx prjxray chipdb venv install.log) gone=() e
-    case "$FPGA_HOME" in "$HOME"|/|"") die "FPGA_HOME is $FPGA_HOME; refusing to delete that. Remove the five entries by hand: ${built[*]}" ;; esac
+    local built=(nextpnr-xilinx yosys-slang prjxray chipdb venv install.log) gone=() e
+    case "$FPGA_HOME" in "$HOME"|/|"") die "FPGA_HOME is $FPGA_HOME; refusing to delete that. Remove the six entries by hand: ${built[*]}" ;; esac
     # only what install.sh put there: anything else in FPGA_HOME (your own projects) is left alone
     for e in "${built[@]}"; do [ -e "$FPGA_HOME/$e" ] && gone+=("$FPGA_HOME/$e"); done
     [ "$HERE" = "$HOME/.dewfpga" ] && gone+=("$HOME/.dewfpga")      # a git clone of the CLI is yours; it stays
@@ -100,12 +106,17 @@ cmd_build() {  # <target> [top]
     # the tools read the files in this order and the messages name them in it, so it is fixed here. No spaces in names (checked above)
     # shellcheck disable=SC2207
     files=($(printf '%s\n' "${files[@]}" | LC_ALL=C sort))
+    local xn="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    # two lines Vivado accepts and yosys and iverilog refuse are written into the student's file first, and each
+    # changed line is printed as a note: the course's seven-segment port line (`output [6:0] seg, logic dp`) gets
+    # its direction, an instance without a name (`inv(sw[0], led[0]);`) gets one (u_inv). Before sim too: the
+    # same folder must pass or fail sim by its code, not by whether a bit ran first. Nothing else is touched.
+    [ "$target" = clean ] || "$py" "$HERE/templates/check_xdc.py" --fix-ports "${files[@]}"
     # what is what: the scanner reads the modules. The top is the design module nothing else instantiates
     # (or the one named on the command line, by module or by file); a testbench is a module without ports;
     # file names are free, and never decide the top. One ERROR= line means it could not decide; PROBLEM=
     # lines are the student's mistakes it saw (a $finish in a design, a start value meant as a wire, a
-    # module defined twice, an instance without a name).
-    local xn="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    # module defined twice, a netlist Vivado wrote left in the folder).
     for f in *.xdc; do [ -f "$f" ] && xn="$xn,${f%.xdc}"; done
     local scan line design="" tb="" auto=0 problems=0 why=""
     scan=$("$py" "$HERE/templates/check_xdc.py" --scan ${top:+--top "$top"} --xdc "${xn#,}" "${files[@]}") || true

@@ -107,11 +107,11 @@ check "unused xdc pins are ignored" "mkdir -p '$T/xa' && cp '$ROOT/templates/bli
 check "bit blink.sv works like bit blink" "cd '$T/w' && '$CLI' bit blink.sv"
 check "help has no comment marks" "! '$CLI' --help | grep -q '^#'"
 check "no create_clock -> checked at 100 MHz" "mkdir -p '$T/nc' && cp '$ROOT/templates/blink.sv' '$T/nc/' && grep -v create_clock '$ROOT/templates/blink.xdc' > '$T/nc/blink.xdc' && cd '$T/nc' && '$CLI' bit >out 2>&1 && grep -q 'PASS at 100.00 MHz' out && grep -q 'no create_clock' out"
-check ".v file with SystemVerilog inside builds" "mkdir -p '$T/vv' && cp '$ROOT/templates/blink.sv' '$T/vv/blink.v' && cp '$ROOT/templates/blink.xdc' '$T/vv/' && cd '$T/vv' && '$CLI' bit >out 2>&1 && [ -s blink.bit ]"
+check ".v file with SystemVerilog inside -> stops naming the .v line (a .v is Verilog-2005, as in Vivado)" "mkdir -p '$T/vv' && cp '$ROOT/templates/blink.sv' '$T/vv/blink.v' && cp '$ROOT/templates/blink.xdc' '$T/vv/' && cd '$T/vv' && ! '$CLI' bit >out 2>&1 && grep -qE 'ERROR: blink.v:[0-9]+' out && [ ! -e blink.bit ]"
 check "module name != file name -> builds, output named after the module" "mkdir -p '$T/mn' && sed 's/module blink/module top/' '$ROOT/templates/blink.sv' > '$T/mn/lab4.sv' && cp '$ROOT/templates/blink.xdc' '$T/mn/lab4.xdc' && cd '$T/mn' && '$CLI' bit >out 2>&1 && [ -s top.bit ]"
 check "course SevSeg port line fixed in place, build goes through" "mkdir -p '$T/ss' && printf 'module ss(input clk, output [6:0]seg, logic dp, output [3:0] an);\\n assign seg = 7'\\''h55; assign dp = 1; assign an = 4'\\''b1110;\\nendmodule\\n' > '$T/ss/ss.sv' && grep -E 'seg|an\\[|dp|clk' '$ROOT/templates/Basys3_Master.xdc' | sed 's/^#//' > '$T/ss/ss.xdc' && cd '$T/ss' && '$CLI' bit >out 2>&1 && grep -q 'wrote the port direction' out && grep -q 'output logic dp' ss.sv && [ -s ss.bit ]"
 check "vivado funcsim netlist -> named, not fed to yosys" "mkdir -p '$T/nl' && cp '$ROOT/templates/blink.sv' '$ROOT/templates/blink.xdc' '$T/nl/' && printf '// Tool Version: Vivado v.2021.2\\n// Purpose : This verilog netlist is a functional simulation representation of the design\\n(* NotValidForBitStream *)\\nmodule leftover(input a, output b); assign b = a; endmodule\\n' > '$T/nl/leftover_func_impl.v' && cd '$T/nl' && ! '$CLI' bit >out 2>&1 && grep -q 'netlist Vivado wrote after synthesis' out"
-check "unnamed instance -> line and fix" "mkdir -p '$T/ui' && printf 'module sub(input a, output b); assign b = a; endmodule\\nmodule ui(input logic [1:0] sw, output logic [1:0] led);\\n sub(sw[0], led[0]);\\n assign led[1] = sw[1];\\nendmodule\\n' > '$T/ui/ui.sv' && cp '$ROOT/templates/blink.xdc' '$T/ui/ui.xdc' && cd '$T/ui' && ! '$CLI' bit >out 2>&1 && grep -q 'ui.sv:3: .sub(. is an instance without a name' out && grep -qF 'Write:  sub u_sub(' out"
+check "unnamed instance -> named in place with a note, build goes through" "mkdir -p '$T/ui' && printf 'module sub(input a, output b); assign b = a; endmodule\\nmodule ui(input logic [1:0] sw, output logic [1:0] led);\\n sub(sw[0], led[0]);\\n assign led[1] = sw[1];\\nendmodule\\n' > '$T/ui/ui.sv' && cp '$ROOT/templates/blink.xdc' '$T/ui/ui.xdc' && cd '$T/ui' && '$CLI' bit >out 2>&1 && grep -q 'ui.sv:3: named the instance:  sub u_sub(' out && grep -q 'sub u_sub(sw\\[0\\], led\\[0\\]);' ui.sv && [ -s ui.bit ]"
 check "uninstall refuses FPGA_HOME=HOME" "! FPGA_HOME=\"\$HOME\" '$CLI' uninstall >out 2>&1 && grep -q 'refusing' out && [ -d \"\$HOME/fpga\" ]"
 check "corrupt .fasm -> error, no .frames" "cd '$T/w' && '$CLI' clean && '$CLI' bit >/dev/null && sleep 1.1 && echo garbage > blink.fasm && ! '$CLI' bit >out 2>&1 && grep -q 'no FASM features' out"
 check "port missing in xdc"   "cd '$T/w' && sed '/led\[15\]/d' blink.xdc > bad.xdc && cp blink.sv b.sv && mkdir x && mv b.sv x/blink.sv && cp bad.xdc x/blink.xdc && cd x && { '$CLI' bit || true; } 2>&1 | grep -q 'led\[15\]'"
@@ -208,19 +208,19 @@ open(p, "w").write(s.replace(old, old + " sub(/:[0-9]+/,\":1\",at);", 1))' "$T/s
 st_latchtext() {
     svcopy && python3 -c '
 import sys
-p = sys.argv[1]; s = open(p).read(); old = "Give \" sig \" a default value at the top of the block."
-assert old in s, "the latch advice changed; update this check"
-open(p, "w").write(s.replace(old, "something went wrong.", 1))' "$T/svr/templates/Makefile" \
-    && svrun 01_latch_comb && grep -qF "expect.tsv quotes 'Give q a default value at the top of the block.', no stage printed it" "$T/svr/out"
+p = sys.argv[1]; s = open(p).read(); old = "Vivado builds it too, with the same warning"
+assert old in s, "the latch warning changed; update this check"
+open(p, "w").write(s.replace(old, "something went wrong", 1))' "$T/svr/templates/Makefile" \
+    && svrun 01_latch_comb && grep -qF "expect.tsv quotes 'warning: design.sv:3: latch inferred for q" "$T/svr/out" && grep -q 'no stage printed it' "$T/svr/out"
 }
 # the unnamed-instance fix replaced: 02's today column quotes it in "...", so the run has to miss the quote
 st_fixtext() {
     svcopy && python3 -c '
 import sys
-p = sys.argv[1]; s = open(p).read(); old = "Write:  {other} u_{other}("
-assert old in s, "the unnamed-instance fix changed; update this check"
-open(p, "w").write(s.replace(old, "Fix it.", 1))' "$T/svr/templates/check_xdc.py" \
-    && svrun 02_unnamed_inst && grep -qF "expect.tsv quotes 'Write:  inv u_inv(', no stage printed it" "$T/svr/out"
+p = sys.argv[1]; s = open(p).read(); old = "named the instance"
+assert old in s, "the unnamed-instance note changed; update this check"
+open(p, "w").write(s.replace(old, "did something:", 1))' "$T/svr/templates/check_xdc.py" \
+    && svrun 02_unnamed_inst && grep -qF "expect.tsv quotes 'note: design.sv:5: named the instance:" "$T/svr/out" && grep -q 'no stage printed it' "$T/svr/out"
 }
 # the CLI made to skip .v files: 74's design.v:3 then never prints, and only the today column's file:line says so
 st_vfile() {
@@ -277,7 +277,7 @@ st_column() {
 st_badrow() {
     svcopy && python3 -c '
 import sys
-p = sys.argv[1]; s = open(p).read(); old = "(#\\s*\\([^;]*?\\))?"
+p = sys.argv[1]; s = open(p).read(); old = "(\\s*#\\s*\\([^;]*?\\))?"
 assert old in s, "the top finder changed; update this check"
 open(p, "w").write(s.replace(old, "(NEVERMATCH)?", 1))' "$T/svr/templates/check_xdc.py" \
     && { rc=0; env -u GITHUB_STEP_SUMMARY SV_OUT="$T/svr/rows" "$T/svr/test/sv/run.sh" 14_params > "$T/svr/out" 2>&1 || rc=$?; } \
@@ -353,7 +353,7 @@ st_verdicts() {
 # the score line has to be the one the rows make: 07 passes all four, 01 is a supported gap
 st_score() {
     local r="$T/rows" l="$T/score.log" good='synthesis 1/2, all four stages 1/2, Vivado-supported probes passing all four stages 1/2, known gaps 1'
-    printf '07_enum_packed_array\tok\tpass\tpass\tpass\tpass\t\n01_latch_comb\tgap\tpass\tfail\t-\tfail\t\n' > "$r"
+    printf '07_enum_packed_array\tok\tpass\tpass\tpass\tpass\t\n11_enum_methods\tgap\tpass\tfail\t-\tfail\t\n' > "$r"
     echo "$good" > "$l"; [ "$(svfails "$r" 0 "$l")" -eq 0 ] || return 1
     for s in "${good/1\/2, known/2\/2, known}" "${good/synthesis 1/synthesis 2}" "${good/stages 1\/2,/stages 2\/2,}" "${good/gaps 1/gaps 0}" "${good/synthesis/Synthesis}"; do
         echo "$s" > "$l"; [ "$(svfails "$r" 0 "$l")" -eq 1 ] || return 1
