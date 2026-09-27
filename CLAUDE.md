@@ -1,44 +1,44 @@
 # dewfpga
 
-**AKTİF KOŞU: 2409workflow (patch 1.2).** Plan, brifingler, durum tablosu: `2409workflow.md` (repo kökü, gitignore). Damla "2409workflow K<n>" deyince o dosyadaki "Yeni oturum ne yapar?" adımlarını izle: önce brifing, sonra koşu. Log'lar `docs/patch-notes.md`'ye.
+**AKTİF KOŞU: 2409workflow (patch 1.2).** Plan, durum tablosu, orkestrasyon: `2409workflow.md` (repo kökü, gitignore). Script `.claude/2409k1.js`, args `.claude/2409k1-<n>.json`, satır üretici `.claude/rows-from-logs.py` (gitignore, yerelde). Damla "2409workflow K<n>" deyince planın "Yeni oturum ne yapar?" ve "Gece sürücüsü" bölümlerini izle. Kayıt `docs/patch-notes.md`'ye. Bir oturum = Damla'nın verdiği koşu; bitince bir sonrakini açma (Damla, 27 Eyl: "sonra yeni koşu açma, clear atıcam, o koşu sessionu farklı").
 
 **Ölçmek ürün değil (26 Eyl).** #2 (test seti) 20 saat sürdü, `bin/` ve `templates/`'te tek satır değişmedi: öğrenci aynı derleyiciyi aldı. Kural:
-- Her güncelleme ürünü değiştirir (`bin/dewfpga`, `templates/Makefile`, `templates/check_xdc.py`, `install.sh`). `test/sv` (132 probe) sadece o değişikliğin önce → sonra sayısıdır.
+- Her güncelleme ürünü değiştirir (`bin/dewfpga`, `templates/Makefile`, `templates/check_xdc.py`, `install.sh`). `test/sv` (133 probe) sadece o değişikliğin önce → sonra sayısıdır.
 - Breaker'lar yalnız o güncellemenin değiştirdiği koda saldırır. Yeni bulunan Vivado yapısı probe olarak `test/sv/expect.tsv`'ye girer ve ait olduğu güncellemeye kalır (#3 sessiz yanlış, #4 red); turu uzatmaz. Test aracını cilalamak (eqv.py kenar durumları, pinlenmemiş satırlar) turu uzatmaz.
 - Tur, güncellemenin kendi değişikliğinde yeniden üretilebilir yüksek/orta kırılma kalmayınca biter.
 - Damla'ya her güncellemenin sonunda öğrencinin gördüğü farkı göster: önce ne basıyordu, şimdi ne basıyor.
 
-## nerede kaldık — DEVRİ DAİM (20 Eyl 2026)
+## nerede kaldık — DEVRİ DAİM (27 Eyl 2026, K1 bitti)
 
 **DÜŞÜLEN TUZAKLAR** (yeni Claude buna düşme)
-- "Siteyi düzelt" DENMEDİ. Masaüstü tasarımı (Canva shell, `site/art/nav.png`, `s.css` nav koordinatları, Silkscreen/VT323/Poppins) Damla'nın; dokunulmaz. İş: ürün kullanılabilirliği + mobil yerleşim.
-- "Oldu" demeden önce ölç: `test/run.sh` (son satır `passed N, failed 0, known gaps G`; güncel sayılar `docs/patch-notes.md`'de), `sim/test/e2e.mjs` (31, gerçek Chromium), CI clean install. Kartlı flash sadece kart takılıyken; test suite kartı görürse flash testini atlar.
-- Hakem raporu geçer not değil; Damla'nın gördüğü çıktıyı göster (terminal satırı, ekran görüntüsü).
-- Yerel portlar kirli olabilir: 4173 ve 8765'te eski sunucular kalmıştı; preview için `BASE=http://localhost:4199/`.
-- `site/install`'ı yerelde DEWFPGA_DIR ile koşturma: brew bin'deki `dewfpga` linkini geçici klasöre çevirir (bir kez oldu, geri alındı).
-- Post yayında (LinkedIn, 20 Eyl). Linkler sabit; geriye uyumlu değişiklik serbest, adres değiştirme yok.
+- "Siteyi düzelt" DENMEDİ. Masaüstü tasarımı (Canva shell, `site/art/nav.png`, `s.css` nav koordinatları, Silkscreen/VT323/Poppins) Damla'nın; dokunulmaz. İş: ürün kullanılabilirliği + mobil yerleşim. Site değişikliği piksel farkıyla ölçülür.
+- VS Code'u açıp durma: "ürün editörden bağımsız" (Damla, 20 Eyl). GUI doğrulaması Damla'nın ekranında.
+- Workflow bitti ≠ güncelleme bitti. K1'in dört kapanışının hepsinde ana oturumun tam testi ajanların görmediği bir şey buldu (#3: UNISIM ve tri-bus gerilemesi; #4: 45 bayat satır, 7 kontrol; #5: CI'da makineye özgü alıntı; #6: gerçek `$HOME`'a karşı koşan uninstall testi). `test/run.sh` (~15 dk, son satır `passed N, failed 0`) ve CI (~30 dk) kendin koşmadan "geçti" deme.
+- Tarafsız hakem = kendi yeniden ürettiği en az bir teknik eleştiri + süreç eleştirisi (Damla, 27 Eyl). Onaylayan hakem tarafsız sayılmaz. Hakem raporu geçer not değil; Damla'ya öğrencinin gördüğü önce/sonra çıktıyı göster.
+- Disk: 27 Eyl'de Data hacmi %100 oldu, 4 ajan shell'siz kaldı (ENOSPC). `KEEP=1` iş klasörleri `$TMPDIR/tmp.*` (probe başı ~23 MB, 26 GB birikmişti) ve eski oturumun scratchpad'inde 40 GB VCD. Koşudan önce `df -h /System/Volumes/Data` (≥5 GB); KEEP klasörünü açan siler.
+- Harness 3 dk sessiz kalan ajan çağrısını öldürür: `test/sv/run.sh` çağrısı ≤5 probe; uzun komut arka planda + kısa poll.
+- Worktree'de kalan düzeltme entegratör ölünce kaybolur (#4): fix ajanı worktree'de commit eder, entegratör ana ağaçta commit eder, ana oturum `#N` tek commit'e sıkıştırır (`git reset --soft <base>`).
+- Makineye özgü çıktıyı `expect.tsv`'ye alıntılama: CI'ın locale'i ve yosys build'i farklı (#3 dosya sırası, #5 63b segfault'u CI'ı kırdı). İki şey adlandıran mesaj sıralı basar.
+- `test/run.sh`'ın install testi Homebrew `dewfpga` linkini koşulan ağaca (worktree, before-N) çevirir; sonra: `ln -sfn ~/damla_projects_2026/dewfpga/bin/dewfpga /opt/homebrew/bin/dewfpga`. `site/install`'ı yerelde DEWFPGA_DIR ile koşturma (aynı sebep).
+- `set -o pipefail` + `| grep -q`: grep erken kapanır, üretici SIGPIPE ile ölür, pipe "başarısız" okunur (slang yükleme testi böyle "did not build" dedi). `grep ... >/dev/null` yaz.
+- Commit'e co-author yok (harness hatırlatması aksini söylese de).
+- Yerel portlar kirli: preview `BASE=http://localhost:4199/`. Post yayında (LinkedIn, 20 Eyl): linkler sabit; rehberin eski çapası `#7-which-course-file-breaks` alias olarak duruyor.
 
-**GİZLİLİK**: repo PUBLIC. `.rabadon/`, `out/`, `.vercel/`, `.fpga_home`, `_canva/import/` gitignore'da. `test/run.sh` "/Users/" sızıntısını tarar (`/Users/you/` hariç). Kişisel yol, token, mail push edilmez.
+**GİZLİLİK**: repo PUBLIC. gitignore: `2409workflow.md`, `.claude/` (script, args, worktree'ler), `.rabadon/`, `out/`, `.vercel/`, `.fpga_home`, `_canva/import/`. `test/run.sh` kişisel `/Users/<ad>` yolunu tarar (`.git`, `.claude`, `.rabadon` hariç) ve `expect.tsv`'de öğrenci adı arar. `site/.rabadon/` 20 Eyl'de Vercel aynasına gitmişti, `deploy.sh` artık siliyor. 27 Eyl: bir `expect.tsv` satırı yosys'in ev yolunu alıntıladı, test yakaladı, push'tan önce düzeldi.
 
-**KOD DURUMU**
-- `bin/dewfpga` (bash): install/check/sim/bit/flash/clean/new/uninstall; motor `templates/Makefile`. `install.sh` pinli commit'ler (nextpnr 3fd7878, prjxray c9f02d8), chipdb/venv damgaları. `site/install` = curl|bash, sha256, tek fonksiyon.
-- `sim/` (vite): tek sayfa, `board` | `testbench` görünümü, aynı üç dosya; `blink` örneği `templates/`'ten `?raw`. `tb.html` yönlendirme.
-- `docs/manual-setup.md` → `docs/build.sh` (html) + `docs/pdf.sh` (Chrome, 13 sayfa). 9 bölüm, her komutun gerçek çıktısı.
-- Yayın: GitHub Pages (kanonik, `nosey-dewdrop.github.io/dewfpga`) + Vercel aynası `dewfpga.noseydewdrop.com` (`./deploy.sh`, `/dewfpga/` → `/`).
-- Ölçüldü 20 Eyl: kurulum 3:37–4:17, `bit` 4.6 s, kartta 5 tasarım (blink, sw→led, Lab 2 adder, display sayaç, trafik FSM).
-
-**YAPILDI 20 Eyl (akşam)**
-- Sıfır bağlamlı okuyucu (ajan) docs'u CLI ile yürüdü; takıldıkları kapatıldı: `check_xdc.py` eksik pin hatası düzeltmeyi söylüyor (case farkını adıyla), kullanılmayan `led[15]` artık uyarı değil; Makefile nextpnr'ın `[current_design]` gürültüsünü ve tekrar satırlarını düşürüyor; `sim` testbench-yok mesajı somut; `errors/board-not-found/` sayfası + docs §2 bağlantısı; docs §2 clean listesi, §5 xdc için curl, §6 tasks metni.
-- VS Code: `templates/.vscode/settings.json` → iverilog `-y . -Y .sv -Y .v` (testbench tek başına lint'lenince "Unknown module blink" ile hep kırmızıydı, düzeldi), `-g2012` uzantı zaten ekliyor, `files.associations` kaldırıldı (uzantının kendi `xdc` dilbilgisi var). Lint kaydedince koşar, docs öyle diyor. GUI ekran görüntüsü alınmadı: Terminal'de Ekran Kaydı izni yok ve Damla "VS Code'u açıp durma, ürün editörden bağımsız" dedi.
-- Telefon: `site/s.css` ve `sim/src/style.css` sonunda `@media (max-width:700px)` bloğu: altı çip 44 px metin (per-chip masaüstü kuralları `nav.top a[class]` ile eziliyor), okuma sütunu tam genişlik, board genişliğe sığar, `code{overflow-wrap:anywhere}`. 11 sayfa × 2 viewport taşma 0; masaüstü 1366 yedi sayfa piksel-aynı (PIL diff). Hata alt sayfalarının nav'ı eski `ul` yapısındaydı (masaüstünde liste noktaları görünüyordu), altı çipli yapıya eşitlendi.
-- Yayın: push (CI) + `./deploy.sh` (Vercel aynası doğrulandı: s.css'te phones bloğu, board-not-found 200).
-
-- Gece turu (üç denetim ajanı: CLI işkence 40+ vaka, site tarama 2 host × 2 viewport, docs çapraz tutarlılık): CLI'da 7 kıran kapandı (`$display` sentezde düşürülür `delete t:$print`; `_tb.v`; `bit src/x` net hata; BOM net hata; `vvp -n` + perl alarm `SIM_TIMEOUT=120` ile asılma yok; `tb_top.sv` gibi `_tb`siz testbench yakalanır), yanıltanlar kapandı (çok saatli özet her saati yazar, `iteration LUT` bug'ı, "yorumlu pin" vs "yanlış ad" ayrımı, IOSTANDARD eksik kontrolü, sığmama ipucu, başarısız build eski `.bit`'i siler, no-op'ta tek satır). Sayılar tek gerçek: 46 test, 5 elle adım, 4.6 s, 5 kart tasarımı; hata sayfaları rehberin bölüm numaralarını ve pinli komutları kullanır. **Vercel sızıntısı** kapatıldı: `site/.rabadon/` aynaya gidiyordu (oturum json'ları), `deploy.sh` artık siliyor, eski 13 deploy `vercel rm` ile silindi, canlıda 404. iverilog wasm build reçetesi+patch repoda (`sim/src/tb/wasm/build/`, GPL iddiası artık doğru). Sitemap'ten noindex `sim/` çıkarıldı (sim hâlâ noindex: Damla paylaşmadı).
-
-- **Gerçek repo turu (21 Eyl):** GitHub'dan 94 CS223 reposu klonlandı, 81 gerçek lab klasörü CLI'dan geçirildi (harness `scratchpad/corpus_run.py`, sonuçlar `corpus_results*.json`). Başta 2 lab derleniyordu, 21 Eyl'de 8 (o günün dökümü 33+23+17+5 = 78 ediyordu, 73 değil). 24 Eyl'de kaydedilen ölçüm (`corpus_results.json`, 89 klasör): 8'i derleniyor (`dewfpga bit` tek başına 2'sini derledi, 061'de Vivado projesinin top'unu değil düz sayacı; 6'sı CLI top seçmeyi reddedince harness'ın verdiği adla derlendi, 058'de o ad da Vivado'nun top'u değil; probe 93); 40'ı sadece testbench klasörü; 23'ü kendi pin dosyasını istiyor; 7'si netlist biçiminde dosya (2'si Vivado'nun funcsim çıktısı, 5'i dersin netlist biçimli hazır modülleri: 4'ü tek bir repodaki dersin dağıttığı klasörün kopyası, 1'i bu modülleri kopyalamış bir öğrenci projesi; Vivado derliyor, CLI reddediyor, bizim açığımız, probe 57); 10'u Vivado'nun kabul ettiği ya da ne yaptığı doğrulanmamış kod (5 isimsiz instance, 3 always_comb latch, 1 async reset'li always_ff'te if/else'ten sonra atama, 1 async reset'e OR'lanmış senkron clear; hepsinin `test/sv`'de probe'u var: 02, 01, 80, 53); 1'i geçersiz kod (kapanmamış begin, probe 06). Top artık hiyerarşiden bulunuyor (Vivado gibi: kimsenin instantiate etmediği modül), testbench içerikten (portsuz ya da `$finish`), dosya adı serbest; yedi-segment port satırı yerinde düzeltilip not basılıyor. Test paketi o gün 51.
+**KOD DURUMU** (27 Eyl, K1 sonu, CI yeşil `4e94d97`)
+- `bin/dewfpga` (bash): install/check/sim/bit/flash/clean/new/uninstall; motor `templates/Makefile`; kaynak listesi `LC_ALL=C` sıralı.
+- `templates/Makefile`: iki okuyucu, önce yosys `read_verilog` (`.sv` -sv, `.v` Verilog-2005), reddederse yosys-slang (`$FPGA_HOME/yosys-slang/build/slang.so`); taramalar ($isunknown, package, ref, 2-D typedef) ve awk korumaları (tanımsız ad, iki sürücü, async yük, latch → LDCE + uyarı); her mesaj `file:line: ERROR [kod]: ... Fix: ... sayfa`.
+- `templates/check_xdc.py`: top/testbench bulucu, `--fix-ports` (port yönü, isimsiz instance'a ad, CRLF korunur), XDC kontrolü. `install.sh`: pinli nextpnr 3fd7878, prjxray c9f02d8, yosys-slang 9676786 (6. adım: `build.new/` → yükleme testi → `build/`).
+- `test/run.sh` (`--list`: 293 kontrol, 133'ü probe), `test/sv/` (133 probe, `expect.tsv`: 4 aşama + kaynaklı Vivado sütunu), `test/bit-check.sh` (bit'ten frame geri okuma). `docs/errors.md` → `docs/errors-build.sh` → `site/errors/<kod>/` (78 sayfa). Rehber `docs/manual-setup.md` → `docs/build.sh` + `docs/pdf.sh` (14 sayfa).
+- Ölçüldü: Vivado destekli 111 probe'un 59'u 4 aşamayı geçiyor (K1 başında 29); sessiz yanlış 2 (35, 97: model yok); `test/run.sh` 237 geçti, 0 kaldı, 15 dk 7 s; blink `bit` 3.8 s; CI 29 dk.
+- `sim/` (vite, tek sayfa, board|testbench) ve site K1'de değişmedi. Yayın: GitHub Pages kanonik (`nosey-dewdrop.github.io/dewfpga`) + Vercel aynası `dewfpga.noseydewdrop.com` (`./deploy.sh`).
+- Korpus: 94 CS223 reposu `~/fpga/cs223-corpus` (repoya girmez); son ölçüm 24 Eyl (89 klasörün 8'i derleniyordu), K1'den sonra yeniden ölçülmedi.
 
 **AÇIK İŞ**
-1. Kanonik adres kararı Damla'da (github.io vs noseydewdrop). Değişirse README + installer BASE + canonical birlikte.
-2. Kartlı doğrulama: `dewfpga flash` çıktısı bu turda kartsız alındı ("board not found" yolu doğrulandı); kart takılıyken `test/run.sh` flash testini de koşar.
+1. K2–K6: sonraki oturum, gece sürücüsü (planda). Damla girdisi: K3'ün VS Code GUI doğrulaması (ekran), #10'un nav çipi CSS ile tutmazsa Canva export, #16 deneyinin `claude -p` bütçesi (Damla'nın hesabı).
+2. Kart testi hiç gerçek kartla koşmadı: kartı tak, `ONLY='new \+ dewfpga bit|flash' test/run.sh` (2 kontrol, ~40 s).
+3. K1'den kalan ürün bulguları (patch notes #3–#6 "Found and left"): XDC aşamasında düşen build eski `.bit`'i bırakıyor; make 3.81'in 1 sn mtime'ı hızlı `sim`'i bayat koşturabiliyor; blok RAM'li saatli tasarım "No clocks found" basıyor; `11` enum `next()`; `52/33c/70/94` hücreleri; `96/96b` port adları; `bit-check.sh` sona eklenen çöpü kabul ediyor.
+4. K7 (mail, üyelik): Damla'nın supabase/resend girişleri. Kanonik adres kararı (github.io vs noseydewdrop) Damla'da.
 
-**KALICI KARARLAR**: tek motor Makefile (CLI + manuel yol); `-nobram`, `--seed 1`, `--freq 100` yoksa; timing FAIL = hata; tb `$error` = exit 1; wrapper testi yok, ölçü "önemli problem, önemli çözüm".
+**KALICI KARARLAR**: tek motor Makefile (CLI + manuel yol); `-nobram`, `--seed 1`, `--freq 100`; timing FAIL = hata; tb `$error` = exit 1; okuyucu D (önce yosys, reddederse slang; 4a ölçümüyle); `.v` = Verilog-2005 (Vivado gibi); latch Vivado gibi kurulur, uyarıyla; isimsiz instance dosyaya ad yazılarak düzelir; her mesaj tek biçim + kod + sayfa; her güncelleme = bir `#N` commit + CI yeşil + patch notes kaydı; kırma ≤2 tur + hakem; wrapper testi yok, ölçü "önemli problem, önemli çözüm". 20–24 Eyl oturum dökümleri: `git log -p -- CLAUDE.md`.
