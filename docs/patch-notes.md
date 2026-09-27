@@ -3045,7 +3045,11 @@ already be committed); the metric must reach the judge as a number, not as rows 
 all 35 targets was lost between the integrator and the judge and was re-counted here); a message with a
 formula in it (`create_clock -period`) is checked against the number printed next to it.
 
-### #6A · The CLI's untested paths get checks; `test/run.sh --list` prints the count the docs quote · 27 September
+### #6 · The CLI's untested paths get checks, one number for the count, a test that reads the bitstream, the board test ready for the board · 27 September
+
+**In numbers.** `test/run.sh`: 213 passed before, 237 passed, 0 failed after (15 min 7 s; the 24 new checks add about 35 s), plus one SKIP: `flash on the board: no board: plug the Basys3 in and run test/run.sh again`. `test/run.sh --list` prints every check's name, `133 probes` and `293 checks` (the two clean-install checks and the board check are counted on every machine, so no single plain run reaches 293: the header says which ones a run skips). README, README.tr and the cli page quote 293 and 133 from `--list`, and a check compares them. Vivado-supported probes passing all four stages 59/111 → 59/111 (this update changes tests, not verdicts); the stage columns of `expect.tsv` unchanged. `test/bit-check.sh` reads the frames back out of `blink.bit` and compares them with the `.fasm`: `bit ok: blink.bit holds the 5408 frames of blink.fasm (105 non-zero), read back from 1 FDRI write(s)`; another design's fasm, a `.bit` cut in half and a `.bit` with one bit flipped in a used frame are refused. The board checks are written and skip without a board; their first real run is Damla's, with the Basys3 on USB.
+
+**6A · The CLI's untested paths get checks; `test/run.sh --list` prints the count the docs quote.**
 
 `test/run.sh --list` prints every check's name, then `133 probes` and `289 checks`, and exits 0 without running
 anything; `ONLY=regex test/run.sh` runs the checks whose name matches (the probes are skipped). README, README.tr
@@ -3068,7 +3072,7 @@ block (+5 checks without a board); the number on the pages is what `--list` prin
 -> `passed 11, failed 0, known gaps 0`, with `SKIP flash on the board: no board: plug the Basys3 in and run
 test/run.sh again`. Untested tonight: the flash check with a board (no board plugged in), the full suite.
 
-### #6B · A test looks inside the bitstream; the board test is ready for the board · 27 September
+**6B · A test looks inside the bitstream; the board test is ready for the board.**
 
 **`test/bit-check.sh <top.bit> <top.fasm|top.frames>` reads the bitstream back.** No test had ever opened
 a `.bit`: `bit` checked the file's size and that the `.frames` file was the same twice. Now the `.bit` is
@@ -3105,9 +3109,112 @@ strings, not from a run; the first run with a board is the check of that line. `
 Test count: two flash checks before, seven checks in the block after: +5 without a board (+4 with one).
 `test/run.sh` was not run whole here (9 minutes); the block was run on its own.
 
+**Fix round 1 (6B-fix), two findings of the judges:**
+
+1. *`--list` printed 288 with a board, 289 without.* The board branch held one check, the no-board branch two,
+   and `--list` walks whichever branch the machine is in, so the number the three pages quote (289) was wrong on
+   the machine the board is plugged into, and the docs check failed there. Reproduced with a fake
+   `system_profiler` first on PATH (`test/run.sh` calls it unqualified) that prints `Digilent USB Device`:
+   `test/run.sh --list | tail -1` printed `288 checks` and `ONLY='quote the numbers' test/run.sh` printed
+   `FAIL README, README.tr and site/cli quote the numbers --list prints (checks, probes)`. Now either branch is
+   two checks: with a board, `flash on the board: openFPGALoader programs it (its Done line)` and
+   `flash on the board: exit 0, no ERROR line` (`dewfpga flash >out 2>&1 && ! grep -q 'ERROR \[' out`).
+   After: `289 checks` with the fake board and without, and the docs check `PASS` in both. The board branch is
+   still not run against a board (none plugged in tonight).
+2. *`bit-check.sh` blamed the `.fasm` when the tools were not where it looked, and it looked only at
+   `FPGA_HOME`/`~/fpga`, not at `.fpga_home` as `bin/dewfpga` does.* Reproduced:
+   `FPGA_HOME=/nowhere test/bit-check.sh top.bit top.fasm` printed
+   `line 25: /nowhere/venv/bin/python: No such file or directory` and
+   `ERROR [bit-check]: fasm2frames could not read top.fasm`. Now the script resolves the folder the way
+   `bin/dewfpga` line 18 does (`$FPGA_HOME`, else the repo's `.fpga_home`, else `~/fpga`), checks that the venv
+   python, `fasm2frames.py` and the part's `part.yaml` exist before anything else, and names the missing one and
+   where the folder came from:
+   `ERROR [bit-check]: /nowhere/venv/bin/python is not there (FPGA_HOME=/nowhere). Fix: run install.sh, or set FPGA_HOME to the folder that holds venv/, prjxray/ and nextpnr-xilinx/.`
+   With `.fpga_home` saying `/elsewhere` (a copy of the script under a scratch root):
+   `ERROR [bit-check]: /elsewhere/venv/bin/python is not there (<root>/.fpga_home says /elsewhere). Fix: ...`.
+   A real fasm2frames failure now carries its last stderr line instead of "could not read": on a file holding
+   `garbage line !!`: `ERROR [bit-check]: fasm2frames (~/fpga/prjxray/utils/fasm2frames.py) failed on bad.fasm: textx.exceptions.TextXSyntaxError: .../bad.fasm:1:14: Expected S or '=' or '{' or '#' or Identifier or Newline or EOF => 'bage line *!! '. Fix: the .fasm has to be nextpnr-xilinx's own output for xc7a35tcpg236-1; rebuild it with dewfpga bit.`
+   The sane run is unchanged: `bit ok: top.bit holds the 5408 frames of top.fasm (192 non-zero), read back from 1 FDRI write(s)`.
+   `shellcheck -S style` on both scripts: clean.
+
+**Fix round 1 (6A-fix + integration), the other findings:**
+
+3. *`--list` printed a different number under `FULL=1` and on a board machine.* Now every branch is listed
+   whatever the machine: the two board checks, the two no-board checks and the two clean-install checks all
+   count, so `test/run.sh --list | tail -1` prints `293 checks` plain, under `FULL=1`, with a fake
+   `system_profiler` that prints `Digilent USB Device`, and with both. The run prints fewer PASS lines than
+   that, never more: the branch the machine cannot run prints one SKIP line
+   (`SKIP flash on the board: no board: plug the Basys3 in and run test/run.sh again`, or
+   `SKIP flash w/o board (2 checks): a Basys3 is on USB`). The docs check reads `FULL='' test/run.sh --list`
+   and finds the `N probes` line by pattern, not by position. README, README.tr and site/cli say 293 and why.
+   Merged with finding 1 above: the board branch keeps 6B-fix's two checks (Done line; exit 0 and no ERROR
+   line), so 289 + 2 board + 2 install = 293. With the fake board: the docs check `PASS`, the two board checks
+   `FAIL` (no board is plugged in), as they must.
+4. *The bitstream and board checks could not run alone under `ONLY=regex`: they used `$T/p` and `$T/ui`,
+   built by checks the regex had skipped.* `need_p` and `need_ui` build them when missing.
+   `ONLY='blink.bit|\.bit |flash' test/run.sh`: the five bitstream checks and the two no-board checks
+   `PASS`, `passed 10, failed 0` (three rebuild/probe-runner checks match the regex too).
+   The `== build` and `== multi-file design` checks still need the section's first check in the regex; the
+   header of `test/run.sh` says so.
+5. *Integration note.* The tree before this update has no `--list`: `test/run.sh --list` there ignores the
+   argument and starts the whole nine-minute suite (the before/after demo killed it after 25 s, exit 142). Its
+   pages said `46 checks`. `bin/dewfpga`, `templates/*`, `install.sh` and `test/sv/expect.tsv` are untouched.
+
+**Fix round 3 (6B-fix), one finding of the judges:**
+
+6. *A board check that FAILs showed nothing a student could act on.* The first on-board check piped
+   `dewfpga flash` into `grep -q 'Done'` and the others wrote to their own `out` file, so `$T/out` (what `bad()`
+   prints five lines of) was empty; the same for the seven bitstream checks. Reproduced with a fake
+   `system_profiler` on PATH printing `Digilent USB Device`, `ONLY='flash on the board' test/run.sh`:
+   `FAIL flash on the board: openFPGALoader programs it (its Done line)` and
+   `FAIL flash on the board: exit 0, no ERROR line` with nothing under either, `passed 0, failed 2`; and in a
+   scratch copy of the product with `board-not-found` renamed, `ONLY='flash w/o board'`:
+   `FAIL flash w/o board: board-not-found line, exit 1`, bare. Now `test/run.sh` has `say <cmd...>`: it runs
+   the command with its output kept in `$T/say` for the check's grep and printed too, so it lands in the
+   check's output and under a FAIL; the nine checks of the block run the product through it. `check()` also
+   prints any `ERROR [` line past the first five (`shown`), since the product's ERROR line comes last, after
+   openFPGALoader's own lines. After, the same fake board:
+   `FAIL flash on the board: openFPGALoader programs it (its Done line)` followed by
+   `unable to open ftdi device: -3 (device not found)` / `JTAG init failed with: unable to open ftdi device` /
+   `ERROR [board-not-found]: board not found: the Mac sees no Basys3 on USB (openFPGALoader: unable to open ftdi device). Fix: plug the USB into the PROG port, switch the power ON, and try another cable or port. https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/`,
+   the same three lines under the second FAIL; the renamed copy shows its `ERROR [board-missing]: ...` line under
+   its FAIL; a bit-check refusal made to fail (its "frames differ" wording renamed in a copy) shows
+   `ERROR [bit-check]: .../p/blink.bit does not hold the frames of .../ui/ui.fasm: 111 of 5408 frames disagree, first 3: 0x00000a00 word 24: ...`.
+   Unchanged where it should be: `ONLY='blink.bit|\.bit |flash' test/run.sh` on the real product, no board:
+   the five bitstream checks and the two no-board checks `PASS`, one SKIP line; `test/run.sh --list | tail -1`
+   still `293 checks`; `shellcheck -S style test/run.sh` clean. Still not run with a board (none plugged in).
+
 Tried and dropped:
 - Re-encoding the `.frames` with `xc7frames2bit` and comparing bytes: the header carries the date and time, and
   a byte compare says nothing about which frame differs. Parsing the packets does.
 - Comparing word 50 whole: `xc7frames2bit` rewrites its low 13 bits (`updateECC` in prjxray's `ecc.cc`,
   `data[50] &= 0xFFFFE000`), so the `.frames` and the `.bit` always differ there. Masked.
 - Building `bitread` from prjxray's sources: it would write into `~/fpga`, which this update leaves alone.
+
+**Also in this commit.** The check `uninstall refuses FPGA_HOME=HOME` ran the real CLI's `uninstall` against the
+real home (the judge read it: the day the guard breaks, the test deletes `~/venv`); it runs against a scratch
+home now, with a scratch `fpga` and `venv` that must survive.
+
+**Found and left to later updates.**
+- Product (K2 or #4 later): a build that fails in the XDC stage (a missing IOSTANDARD, a wrong port name)
+  leaves the previous `.bit` next to the sources (only the synthesis rule removes it); the `.deps` rebuild
+  rules miss a change made within the same second as the previous compile (Apple's make 3.81 compares whole
+  seconds: bites `sim`, never `bit`); a block-RAM or `$readmemh` design with registers on `posedge clk`
+  prints `Warning: No clocks found in design` and `0 LUT, 0 FF, no clocked paths` although it is clocked
+  (DOĞRULANMADI why: possibly the sync read became LUTRAM output registers nextpnr does not time).
+- Tests: `bit-check.sh` accepts a `.bit` with garbage appended after the last packet (words that are
+  neither type-1 nor type-2 are skipped as padding); the SKIP line sends the student to the whole suite for
+  two 40-second checks (`ONLY='new \+ dewfpga bit|flash' test/run.sh` runs them alone); the two on-board
+  checks were run only with a fake `system_profiler`, never with a board.
+- Not verified (DOĞRULANMADI): whether make 3.81 on this Mac lacks sub-second timestamps or the copy does.
+
+**Orchestration, for the record.** 15 agents, 1 h 27 min, none died: 2 build (40, 30 minutes), 1
+integrator, 2 break rounds, 3 fix agents, the judge, 3 integrations; the integrators committed in the main
+tree (the first commit went out with the #5 CI fix; the three fix commits are squashed into this one). The
+judge's process notes: the metric "N passed before → M passed after" needed two full runs no agent was
+allowed to make (the main session made them: 213 → 237); two agents in one file (`test/run.sh`) cost a hand
+merge in three hunks; a before-demo command must be vetted against the before tree (`--list` did not exist
+there and started the whole suite); "the same number on every machine" shipped twice without a run on a
+second kind of machine (`env -i` would have caught `yosys: command not found` at line 83 and the board and
+FULL modes); a check that hides the product's output prints a bare FAIL (fixed in round 3 with `say`/`shown`);
+"each new check broken once" was promised and not evidenced in the integrator's report (the judge did three).

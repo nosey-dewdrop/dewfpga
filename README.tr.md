@@ -113,9 +113,10 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (289 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (293 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
-bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u). `--list` her kontrolün
+bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
+da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün
 adını basar; `ONLY=regex test/run.sh` adı eşleşenleri koşar. `FULL=1 test/run.sh` geçici bir klasöre temiz kurulumu da
 ekler. CI her push'ta temiz bir `macos-15` (Apple Silicon) GitHub makinesinde temiz kurulumu,
 test paketini ve npm paketini koşar.

@@ -111,9 +111,10 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (289 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (293 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
-probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`). `--list` names
+probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
+install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names
 every check; `ONLY=regex test/run.sh` runs the ones whose name matches. `FULL=1 test/run.sh`
 adds a clean install into a temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.

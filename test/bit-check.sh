@@ -11,19 +11,26 @@
 set -euo pipefail
 [ $# -eq 2 ] || { echo "usage: test/bit-check.sh <top.bit> <top.fasm|top.frames>" >&2; exit 2; }
 bit=$1; ref=$2
-FPGA=${FPGA_HOME:-$HOME/fpga}
+# the tools are where bin/dewfpga looks for them: $FPGA_HOME, else the folder install.sh recorded in .fpga_home, else ~/fpga
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -n "${FPGA_HOME:-}" ]; then FPGA=$FPGA_HOME; src="FPGA_HOME=$FPGA_HOME"
+elif [ -s "$ROOT/.fpga_home" ]; then FPGA=$(cat "$ROOT/.fpga_home"); src="$ROOT/.fpga_home says $FPGA"
+else FPGA=$HOME/fpga; src="the default $FPGA (no FPGA_HOME, no $ROOT/.fpga_home)"; fi
 PART=xc7a35tcpg236-1
 XRAYDB="$FPGA/nextpnr-xilinx/xilinx/external/prjxray-db/artix7"
 PY="$FPGA/venv/bin/python"
 F2F="$FPGA/prjxray/utils/fasm2frames.py"
+for tool in "$PY" "$F2F" "$XRAYDB/$PART/part.yaml"; do
+    [ -e "$tool" ] || { echo "ERROR [bit-check]: $tool is not there ($src). Fix: run install.sh, or set FPGA_HOME to the folder that holds venv/, prjxray/ and nextpnr-xilinx/." >&2; exit 1; }
+done
 [ -s "$bit" ] || { echo "ERROR [bit-check]: $bit is missing or empty" >&2; exit 1; }
 [ -s "$ref" ] || { echo "ERROR [bit-check]: $ref is missing or empty" >&2; exit 1; }
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 case $ref in
     *.frames) frames=$ref ;;
     *) frames="$T/ref.frames"
-       PYTHONWARNINGS=ignore "$PY" "$F2F" --part $PART --db-root "$XRAYDB" "$ref" > "$frames" \
-           || { echo "ERROR [bit-check]: fasm2frames could not read $ref" >&2; exit 1; } ;;
+       PYTHONWARNINGS=ignore "$PY" "$F2F" --part $PART --db-root "$XRAYDB" "$ref" > "$frames" 2> "$T/f2f.err" \
+           || { echo "ERROR [bit-check]: fasm2frames ($F2F) failed on $ref: $(tail -1 "$T/f2f.err"). Fix: the .fasm has to be nextpnr-xilinx's own output for $PART; rebuild it with dewfpga bit." >&2; exit 1; } ;;
 esac
 "$PY" - "$bit" "$frames" "$XRAYDB/$PART/part.yaml" "$ref" <<'PY'
 import struct, sys, yaml
