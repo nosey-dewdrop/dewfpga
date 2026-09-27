@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ERROR: Module port &#x27;dp&#x27; is neither input nor output (fix, macOS)</title>
+<title>design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both) (fix, macOS)</title>
 <meta name="description" content="The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ERROR: Module port &#x27;dp&#x27; is neither input nor output (fix, macOS)">
+<meta property="og:title" content="design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both) (fix, macOS)">
 <meta property="og:description" content="The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
@@ -15,7 +15,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR: Module port 'dp' is neither input nor output","url":"https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both)","url":"https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-19","inLanguage":"en"}</script>
 </head>
 <body>
 <nav class="top" aria-label="Site">
@@ -29,18 +29,21 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">7</span>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv</p>
-  <h1 class="mono">ERROR: Module port &#x27;dp&#x27; is neither input nor output</h1>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">7</span>dewfpga bit, the source scan before the tools run (Yosys alone prints the raw form below)</p>
+  <h1 class="mono">design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both)</h1>
+<p>Since #4 the CLI writes the direction into your file and prints a note; the build goes on:</p>
+<pre><code>design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/</code></pre>
+<p>Yosys alone, without the CLI, stops with the lines below.</p>
 <p>The first lab that uses the seven-segment display stops in synthesis with this line. Simulation was fine.</p>
-<h2>Why does it happen?</h2>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>The <code>SevSeg_4digit.sv</code> module that the course hands out declares its ports like this.</p>
 <pre><code>output [6:0]seg, logic dp,     // dp takes output from seg, per the standard</code></pre>
 <p>The standard reads it as <code>output logic dp</code>: a port without a direction takes the one before it. Vivado accepts the line, and so does Icarus Verilog, which is why <code>make sim</code> passes. Yosys does not implement that inheritance and stops.</p>
-<h2>What is the fix?</h2>
+<h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>output [6:0] seg,
 output logic dp,</code></pre>
 <p>After the change the module synthesizes to 46 cells and the rest of the lab goes through unchanged.</p>
-<p><code>dewfpga bit</code> makes this change for you and prints a note, unless a comment sits between <code>seg,</code> and <code>logic dp</code>, or a comment in the port list holds a <code>;</code>; then move that comment out. The course's ready modules in netlist form are the other course files that break (<a href="/dewfpga/docs/#7-which-course-file-breaks">section 7</a>). This one is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-course-file-breaks">Section 7</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">section 8</a> of the guide.</p>
+<p><code>dewfpga bit</code> makes this change for you and prints a note, unless a comment sits between <code>seg,</code> and <code>logic dp</code>, or a comment in the port list holds a <code>;</code>; then move that comment out. The course's ready modules in netlist form are the other course files that break (<a href="/dewfpga/docs/#71-which-course-file-breaks">section 7.1</a>). This one is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-errors-does-the-cli-stop-with-and-what-do-they-mean">Section 7</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">section 8</a> of the guide.</p>
 </main>
 
 <footer class="wrap">

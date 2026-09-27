@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR [no-design-module]: no design module in blink_tb.sv (only testbenches). Fix: a design is a module with ports; put it in a .sv file in this folder, or start one:  dewfpga new blink (fix, macOS)</title>
+<meta name="description" content="Every module in the folder has no ports; there is nothing to build. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-design-module/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [no-design-module]: no design module in blink_tb.sv (only testbenches). Fix: a design is a module with ports; put it in a .sv file in this folder, or start one:  dewfpga new blink (fix, macOS)">
+<meta property="og:description" content="Every module in the folder has no ports; there is nothing to build. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/no-design-module/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [no-design-module]: no design module in blink_tb.sv (only testbenches). Fix: a design is a module with ports; put it in a .sv file in this folder, or start one:  dewfpga new blink","url":"https://nosey-dewdrop.github.io/dewfpga/errors/no-design-module/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga sim / bit, the source scan before the tools run</p>
+  <h1 class="mono">ERROR [no-design-module]: no design module in blink_tb.sv (only testbenches). Fix: a design is a module with ports; put it in a .sv file in this folder, or start one:  dewfpga new blink</h1>
+<pre><code>ERROR [no-design-module]: no design module in blink_tb.sv (only testbenches). Fix: a design is a module with ports; put it in a .sv file in this folder, or start one:  dewfpga new blink https://nosey-dewdrop.github.io/dewfpga/errors/no-design-module/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>The design's file is missing from the folder (copied the testbench only), or the design was written without ports.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Put the design's <code>.sv</code> next to the testbench, or give the module its ports (<code>module blink(input logic clk, output logic [15:0] led);</code>).</p>
+<pre data-copy="1"><code>ls *.sv</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

@@ -102,6 +102,13 @@ dewfpga --version
   with a register inside is not timed at all (nextpnr-xilinx). `sim` exits 1 when the testbench prints `$error`/`$fatal`.
 - `flash` writes SRAM: the design is gone after a power cycle.
 
+## Errors
+
+When `sim`, `bit` or `flash` stops, it prints one line in one format, `file:line: ERROR [code]: message`,
+then the fix and the address of that code's page. Every code, with what you saw, why, the fix and an
+example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), generated from
+`docs/errors.md` by `docs/errors-build.sh`.
+
 ## Tests
 
 `test/run.sh` (46 checks: static analysis, golden `.fasm`, determinism, multi-file designs,

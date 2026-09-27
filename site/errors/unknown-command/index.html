@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below. (fix, macOS)</title>
+<meta name="description" content="The word after dewfpga is not one of its commands (install, check, new, sim, bit, flash, clean, uninstall). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/unknown-command/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below. (fix, macOS)">
+<meta property="og:description" content="The word after dewfpga is not one of its commands (install, check, new, sim, bit, flash, clean, uninstall). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/unknown-command/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/unknown-command/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">check</span>dewfpga, before anything runs</p>
+  <h1 class="mono">ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below.</h1>
+<p>You typed <code>dewfpga nope</code> (a typo, or a make target such as <code>dewfpga synth</code>). The CLI prints the line and the help below it.</p>
+<pre><code>ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below. https://nosey-dewdrop.github.io/dewfpga/errors/unknown-command/
+dewfpga: Basys3 on macOS without Vivado.
+  dewfpga install                 install the toolchain into ~/fpga (safe to re-run)</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>The CLI has eight commands and takes nothing else; a make target (<code>synth</code>, <code>pnr</code>) is not one of them, the CLI runs those stages itself inside <code>bit</code>.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Pick the command from the list: <code>sim</code> simulates, <code>bit</code> builds the bitstream, <code>flash</code> programs the board.</p>
+<pre data-copy="1"><code>dewfpga --help</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

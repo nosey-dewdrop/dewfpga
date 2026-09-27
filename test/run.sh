@@ -100,18 +100,18 @@ check "unknown command"       "! '$CLI' nope 2>/dev/null"
 check "check w/ empty home"   "! FPGA_HOME='$T/none' '$CLI' check >/dev/null"
 check "bit w/o toolchain"     "cd '$T/w' && { FPGA_HOME='$T/none' '$CLI' bit || true; } 2>&1 | grep -q 'not installed'"
 check "sim w/o testbench"     "cd '$T/m' && { '$CLI' sim top || true; } 2>&1 | grep -q 'testbench'"
-check "failing testbench -> exit 1" "mkdir -p '$T/ft' && sed 's/assign led = .*/assign led = 16'\\''hFFFF;/' '$ROOT/templates/blink.sv' > '$T/ft/blink.sv' && cp '$ROOT/templates/blink_tb.sv' '$T/ft/' && cd '$T/ft' && ! '$CLI' sim >out 2>&1 && grep -q '^FAIL: 2 of 3' out && grep -q 'reported errors' out"
+check "failing testbench -> exit 1" "mkdir -p '$T/ft' && sed 's/assign led = .*/assign led = 16'\\''hFFFF;/' '$ROOT/templates/blink.sv' > '$T/ft/blink.sv' && cp '$ROOT/templates/blink_tb.sv' '$T/ft/' && cd '$T/ft' && ! '$CLI' sim >out 2>&1 && grep -q '^FAIL: 2 of 3' out && grep -qE 'reported [0-9]+ errors?' out"
 check "timing not met -> error, no bit" "mkdir -p '$T/tm' && cp '$ROOT/templates/blink.sv' '$T/tm/' && sed 's/-period 10.00/-period 0.50/; s/-waveform {0 5}/-waveform {0 0.25}/' '$ROOT/templates/blink.xdc' > '$T/tm/blink.xdc' && cd '$T/tm' && ! '$CLI' bit >out 2>&1 && grep -q 'timing not met' out && [ ! -e blink.bit ] && [ ! -e blink.fasm ]"
 check "file name with a space -> clear error" "mkdir -p '$T/spc' && cp '$ROOT/templates/blink.sv' '$T/spc/my blink.sv' && cp '$ROOT/templates/blink.xdc' '$T/spc/my blink.xdc' && cd '$T/spc' && ! '$CLI' bit >out 2>&1 && grep -q 'spaces are not supported' out"
 check "unused xdc pins are ignored" "mkdir -p '$T/xa' && cp '$ROOT/templates/blink.sv' '$T/xa/' && sed 's/^#set_property/set_property/' '$ROOT/templates/Basys3_Master.xdc' > '$T/xa/blink.xdc' && cd '$T/xa' && '$CLI' bit >out 2>&1 && grep -q 'unused pins in the XDC ignored' out && [ -s blink.bit ]"
 check "bit blink.sv works like bit blink" "cd '$T/w' && '$CLI' bit blink.sv"
 check "help has no comment marks" "! '$CLI' --help | grep -q '^#'"
 check "no create_clock -> checked at 100 MHz" "mkdir -p '$T/nc' && cp '$ROOT/templates/blink.sv' '$T/nc/' && grep -v create_clock '$ROOT/templates/blink.xdc' > '$T/nc/blink.xdc' && cd '$T/nc' && '$CLI' bit >out 2>&1 && grep -q 'PASS at 100.00 MHz' out && grep -q 'no create_clock' out"
-check ".v file with SystemVerilog inside -> stops naming the .v line (a .v is Verilog-2005, as in Vivado)" "mkdir -p '$T/vv' && cp '$ROOT/templates/blink.sv' '$T/vv/blink.v' && cp '$ROOT/templates/blink.xdc' '$T/vv/' && cd '$T/vv' && ! '$CLI' bit >out 2>&1 && grep -qE 'ERROR: blink.v:[0-9]+' out && [ ! -e blink.bit ]"
+check ".v file with SystemVerilog inside -> stops naming the .v line (a .v is Verilog-2005, as in Vivado)" "mkdir -p '$T/vv' && cp '$ROOT/templates/blink.sv' '$T/vv/blink.v' && cp '$ROOT/templates/blink.xdc' '$T/vv/' && cd '$T/vv' && ! '$CLI' bit >out 2>&1 && grep -qE '^blink\.v:[0-9]+: ERROR \[' out && [ ! -e blink.bit ]"
 check "module name != file name -> builds, output named after the module" "mkdir -p '$T/mn' && sed 's/module blink/module top/' '$ROOT/templates/blink.sv' > '$T/mn/lab4.sv' && cp '$ROOT/templates/blink.xdc' '$T/mn/lab4.xdc' && cd '$T/mn' && '$CLI' bit >out 2>&1 && [ -s top.bit ]"
 check "course SevSeg port line fixed in place, build goes through" "mkdir -p '$T/ss' && printf 'module ss(input clk, output [6:0]seg, logic dp, output [3:0] an);\\n assign seg = 7'\\''h55; assign dp = 1; assign an = 4'\\''b1110;\\nendmodule\\n' > '$T/ss/ss.sv' && grep -E 'seg|an\\[|dp|clk' '$ROOT/templates/Basys3_Master.xdc' | sed 's/^#//' > '$T/ss/ss.xdc' && cd '$T/ss' && '$CLI' bit >out 2>&1 && grep -q 'wrote the port direction' out && grep -q 'output logic dp' ss.sv && [ -s ss.bit ]"
 check "vivado funcsim netlist -> named, not fed to yosys" "mkdir -p '$T/nl' && cp '$ROOT/templates/blink.sv' '$ROOT/templates/blink.xdc' '$T/nl/' && printf '// Tool Version: Vivado v.2021.2\\n// Purpose : This verilog netlist is a functional simulation representation of the design\\n(* NotValidForBitStream *)\\nmodule leftover(input a, output b); assign b = a; endmodule\\n' > '$T/nl/leftover_func_impl.v' && cd '$T/nl' && ! '$CLI' bit >out 2>&1 && grep -q 'netlist Vivado wrote after synthesis' out"
-check "unnamed instance -> named in place with a note, build goes through" "mkdir -p '$T/ui' && printf 'module sub(input a, output b); assign b = a; endmodule\\nmodule ui(input logic [1:0] sw, output logic [1:0] led);\\n sub(sw[0], led[0]);\\n assign led[1] = sw[1];\\nendmodule\\n' > '$T/ui/ui.sv' && cp '$ROOT/templates/blink.xdc' '$T/ui/ui.xdc' && cd '$T/ui' && '$CLI' bit >out 2>&1 && grep -q 'ui.sv:3: named the instance:  sub u_sub(' out && grep -q 'sub u_sub(sw\\[0\\], led\\[0\\]);' ui.sv && [ -s ui.bit ]"
+check "unnamed instance -> named in place with a note, build goes through" "mkdir -p '$T/ui' && printf 'module sub(input a, output b); assign b = a; endmodule\\nmodule ui(input logic [1:0] sw, output logic [1:0] led);\\n sub(sw[0], led[0]);\\n assign led[1] = sw[1];\\nendmodule\\n' > '$T/ui/ui.sv' && cp '$ROOT/templates/blink.xdc' '$T/ui/ui.xdc' && cd '$T/ui' && '$CLI' bit >out 2>&1 && grep -q 'ui.sv:3: note \[unnamed-instance\]: named the instance:  sub u_sub(' out && grep -q 'sub u_sub(sw\\[0\\], led\\[0\\]);' ui.sv && [ -s ui.bit ]"
 check "uninstall refuses FPGA_HOME=HOME" "! FPGA_HOME=\"\$HOME\" '$CLI' uninstall >out 2>&1 && grep -q 'refusing' out && [ -d \"\$HOME/fpga\" ]"
 check "corrupt .fasm -> error, no .frames" "cd '$T/w' && '$CLI' clean && '$CLI' bit >/dev/null && sleep 1.1 && echo garbage > blink.fasm && ! '$CLI' bit >out 2>&1 && grep -q 'no FASM features' out"
 check "port missing in xdc"   "cd '$T/w' && sed '/led\[15\]/d' blink.xdc > bad.xdc && cp blink.sv b.sv && mkdir x && mv b.sv x/blink.sv && cp bad.xdc x/blink.xdc && cd x && { '$CLI' bit || true; } 2>&1 | grep -q 'led\[15\]'"
@@ -208,10 +208,10 @@ open(p, "w").write(s.replace(old, old + " sub(/:[0-9]+/,\":1\",at);", 1))' "$T/s
 st_latchtext() {
     svcopy && python3 -c '
 import sys
-p = sys.argv[1]; s = open(p).read(); old = "Vivado builds it too, with the same warning"
+p = sys.argv[1]; s = open(p).read(); old = "Vivado builds the latch too, with the same warning"
 assert old in s, "the latch warning changed; update this check"
 open(p, "w").write(s.replace(old, "something went wrong", 1))' "$T/svr/templates/Makefile" \
-    && svrun 01_latch_comb && grep -qF "expect.tsv quotes 'warning: design.sv:3: latch inferred for q" "$T/svr/out" && grep -q 'no stage printed it' "$T/svr/out"
+    && svrun 01_latch_comb && grep -qF "expect.tsv quotes 'design.sv:3: warning [latch]: latch inferred for q" "$T/svr/out" && grep -q 'no stage printed it' "$T/svr/out"
 }
 # the unnamed-instance fix replaced: 02's today column quotes it in "...", so the run has to miss the quote
 st_fixtext() {
@@ -220,7 +220,7 @@ import sys
 p = sys.argv[1]; s = open(p).read(); old = "named the instance"
 assert old in s, "the unnamed-instance note changed; update this check"
 open(p, "w").write(s.replace(old, "did something:", 1))' "$T/svr/templates/check_xdc.py" \
-    && svrun 02_unnamed_inst && grep -qF "expect.tsv quotes 'note: design.sv:5: named the instance:" "$T/svr/out" && grep -q 'no stage printed it' "$T/svr/out"
+    && svrun 02_unnamed_inst && grep -qF "expect.tsv quotes 'design.sv:5: note [unnamed-instance]: named the instance:" "$T/svr/out" && grep -q 'no stage printed it' "$T/svr/out"
 }
 # the CLI made to skip .v files: 74's design.v:3 then never prints, and only the today column's file:line says so
 st_vfile() {
@@ -312,10 +312,10 @@ open(p, "w").write(s.replace(old, "`ifdef SYNTHESIS\n  assign stop = sw[0] | sw[
 st_quote2() {
     svcopy && python3 -c '
 import sys
-p = sys.argv[1]; s = open(p).read(); old = "Drive each signal from one always block."
+p = sys.argv[1]; s = open(p).read(); old = "no flip-flop on the chip does that"
 assert old in s, "the dual-edge advice changed; update this check"
 open(p, "w").write(s.replace(old, "Use one edge.", 1))' "$T/svr/templates/Makefile" \
-    && svrun 04_dual_edge && grep -qF "expect.tsv quotes 'Drive each signal from one always block.', no stage printed it" "$T/svr/out"
+    && svrun 04_dual_edge && grep -qF "expect.tsv quotes 'no flip-flop on the chip does that, and neither reader builds it.', no stage printed it" "$T/svr/out"
 }
 # 76's second file:line made wrong in expect.tsv: every file:line of a row is looked for, not only the first
 st_line2() {

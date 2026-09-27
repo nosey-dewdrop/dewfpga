@@ -36,7 +36,7 @@ virtual Basys3, and a testbench view that draws the waveform.
 - [4. What is in the project folder?](#4-what-is-in-the-project-folder)
 - [5. How do you use it for your own lab?](#5-how-do-you-use-it-for-your-own-lab)
 - [6. How do you set up VS Code?](#6-how-do-you-set-up-vs-code)
-- [7. Which course file breaks?](#7-which-course-file-breaks)
+- [7. Which errors does the CLI stop with, and what do they mean?](#7-which-errors-does-the-cli-stop-with-and-what-do-they-mean)
 - [8. What can it not do?](#8-what-can-it-not-do)
 - [9. Which versions were tested?](#9-which-versions-were-tested)
 
@@ -566,7 +566,26 @@ instead; there the tasks say `make`.
 
 ---
 
-## 7. Which course file breaks?
+<a id="7-which-course-file-breaks"></a>
+
+## 7. Which errors does the CLI stop with, and what do they mean?
+
+When `sim`, `bit` or `flash` stops, it prints one message in one format:
+
+```
+blink.sv:12: ERROR [code]: what is wrong, in one line
+  Fix: what to change
+  https://nosey-dewdrop.github.io/dewfpga/errors/code/
+```
+
+`blink.sv:12` is the line in your file, not in a copy the tool made. `code` names the entry
+in the error catalog; the page behind the address holds what you saw, why it happens, the fix
+and an example line. Warnings and notes carry the same code in the same brackets, without the
+stop. The catalog, every code on one page:
+[Which error did you get?](https://nosey-dewdrop.github.io/dewfpga/errors/) It is generated
+from one file, `docs/errors.md`, by `docs/errors-build.sh`.
+
+### 7.1 Which course file breaks?
 
 Two. One is fixed for you: `SevSeg_4digit.sv` (also handed out as `SevenSegmentDisplay.sv`),
 as source code, has a port line that Vivado and Icarus accept and Yosys does not

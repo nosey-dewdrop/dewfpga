@@ -32,21 +32,20 @@
   <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.3</span>nextpnr-xilinx, while compiling on macOS</p>
   <h1 class="mono">clang++: error: unsupported option &#x27;-fopenmp&#x27;</h1>
 <p>You ran <code>ninja</code> (or <code>make</code>) to build <a href="https://github.com/openXC7/nextpnr-xilinx">nextpnr-xilinx</a> on a Mac and the first file died with this line.</p>
-<h2>Why does it happen?</h2>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>nextpnr's build turns OpenMP on by default. Apple's compiler ships without OpenMP support, so the flag <code>-fopenmp</code> is rejected. Homebrew's <code>libomp</code> does not change that on its own.</p>
-<h2>What is the fix?</h2>
+<h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Configure with <code>-DUSE_OPENMP=OFF</code>. This is the full command used in the guide, from inside the cloned folder.</p>
 <pre data-copy="1"><code>cmake -B build -G Ninja \
   -DARCH=xilinx \
   -DCMAKE_BUILD_TYPE=Release \
   -DUSE_OPENMP=OFF \
   -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
-
 ninja -C build -j3</code></pre>
 <p>OpenMP only parallelizes part of the placer; the blink build in the guide takes 4.6 s without it. <code>-j3</code> keeps an 8 GB Mac from swapping; with 16 GB or more you can raise it.</p>
-<h2>What should you see?</h2>
+<h2 id="what-should-you-see">What should you see?</h2>
 <pre><code>~/fpga/nextpnr-xilinx/build/nextpnr-xilinx --version
-# "nextpnr-xilinx" -- Next Generation Place and Route (Version 0.9.6)</code></pre>
+# &quot;nextpnr-xilinx&quot; -- Next Generation Place and Route (Version 0.9.6)</code></pre>
 <p>Section 3.3 of the guide walks through the whole build: <a href="/dewfpga/docs/#33-nextpnr-xilinx">nextpnr-xilinx</a>.</p>
 </main>
 

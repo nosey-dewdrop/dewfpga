@@ -104,6 +104,13 @@ dewfpga --version
   timing'i hiç kontrol edilmez (nextpnr-xilinx). `sim` testbench `$error`/`$fatal` basınca 1 ile çıkar.
 - `flash` SRAM'a yazar: kartın gücü kesilince tasarım silinir.
 
+## Hatalar
+
+`sim`, `bit` ya da `flash` durduğunda tek biçimde tek satır basar, `dosya:satır: ERROR [kod]: mesaj`,
+ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün satır, nedeni, düzeltmesi ve bir
+örnekle: [hata kataloğu](https://nosey-dewdrop.github.io/dewfpga/errors/), `docs/errors.md`'den
+`docs/errors-build.sh` üretir.
+
 ## Testler
 
 `test/run.sh` (46 kontrol: statik analiz, golden `.fasm`, determinizm, çok dosyalı tasarımlar,

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR [timing-not-met]: timing not met: clk 33.61 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results), or give it the time it needs: create_clock -period 30.000 [get_ports clk] (33.3 MHz) makes the check pass, and the Basys3 pin gives 100 MHz whatever the XDC says (its oscillator, Basys3 reference manual), so those registers must then take a new value only every 3 clocks or more (a clock enable from a counter: if (tick) ...). (fix, macOS)</title>
+<meta name="description" content="The longest path between two registers is longer than the clock period; the CLI writes no bitstream where Vivado would, with a critical warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/timing-not-met/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [timing-not-met]: timing not met: clk 33.61 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results), or give it the time it needs: create_clock -period 30.000 [get_ports clk] (33.3 MHz) makes the check pass, and the Basys3 pin gives 100 MHz whatever the XDC says (its oscillator, Basys3 reference manual), so those registers must then take a new value only every 3 clocks or more (a clock enable from a counter: if (tick) ...). (fix, macOS)">
+<meta property="og:description" content="The longest path between two registers is longer than the clock period; the CLI writes no bitstream where Vivado would, with a critical warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/timing-not-met/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [timing-not-met]: timing not met: clk 33.61 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results), or give it the time it needs: create_clock -period 30.000 [get_ports clk] (33.3 MHz) makes the check pass, and the Basys3 pin gives 100 MHz whatever the XDC says (its oscillator, Basys3 reference manual), so those registers must then take a new value only every 3 clocks or more (a clock enable from a counter: if (tick) ...).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/timing-not-met/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, nextpnr&#x27;s timing report</p>
+  <h1 class="mono">ERROR [timing-not-met]: timing not met: clk 33.61 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results), or give it the time it needs: create_clock -period 30.000 [get_ports clk] (33.3 MHz) makes the check pass, and the Basys3 pin gives 100 MHz whatever the XDC says (its oscillator, Basys3 reference manual), so those registers must then take a new value only every 3 clocks or more (a clock enable from a counter: if (tick) ...).</h1>
+<p>The period the fix suggests is computed from the failing clock's number (33.61 MHz needs 29.8 ns, so 30.000), and it comes with what it costs: the Basys3 pin still gives 100 MHz. A clock made inside the design (a divider's output) is checked at 100 MHz too, and then the fix names it instead.</p>
+<pre><code>ERROR [timing-not-met]: timing not met: clk 33.61 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results), or give it the time it needs: create_clock -period 30.000 [get_ports clk] (33.3 MHz) makes the check pass, and the Basys3 pin gives 100 MHz whatever the XDC says (its oscillator, Basys3 reference manual), so those registers must then take a new value only every 3 clocks or more (a clock enable from a counter: if (tick) ...). https://nosey-dewdrop.github.io/dewfpga/errors/timing-not-met/
+ERROR [timing-not-met]: timing not met: clk 498.01 MHz (PASS at 100.00 MHz), slow 35.39 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results); slow is a clock made inside the design and is checked at the same 100 MHz, so clock those registers on the port clock with a clock enable (if (tick) ...) instead of on slow. https://nosey-dewdrop.github.io/dewfpga/errors/timing-not-met/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>At 100 MHz a path has 10 ns; a 32-bit divide or modulo in one cycle takes 30. A design that fails timing may still seem to work on the board and fail at random, so the CLI stops instead of writing the bitstream (the recorded decision; Vivado writes it with a critical warning).</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Register the intermediate results, or clock those registers on the port clock with an enable instead of on a derived clock:</p>
+<pre data-copy="1"><code>always_ff @(posedge clk) if (tick) count &lt;= count + 1;</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

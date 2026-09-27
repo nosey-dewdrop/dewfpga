@@ -32,9 +32,9 @@
   <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.5</span>CMake, while configuring prjxray</p>
   <h1 class="mono">Cannot specify include directories for target &quot;yaml-cpp&quot; which is not built by this project</h1>
 <p>You ran <code>cmake -B build</code> inside <a href="https://github.com/f4pga/prjxray">prjxray</a> and CMake stopped with this error. If you fix yaml-cpp by hand, the next run fails on googletest, then on abseil.</p>
-<h2>Why does it happen?</h2>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>prjxray pulls six smaller projects in as git submodules. A plain <code>git clone</code> leaves those folders empty, and CMake reports them one at a time. Nothing gives you the full list up front.</p>
-<h2>What is the fix?</h2>
+<h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Clone with <code>--recursive</code>.</p>
 <pre data-copy="1"><code>cd ~/fpga
 git clone --recursive https://github.com/f4pga/prjxray.git

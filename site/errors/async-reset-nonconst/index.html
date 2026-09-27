@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#x27;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1; (fix, macOS)</title>
+<meta name="description" content="In an always_ff with an asynchronous reset, the reset branch loads a register from a signal, or a signal is written outside the reset if/else; a flip-flop can only reset to a constant. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-nonconst/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#x27;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1; (fix, macOS)">
+<meta property="og:description" content="In an always_ff with an asynchronous reset, the reset branch loads a register from a signal, or a signal is written outside the reset if/else; a flip-flop can only reset to a constant. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-nonconst/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC's edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q <= 0; else if (load) q <= sw; else q <= q + 1;","url":"https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-nonconst/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, yosys</p>
+  <h1 class="mono">design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#x27;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1;</h1>
+<p>Two shapes, two texts. The second comes from yosys' own line above it. When the first if tests the reset at the level its edge leaves (posedge rst with if (!rst)), the code is <a href="/dewfpga/errors/async-reset-polarity/">async-reset-polarity</a> instead.</p>
+<pre><code>design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#39;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1; https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-nonconst/
+ERROR: Async reset \btnC yields non-constant value 4&#39;mmmm for signal \d.
+design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge btnC), so on btnC&#39;s edge every signal it writes must get a constant, and d does not: it is written after the if (btnC) ... else ..., or from a signal, so on the reset edge it would load a value no flip-flop on the chip can load. Fix: make the reset if the whole block, with a constant for every signal in its first branch:  if (btnC) begin q &lt;= 0; d &lt;= 0; end else begin q &lt;= ...; d &lt;= ...; end https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-nonconst/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p><code>always_ff @(posedge clk, posedge btn)</code> makes <code>btn</code> an asynchronous reset: the flip-flop's set/reset pin, which can only force a constant. <code>if (btn) q &lt;= sw;</code> asks the chip to load <code>sw</code> on that pin. yosys emulates it with extra flip-flops and a mux (or a loop), Vivado refuses it outright.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<pre data-copy="1"><code>always_ff @(posedge clk, posedge btn)
+  if (btn) q &lt;= &#39;0;
+  else if (load) q &lt;= sw;
+  else q &lt;= q + 1;</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

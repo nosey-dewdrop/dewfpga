@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:2: ERROR [yosys-crashed]: yosys&#x27; own reader crashed (Segmentation fault: 11) without a message, and this line holds a real number (1e1): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000). (fix, macOS)</title>
+<meta name="description" content="yosys died with a signal instead of an error message; a real literal in a parameter is the known cause, and the line that holds one is named. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/yosys-crashed/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:2: ERROR [yosys-crashed]: yosys&#x27; own reader crashed (Segmentation fault: 11) without a message, and this line holds a real number (1e1): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000). (fix, macOS)">
+<meta property="og:description" content="yosys died with a signal instead of an error message; a real literal in a parameter is the known cause, and the line that holds one is named. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/yosys-crashed/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:2: ERROR [yosys-crashed]: yosys' own reader crashed (Segmentation fault: 11) without a message, and this line holds a real number (1e1): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/yosys-crashed/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, yosys</p>
+  <h1 class="mono">design.sv:2: ERROR [yosys-crashed]: yosys&#x27; own reader crashed (Segmentation fault: 11) without a message, and this line holds a real number (1e1): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000).</h1>
+<pre><code>design.sv:2: ERROR [yosys-crashed]: yosys&#39; own reader crashed (Segmentation fault: 11) without a message, and this line holds a real number (1e1): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000). https://nosey-dewdrop.github.io/dewfpga/errors/yosys-crashed/
+yosys-slang: ERROR: Feature unimplemented at slang_frontend.cc:776, see AST and code line dump above</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>yosys 0.69 segfaults on <code>localparam int MAX = 1e1;</code> (a real in a parameter expression); the shell sees only the signal. The CLI looks for a real literal in the sources to name the line; without one it prints the crash alone and asks for a report.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<pre data-copy="1"><code>localparam int MAX = 10;</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

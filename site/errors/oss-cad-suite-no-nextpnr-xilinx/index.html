@@ -32,9 +32,9 @@
   <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.1</span>the obvious first try, 497 MB later</p>
   <h1 class="mono">oss-cad-suite has no nextpnr-xilinx</h1>
 <p>You want Yosys and nextpnr on a Mac. <a href="https://github.com/YosysHQ/oss-cad-suite-build">oss-cad-suite</a> is YosysHQ's ready-made bundle with a macOS build, so it looks like the whole answer. You download it, unpack it, and there is no <code>nextpnr-xilinx</code> inside.</p>
-<h2>Why does it happen?</h2>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>The bundle ships nextpnr for the architectures that live in the main nextpnr repository: ice40, ecp5, nexus and Gowin. Xilinx support lives in a separate project, <a href="https://github.com/openXC7/nextpnr-xilinx">openXC7/nextpnr-xilinx</a>, and it is not part of the bundle. For the Basys3's Artix-7 you need that one, and Homebrew has no formula for it either.</p>
-<h2>What is the fix?</h2>
+<h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Take Yosys, Icarus Verilog and openFPGALoader from Homebrew, and build nextpnr-xilinx from source.</p>
 <pre data-copy="1"><code>brew install yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14</code></pre>
 <pre data-copy="1"><code>cd ~/fpga

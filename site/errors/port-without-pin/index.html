@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]). (fix, macOS)</title>
+<meta name="description" content="A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs, or the port has a shape this check does not read yet ([0:0], [4:1]). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]). (fix, macOS)">
+<meta property="og:description" content="A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs, or the port has a shape this check does not read yet ([0:0], [4:1]). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, the XDC check before place and route</p>
+  <h1 class="mono">blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]).</h1>
+<p>One line per port, the first twelve; the file:line is the commented-out XDC line, or the port's declaration when no XDC line names it. Four causes, four texts:</p>
+<pre><code>blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]). https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
+blink.sv:10: ERROR [port-without-pin]: led[15] has no pin in the XDC: no line names it (the XDC has lines for led with other indices, none for led[15]). Fix: add a line for led[15] to the XDC (copy a led line, change the index and the pin), or make the port narrower. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
+design.sv:2: ERROR [port-without-pin]: led is a vector of one bit (led [0:0]), so its pin in the XDC is named led[0] (the XDC has that line); this check reads a one-bit port as the scalar led, not led[0]: a [0:0] port is not read yet. Fix: declare it as a scalar (led without the range) and name it [get_ports led] in the XDC; a module written for any width cannot, and then this check is what stops you, not Vivado. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
+design.sv:2: ERROR [port-without-pin]: led[0] is not a bit of led: led is declared [4:1] (its bits and its XDC names start at 1), and this check numbers a port&#39;s bits from 0: a range that does not start at 0 is not read yet. Fix: declare led [3:0] and use the names from led[0] in the XDC; if the handout numbers from 1, this check is what stops you, not Vivado. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>The course's <code>Basys3_Master.xdc</code> ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (<code>LED</code>, <code>leds</code>) matches nothing. The last two texts are limits of this check, not of the chip: a one-bit vector (<code>[0:0]</code>) and a range that does not start at 0 are legal SystemVerilog that nextpnr places, and the check does not read them yet.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Uncomment the line, with the name and index the design uses:</p>
+<pre data-copy="1"><code>set_property -dict { PACKAGE_PIN L1    IOSTANDARD LVCMOS33 } [get_ports {led[15]}]</code></pre>
+<p>For the two shapes the check does not read: declare the port as a scalar, or with a range from 0.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

@@ -2766,7 +2766,7 @@ per agent (two overwrote each other's repro), a judge with a reproduced criticis
 
 ### #4 · What Vivado accepts compiles: yosys-slang as the second reader · 27 September
 
-**In numbers.** Vivado-supported probes passing all four stages 32/111 → 59/111; all four stages 33/133 → 64/133; synthesis 57/133 → 108/133; known gaps 79 → 52; silent wrongs 2 → 2 (`35`, `97`, no simulation model). `test/run.sh`: 187 passed before, 213 passed, 0 failed after (13 min 48 s; the probe stage is longer, every refused design now runs through two readers). `dewfpga bit` on blink: 4.1 s → 3.8 s (the first reader builds it; a design that falls to the second reader pays one more yosys run). `dewfpga check` has a tenth row, `yosys-slang`, and the install grew by one step.
+**In numbers.** Vivado-supported probes passing all four stages 32/111 → 59/111; all four stages 33/133 → 64/133; synthesis 57/133 → 108/133; known gaps 79 → 52; silent wrongs 2 → 2 (`35`, `97`, no simulation model). `test/run.sh`: 187 passed before, 213 passed, 0 failed after (13 min 48 s; the probe stage is longer, every refused design now runs through two readers). `dewfpga bit` on blink: 4.1 s → 3.8 s (the first reader builds it; a design that falls to the second reader pays one more yosys run). `dewfpga check` has a tenth row, `yosys-slang`, and the install grew by one step. CI on the commit: 212 passed, 0 failed, 26 min 59 s (15 min 32 s for #3: the slang build on the runner is the difference).
 
 **The reader decision, measured first (4a).** One agent ran the synthesis stage of all 133 probes under
 four front ends: (A) yosys' `read_verilog -sv`, today's; (B) `read_slang` (the yosys-slang plugin, commit
@@ -2888,7 +2888,7 @@ cannot compile the RTL, 1 still unreadable, `74`). The judge called it: for thos
 would pass the suite as the recorded state. `eqv.sh` now lists the registers with the same two readers as the
 product, so the netlist stage sees slang-built designs. 45 rows of `expect.tsv` were then rewritten from the logs of a run with the fixed `eqv.sh`: the stage columns and a `today` column quoting what the product prints (the `note: top read with yosys-slang` line, the `pnr ok` line, the `EQV PASS` line, or the ERROR that stops it).
 
-**Tests.** The full suite ran three times in the main session after the integration: the first run found 45 rows to rewrite and 7 CLI checks the product change had turned (an unnamed instance is a note now, not an error; a `.v` with SystemVerilog inside stops, as in Vivado; the runner's self-checks that planted their mutation on `01`'s and `02`'s old messages plant it on the new ones, `st_score` plants its gap on `11`); the second found 5 rows whose quotes the runner's parser cut at a backtick, a double quote or a home path; the third passed 213 and failed 1, the self-check `st_fixtext`, whose mutation string had a colon the source does not have: fixed and reproduced by hand (the mutated copy prints the expected `no stage printed it` line); CI's run is the fourth. `test/sv/eqv.sh` lists the RTL's registers with both readers. `.claude/rows-from-logs.py` rewrites a probe's row from the logs of a `KEEP=1` run (used for the 45 rows; it cuts a quote at an apostrophe, a backtick, a double quote and `/Users/`, which the runner's quote parser and the personal-path check would trip on).
+**Tests.** The full suite ran three times in the main session after the integration: the first run found 45 rows to rewrite and 7 CLI checks the product change had turned (an unnamed instance is a note now, not an error; a `.v` with SystemVerilog inside stops, as in Vivado; the runner's self-checks that planted their mutation on `01`'s and `02`'s old messages plant it on the new ones, `st_score` plants its gap on `11`); the second found 5 rows whose quotes the runner's parser cut at a backtick, a double quote or a home path; the third passed 213 and failed 1, the self-check `st_fixtext`, whose mutation string had a colon the source does not have: fixed and reproduced by hand (the mutated copy prints the expected `no stage printed it` line); the full suite on the committed tree is CI's run. `test/sv/eqv.sh` lists the RTL's registers with both readers. `.claude/rows-from-logs.py` rewrites a probe's row from the logs of a `KEEP=1` run (used for the 45 rows; it cuts a quote at an apostrophe, a backtick, a double quote and `/Users/`, which the runner's quote parser and the personal-path check would trip on).
 
 **Found and left to later updates.**
 - #4 (later): `11` enum `next()`/`prev()` (slang builds `first()`/`last()` only); `52`, `33c`, `70`, `94`'s
@@ -2914,3 +2914,133 @@ integrator must run the demo probes itself and quote them (11's row went out sta
 task (08b was on two lists); a fix agent commits to a branch so the integrator merges commits, not worktree
 files; the guard must be measurable by the suite before the run (the eqv.sh reader was not); a 4 GB free-disk
 check before the run, and `KEEP=1` work folders deleted by the agent that made them.
+
+### #5 · Every message in one shape, with its code and its page · 27 September
+
+**In numbers.** Over the 35 probes whose messages this update owns (a `KEEP=1` run of each, before and
+after, `rtl.log` and `bit.log`): lines the product prints as an ERROR, a warning or a note, 68 before,
+70 after; of them, carrying a code in brackets, 0 → 59, and 36 of the 59 start with the student's
+`file:line` (the rest are the toolchain, the XDC as a whole, timing, or the two notes `read-with-slang`
+and `no-create-clock`). The 11 uncoded lines after are the tools' own lines, kept above the coded one
+(yosys' `Multiple edge sensitive events`, nextpnr's `Unable to place cell`, yosys' `Failed to get a
+constant init value`). The catalog: 10 pages → 78, one per code, generated from `docs/errors.md`. The
+four stage columns of `expect.tsv` are byte-identical before and after (md5 of the columns, both trees):
+this update changed words, not verdicts; Vivado-supported probes passing all four stages 59/111 → 59/111.
+`test/run.sh`: 213 passed before, 213 passed, 0 failed after (14 min 41 s; two rows were requoted after the run and re-run alone, CI runs the whole suite on the commit).
+
+**The shape.** One line per problem: the student's file and line, the kind, the code, what is wrong, the
+fix in one sentence, the page.
+```
+design.sv:4: ERROR [undeclared-name]: summ is not declared anywhere and nothing drives it: yosys made it a 1-bit wire stuck at x and built the design without it (dewfpga sim refuses this code). Fix: declare it, or check the spelling (a typo of a declared name). https://nosey-dewdrop.github.io/dewfpga/errors/undeclared-name/
+```
+A problem with no place in the student's code starts with the kind (`ERROR [board-not-found]: ...`).
+yosys', iverilog's, nextpnr's and yosys-slang's own lines stay as they are, above the product's line; when
+the product already made a coded ERROR, slang's diagnostic is shown as a plain `yosys-slang: ...` line, not
+a second ERROR. Warnings and notes carry a code too (`warning [latch]`, `note [unnamed-instance]`). The code
+is the page's folder under `/errors/`; the ten pages that existed keep their slugs.
+
+**What the student sees.** `77_initial_from_signal` (`initial num = sw;`), `dewfpga bit`, before:
+```
+yosys' reader:
+  ERROR: Failed to get a constant init value for \num: \sw
+ERROR: design.sv:3:17: reading net state during design initialization unsupported (yosys-slang)
+```
+after:
+```
+ERROR: Failed to get a constant init value for \num: \sw
+design.sv:3: ERROR [initial-from-signal]: `num = sw` here is a start value, not a wire: it reads sw once, at time 0 (IEEE 1800-2017 6.8), and the chip has no power-up value that follows a signal, so yosys stops. Fix: for a wire write  assign num = sw;  for a register give num a constant start value (logic [15:0] num = '0;) and load sw with the clock (if (btnC) num <= sw;). https://nosey-dewdrop.github.io/dewfpga/errors/initial-from-signal/
+```
+`31b_negedge_set`'s pnr line said `337:slice$1535.C': 358.68 MHz`; it says `clk 358.68 MHz`. `04_dual_edge`
+got "a signal is written from two always blocks with different edges"; it gets `design.sv:3: ERROR
+[dual-edge]: this always block is sensitive to both edges of clk (@(posedge clk or negedge clk)), so cnt
+would change on every edge: no flip-flop on the chip does that ... Fix: clock the block on one edge`.
+`33c` (a tri-state buffer on an output port) got nextpnr's `no Bels remaining of type '$_TBUF_'` and "the
+design does not fit"; it gets `design.sv:4: ERROR [internal-tristate]` naming the z lines and saying that
+Vivado converts such a driver to logic and this chain cannot yet.
+
+**What changed.**
+- *One formatter* (`templates/Makefile`): an awk function `fmt()` prepended to every awk program, and the
+  same shape in the shell `echo` lines; every message the Makefile prints goes through it (the yosys
+  filter, the nextpnr filter, the timing verdict, the scans, sim's testbench-missing, timeout, `$error`
+  and exit lines, flash's board-not-found).
+- *Lines for the line-less.* `04` dual edge (the always block's line from the `src` attributes, as the
+  two-driver rule reads them), `53` (an async reset ORed with a synchronous clear: one block, told from the
+  two-block case, with the shape of the fix), `77` (the declaration line), a module whose file is missing
+  (`module-not-found`, the instantiation's line by a grep of the sources), a yosys crash (`63b`: the coded
+  line names the file, and the awk program is never printed again).
+- *The real cause for the misleading ones.* nextpnr's `no Bels remaining` is not "does not fit" unless it
+  is a real LUT/FF overflow: `$_TBUF_` is `internal-tristate` (with the z lines), `$and`/`$or` from
+  `wor`/`wand` and `$pow` (`power-operator`) name the construct, an empty module's blackbox (`95`,
+  `empty-module`) names the module and its line; the `-nobram` sentence says what is true for a block RAM
+  attribute (`97`).
+- *The pnr line names the clock.* A resolver reads the clock net back from the design's json (only the
+  module named `top`: the first version read the cell library's modules too and printed `VAUXN`) and
+  prints the student's name (`clk`, a divided `slow`), or `a clock derived inside the design (file:line)`.
+  `31b`'s falling-edge clock prints `clk`, not `clk (falling edge)`: yosys puts the inversion on the
+  flip-flop's parameter, not on the net (open).
+- *The scanner and the CLI* (`templates/check_xdc.py`, `bin/dewfpga`): the scanner's problems, the
+  `--fix-ports` notes, the XDC checker (ports with no pin now name the XDC line where one exists, the
+  case typo the port's declaration; the wildcard and list forms of `get_ports` that Vivado accepts, `96`,
+  `96b`, get `xdc-get-ports-form`, which says the form is not read yet) and every `die` line (no source
+  file, a space in a path, a BOM, no testbench, no or two `.xdc`, the toolchain missing, an unknown option,
+  running outside the folder), `check`'s summary line, `uninstall`'s lines. `dewfpga sim` with two roots
+  says `dewfpga sim <name>`.
+- *The catalog* (`docs/errors.md`, `docs/errors-build.sh`, `site/errors/`): one `## code` entry per code
+  (what the student sees, why, the fix, an example line) rendered into the pages' shell by pandoc, plus an
+  index page; the ten old pages were moved into entries word for word and regenerated with the same text
+  (a text diff, three `<pre>` blocks fixed by hand). The guide's section 7 is now "Which errors does the
+  CLI stop with, and what do they mean?" with the shape explained once; its old anchor
+  `#7-which-course-file-breaks` is kept as an alias (the 20 September post may point at it). README,
+  README.tr and the cli page point at the catalog. A link check over the site tree: 210 links in 16 files,
+  0 broken.
+
+**Break rounds and the judge.** Round 1, the student: 5 findings, all reproduced (an empty submodule
+*with a parameter* built silently through slang, its outputs x, high; the textbook tri-state mux written
+inline on a `tri` net reported as two always blocks, high; a dual-edge list spanning two lines reported as
+an async reset with a clear, medium; `3 ** sw[2:0]` reported as a signal base, medium; the `.v` note after
+a coded error on plain Verilog, low). Round 2: 5 + 2 (two z drivers in a `generate` loop and `always @*`
+plus `assign` on one signal both reported as two always blocks, high; an undeclared name inside a
+`generate` sent to the unsupported-construct page, medium; the latch warning saying "an if without else"
+for a `case`, low; a `**` message quoting an expression not in the file, low; two inline z drivers under
+yosys' own reader named by a yosys-internal net, medium; `33c`'s message claiming Vivado converts a top
+output's driver to logic where UG901 says OBUFT, low). The judge (an agent that built none of it) returned
+`fix` with 6 criticisms, 5 reproduced and in scope: an async reset with the wrong polarity (`posedge btnC`,
+`if (!btnC)`) reported as "loaded from a signal" with a fix naming `rst`, `load`, `sw` that are not in the
+design (high); the same message hardcoding `(posedge clk or posedge btn)` after 16 raw `Emulating async
+set + reset` lines (medium); `timing-not-met` advising `create_clock -period 20.000` (50 MHz) to a design
+that reaches 33.61 MHz (medium); a `case` latch at top level called an `if` (medium); a driver conflict in
+a submodule printed twice, `q` and `u_cnt.q` (low). Three fix rounds closed all of them: the driver
+conflicts are named by their source lines and their real kind (`always-and-assign`, `two-assign-drivers`,
+`tristate-to-logic`), `async-reset-polarity` is a code of its own, the END-branch message uses the
+student's names and edges, the `Emulating` lines are folded, `[latch]` tells `case` from `if`, and the
+timing fix proposes a period the measured frequency allows. Held: the 35 targets and the 6 canaries with
+every stage unchanged, the CLI checks that grep the messages (rewritten by the integrator), two-file
+designs after round 3.
+
+**Tried and did not work.** A bare `#` inside a grep pattern in a make variable starts a make comment and
+cut the awk program on every probe (`\#`). The first clock resolver read every module in the json. The
+first `5C` link check flagged `/dewfpga/sim/` and `/dewfpga/templates/*`, which CI copies next to `site/`
+(the check resolves against `site/` then the repo root), and the query string of `?view=tb`. The `.v`
+note printed after a coded error that already named the cause (dropped there).
+
+**Tests.** The suite's message greps (the CLI checks that look for a message, and the runner's self-checks that plant a mutation in a message) were rewritten by the integrator to the new lines; 44 rows of `expect.tsv` were requoted from logs after the build, 2 more after the judge's fixes (`03b`, `22b`), all with `.claude/rows-from-logs.py`, which now recognizes the file-first shape. The full suite: 213 passed, 2 failed on the two stale rows, then those two re-run alone: `matches expect.tsv: 2/2`.
+
+**Found and left to later updates.**
+- #4 (later): `96`/`96b`: yosys' json carries `single_bit_vector` and `offset` on those ports, so the XDC
+  names could be built from it and both would build; not done here (the guard forbade a verdict change).
+  `11` enum `next()`.
+- #6: no probe exercises `module-not-found`; the XDC checker's cap at 12 missing-port lines is untested; the
+  flash lines are in the Makefile, tested only without a board.
+- Open in the messages: `31b`'s clock prints `clk` without "falling edge"; `33c`'s Vivado claim is the
+  UG901 tristate paragraph, not a log.
+- Not verified (DOĞRULANMADI): the XC7A35T counts in the `does-not-fit` message (20800 LUTs, 41600 FFs) are
+  from DS180, not re-checked; UG903's `get_ports` pattern rules quoted in `xdc-get-ports-form`; the PDF's
+  print layout after the new section 7 (14 pages) was not looked at.
+
+**Orchestration, for the record.** 15 agents, 2 h 22 min, no agent died: 3 build (45, 35, 35 minutes),
+1 integrator, 2 break rounds (student + regression reader), 3 fix agents, the judge, 3 integrations. The
+integrators committed in the main tree (four commits, squashed into this one). The judge's process notes,
+applied to the script: the diff is read against the update's base commit, not `HEAD` (the update may
+already be committed); the metric must reach the judge as a number, not as rows (the coded-line count over
+all 35 targets was lost between the integrator and the judge and was re-counted here); a message with a
+formula in it (`create_clock -period`) is checked against the number printed next to it.

@@ -60,20 +60,296 @@
     <p>make, on a Makefile copied from a PDF or a web page. The recipe lines lost their Tab characters when you copied them.</p>
   </div>
   <div class="err">
-    <span class="step">5</span><a class="title" href="/dewfpga/errors/no-iostandard-property/">ERROR: port led[0] of type PAD has no IOSTANDARD property</a>
-    <p>nextpnr-xilinx, at the start of place and route. A port in your design has no pin in the .xdc file. nextpnr names the wrong port.</p>
+    <span class="step">5</span><a class="title" href="/dewfpga/errors/no-iostandard-property/">blink.xdc:42: ERROR [no-iostandard-property]: led[15] has a PACKAGE_PIN but no IOSTANDARD in the XDC: every pin needs both, and nextpnr stops without one. Fix: add the line  set_property IOSTANDARD LVCMOS33 [get_ports {led[15]}]</a>
+    <p>dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw form below). A port in your design has no pin in the .xdc file. nextpnr names the wrong port.</p>
   </div>
   <div class="err">
-    <span class="step">7</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">ERROR: Module port &#x27;dp&#x27; is neither input nor output</a>
-    <p>Yosys, while synthesizing the course&#x27;s SevSeg_4digit.sv. The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
+    <span class="step">7</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both)</a>
+    <p>dewfpga bit, the source scan before the tools run (Yosys alone prints the raw form below). The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
   </div>
   <div class="err">
-    <span class="step">flash</span><a class="title" href="/dewfpga/errors/board-not-found/">ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</a>
+    <span class="step">flash</span><a class="title" href="/dewfpga/errors/board-not-found/">ERROR [board-not-found]: board not found: the Mac sees no Basys3 on USB (openFPGALoader: unable to open ftdi device). Fix: plug the USB into the PROG port, switch the power ON, and try another cable or port.</a>
     <p>openFPGALoader, when you program the board. The Mac does not see the Basys3 on the USB bus: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper.</p>
   </div>
-  <h2>Your error is not here?</h2>
-  <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the section number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
-  <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#9-which-versions-were-tested">section 9 of the guide</a>. Newer versions can move the walls.</p>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/unknown-command/">ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below.</a>
+    <p>dewfpga, before anything runs. The word after dewfpga is not one of its commands (install, check, new, sim, bit, flash, clean, uninstall).</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/unknown-option/">ERROR [unknown-option]: unknown option: --x; dewfpga bit takes a module or a file name, nothing else. Fix: dewfpga bit [top]  (dewfpga --help lists the commands).</a>
+    <p>dewfpga bit / sim / flash / install, before anything runs. A word starting with - after the command, or an argument after install: the commands take a module or file name at most, install takes nothing.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-source-file/">ERROR [no-source-file]: no .sv or .v file in /Users/you/lab4. Fix: cd into the folder with your design, or start one:  dewfpga new blink</a>
+    <p>dewfpga sim / bit, before anything runs. The current folder holds no .sv or .v file; dewfpga works on the files in the folder you run it in.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/run-inside-the-folder/">ERROR [run-inside-the-folder]: w/blink is a path, and dewfpga works on the .sv files in the current folder. Fix: run it inside the folder that holds the .sv files:  cd &quot;w&quot; &amp;&amp; dewfpga bit blink</a>
+    <p>dewfpga sim / bit, before anything runs. The argument holds a slash: the CLI takes a module or a file name in the current folder, not a path.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/file-name-with-space/">ERROR [file-name-with-space]: &#x27;my blink.sv&#x27;: file names with spaces are not supported by the tools. Fix: rename it (e.g. my_blink.sv).</a>
+    <p>dewfpga sim / bit, before anything runs. A .sv, .v or .xdc file name with a space in it; yosys, iverilog and nextpnr take file lists split at spaces.</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/path-with-space/">ERROR [path-with-space]: a path with a space (/Users/you/My Projects/dewfpga / /Users/you/fpga): the FPGA tools cannot handle that. Fix: move the folder to a path without spaces, or set FPGA_HOME to one.</a>
+    <p>dewfpga, before anything runs. The CLI&#x27;s own folder or FPGA_HOME has a space in its path; the build scripts hand those paths to make and the tools unquoted.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/utf8-bom/">blink.sv:1: ERROR [utf8-bom]: blink.sv starts with a byte-order mark (saved as &#x27;UTF-8 with BOM&#x27;), and yosys stops at its first token. Fix: save it as plain UTF-8, or remove it:  LC_ALL=C sed -i &#x27;&#x27; $&#x27;1s/^\xEF\xBB\xBF//&#x27; blink.sv</a>
+    <p>dewfpga sim / bit, before anything runs. The file starts with the three invisible bytes EF BB BF that Notepad and some editors write; yosys reads them as a token it does not know.</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/folder-exists/">ERROR [folder-exists]: w already exists, and dewfpga new does not overwrite. Fix: pick another name, or cd w and work there.</a>
+    <p>dewfpga new. The folder dewfpga new was told to create is already there; it never overwrites a design.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-xdc-file/">ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.</a>
+    <p>dewfpga bit / flash, before synthesis. The folder has the design but no .xdc; the pin file says which pin of the Basys3 each port goes to, and without it nothing can be placed.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/two-xdc-files/">ERROR [two-xdc-files]: 2 .xdc files here (a.xdc b.xdc) and none is named blink.xdc, so nothing says which one holds the pins. Fix: keep one, or name it blink.xdc.</a>
+    <p>dewfpga bit / flash, before synthesis. Several .xdc files in the folder and none named after the top module; the CLI does not guess which one is the pin file.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/no-testbench/">ERROR [no-testbench]: no testbench for blink in this folder: a testbench is a module without ports that instantiates blink and ends with $finish; blink_tb.sv is the usual name. Fix: write one next to the design; &#x27;dewfpga new blink&#x27; gives an example (blink/blink_tb.sv).</a>
+    <p>dewfpga sim, before iverilog. No module without ports instantiates the top module, so there is nothing to simulate it with.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-top-module/">ERROR [no-top-module]: could not find a top module in blink.sv blink_tb.sv. Fix: name it:  dewfpga bit &lt;module&gt;</a>
+    <p>dewfpga sim / bit, before anything runs. The source scan ended without a top module and without a reason; naming the module on the command line settles it.</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/toolchain-not-installed/">ERROR [toolchain-not-installed]: something is missing (the ✗ rows above), so dewfpga bit and flash cannot run. Fix: dewfpga install  (safe to re-run; it only builds what is missing).</a>
+    <p>dewfpga check, or dewfpga bit / flash before synthesis. nextpnr-xilinx, the chip database or another tool is not under FPGA_HOME; the build needs all of them.</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/yosys-slang-does-not-load/">ERROR [yosys-slang-does-not-load]: /Users/you/fpga/yosys-slang/build/slang.so was built for another yosys (brew upgrade yosys leaves it behind), so the SystemVerilog yosys&#x27; own reader refuses would not build. Fix: dewfpga install  (it rebuilds the reader, about 4 min).</a>
+    <p>dewfpga check. The second reader is a plugin compiled against one yosys; after brew upgrade yosys it no longer loads.</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/fpga-home-unsafe/">ERROR [fpga-home-unsafe]: FPGA_HOME is /Users/you; refusing to delete that. Fix: remove the six entries by hand: nextpnr-xilinx yosys-slang prjxray chipdb venv install.log</a>
+    <p>dewfpga uninstall. FPGA_HOME points at your home folder or /; uninstall deletes what install.sh put under FPGA_HOME and will not touch those.</p>
+  </div>
+  <div class="err">
+    <span class="step">check</span><a class="title" href="/dewfpga/errors/no-install-found/">note [no-install-found]: nothing to remove: no dewfpga install found in /Users/you/fpga (FPGA_HOME=/elsewhere dewfpga uninstall for one installed elsewhere).</a>
+    <p>dewfpga uninstall. Not an error: uninstall found none of the six entries install.sh writes under FPGA_HOME.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/two-tops/">counter.sv:4: ERROR [two-tops]: 2 modules could be the top (nothing instantiates them): counter (counter.sv:4), top (counter.sv:8). Fix: name it:  dewfpga bit counter</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. Two or more design modules that nothing instantiates; the CLI does not pick one by file name (Lab 4 folders name the file after the wrong one).</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/top-is-a-testbench/">blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-such-module/">ERROR [no-such-module]: no module named nope in blink.sv blink_tb.sv; the modules here: blink. Fix: name one of them, or the file that holds it:  dewfpga bit blink</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. The name on the command line is neither a module nor a file of this folder.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-design-module/">ERROR [no-design-module]: no design module in blink_tb.sv (only testbenches). Fix: a design is a module with ports; put it in a .sv file in this folder, or start one:  dewfpga new blink</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. Every module in the folder has no ports; there is nothing to build.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/module-defined-twice/">design.sv:1: ERROR [module-defined-twice]: module top is defined twice: design.sv:1 and design_old.sv:2; the last one read would win silently. Fix: keep one, or move the backup out of this folder.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. Two files in the folder declare the same module; the tools would take the last one read, so a backup could be built instead of the design.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/finish-in-design/">design.sv:6: ERROR [finish-in-design]: $finish in a design module (top): Vivado ignores it (UG901 Table 21: $finish Ignored) and yosys stops on it. Fix: remove it, move the check to the testbench, or wrap it in `ifndef SYNTHESIS ... `endif.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. A $finish or $stop inside a module with ports; there is no hardware for it, and yosys stops on it where Vivado drops it.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/decl-init-reads-signal/">design.sv:2: ERROR [decl-init-reads-signal]: `sum = sw[3:0] + sw[7:4]` in a declaration is a start value, not a wire: it reads sw once, at time 0 (IEEE 1800-2017 6.8; yosys makes it the power-up value, so the board never follows sw). Fix: write  assign sum = sw[3:0] + sw[7:4];  and declare sum without the = part.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. `logic [3:0] sum = sw[3:0] + sw[7:4];` sets a power-up value from a signal; it is not a continuous assignment, and the board would show the value from time 0 forever.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/unnamed-instance/">design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (the standard and Yosys need it; Vivado accepts both)</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in your file and says so.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/vivado-netlist-in-folder/">leftover_func_synth.v:2: ERROR [vivado-netlist-in-folder]: leftover_func_synth.v is a netlist Vivado wrote after synthesis, not source code (its header says so, and Yosys cannot read it); Vivado writes these under .sim/ and .runs/. Fix: delete it from this folder and keep your own .sv files.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. A .v file whose header says it is a Vivado post-synthesis simulation netlist sits next to the sources; it is not a design and yosys cannot read it.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/port-without-pin/">blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]).</a>
+    <p>dewfpga bit, the XDC check before place and route. A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs, or the port has a shape this check does not read yet ([0:0], [4:1]).</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/xdc-get-ports-form/">blink.xdc:43: warning [xdc-get-ports-form]: `get_ports {led[*]}` is a wildcard: Vivado expands it, and this check does not read that form yet, so the ports it names count as unpinned here. Fix: write one line per port with its full name, as the course&#x27;s Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}]</a>
+    <p>dewfpga bit, the XDC check before place and route. A get_ports with a wildcard, a list of several ports or an option (-regexp, -filter): Vivado expands those, this check reads one full port name per line.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/xdc-port-case/">blink.xdc:43: warning [xdc-port-case]: the XDC names &#x27;LED[3]&#x27; but the design&#x27;s port is spelled led (same name, different case), so this line is an unused pin. Fix: make the two spellings the same.</a>
+    <p>dewfpga bit, the XDC check before place and route. An XDC line names a port that differs from the design&#x27;s only in case; names are case-sensitive, so the line pins nothing.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/iverilog-refused/">design.sv:4: ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above). Fix: fix the first line it names; the errors after the first often follow from it.</a>
+    <p>dewfpga sim, iverilog. iverilog stopped with an error; its own lines are above, and this line names the first of them.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-timeout/">ERROR [sim-timeout]: the simulation did not finish in 120 s: the testbench never reached $finish (a free-running clock never stops on its own). Fix: end the testbench with $finish; SIM_TIMEOUT=600 dewfpga sim waits longer.</a>
+    <p>dewfpga sim, vvp. The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-exit/">ERROR [sim-exit]: the simulator stopped with exit 1 (its message is above: a $fatal, or a testbench that ends without $finish). Fix: read the line above this one and fix what it names; make the testbench end with $finish.</a>
+    <p>dewfpga sim, vvp. vvp ended with a non-zero exit: a $fatal in the testbench, or a run that ended without $finish.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/testbench-error/">blink_tb.sv:17: ERROR [testbench-error]: the testbench reported 2 errors (its ERROR: lines above, from $error): the design does not do what the testbench expects. Fix: read the first ERROR: line, it names the check that failed; fix the design there, or the testbench if its expectation is wrong.</a>
+    <p>dewfpga sim, after vvp. The simulation ran to $finish, and the testbench printed ERROR: lines with $error: a check failed.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/packed-typedef-2d/">design.sv:4: ERROR [packed-typedef-2d]: SEG is declared with the type tab_t, a packed array with two dimensions (design.sv:3): yosys keeps a value of such a typedef as one flat vector, so SEG[i] picks one bit instead of one row, and the table would be built wrong. Fix: write the dimensions on the declaration itself:  logic [3:0][6:0] SEG;  a parameter yosys refuses in that form, so keep it flat and take a row with +:  (localparam logic [N*W-1:0] SEG = {...}; SEG[i*W +: W]).</a>
+    <p>dewfpga sim / bit, the typedef scan before the tools run. A typedef of a two-dimensional packed array used to declare a parameter or a net; yosys flattens the type and every row index picks one bit.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/ref-argument/">design.sv:2: ERROR [ref-argument]: function inc takes an argument by reference (ref logic [3:0] x): yosys does not read ref, and yosys-slang drops it, so the variable it is called with would never change on the board. Fix: pass the value in and return it (function automatic logic [3:0] inc(input logic [3:0] x); ... return x + 1;  and  v = inc(v);).</a>
+    <p>dewfpga bit, the source scan before the tools run. A function or task argument passed by reference; yosys&#x27; reader stops on it and yosys-slang builds the call as nothing.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/package-file-not-given/">design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.sv, and the tools are not given that file (dewfpga hands them the files that hold a module: design.sv): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include &quot;pkg.sv&quot;   as the first line of design.sv; or move the package into design.sv, above the module.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run (or yosys). The package lives in its own file, and the CLI hands the tools only the files that hold a module, so the package is not read.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/package-not-found/">design.sv:2: ERROR [package-not-found]: `import cfg_pkg::*` names the package cfg_pkg, and no file in this folder declares it (package cfg_pkg; ... endpackage). Fix: check the spelling, or add the file that declares it and `include it as the first line of design.sv.</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. An import or pkg::NAME names a package no file in the folder declares.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/isunknown-in-design/">design.sv:2: ERROR [isunknown-in-design]: $isunknown in a design: on the board a signal is never x, so it is 0 there (and dewfpga sim shows 0); yosys folds it to the constant 1 instead, so the bitstream would not do what the simulation showed. Fix: remove it from the design; $isunknown belongs in the testbench.</a>
+    <p>dewfpga bit, the source scan before yosys. $isunknown in synthesizable code; a chip has no x, and yosys folds the call to a constant that differs from the simulation.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/latch/">design.sv:3: warning [latch]: latch inferred for q (an if without else in always_comb): q keeps its value when no branch assigns it; Vivado builds the latch too, with the same warning (UG901 Ch.5 Latches). Fix: if you meant a register, write always_ff with a clock; if a latch, always_latch; if neither, give q a value on every path (an else branch, or a default at the top of the block).</a>
+    <p>dewfpga bit, yosys. A combinational block leaves a signal unassigned on some path, so it has to remember its value: a latch, built as Vivado builds it, with the same warning.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/latch-loop/">design.sv:3: ERROR [latch-loop]: latch inferred for q (an if without else in always_comb), and yosys built it as a LUT feedback loop, not a latch, so the board would not do what the simulation showed; Vivado builds an LDCE latch here, with a warning (UG901 Ch.5 Latches). Fix: give q a value on every path (an else branch, or a default at the top of the block); if you meant a latch, write always_latch instead of always_comb (both readers build that as a latch).</a>
+    <p>dewfpga bit, yosys. A latch the reader turned into a combinational loop instead of a latch cell; the loop does not behave like the simulation, so the build stops.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/async-reset-nonconst/">design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#x27;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1;</a>
+    <p>dewfpga bit, yosys. In an always_ff with an asynchronous reset, the reset branch loads a register from a signal, or a signal is written outside the reset if/else; a flip-flop can only reset to a constant.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/async-reset-polarity/">design.sv:3: ERROR [async-reset-polarity]: this always_ff is sensitive to posedge btnC, but its first if tests !btnC, so the reset branch runs while btnC is low and on btnC&#x27;s rising edge the block takes the else branch, which loads q from sw: no flip-flop on the chip loads a signal on its reset edge (yosys emulates it with FFs and a mux, so the board would not do what the simulation showed). Fix: test btnC at the level its edge leaves it:  if (btnC) q &lt;= 0; else ...;  or keep if (!btnC) and write negedge btnC in the sensitivity list.</a>
+    <p>dewfpga bit, yosys. The sensitivity list names one edge of the reset and the first if tests the other level, so the reset edge lands in the else branch, which loads a signal.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/async-reset-not-alone/">design.sv:3: ERROR [async-reset-not-alone]: this always block is sensitive to two edges (@(posedge clk, posedge btnC)), so one of them is an asynchronous reset, but its first if does not test that reset alone (a reset ORed with a synchronous clear: if (rst || clear)), so neither reader can tell the reset from the clock. Fix: test the reset alone first and put the synchronous clear in the else:  if (btnC) q &lt;= 0; else if (clear) q &lt;= 0; else q &lt;= q + 1;</a>
+    <p>dewfpga bit, yosys. The block has a clock and an asynchronous reset in its sensitivity list, but the first if tests the reset ORed with another signal.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/dual-edge/">design.sv:3: ERROR [dual-edge]: this always block is sensitive to both edges of clk (@(posedge clk or negedge clk)), so cnt would change on every edge: no flip-flop on the chip does that, and neither reader builds it. Fix: clock the block on one edge (always_ff @(posedge clk)); for twice the rate use a faster clock (the Basys3&#x27;s is 100 MHz) or count on both phases with two registers.</a>
+    <p>dewfpga bit, yosys. One always block clocked on posedge and negedge of the same clock; the chip&#x27;s flip-flops have one clock edge.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/initial-from-signal/">design.sv:3: ERROR [initial-from-signal]: `num = sw` here is a start value, not a wire: it reads sw once, at time 0 (IEEE 1800-2017 6.8), and the chip has no power-up value that follows a signal, so yosys stops. Fix: for a wire write  assign num = sw;  for a register give num a constant start value (logic [15:0] num = &#x27;0;) and load sw with the clock (if (btnC) num &lt;= sw;).</a>
+    <p>dewfpga bit, yosys. An initial block, or a declaration, sets a register&#x27;s start value from a signal; power-up values are constants.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/two-always-drivers/">design.sv:3 and design.sv:4: ERROR [two-always-drivers]: cnt is written from two always blocks (design.sv:3 and design.sv:4): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive cnt from one always block (merge the two, or give each block its own signal).</a>
+    <p>dewfpga bit, yosys. The same register is assigned in two always blocks; yosys resolves the conflict silently, Vivado refuses it.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/always-and-assign/">design.sv:4 and design.sv:6: ERROR [always-and-assign]: q is written by an always block (design.sv:4) and by a continuous assign (design.sv:6): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive q from one of them.</a>
+    <p>dewfpga bit, yosys. A signal assigned both in an always block and with assign; two drivers on one wire.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/two-assign-drivers/">design.sv:2 and design.sv:3: ERROR [two-assign-drivers]: led is written by two continuous assigns (design.sv:2 and design.sv:3): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive led from one assign (select with a mux:  assign led = sel ? b : a;).</a>
+    <p>dewfpga bit, yosys. A signal with two assign lines; two drivers on one wire.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/multiple-drivers/">design.sv:3 and design.sv:7: ERROR [multiple-drivers]: q is written from more than one place (design.sv:3 and design.sv:7): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive q from one always block or one assign; give each other writer its own signal.</a>
+    <p>dewfpga bit, yosys. A signal written from more than one place that the checker could not sort into always blocks and assigns; two drivers on one wire.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/undeclared-name/">design.sv:4: ERROR [undeclared-name]: summ is not declared anywhere and nothing drives it: yosys made it a 1-bit wire stuck at x and built the design without it (dewfpga sim refuses this code). Fix: declare it, or check the spelling (a typo of a declared name).</a>
+    <p>dewfpga bit, yosys. A name used but never declared; yosys&#x27; reader makes an implicit 1-bit wire with no driver, so the design would be built without it.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/hierarchical-name/">design.sv:7: ERROR [hierarchical-name]: u_cnt.count is a hierarchical name (a signal inside another instance). yosys does not resolve it (it made a 1-bit wire with no driver, so the board would not do what the simulation showed); Vivado resolves hierarchical names (UG901 Ch.9 Table 20). Fix: bring that signal out through an output port of its module and connect it here.</a>
+    <p>dewfpga bit, yosys (when yosys-slang is not installed). A signal reached through an instance name (u_cnt.count); yosys&#x27; own reader does not resolve it. With yosys-slang installed the design builds, with the read-with-slang note.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/interface-member/">design.sv:9: ERROR [interface-member]: bus.data is a member of the interface instance bus, used in the module that instantiates it. yosys does not resolve it (it made a 1-bit wire with no driver, so the board would not do what the simulation showed); an interface used this way is not supported yet (#4). Fix: pass the interface to a module through an interface port, or keep those signals as plain logic in the module.</a>
+    <p>dewfpga bit, yosys (when yosys-slang is not installed). A member of an interface instance read in the module that declares the instance; yosys&#x27; own reader makes an undriven wire of it. With yosys-slang installed the design builds.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/module-not-found/">design.sv:5: ERROR [module-not-found]: the module counter is instantiated here, and no file the build was given declares it (dewfpga reads the files that hold a module: design.sv). Fix: put the file that declares counter in this folder, or check the spelling of the module name.</a>
+    <p>dewfpga bit, yosys. An instance of a module no file in the folder declares.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/enum-method-next-prev/">design.sv:5: ERROR [enum-method-next-prev]: s.next() is an enum method that steps through the values (next/prev): yosys does not build enum methods, and yosys-slang builds first()/last() only; Vivado builds next/prev (UG901 Ch.10 Table 27). Fix: write the step out as a case on s, in the order the enum lists its values (with IDLE, RUN, DONE: case (s) IDLE: s &lt;= RUN; RUN: s &lt;= DONE; DONE: s &lt;= IDLE; endcase).</a>
+    <p>dewfpga bit, yosys-slang. The enum methods next() and prev(); neither reader builds them, Vivado does.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/slang-refused/">blink.v:8: ERROR [slang-refused]: use of undeclared identifier &#x27;logic&#x27; (yosys-slang, the second reader; yosys&#x27; own reader refused this code too, its line is above). Fix: the caret below marks the construct; the page lists the usual ones and what to write instead.</a>
+    <p>dewfpga bit, yosys-slang, after yosys&#x27; own reader refused the code. Both readers refused the code; yosys&#x27; own line is printed first, then yosys-slang&#x27;s error with its caret.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/slang-unimplemented/">ERROR [slang-unimplemented]: yosys-slang cannot build a construct of this design yet (ERROR: Feature unimplemented at slang_frontend.cc:776, see AST and code line dump above), and yosys&#x27; own reader refused the code too (its line is above). Fix: take the design apart until the build goes through, and report that construct (github.com/nosey-dewdrop/dewfpga/issues).</a>
+    <p>dewfpga bit, yosys-slang, after yosys&#x27; own reader refused the code. yosys-slang stops on a construct it has no implementation for, without a line; the code line dump above it shows the construct.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/yosys-crashed/">design.sv:2: ERROR [yosys-crashed]: yosys&#x27; own reader crashed (Segmentation fault: 11) without a message, and this line holds a real number (1e1): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000).</a>
+    <p>dewfpga bit, yosys. yosys died with a signal instead of an error message; a real literal in a parameter is the known cause, and the line that holds one is named.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/second-reader-missing/">note [second-reader-missing]: yosys&#x27; own reader refused this code, and yosys-slang, the second reader (it reads the SystemVerilog Vivado accepts: interfaces, unpacked arrays, foreach, break, enum methods first/last ...), is not installed: /Users/you/fpga/yosys-slang/build/slang.so not found. Fix: run  dewfpga install  (it builds that reader, ~3 min), then build again.</a>
+    <p>dewfpga bit, after yosys&#x27; own reader refused the code. The code needs the second reader, and it is not built; the error above it may go away with it.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/read-with-slang/">note [read-with-slang]: top read with yosys-slang, the second reader (yosys&#x27; own reader refused this code; the build is the same from here).</a>
+    <p>dewfpga bit, synthesis. Not an error: yosys&#x27; own reader refused the code, yosys-slang read it, and synthesis went on as usual.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/v-is-verilog-2005/">note [v-is-verilog-2005]: a .v file is read as Verilog-2005 by both readers, as Vivado reads it (UG901 Ch.10): SystemVerilog (logic, always_ff, always_comb, enum ...) belongs in a .sv file. Fix: if your .v file holds SystemVerilog, rename it to .sv.</a>
+    <p>dewfpga bit, after both readers refused a .v file. A .v file that holds SystemVerilog; both readers, like Vivado, read .v as Verilog-2005, so logic and always_ff are syntax errors there.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-create-clock/">note [no-create-clock]: no create_clock in Basys3_Master.xdc; timing is checked against the Basys3&#x27;s 100 MHz oscillator (--freq 100).</a>
+    <p>dewfpga bit, before place and route. Not an error: the XDC has no create_clock line, so every clock is checked at the board&#x27;s 100 MHz.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/internal-tristate/">design.sv:2: ERROR [internal-tristate]: a tri-state driver (a z, at design.sv:2) on a signal that is not an inout pin of the top module: the chip has tri-state buffers on its pins only. Vivado converts such a driver to logic (UG901 Ch.5 Tristates); yosys keeps it as a $_TBUF_ cell, and nextpnr has nothing to place it on. Not a size problem. Fix: select with a mux instead:  assign bus = sel ? b : a;  and keep z for an inout pin only.</a>
+    <p>dewfpga bit, nextpnr. A z driven onto an internal signal or a submodule port; the chip&#x27;s tri-state buffers sit on pins only, and yosys keeps the buffer as a cell nextpnr cannot place.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/tristate-to-logic/">design.sv:3 and design.sv:4: warning [tristate-to-logic]: bus has two tri-state drivers (a z, at design.sv:3 and design.sv:4) and is not an inout pin of the top module: the chip has tri-state buffers on its pins only, so yosys built the two drivers as logic, as Vivado does (UG901 Ch.5 Tristates). On the board bus is never z: with no driver on it shows one driver&#x27;s value, with both on the other&#x27;s, where the simulation shows z and x. Fix: select with a mux instead, so the simulation shows what the board does:  assign bus = sel ? b : a;  and keep z for an inout pin only.</a>
+    <p>dewfpga bit, yosys. Two z drivers on one internal bus in one module; yosys builds them as logic, as Vivado does, so the board never shows the z or x the simulation shows.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/wired-net/">design.sv:2: ERROR [wired-net]: a wor/wand net (declared at design.sv:2 and design.sv:3) with two drivers: yosys keeps the wired OR/AND as a $and cell, and nextpnr has nothing to place it on. Not a size problem. Fix: write the resolution yourself, in one assign:  assign any = sw[3:0] | sw[7:4];  (wand: &amp;), and declare the net as logic.</a>
+    <p>dewfpga bit, nextpnr. A wor or wand net with several drivers; yosys keeps the wired resolution as a $and/$or cell nextpnr cannot place.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/power-operator/">design.sv:3: ERROR [power-operator]: ** with a base that is a signal (sw ** 2): yosys builds ** only for a constant base and exponent, or 2 ** n, and leaves this one as a $pow cell nextpnr has nothing to place on. Not a size problem. Fix: write the multiplication out (sw * sw), a table (case), or 1 &lt;&lt; n for a power of two.</a>
+    <p>dewfpga bit, nextpnr. The ** operator with a variable base; yosys builds only constant powers and 2 ** n.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/empty-module/">design.sv:2: ERROR [empty-module]: the module blinker (design.sv:2), instantiated as u_blink, has no body (no assign, no always), so yosys kept it as a black box, and nextpnr has no cell of that type to place. Not a size problem. Fix: write the body of blinker, or comment the instance u_blink out until it is written.</a>
+    <p>dewfpga bit, nextpnr. An instance of a module with ports and no body; yosys keeps it as a black box, nextpnr has no cell of that type.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/design-too-big/">ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left: 20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = &quot;block&quot; *) asks for a block RAM). The counts are in top.log. Fix: make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles.</a>
+    <p>dewfpga bit, nextpnr. nextpnr ran out of a real resource of the chip; the counts are in the log.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/timing-not-met/">ERROR [timing-not-met]: timing not met: clk 33.61 MHz (FAIL at 100.00 MHz). The longest path between two registers takes more than one period of that clock, so the design cannot run at it, and no bitstream is written; top.log has the critical path report (the registers and the logic between them). Fix: make the path shorter (a divide or a modulo in one cycle is the usual cause: register the intermediate results), or give it the time it needs: create_clock -period 30.000 [get_ports clk] (33.3 MHz) makes the check pass, and the Basys3 pin gives 100 MHz whatever the XDC says (its oscillator, Basys3 reference manual), so those registers must then take a new value only every 3 clocks or more (a clock enable from a counter: if (tick) ...).</a>
+    <p>dewfpga bit, nextpnr&#x27;s timing report. The longest path between two registers is longer than the clock period; the CLI writes no bitstream where Vivado would, with a critical warning.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/empty-fasm/">ERROR [empty-fasm]: top.fasm has no FASM features (an empty or corrupt place-and-route output, usually a build interrupted half way). Fix: run  dewfpga clean  and build again.</a>
+    <p>dewfpga bit, after place and route. The place-and-route output file is empty, usually from a build interrupted between nextpnr and the bitstream.</p>
+  </div>
+  <div class="err">
+    <span class="step">flash</span><a class="title" href="/dewfpga/errors/openfpgaloader-failed/">ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit 1 (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on.</a>
+    <p>openFPGALoader, when you program the board. The board was found, and programming still failed; openFPGALoader&#x27;s own lines above say why.</p>
+  </div>
+<h2 id="your-error-is-not-here">Your error is not here?</h2>
+<p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the section number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
+<p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#9-which-versions-were-tested">section 9 of the guide</a>. Newer versions can move the walls.</p>
 </main>
 
 <footer class="wrap">

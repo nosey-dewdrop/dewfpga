@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:2 and design.sv:3: ERROR [two-assign-drivers]: led is written by two continuous assigns (design.sv:2 and design.sv:3): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive led from one assign (select with a mux:  assign led = sel ? b : a;). (fix, macOS)</title>
+<meta name="description" content="A signal with two assign lines; two drivers on one wire. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/two-assign-drivers/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:2 and design.sv:3: ERROR [two-assign-drivers]: led is written by two continuous assigns (design.sv:2 and design.sv:3): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive led from one assign (select with a mux:  assign led = sel ? b : a;). (fix, macOS)">
+<meta property="og:description" content="A signal with two assign lines; two drivers on one wire. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/two-assign-drivers/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:2 and design.sv:3: ERROR [two-assign-drivers]: led is written by two continuous assigns (design.sv:2 and design.sv:3): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive led from one assign (select with a mux:  assign led = sel ? b : a;).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/two-assign-drivers/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, yosys</p>
+  <h1 class="mono">design.sv:2 and design.sv:3: ERROR [two-assign-drivers]: led is written by two continuous assigns (design.sv:2 and design.sv:3): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive led from one assign (select with a mux:  assign led = sel ? b : a;).</h1>
+<pre><code>design.sv:2 and design.sv:3: ERROR [two-assign-drivers]: led is written by two continuous assigns (design.sv:2 and design.sv:3): yosys resolved the conflict to a constant, so the board would not do what the simulation showed. Fix: drive led from one assign (select with a mux:  assign led = sel ? b : a;). https://nosey-dewdrop.github.io/dewfpga/errors/two-assign-drivers/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>Every <code>assign</code> is a permanent driver. Two of them on one wire fight; on the chip a wire has one driver, so yosys resolves the conflict to a constant with a warning, and the netlist no longer matches the RTL. The second line of the message names both assigns.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>One assign, with the choice written as a mux:</p>
+<pre data-copy="1"><code>assign led = sel ? ~sw : sw;</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

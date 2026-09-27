@@ -32,14 +32,14 @@
   <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">3.5</span>CMake 4, while configuring prjxray</p>
   <h1 class="mono">Compatibility with CMake &lt; 3.5 has been removed from CMake</h1>
 <p>You ran <code>cmake -B build</code> inside prjxray with a current Homebrew CMake (version 4 or later) and it stopped at <code>cmake_minimum_required</code> with this message.</p>
-<h2>Why does it happen?</h2>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>CMake 4 dropped compatibility with projects that declare a minimum version below 3.5. prjxray still declares one, and the version it asks for is older than what CMake 4 will accept.</p>
-<h2>What is the fix?</h2>
+<h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Tell CMake to treat the project as if it asked for 3.5.</p>
 <pre data-copy="1"><code>cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 cmake --build build --target xc7frames2bit -j3</code></pre>
 <p>Only the <code>xc7frames2bit</code> target is needed. prjxray's own README starts by telling you to install Vivado 2017.2; ignore that, it is for people who map a chip from zero, and the Artix-7 is already mapped.</p>
-<h2>What should you see?</h2>
+<h2 id="what-should-you-see">What should you see?</h2>
 <pre><code>ls ~/fpga/prjxray/build/tools/xc7frames2bit</code></pre>
 <p>If it prints the path back, the tool is built.</p>
 <p class="mute small">The message above is CMake 4's wording. The guide was written against the same CMake and describes the failure without quoting it: <a href="/dewfpga/docs/#35-prjxray">section 3.5</a>.</p>

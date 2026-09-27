@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left: 20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = &quot;block&quot; *) asks for a block RAM). The counts are in top.log. Fix: make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles. (fix, macOS)</title>
+<meta name="description" content="nextpnr ran out of a real resource of the chip; the counts are in the log. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/design-too-big/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left: 20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = &quot;block&quot; *) asks for a block RAM). The counts are in top.log. Fix: make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles. (fix, macOS)">
+<meta property="og:description" content="nextpnr ran out of a real resource of the chip; the counts are in the log. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/design-too-big/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left: 20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = \"block\" *) asks for a block RAM). The counts are in top.log. Fix: make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/design-too-big/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, nextpnr</p>
+  <h1 class="mono">ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left: 20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = &quot;block&quot; *) asks for a block RAM). The counts are in top.log. Fix: make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles.</h1>
+<pre><code>ERROR: Unable to place cell &#39;$abc$1234$auto$blifparse.cc:396:parse_blif$5678&#39;, no Bels remaining of type &#39;SLICE_LUTX&#39;
+ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left: 20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = &quot;block&quot; *) asks for a block RAM). The counts are in top.log. Fix: make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles. https://nosey-dewdrop.github.io/dewfpga/errors/design-too-big/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>The Basys3's chip has 20800 LUTs and 41600 flip-flops. A large memory without <code>ram_style = "block"</code> is built from LUTs; a wide divider or multiplier in one cycle takes thousands. A cell type that is not a chip resource is one of <a href="/dewfpga/errors/internal-tristate/">internal-tristate</a>, <a href="/dewfpga/errors/wired-net/">wired-net</a>, <a href="/dewfpga/errors/power-operator/">power-operator</a> or <a href="/dewfpga/errors/empty-module/">empty-module</a>, named as such.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p><code>top.log</code> lists the counts per cell type. Ask for a block RAM, narrow the data, share the operator over cycles.</p>
+<pre data-copy="1"><code>(* ram_style = &quot;block&quot; *) logic [7:0] mem [0:4095];</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

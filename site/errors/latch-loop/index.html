@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:3: ERROR [latch-loop]: latch inferred for q (an if without else in always_comb), and yosys built it as a LUT feedback loop, not a latch, so the board would not do what the simulation showed; Vivado builds an LDCE latch here, with a warning (UG901 Ch.5 Latches). Fix: give q a value on every path (an else branch, or a default at the top of the block); if you meant a latch, write always_latch instead of always_comb (both readers build that as a latch). (fix, macOS)</title>
+<meta name="description" content="A latch the reader turned into a combinational loop instead of a latch cell; the loop does not behave like the simulation, so the build stops. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/latch-loop/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:3: ERROR [latch-loop]: latch inferred for q (an if without else in always_comb), and yosys built it as a LUT feedback loop, not a latch, so the board would not do what the simulation showed; Vivado builds an LDCE latch here, with a warning (UG901 Ch.5 Latches). Fix: give q a value on every path (an else branch, or a default at the top of the block); if you meant a latch, write always_latch instead of always_comb (both readers build that as a latch). (fix, macOS)">
+<meta property="og:description" content="A latch the reader turned into a combinational loop instead of a latch cell; the loop does not behave like the simulation, so the build stops. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/latch-loop/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:3: ERROR [latch-loop]: latch inferred for q (an if without else in always_comb), and yosys built it as a LUT feedback loop, not a latch, so the board would not do what the simulation showed; Vivado builds an LDCE latch here, with a warning (UG901 Ch.5 Latches). Fix: give q a value on every path (an else branch, or a default at the top of the block); if you meant a latch, write always_latch instead of always_comb (both readers build that as a latch).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/latch-loop/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, yosys</p>
+  <h1 class="mono">design.sv:3: ERROR [latch-loop]: latch inferred for q (an if without else in always_comb), and yosys built it as a LUT feedback loop, not a latch, so the board would not do what the simulation showed; Vivado builds an LDCE latch here, with a warning (UG901 Ch.5 Latches). Fix: give q a value on every path (an else branch, or a default at the top of the block); if you meant a latch, write always_latch instead of always_comb (both readers build that as a latch).</h1>
+<pre><code>design.sv:3: ERROR [latch-loop]: latch inferred for q (an if without else in always_comb), and yosys built it as a LUT feedback loop, not a latch, so the board would not do what the simulation showed; Vivado builds an LDCE latch here, with a warning (UG901 Ch.5 Latches). Fix: give q a value on every path (an else branch, or a default at the top of the block); if you meant a latch, write always_latch instead of always_comb (both readers build that as a latch). https://nosey-dewdrop.github.io/dewfpga/errors/latch-loop/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>Since #4 the CLI makes yosys build an inferred latch as Vivado does (the <a href="/dewfpga/errors/latch/">latch</a> warning). When the netlist still holds the value in a loop of LUTs instead of a latch cell (a shape the readers keep as logic), the board would glitch, so this is an error.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Assign the signal on every path, or say latch when you mean it:</p>
+<pre data-copy="1"><code>always_latch if (en) q &lt;= d;</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>
