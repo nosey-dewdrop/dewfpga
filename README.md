@@ -111,9 +111,11 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (46 checks: static analysis, golden `.fasm`, determinism, multi-file designs,
-every error path, idempotent install). `FULL=1 test/run.sh` adds a clean install into a
-temp directory. CI runs the clean install, the suite and the npm package on a fresh
+`test/run.sh` (289 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
+probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`). `--list` names
+every check; `ONLY=regex test/run.sh` runs the ones whose name matches. `FULL=1 test/run.sh`
+adds a clean install into a temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.
 
 Measured 2026-09-19 and 20 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),

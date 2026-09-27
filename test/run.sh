@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # dewfpga test suite. Needs an installed toolchain (FPGA_HOME, default ~/fpga).
 #   test/run.sh            everything except the clean install, including the SystemVerilog probes in test/sv
+#   test/run.sh --list     the name of every check, the probes as one line 'N probes', and a last line 'N checks'
+#                          (N counts the probes too, as 'passed N' does); README, README.tr and site/cli quote that N
+#   ONLY=regex test/run.sh only the checks whose name matches (the probes are skipped): to run one check on its own
 #   FULL=1 test/run.sh     also a clean install into a temp FPGA_HOME (~4 min, 1.4 GB)
 #   SV_OUT=file            keep the probes' result rows (test/sv/run.sh writes them)
 # A probe that does what test/sv/expect.tsv records but fails a stage Vivado passes, or builds a bitstream
@@ -10,25 +13,28 @@
 # Each probe's verdict is worked out here again from expect.tsv and its four stages, and has to agree with
 # test/sv/run.sh's, whose exit code has to agree with its rows.
 set -euo pipefail
+LIST=0; case ${1:-} in --list) LIST=1 ;; "") ;; *) echo "usage: test/run.sh [--list]   (ONLY=regex, FULL=1, SV_OUT=file in the environment)" >&2; exit 2 ;; esac
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="$ROOT/bin/dewfpga"
 # the checks below cd around, so a relative SV_OUT is made absolute here, against the caller's folder
 case ${SV_OUT:-} in ""|/*) ;; *) SV_OUT="$PWD/$SV_OUT" ;; esac
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
-pass=0; fail=0; gaps=0
+pass=0; fail=0; gaps=0; listed=0
+sec()  { [ "$LIST" = 1 ] || echo "$1"; }
 ok()   { pass=$((pass+1)); printf '  \033[32mPASS\033[0m %s\n' "$1"; }
 bad()  { fail=$((fail+1)); printf '  \033[31mFAIL\033[0m %s\n' "$1"; }
 gap()  { gaps=$((gaps+1)); printf '  \033[33mGAP\033[0m  %s\n' "$1"; }
-check(){ if eval "$2" >"$T/out" 2>&1; then ok "$1"; else bad "$1"; sed 's/^/       /' "$T/out" | head -5; fi; }
+check(){ if [ "$LIST" = 1 ]; then listed=$((listed+1)); echo "$1"; return; fi; [ -z "${ONLY:-}" ] || grep -qE -- "$ONLY" <<< "$1" || return 0
+         if eval "$2" >"$T/out" 2>&1; then ok "$1"; else bad "$1"; sed 's/^/       /' "$T/out" | head -5; fi; }
 # golden .fasm minus the tool-version comment line (differs between tag/sha checkouts)
 strip() { grep -v '^# nextpnr' "$1" | sort; }
 
-echo "== static"
-check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh'"
+sec "== static"
+check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh'"
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
 # every file is scanned, this one too: a home folder is /Users/ and a name (/Users/you/ is the guide's placeholder).
 # This file writes the pattern with no name after /Users/, and its planted paths through printf's %s
-personal_paths() { grep -rnoE '/Users/[A-Za-z0-9._-]+/?' --exclude-dir=.git --exclude-dir=.rabadon --exclude-dir=.claude --exclude-dir=node_modules --exclude=.fpga_home "$1" | grep -vE ':/Users/you/?$'; }
+personal_paths() { grep -rnoE '/Users/[A-Za-z0-9._-]+/?' --exclude-dir=.git --exclude=.git --exclude-dir=.rabadon --exclude-dir=.claude --exclude-dir=node_modules --exclude=.fpga_home "$1" | grep -vE ':/Users/you/?$'; }
 check "no personal paths"     "! personal_paths '$ROOT' | grep -q ."
 check "personal-path check sees test/sv/run.sh" "mkdir -p '$T/pp/test/sv' && printf '# /Users/%s/fpga\\n' someone > '$T/pp/test/sv/run.sh' && personal_paths '$T/pp' | grep -q 'test/sv/run.sh'"
 check "personal-path check sees test/run.sh" "printf '# built on /Users/%s/fpga\\n' someone > '$T/pp/test/run.sh' && personal_paths '$T/pp' | grep -q 'test/run.sh:1:'"
@@ -52,19 +58,26 @@ st_names() {
 check "student-name check sees a quoted name" st_names
 check "no sudo/eval/curl|sh"  "! grep -nE 'sudo |eval |curl.*\| *(ba)?sh' '$ROOT/install.sh' '$CLI'"
 check "https only"            "! grep -n 'http://' '$ROOT/install.sh'"
+# the three pages say how many checks this file has: the number test/run.sh --list prints, no other
+pages_count() {
+    local n np; n=$("$ROOT/test/run.sh" --list | tail -2) && np=${n%%$'\n'*} && n=${n#*$'\n'} && [[ $np =~ ^[0-9]+\ probes$ ]] && [[ $n =~ ^[0-9]+\ checks$ ]] && n=${n%% *} && np=${np%% *} \
+    && grep -qE "(^|[^0-9])$n checks" "$ROOT/README.md" && grep -qE "(^|[^0-9])$n kontrol" "$ROOT/README.tr.md" && grep -qE "(^|[^0-9])$n checks" "$ROOT/site/cli/index.html" \
+    && grep -qE "(^|[^0-9])$np SystemVerilog probes" "$ROOT/README.md" && grep -qE "(^|[^0-9])$np SystemVerilog probe" "$ROOT/README.tr.md" && grep -qE "(^|[^0-9])$np of them the SystemVerilog probes" "$ROOT/site/cli/index.html"
+}
+check "README, README.tr and site/cli quote the numbers --list prints (checks, probes)" pages_count
 check "--version"             "v=\$('$CLI' --version); [ -n \"\$v\" ] && [ \"\$v\" = \"\$(sed -n 's/.*\"version\": *\"\([^\"]*\)\".*/\1/p' '$ROOT/package.json')\" ]"
 
-echo "== toolchain"
+sec "== toolchain"
 check "check passes"          "'$CLI' check"
 
-echo "== build (folder with only .sv + .xdc)"
+sec "== build (folder with only .sv + .xdc)"
 mkdir -p "$T/w"; cp "$ROOT"/templates/{blink.sv,blink.xdc,blink_tb.sv} "$T/w/"
 check "sim"                   "cd '$T/w' && '$CLI' sim | grep -q '^PASS: 3 checks'"
 check "bit"                   "cd '$T/w' && '$CLI' bit && [ -s blink.bit ]"
 # The golden .fasm is exact only for the yosys version it was made with (brew can't be pinned).
 # With another yosys the netlist differs, so only the I/O placement (IOB lines = XDC pins) is compared.
 YV=$(yosys -V | awk '{print $2}'); GV=$(cat "$ROOT/test/golden/yosys-version")
-if [ "$YV" = "$GV" ]; then
+if [ "$LIST" = 1 ] || [ "$YV" = "$GV" ]; then
     check "fasm == golden (yosys $YV)" "diff <(strip '$T/w/blink.fasm') <(strip '$ROOT/test/golden/blink.fasm')"
 else
     echo "  SKIP fasm == golden: yosys $YV here, golden made with $GV; checking I/O placement only"
@@ -72,17 +85,13 @@ else
 fi
 check "no warnings in output" "cd '$T/w' && '$CLI' clean && ! '$CLI' bit 2>&1 | grep -qiE 'warning|error'"
 check "bit is deterministic"  "cd '$T/w' && cp blink.frames a && '$CLI' clean && '$CLI' bit >/dev/null && cmp a blink.frames"
-# programming a board that happens to be plugged in is not something a test suite should do unless asked
-if [ "${DEWFPGA_TEST_BOARD:-}" = 1 ] || ! system_profiler SPUSBDataType 2>/dev/null | grep -q 'Digilent'; then
-check "flash w/o board: message" "cd '$T/w' && { '$CLI' flash || true; } 2>&1 | grep -qE 'board not found|done'"
-else echo "  SKIP flash: a Digilent board is plugged in; DEWFPGA_TEST_BOARD=1 to program it"; fi
-check "flash w/o board: no make trailer" "cd '$T/w' && ! { '$CLI' flash || true; } 2>&1 | grep -q 'make: \*\*\*'"
+# flash: in the '== inside the bitstream, and the board' block below (with and without a board)
 check "bit output is short (<=3 lines)" "cd '$T/w' && '$CLI' clean && [ \$('$CLI' bit 2>&1 | wc -l) -le 3 ]"
 check "bit prints xdc, pnr, bit lines" "cd '$T/w' && '$CLI' clean && out=\$('$CLI' bit 2>&1) && grep -q '^xdc ok' <<<\"\$out\" && grep -q '^pnr ok.*PASS' <<<\"\$out\" && grep -q '^blink.bit' <<<\"\$out\""
 check "bit up to date: exit 0, one line" "cd '$T/w' && out=\$('$CLI' bit 2>&1) && [ \"\$out\" = 'blink.bit is up to date (nothing changed since the last build; dewfpga clean forces a rebuild)' ]"
 check "full pnr log kept"       "cd '$T/w' && grep -q 'Max frequency' blink.log"
 
-echo "== multi-file design"
+sec "== multi-file design"
 mkdir -p "$T/m"; cd "$T/m"
 printf 'module counter #(parameter int HALF=50_000_000)(input logic clk, output logic tick);\n logic [25:0] c=0; always_ff @(posedge clk) if (c==HALF-1) begin c<=0; tick<=~tick; end else c<=c+1;\nendmodule\n' > counter.sv
 printf "module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n logic t; counter u(.clk(clk),.tick(t)); assign led={sw[0],14'b0,t&sw[0]};\nendmodule\n" > top.sv
@@ -94,7 +103,7 @@ check "no xdc: top still found from the hierarchy, then a clear pin-file error" 
 check "two roots, nothing decides -> error names both" "mkdir -p '$T/two' && cp '$ROOT/templates/blink.sv' '$T/two/a.sv' && sed 's/module blink/module other/' '$ROOT/templates/blink.sv' > '$T/two/b.sv' && cp '$ROOT/templates/blink.xdc' '$T/two/pins.xdc' && cd '$T/two' && ! '$CLI' bit >out 2>&1 && grep -q 'could be the top' out && grep -q 'blink' out && grep -q 'other' out"
 check "testbench found by content, not by name" "mkdir -p '$T/tbn' && cp '$ROOT/templates/blink.sv' '$ROOT/templates/blink.xdc' '$T/tbn/' && cp '$ROOT/templates/blink_tb.sv' '$T/tbn/testbench.sv' && cd '$T/tbn' && '$CLI' sim >out 2>&1 && grep -q '^PASS: 3 checks' out && '$CLI' bit >out2 2>&1 && [ -s blink.bit ]"
 
-echo "== error paths"
+sec "== error paths"
 check "new: existing dir"     "{ '$CLI' new '$T/w' || true; } 2>&1 | grep -q 'already exists' && ! '$CLI' new '$T/w' 2>/dev/null"
 check "unknown command"       "! '$CLI' nope 2>/dev/null"
 check "check w/ empty home"   "! FPGA_HOME='$T/none' '$CLI' check >/dev/null"
@@ -106,6 +115,40 @@ check "file name with a space -> clear error" "mkdir -p '$T/spc' && cp '$ROOT/te
 check "unused xdc pins are ignored" "mkdir -p '$T/xa' && cp '$ROOT/templates/blink.sv' '$T/xa/' && sed 's/^#set_property/set_property/' '$ROOT/templates/Basys3_Master.xdc' > '$T/xa/blink.xdc' && cd '$T/xa' && '$CLI' bit >out 2>&1 && grep -q 'unused pins in the XDC ignored' out && [ -s blink.bit ]"
 check "bit blink.sv works like bit blink" "cd '$T/w' && '$CLI' bit blink.sv"
 check "help has no comment marks" "! '$CLI' --help | grep -q '^#'"
+check "bit src/x -> run inside the folder" "cd '$T/w' && ! '$CLI' bit src/x >out 2>&1 && grep -q '^ERROR \[run-inside-the-folder\]: src/x is a path, .* Fix: run it inside the folder that holds the .sv files:  cd \"src\" && dewfpga bit x ' out"
+check "bit --foo -> unknown option" "cd '$T/w' && ! '$CLI' bit --foo >out 2>&1 && grep -q '^ERROR \[unknown-option\]: unknown option: --foo; dewfpga bit takes a module or a file name' out"
+check "FPGA_HOME with a space -> path-with-space, before any command" "cd '$T/w' && ! FPGA_HOME='$T/a b' '$CLI' check >out 2>&1 && grep -q '^ERROR \[path-with-space\]: a path with a space (.* / $T/a b): the FPGA tools cannot handle that' out"
+check "UTF-8 BOM -> error names line 1 and the sed that strips it" "mkdir -p '$T/bom' && printf '\\xEF\\xBB\\xBF' > '$T/bom/blink.sv' && cat '$ROOT/templates/blink.sv' >> '$T/bom/blink.sv' && cp '$ROOT/templates/blink.xdc' '$T/bom/' && cd '$T/bom' && ! '$CLI' bit >out 2>&1 && grep -q '^blink.sv:1: ERROR \[utf8-bom\]: blink.sv starts with a byte-order mark' out && grep -q \"sed -i '' \" out && [ ! -e blink.bit ]"
+# shellcheck disable=SC2016   # $finish and $stop are Verilog
+check 'testbench without $finish -> sim-timeout, names SIM_TIMEOUT' "mkdir -p '$T/tmo' && cp '$ROOT/templates/blink.sv' '$T/tmo/' && printf 'module blink_tb;\\n logic clk = 0; logic [15:0] sw = 0; logic [15:0] led;\\n blink dut(.clk(clk), .sw(sw), .led(led));\\n always #5 clk = ~clk;\\nendmodule\\n' > '$T/tmo/blink_tb.sv' && cd '$T/tmo' && ! SIM_TIMEOUT=2 '$CLI' sim >out 2>&1 && grep -q '^ERROR \[sim-timeout\]: the simulation did not finish in 2 s: the testbench never reached \$finish' out && grep -q 'SIM_TIMEOUT=600 dewfpga sim' out"
+# shellcheck disable=SC2016   # $stop is Verilog
+check 'testbench ending with $stop -> sim ends, PASS line, exit 0' "mkdir -p '$T/stp' && cp '$ROOT/templates/blink.sv' '$T/stp/' && sed 's/[\$]finish;/\$stop;/' '$ROOT/templates/blink_tb.sv' > '$T/stp/blink_tb.sv' && grep -q 'stop;' '$T/stp/blink_tb.sv' && cd '$T/stp' && '$CLI' sim >out 2>&1 && grep -q '^PASS: 3 checks' out && grep -q 'blink_tb.sv:35: \$stop called' out"
+# a Verilog-2005 testbench in a .v file (reg/wire, no logic): found by content, compiled with the .sv design
+# shellcheck disable=SC2016   # $error, $display and $finish are Verilog
+tb_dot_v() {
+    mkdir -p "$T/tbv" && cp "$ROOT/templates/blink.sv" "$T/tbv/" && cd "$T/tbv" \
+    && printf '`timescale 1ns/1ps\nmodule blink_tb;\n reg clk = 0; reg [15:0] sw = 0; wire [15:0] led;\n blink dut(.clk(clk), .sw(sw), .led(led));\n always #5 clk = ~clk;\n initial begin #100; if (led[15] !== 0) $error("led[15] must be 0"); sw[0] = 1; #100; if (led[15] !== 1) $error("led[15] must be 1"); $display("PASS: 2 checks"); $finish; end\nendmodule\n' > blink_tb.v \
+    && "$CLI" sim > out 2>&1 && grep -q '^iverilog -g2012 -o blink_sim blink.sv blink_tb.v$' out && grep -q '^PASS: 2 checks' out
+}
+check "testbench named _tb.v (Verilog-2005) -> sim finds and runs it" tb_dot_v
+check "missing IOSTANDARD -> error names the XDC line and the add line" "rm -rf '$T/io' && cp -Rp '$T/w' '$T/io' && cd '$T/io' && sed -i '' 's/PACKAGE_PIN U16  IOSTANDARD LVCMOS33/PACKAGE_PIN U16/' blink.xdc && ! '$CLI' bit >out 2>&1 && grep -q '^blink.xdc:27: ERROR \[no-iostandard-property\]: led\[0\] has a PACKAGE_PIN but no IOSTANDARD in the XDC.* Fix: add the line  set_property IOSTANDARD LVCMOS33 \[get_ports {led\[0\]}\]' out"
+check "failed build removes the old .bit" "rm -rf '$T/ob' && cp -Rp '$T/w' '$T/ob' && cd '$T/ob' && [ -s blink.bit ] && echo 'garbage;' >> blink.sv && ! '$CLI' bit >out 2>&1 && grep -q '^blink.sv:35: ERROR' out && [ ! -e blink.bit ] && [ ! -e blink.fasm ]"
+# uninstall, from a copy of the CLI: the real one may be what Homebrew's bin/dewfpga links to, and uninstall
+# removes that link when it points at the CLI that runs (a fake FPGA_HOME holds three of the six entries and a file of the student's)
+un_copy() { rm -rf "$T/un" && mkdir -p "$T/un" && cp -R "$ROOT/bin" "$ROOT/package.json" "$T/un/" && cp "$ROOT/.fpga_home" "$T/un/" 2>/dev/null || true; }
+check "uninstall removes what install built, keeps the rest, keeps the folder" "un_copy && mkdir -p '$T/uh/nextpnr-xilinx' '$T/uh/chipdb' '$T/uh/mine' && touch '$T/uh/install.log' '$T/uh/mine/keep.sv' && FPGA_HOME='$T/uh' '$T/un/bin/dewfpga' uninstall >'$T/un.out' 2>&1 && grep -q '^removing: $T/uh/chipdb$' '$T/un.out' && grep -q '^kept: $T/uh (other files live there)$' '$T/un.out' && grep -q '^done\.$' '$T/un.out' && [ ! -e '$T/uh/chipdb' ] && [ ! -e '$T/uh/install.log' ] && [ -e '$T/uh/mine/keep.sv' ] && [ -L /opt/homebrew/bin/dewfpga -o ! -e /opt/homebrew/bin/dewfpga ]"
+check "uninstall with nothing installed -> note, exit 0" "un_copy && mkdir -p '$T/uh2' && FPGA_HOME='$T/uh2' '$T/un/bin/dewfpga' uninstall >'$T/un.out' 2>&1 && grep -q '^note \[no-install-found\]: nothing to remove: no dewfpga install found in $T/uh2' '$T/un.out'"
+# the second reader (#4): an unpacked array concatenation, which yosys' own reader refuses and yosys-slang builds
+slang_design() { mkdir -p "$1" && printf 'module top(input logic [15:0] sw, output logic [15:0] led);\n  logic [3:0] arr [0:1];\n  assign arr = {sw[3:0], sw[7:4]};\n  assign led = {8'"'"'d0, arr[0], arr[1]};\nendmodule\n' > "$1/top.sv" && sed 's/blink/top/' "$ROOT/templates/blink.xdc" > "$1/top.xdc"; }
+check "a design only yosys-slang reads builds, with the note" "slang_design '$T/sl' && cd '$T/sl' && '$CLI' bit >out 2>&1 && grep -q '^note \[read-with-slang\]: top read with yosys-slang, the second reader' out && grep -q '^pnr ok' out && [ -s top.bit ]"
+check "with slang.so absent the note names the install step" "slang_design '$T/sl2' && cd '$T/sl2' && ! SLANG='$T/none/slang.so' '$CLI' bit >out 2>&1 && grep -q '^top.sv:3: ERROR: ' out && grep -q '^note \[second-reader-missing\]: yosys. own reader refused this code, and yosys-slang, the second reader .* is not installed: $T/none/slang.so not found. Fix: run  dewfpga install' out && [ ! -e top.bit ]"
+# two clocks: a divided clock the student named (slow) clocks a counter; the pnr line reports each clock by name
+two_clocks() {
+    mkdir -p "$T/2c" && cd "$T/2c" && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic slow = 0; always_ff @(posedge clk) slow <= ~slow;\n  logic [15:0] c = 0; always_ff @(posedge slow) c <= c + sw;\n  assign led = c;\nendmodule\n' > top.sv \
+    && sed 's/blink/top/' "$ROOT/templates/blink.xdc" > top.xdc && "$CLI" bit > out 2>&1 && [ -s top.bit ] \
+    && grep -qE '^pnr ok: [0-9]+ LUT, [0-9]+ FF, .*slow [0-9.]+ MHz \(PASS at [0-9.]+ MHz\)' out && grep -qE '^pnr ok: .*clk [0-9.]+ MHz \(PASS at 100\.00 MHz\)' out
+}
+check "two clocks -> the pnr line reports each by name" two_clocks
 check "no create_clock -> checked at 100 MHz" "mkdir -p '$T/nc' && cp '$ROOT/templates/blink.sv' '$T/nc/' && grep -v create_clock '$ROOT/templates/blink.xdc' > '$T/nc/blink.xdc' && cd '$T/nc' && '$CLI' bit >out 2>&1 && grep -q 'PASS at 100.00 MHz' out && grep -q 'no create_clock' out"
 check ".v file with SystemVerilog inside -> stops naming the .v line (a .v is Verilog-2005, as in Vivado)" "mkdir -p '$T/vv' && cp '$ROOT/templates/blink.sv' '$T/vv/blink.v' && cp '$ROOT/templates/blink.xdc' '$T/vv/' && cd '$T/vv' && ! '$CLI' bit >out 2>&1 && grep -qE '^blink\.v:[0-9]+: ERROR \[' out && [ ! -e blink.bit ]"
 check "module name != file name -> builds, output named after the module" "mkdir -p '$T/mn' && sed 's/module blink/module top/' '$ROOT/templates/blink.sv' > '$T/mn/lab4.sv' && cp '$ROOT/templates/blink.xdc' '$T/mn/lab4.xdc' && cd '$T/mn' && '$CLI' bit >out 2>&1 && [ -s top.bit ]"
@@ -120,10 +163,74 @@ check "install: refuses x86"  "rm -f '$T/fb/id'; printf '#!/bin/sh\n[ \"\$1\" = 
 check "install: no network -> clear error" "rm -rf '$T/e'; { GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.proxy GIT_CONFIG_VALUE_0=http://127.0.0.1:9 FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'could not fetch'"
 check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1; [ \$(( \$(date +%s) - s )) -lt 10 ]"
 
-echo "== project template"
+sec "== project template"
 check "new + dewfpga bit"     "'$CLI' new '$T/p' && cd '$T/p' && '$CLI' bit && [ -s blink.bit ]"
 check "new: no Makefile, task uses dewfpga" "cd '$T/p' && [ ! -e Makefile ] && grep -q '\"dewfpga flash\"' .vscode/tasks.json && ! grep -q 'make ' .vscode/tasks.json && python3 -c 'import json;json.load(open(\".vscode/settings.json\"));json.load(open(\".vscode/extensions.json\"))'"
 check "manual path: templates/Makefile"  "mkdir '$T/mk' && cp '$ROOT'/templates/{blink.sv,blink_tb.sv,blink.xdc,check_xdc.py,Makefile} '$T/mk/' && cd '$T/mk' && make -s bit > out.txt && grep -q '^pnr ok' out.txt && [ -s blink.bit ] && ! make check | grep -q MISSING"
+
+sec "== rebuild rules (.deps, #3): a changed include or .mem rebuilds and changes the bitstream; a renamed testbench recompiles"
+uptodate() { [ "$("$CLI" bit 2>&1)" = "$1.bit is up to date (nothing changed since the last build; dewfpga clean forces a rebuild)" ]; }
+# the LED constant comes from defs.svh: its change has to reach the .bit (compared byte for byte, and the .frames)
+# shellcheck disable=SC2016   # `include and `VAL are Verilog
+inc_rebuild() {
+    mkdir -p "$T/inc" && cd "$T/inc" && printf '`define VAL 8'"'"'h3C\n' > defs.svh \
+    && printf '`include "defs.svh"\nmodule top(input logic [15:0] sw, output logic [15:0] led);\n  assign led = {sw[7:0], `VAL};\nendmodule\n' > top.sv \
+    && sed 's/blink/top/' "$ROOT/templates/blink.xdc" > top.xdc \
+    && "$CLI" bit > out 2>&1 && [ -s top.bit ] && cp top.bit a.bit && cp top.frames a.frames && uptodate top \
+    && printf '`define VAL 8'"'"'hC3\n' > defs.svh && "$CLI" bit > out2 2>&1 && grep -q '^pnr ok' out2 && ! cmp -s a.frames top.frames && ! cmp -s a.bit top.bit
+}
+check "a changed .svh include rebuilds, and the .bit differs" inc_rebuild
+# a $readmemh ROM: the first row of rom.mem changes, and the .bit has to change with it
+# shellcheck disable=SC2016   # $readmemh is Verilog
+mem_rebuild() {
+    mkdir -p "$T/mem" && cd "$T/mem" && printf '3C\nA5\n0F\n' > rom.mem \
+    && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic [7:0] rom [0:3];\n  initial $readmemh("rom.mem", rom);\n  logic [7:0] q;\n  always_ff @(posedge clk) q <= rom[sw[1:0]];\n  assign led = {rom[sw[3:2]], q};\nendmodule\n' > top.sv \
+    && sed 's/blink/top/' "$ROOT/templates/blink.xdc" > top.xdc \
+    && "$CLI" bit > out 2>&1 && [ -s top.bit ] && cp top.bit a.bit && cp top.frames a.frames && uptodate top \
+    && printf 'FF\nA5\n0F\n' > rom.mem && "$CLI" bit > out2 2>&1 && grep -q '^pnr ok' out2 && ! cmp -s a.frames top.frames && ! cmp -s a.bit top.bit
+}
+check "a changed .mem rebuilds, and the .bit differs" mem_rebuild
+# the sleep: make 3.81 compares whole seconds, so a testbench renamed within the second of the last compile is
+# not seen as newer (5 of 6 runs of this check without the sleep ran the stale blink_sim); a student is slower than that
+tb_rename() {
+    mkdir -p "$T/tbr" && cp "$ROOT"/templates/{blink.sv,blink_tb.sv} "$T/tbr/" && cd "$T/tbr" \
+    && "$CLI" sim > out 2>&1 && grep -q '^iverilog -g2012 -o blink_sim blink.sv blink_tb.sv$' out \
+    && "$CLI" sim > out2 2>&1 && ! grep -q '^iverilog' out2 \
+    && sleep 1.1 && mv blink_tb.sv bench.sv && "$CLI" sim > out3 2>&1 && grep -q '^iverilog -g2012 -o blink_sim blink.sv bench.sv$' out3 && grep -q '^PASS: 3 checks' out3
+}
+check "a renamed testbench recompiles (the second sim did not)" tb_rename
+
+# ---------------------------------------------------------------------------------------------------- #6B
+# test/bit-check.sh reads a .bit back (the sync word, the type 1/2 packets, the FDRI data cut into 101-word
+# frames and given their addresses by part.yaml's walk) and compares every frame with what fasm2frames makes
+# of the .fasm. It runs on the blink the template built ($T/p) and has to refuse the .fasm of another design
+# ($T/ui, a sw -> led design), a .bit cut in half, and a .bit with one bit flipped inside a used frame.
+sec "== inside the bitstream, and the board"
+BC="$ROOT/test/bit-check.sh"
+bc_flip() {   # $T/flip.bit: $T/p/blink.bit with one bit flipped in the first non-zero word 2000 bytes past the sync word
+    python3 - "$T/p/blink.bit" "$T/flip.bit" <<'PY'
+import sys
+b = bytearray(open(sys.argv[1], "rb").read()); i = b.find(b"\xaa\x99\x55\x66") + 4 + 2000
+while b[i] == 0: i += 4
+b[i] ^= 0x40; open(sys.argv[2], "wb").write(b)
+PY
+}
+check "blink.bit holds the frames of blink.fasm (read back from the .bit)" "'$BC' '$T/p/blink.bit' '$T/p/blink.fasm' | grep -q '^bit ok: .* non-zero'"
+check "blink.bit holds the frames of blink.frames"                        "'$BC' '$T/p/blink.bit' '$T/p/blink.frames' | grep -q '^bit ok'"
+check "blink.bit with another design's fasm is refused"                   "! '$BC' '$T/p/blink.bit' '$T/ui/ui.fasm' >'$T/out' 2>&1 && grep -q 'ERROR \[bit-check\]: .*frames differ' '$T/out'"
+check "a .bit cut in half is refused"                                      "head -c \$(( \$(stat -f%z '$T/p/blink.bit') / 2 )) '$T/p/blink.bit' > '$T/half.bit' && ! '$BC' '$T/half.bit' '$T/p/blink.fasm' >'$T/out' 2>&1 && grep -q 'ERROR \[bit-check\]: .*truncated' '$T/out'"
+check "a .bit with one bit flipped in a used frame is refused"            "bc_flip && ! '$BC' '$T/flip.bit' '$T/p/blink.fasm' >'$T/out' 2>&1 && grep -q '1 of [0-9]* frames differ' '$T/out'"
+# the board. Without one, dewfpga flash has to stop with the board-not-found line and no make trailer. With a
+# Basys3 on USB (system_profiler lists Digilent), dewfpga flash programs blink into it (SRAM, gone at power
+# off) and openFPGALoader's own success line, Done, has to be in the output.
+if system_profiler SPUSBDataType 2>/dev/null | grep -q 'Digilent'; then
+check "flash: openFPGALoader programs the board (its Done line)" "cd '$T/p' && '$CLI' flash 2>&1 | grep -q 'Done'"
+else
+check "flash w/o board: board-not-found line, exit 1" "cd '$T/p' && ! '$CLI' flash >out 2>&1 && grep -q 'ERROR \[board-not-found\]: board not found' out"
+check "flash w/o board: no make trailer"              "cd '$T/p' && ! { '$CLI' flash || true; } 2>&1 | grep -q 'make: \*\*\*'"
+[ "$LIST" = 1 ] || echo "  SKIP flash on the board: no board: plug the Basys3 in and run test/run.sh again"
+fi
+# ---------------------------------------------------------------------------------------------------- #6B
 
 # sv_rows <rows> <runner exit code> <runner log> [expect.tsv]: one PASS, GAP or FAIL per row of test/sv/run.sh's SV_OUT.
 # The verdict is worked out again from expect.tsv and the row's four stages: bad when a stage that should
@@ -170,7 +277,7 @@ sv_rows() {
     elif [ "$said" != "$score" ]; then bad "sv: test/sv/run.sh says '$said', its rows make it '$score'"; fi
 }
 
-echo "== probe runner (test/sv/run.sh on a copy, one probe each)"
+sec "== probe runner (test/sv/run.sh on a copy, one probe each)"
 # a copy of the product in which one thing is broken on purpose; each check runs one probe through it
 svcopy() { rm -rf "$T/svr" && mkdir -p "$T/svr" && cp -R "$ROOT/bin" "$ROOT/templates" "$ROOT/test" "$ROOT/package.json" "$T/svr/" && { cp "$ROOT/.fpga_home" "$T/svr/" 2>/dev/null || true; }; }
 setrow() { awk -F'\t' -v id="$1" -v c="$2" -v v="$3" 'BEGIN{OFS="\t"} $1==id{$c=v} {print}' "$T/svr/test/sv/expect.tsv" > "$T/svr/x" && mv "$T/svr/x" "$T/svr/test/sv/expect.tsv"; }
@@ -369,7 +476,7 @@ st_exact() {
 }
 check "a build output left in a probe folder is not reused" st_stale
 check "a new silent wrong fails with any yosys" st_silent
-if [ "$(yosys -V | awk '{print $2}')" = "$(cat "$ROOT/test/golden/yosys-version")" ]; then
+if [ "$LIST" = 1 ] || [ "$(yosys -V | awk '{print $2}')" = "$(cat "$ROOT/test/golden/yosys-version")" ]; then
 check "an unexpected pass fails with the measured yosys" st_unexpected
 check "an unexpected pass in a row is not trusted with the measured yosys" st_exact
 else echo "  SKIP an unexpected pass fails: yosys $(yosys -V | awk '{print $2}') here, expect.tsv measured with $(cat "$ROOT/test/golden/yosys-version")"; fi
@@ -451,19 +558,24 @@ check "eqv.py: an FDSE_1 and an FDPE_1 with INIT x start at 1, as on the board" 
 
 # one line per probe: PASS when all four stages (rtl, synth, netlist, bit) did what test/sv/expect.tsv says,
 # GAP when they did but Vivado passes a stage we fail (or the bitstream builds and is wrong), FAIL otherwise
+want=$(( $(wc -l < "$ROOT/test/sv/expect.tsv") - 1 ))
+if [ "$LIST" = 1 ]; then echo "$want probes"
+elif [ -n "${ONLY:-}" ]; then echo "== SystemVerilog probes (test/sv): skipped, ONLY=$ONLY"; else
 echo "== SystemVerilog probes (test/sv)"
 svo=${SV_OUT:-$T/sv.tsv}; : > "$svo"
 svrc=0; SV_OUT="$svo" "$ROOT/test/sv/run.sh" > "$T/sv.log" 2>&1 || svrc=$?
 sv_rows "$svo" "$svrc" "$T/sv.log"
-want=$(( $(wc -l < "$ROOT/test/sv/expect.tsv") - 1 )); got=$(wc -l < "$svo")
+got=$(wc -l < "$svo")
 [ "$got" -eq "$want" ] || { bad "sv: $got of $want probes reported"; tail -5 "$T/sv.log" | sed 's/^/       /'; }
 grep -E '^synthesis ' "$T/sv.log" | sed 's/^/  /' || true
+fi
 
 if [ "${FULL:-}" = 1 ]; then
-    echo "== clean install into temp FPGA_HOME"
+    sec "== clean install into temp FPGA_HOME"
     check "clean install exit 0" "FPGA_HOME='$T/fresh' '$ROOT/install.sh'"
     check "fresh chain builds golden" "mkdir '$T/fw' && cp '$ROOT'/templates/{blink.sv,blink.xdc} '$T/fw/' && cd '$T/fw' && FPGA_HOME='$T/fresh' '$CLI' bit && diff <(strip blink.fasm) <(strip '$ROOT/test/golden/blink.fasm')"
 fi
 
+if [ "$LIST" = 1 ]; then echo "$((listed + want)) checks"; exit 0; fi
 echo; echo "passed $pass, failed $fail, known gaps $gaps"
 [ $fail -eq 0 ]

@@ -3044,3 +3044,70 @@ applied to the script: the diff is read against the update's base commit, not `H
 already be committed); the metric must reach the judge as a number, not as rows (the coded-line count over
 all 35 targets was lost between the integrator and the judge and was re-counted here); a message with a
 formula in it (`create_clock -period`) is checked against the number printed next to it.
+
+### #6A · The CLI's untested paths get checks; `test/run.sh --list` prints the count the docs quote · 27 September
+
+`test/run.sh --list` prints every check's name, then `133 probes` and `289 checks`, and exits 0 without running
+anything; `ONLY=regex test/run.sh` runs the checks whose name matches (the probes are skipped). README, README.tr
+and site/cli quote `289 checks` / `289 kontrol` and `133 SystemVerilog probes`, and one check greps the three files
+for the two numbers `--list` printed, so a stale number fails the suite.
+
+Paths that had no check before (15 in `== error paths`, 3 in `== rebuild rules`): `bit src/x`, `bit --foo`, an
+FPGA_HOME with a space, a UTF-8 BOM, a testbench without `$finish` (SIM_TIMEOUT=2), a testbench ending with
+`$stop`, a `_tb.v` testbench (Verilog-2005), a missing IOSTANDARD, a failed build removing the old .bit,
+`uninstall` removing what install built and keeping the rest, `uninstall` with nothing installed, a design only
+yosys-slang reads, the note naming `dewfpga install` when slang.so is absent, two clocks named on the pnr line;
+a changed `.svh` include rebuilds and the .bit and .frames differ byte for byte, a changed `.mem` ROM rebuilds
+and the .bit differs, a renamed testbench recompiles (`sleep 1.1` first: make compares whole seconds).
+`personal_paths` adds `--exclude=.git` (in a worktree `.git` is a file holding a home path).
+
+Integration: 6A and 6B both edited `test/run.sh` and clashed in three hunks (the shellcheck line, the old flash
+checks, the section after the rebuild rules); resolved by hand keeping both. 6A's count was 284 before 6B's
+block (+5 checks without a board); the number on the pages is what `--list` prints after both: 289. Run alone:
+`ONLY='new \+ dewfpga bit|unnamed instance|blink\.bit|cut in half|flipped|flash|quote the numbers|shellcheck' test/run.sh`
+-> `passed 11, failed 0, known gaps 0`, with `SKIP flash on the board: no board: plug the Basys3 in and run
+test/run.sh again`. Untested tonight: the flash check with a board (no board plugged in), the full suite.
+
+### #6B · A test looks inside the bitstream; the board test is ready for the board · 27 September
+
+**`test/bit-check.sh <top.bit> <top.fasm|top.frames>` reads the bitstream back.** No test had ever opened
+a `.bit`: `bit` checked the file's size and that the `.frames` file was the same twice. Now the `.bit` is
+parsed as UG470 chapter 5 lays it out: the header up to the sync word `AA995566`, then the type 1 / type 2
+configuration packets; the FDRI write is cut into 101-word frames (UG470 table 5-18, 7-series) and each frame
+gets its address by walking `part.yaml`'s columns the way `xc7frames2bit` does (block type, top/bottom, row,
+column, minor; two zero frames between rows and block types). Every one of the part's 5408 frames is compared
+with what `fasm2frames.py` makes of the `.fasm` (a `.frames` file is taken as is; frames it does not name are
+zero). The one thing not compared is the 13-bit ECC field of word 50, which `xc7frames2bit` computes and the
+`.frames` does not hold. prjxray's `bitread` is not built in `~/fpga` (only `xc7frames2bit` is), so the reader
+is 60 lines of Python in the script, on the venv's python and `yaml`.
+
+What it printed (paths shortened):
+- blink.bit + blink.fasm: `bit ok: blink.bit holds the 5408 frames of blink.fasm (105 non-zero), read back from 1 FDRI write(s)`, exit 0
+- blink.bit + blink.frames: the same line, exit 0
+- blink.bit + the fasm of another design (probe 07, a sw -> led state machine): `ERROR [bit-check]: blink.bit does not hold the frames of top.fasm: 82 of 5408 frames differ, first 3: 0x00000a00 word 24: bit 0x00000200, fasm 0x00000000; 0x00000a01 word 24: bit 0x00000040, fasm 0x00000000; 0x00000a04 word 62: bit 0x00800000, fasm 0x00000000`, exit 1
+- blink.bit cut in half (`head -c 1096057`): `ERROR [bit-check]: half.bit does not hold the frames of blink.fasm: truncated: a packet at word 45 says 547420 words, only 273929 are left (1096057 bytes in the file)`, exit 1
+- blink.bit with one bit flipped inside a used frame: `ERROR [bit-check]: flip.bit does not hold the frames of blink.fasm: 1 of 5408 frames differ, first 1: 0x00000a04 word 74: bit 0x42000000, fasm 0x02000000`, exit 1
+
+**`test/run.sh`: the block `== inside the bitstream, and the board`** (one delimited block after the project
+template section, marked `#6B`), seven checks without a board, run alone against a prebuilt blink and probe 07's
+fasm: `passed 7, failed 0`. The five bitstream checks are the five lines above, on the blink `dewfpga new` built
+(`$T/p`) and the sw -> led design of the unnamed-instance check (`$T/ui`). The two flash checks moved here from
+the build section: `dewfpga flash` without a board has to exit 1 with `ERROR [board-not-found]: board not found`
+and no `make: ***` trailer, and the run then prints one line:
+`SKIP flash on the board: no board: plug the Basys3 in and run test/run.sh again`. With a Basys3 on USB
+(`system_profiler` lists Digilent) the block instead runs `dewfpga flash` on that blink and greps
+openFPGALoader's own success line, `Done` (the string in `/opt/homebrew/bin/openFPGALoader`; SRAM only, gone
+at power off). The old `DEWFPGA_TEST_BOARD=1` gate is gone: a plugged-in board is programmed with blink.
+**Not run with a board tonight: no board was plugged in.** The board branch is written from openFPGALoader's
+strings, not from a run; the first run with a board is the check of that line. `shellcheck -S style` covers
+`test/bit-check.sh` now.
+
+Test count: two flash checks before, seven checks in the block after: +5 without a board (+4 with one).
+`test/run.sh` was not run whole here (9 minutes); the block was run on its own.
+
+Tried and dropped:
+- Re-encoding the `.frames` with `xc7frames2bit` and comparing bytes: the header carries the date and time, and
+  a byte compare says nothing about which frame differs. Parsing the packets does.
+- Comparing word 50 whole: `xc7frames2bit` rewrites its low 13 bits (`updateECC` in prjxray's `ecc.cc`,
+  `data[50] &= 0xFFFFE000`), so the `.frames` and the `.bit` always differ there. Masked.
+- Building `bitread` from prjxray's sources: it would write into `~/fpga`, which this update leaves alone.
