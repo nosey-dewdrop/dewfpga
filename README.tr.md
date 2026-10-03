@@ -87,11 +87,20 @@ Script'i tekrar çalıştırınca biten adımlar atlanır. Log: `~/fpga/install.
 ```
 dewfpga install                     zinciri kur (tekrar çalıştırmak güvenli)
 dewfpga check                       her parça yerinde mi
-dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları
+dewfpga sim|bit|flash|clean [top]   düz klasör veya Vivado projesi
+dewfpga tops                        top adaylarını dosya yazmadan listele
+dewfpga vscode [--remove]           editör bağlantısını kur veya kaldır
 dewfpga new <dizin>                 VS Code görevli blink örneği (⌘⇧B = flash)
 dewfpga uninstall                   kurulumun ürettiklerini, CLI'ı ve linki sil (senin dosyaların ve brew paketleri kalır)
 dewfpga --version
 ```
+
+Ajanlar için `check`, `sim`, `bit` ve `flash`, `--json` kabul eder:
+`dewfpga sim --json --timeout=180`. Standart çıktıda tek `dewfpga/result@1` nesnesi
+bulunur; süreç kodu `exit_code` ile eşleşir. `diagnostics` hata ve düzeltmeleri,
+`log.tail` ayrıştırılamayan çıktıyı gösterir. Eski `.bit` dosyası yeni derlemenin
+başarısı sayılmaz; `artifacts` yeni, önbellekteki ve bayat çıktıları ayırır.
+[Ajan arayüzü ve sınırlar](docs/agent-interface.md).
 
 ## Kapsam
 
@@ -116,7 +125,7 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (325 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (326 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
 bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün

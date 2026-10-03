@@ -20,6 +20,11 @@ resolve() { local f=$1 d; while [ -L "$f" ]; do d=$(cd "$(dirname "$f")" && pwd)
 SELF="$(resolve "${BASH_SOURCE[0]}")"
 HERE="$(cd "$(dirname "$SELF")/.." && pwd)"
 FPGA_HOME="${FPGA_HOME:-$(cat "$HERE/.fpga_home" 2>/dev/null || echo "$HOME/fpga")}"   # install.sh records where it put the tools
+# --json (any position): exactly one JSON object on stdout + documented exit codes (templates/agent_json.py runs this same
+# CLI in text mode and translates). Handed over here, before any message can print, so the object is the only output.
+json=""; JSON_ARGS=(); for a in "$@"; do if [ "$a" = --json ]; then json=1; else JSON_ARGS+=("$a"); fi; done
+if [ -n "$json" ]; then PY="$FPGA_HOME/venv/bin/python"; [ -x "$PY" ] || PY=python3
+    exec "$PY" "$HERE/templates/agent_json.py" --cli "$SELF" -- ${JSON_ARGS[@]+"${JSON_ARGS[@]}"}; fi
 # every message in one format (templates/check_xdc.py prints the same): [<file>:<line>: ]<kind> [<code>]: <text> Fix: <fix> <page>
 # code = the page's folder under site/errors/. die <code> <text>, or die <file:line> <code> <text> when the problem is in the student's code
 SITE=https://nosey-dewdrop.github.io/dewfpga/errors

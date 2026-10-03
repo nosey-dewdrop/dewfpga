@@ -94,6 +94,13 @@ dewfpga uninstall                   remove what install built, the CLI and its l
 dewfpga --version
 ```
 
+For coding agents, `check`, `sim`, `bit` and `flash` accept `--json`, for example
+`dewfpga sim --json --timeout=180`. Standard output contains one `dewfpga/result@1`
+object; the process exit matches `exit_code`. Read `diagnostics` for source locations,
+error codes and fix links, and `log.tail` when no structured diagnostic is available.
+`artifacts` distinguishes new, cached and stale outputs; an old `.bit` is not proof
+that the current build succeeded. Full protocol and limits: [agent interface](docs/agent-interface.md).
+
 ## Scope
 
 - Board: Digilent **Basys3** (XC7A35T-1CPG236C) only. Another 7-series board would need its own
@@ -117,7 +124,7 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (325 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (326 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
 probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names

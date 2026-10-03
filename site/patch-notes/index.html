@@ -33,8 +33,9 @@
 </nav>
 <main class="wrap docs">
 <h1 id="patch-notes">Patch notes</h1>
-<p class="docbar"><span>13 updates</span><a href="#latest">latest: #13</a><a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/docs/patch-notes.md">source</a></p>
+<p class="docbar"><span>14 updates</span><a href="#latest">latest: #14</a><a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/docs/patch-notes.md">source</a></p>
 <ul class="notes-index">
+<li><a href="#14">#14</a> Machine-readable CLI results · 3 October</li>
 <li><a href="#13">#13</a> Accurate lint severity and fresh waveforms · 3 October</li>
 <li><a href="#12">#12</a> Vivado projects and editor tasks that preserve user files · 3 October</li>
 <li><a href="#11">#11</a> Five CLI steps and accurate Homebrew diagnosis · 3 October</li>
@@ -1919,11 +1920,15 @@ design.sv:3: ERROR [initial-from-signal]: `num = sw` here is a start value, not 
 <p>Independent review reproduced Cursor's <code>code</code> being mistaken for VS Code and a failed profile retry losing its earlier ownership record. A further root case showed that a <code>code</code> symlink into Insiders must not be selected for a Code removal. These cases have specific regression checks. Profile metadata was checked against Microsoft's source; that is distinct from testing the real editor GUI.</p>
 <p>Focused checks before final acceptance: task writer <strong>69/0</strong>, companion <strong>35/0</strong>, Vivado <strong>82/0</strong>, setup <strong>89/0</strong>. An additional eight editor-boundary checks passed in a corrected isolated copy. The first full run caught two flat-folder compile-line regressions despite those focused results. They are retained in the test history; the corrected full run passed <strong>269, failed 0, with 52 known gaps</strong>, in 24 minutes 11 seconds, with the tested files unchanged. The command list contains <strong>325 available checks</strong>, not 325 executed successes. Real GUI and Basys3 acceptance remain unverified. Remote CI is pending for this integration.</p>
 <p>Release review then found the tracked-file package builder omitted the companion sources. The old archive now fails validation for all four missing files. The fixed archive builds a VSIX byte-identical to the source tree and runs <code>vscode --print</code>. Both assembled site variants pass: <strong>101 pages, 0 failures</strong> each. CI now builds the companion from the unpacked release, so source-only success cannot hide this omission.</p>
-<span id="latest"></span>
 <h3 id="13">#13 · Accurate lint severity and fresh waveforms · 3 October</h3>
 <p>The companion offers an explicit lint-shim setup command. Icarus's specific constant-select <code>sorry</code> diagnostic becomes a warning; syntax errors, other diagnostics and exit codes remain intact. The prior global setting is restored only when dewfpga owns the current value; workspace overrides and user changes are preserved. Symlink, hard-link and copied-shim recursion cases are covered.</p>
 <p>A successful simulation task opens a new or changed VCD directly in its working project root. Before/after file identity, nanosecond timestamps and small-file hashes prevent unchanged old waveforms from opening, including same-second cases. The installed Verilog extension declares a default VCD viewer; actual GUI opening remains unverified. Nested or absolute dumpfile destinations are not discovered automatically.</p>
 <p>The top chooser uses the real Quick Pick lifecycle, remembers choices per project and cancels the task on Escape. The companion suite passed <strong>35, failed 0, skipped 0</strong> in the integrated tree. These extension features share the #12 installation and ownership boundary and are committed together. Full CLI acceptance passed <strong>269/0</strong> with <strong>52 known gaps</strong>. Remote CI remains pending for the combined integration.</p>
+<span id="latest"></span>
+<h3 id="14">#14 · Machine-readable CLI results · 3 October</h3>
+<p><code>check</code>, <code>sim</code>, <code>bit</code> and <code>flash</code> now accept <code>--json</code>. One result object carries a stable schema tag, process and child exit codes, bounded diagnostics and logs, source locations and artifact provenance. Text commands keep their original output. The timeout option bounds the child process group; parent SIGINT and SIGTERM also stop that group. A deliberately daemonized process outside the group is not covered.</p>
+<p>Independent review rejected false success after reader failures or open orphan pipes, warning floods that hid errors, stale artifacts attributed to the wrong top, and relative artifact scans from a nested Vivado directory. Root follow-ups fixed similarly named old bitstreams and multi-driver diagnostics containing several source locations. Unknown top/artifact provenance remains unknown instead of guessed.</p>
+<p>The integrated tree passed <strong>30 tests, 0 failures, 0 skips</strong>, including real sim and bit commands, text-mode parity and interruption cleanup. Separate real XPR and XPR-less projects passed <strong>10 checks</strong> for nested roots, caching, unrelated artifacts and source paths containing spaces. The preceding #12–#13 full CLI run passed <strong>269/0 with 52 known gaps</strong>; it is not a full run of this newer commit. Remote CI for this update remains pending. No real board programming is claimed.</p>
 <hr>
 <p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
 </main>

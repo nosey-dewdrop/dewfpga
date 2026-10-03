@@ -1,0 +1,24 @@
+#!/bin/bash
+# fake dewfpga for the review counterexamples; FAKE_MODE picks one behaviour
+U=https://nosey-dewdrop.github.io/dewfpga/errors
+case "$FAKE_MODE" in
+  space)    # the #12 CLI with DEWFPGA_ABSPATH=1 prefixes $PWD; a folder name with a space is legal there
+    echo "$PWD/a.sv:3: ERROR [undefined-name]: x is not declared. Fix: declare it. $U/undefined-name/" >&2; exit 1 ;;
+  multi-location)
+    echo "$PWD/a.sv:5 and $PWD/b.sv:6 and $PWD/c.sv:7: ERROR [two-always-drivers]: cnt has conflicting drivers. Fix: use one block. $U/two-always-drivers/" >&2; exit 2 ;;
+  vivado)   # nested cwd under <p>.srcs: the CLI cds to the project root and names it; root files untouched
+    echo "vivado project: $FAKE_ROOT/p.xpr (top from the project: blink)"; exit "${FAKE_RC:-1}" ;;
+  quiet-ok) exit 0 ;;   # success that wrote nothing (make: nothing to be done)
+  tail)     l=$(printf 'x%.0s' $(seq 1 8192)); for i in $(seq 1 60); do echo "$l"; done; exit 0 ;;
+  warnflood)
+    for i in $(seq 1 60); do echo "a.sv:$i: warning [latch-inferred]: w$i. Fix: f. $U/latch-inferred/" >&2; done
+    echo "ERROR [board-not-found]: board not found. Fix: plug it in. $U/board-not-found/" >&2; exit 1 ;;
+  orphan)   # exits 0 but leaves a descendant that holds both pipes
+    (exec sleep 30) & echo $! > "$FAKE_PID_FILE"; echo "PASS: 1 checks"; exit 0 ;;
+  logfail)  # 6 KB of output then a warning, exit 0; the wrapper's log file hits RLIMIT_FSIZE
+    for i in $(seq 1 60); do printf 'noise %095d\n' $i; done
+    echo "a.sv:9: warning [latch-inferred]: q is a latch. Fix: assign q in every branch. $U/latch-inferred/" >&2; exit 0 ;;
+  readerdies)  # a line number of 5000 digits (Python refuses int() past 4300), then a real warning, exit 0
+    n=$(printf '1%.0s' $(seq 1 5000)); echo "a.sv:$n: note [x-y]: odd. $U/x-y/" >&2
+    echo "a.sv:9: warning [latch-inferred]: q is a latch. Fix: assign q in every branch. $U/latch-inferred/" >&2; exit 0 ;;
+esac

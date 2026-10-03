@@ -1,0 +1,5 @@
+#!/bin/bash
+# fake dewfpga: starts a grandchild and waits; the wrapper's timeout must kill the whole group
+sleep 1000 &
+echo $! > "$FAKE_PID_FILE"
+wait

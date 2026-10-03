@@ -46,6 +46,9 @@
     <lastmod>2026-09-20</lastmod>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/command-timeout/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/decl-init-reads-signal/</loc>
   </url>
   <url>
@@ -94,6 +97,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/internal-tristate/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/internal/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/isunknown-in-design/</loc>

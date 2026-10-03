@@ -2274,3 +2274,37 @@ The compiler needs a privately reserved directory for Verilog-2005 source copies
 ## What is the fix?
 
 Check the project folder's permissions with `ls -ld .` and available disk space with `df -h .`. Use a writable project folder or free space, then retry. Do not delete another running build's temporary directory.
+
+## command-timeout
+step: agent CLI
+source: JSON command deadline
+title: The command exceeded its time limit
+summary: The JSON wrapper stopped a command that did not finish within its deadline.
+date: 2026-10-03
+
+`ERROR [command-timeout]` appears as a JSON diagnostic with exit 124.
+
+## Why does it happen?
+
+The command took longer than the selected timeout. A stalled simulation, slow build or disconnected programmer can require investigation.
+
+## What is the fix?
+
+Read `log.tail` and `log.path`. Fix an unbounded testbench or tool problem first. If the command is making progress, retry with a larger limit, for example `dewfpga bit --json --timeout=1200`.
+
+## internal
+step: agent CLI
+source: JSON output capture
+title: The wrapper could not produce a complete command result
+summary: Starting the command, reading its output or another wrapper operation failed.
+date: 2026-10-03
+
+The JSON result contains `code: "internal"`. Exit 70 reports a wrapper failure; interrupted calls use exit 130 or 143.
+
+## Why does it happen?
+
+A child could not start, an output reader failed, or a descendant kept output open after the command exited. These cases cannot be treated as successful results. A parent signal can also interrupt the command.
+
+## What is the fix?
+
+Read the diagnostic and temporary log. Verify the installed CLI files and filesystem access, then retry. Preserve the diagnostic and command when reporting a reproducible wrapper error. Do not use a leftover bitstream as proof that the interrupted command succeeded.

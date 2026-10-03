@@ -87,6 +87,9 @@ check "VS Code extension chooser, diagnostics and fresh waveforms" "node '$ROOT/
 check "VS Code setup and removal stay inside their test profiles" "python3 -B '$ROOT/test/vscode/test-setup.py' && python3 -B '$ROOT/test/vscode/test-setup-editor.py'"
 check "Vivado project files, nested sources and includes" "bash '$ROOT/test/vivado/run.sh'"
 
+sec "== machine-readable CLI"
+check "JSON CLI protocol, cancellation and text parity" "python3 -B '$ROOT/test/agent/test-json.py'"
+
 sec "== toolchain"
 check "check passes"          "'$CLI' check"
 

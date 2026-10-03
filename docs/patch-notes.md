@@ -3436,3 +3436,25 @@ and cancels the task on Escape. The companion suite passed **35, failed 0, skipp
 in the integrated tree. These extension features share the #12 installation and
 ownership boundary and are committed together. Full CLI acceptance passed **269/0**
 with **52 known gaps**. Remote CI remains pending for the combined integration.
+
+
+### #14 · Machine-readable CLI results · 3 October
+
+`check`, `sim`, `bit` and `flash` now accept `--json`. One result object carries a
+stable schema tag, process and child exit codes, bounded diagnostics and logs,
+source locations and artifact provenance. Text commands keep their original output.
+The timeout option bounds the child process group; parent SIGINT and SIGTERM also
+stop that group. A deliberately daemonized process outside the group is not covered.
+
+Independent review rejected false success after reader failures or open orphan
+pipes, warning floods that hid errors, stale artifacts attributed to the wrong top,
+and relative artifact scans from a nested Vivado directory. Root follow-ups fixed
+similarly named old bitstreams and multi-driver diagnostics containing several
+source locations. Unknown top/artifact provenance remains unknown instead of guessed.
+
+The integrated tree passed **30 tests, 0 failures, 0 skips**, including real sim and
+bit commands, text-mode parity and interruption cleanup. Separate real XPR and
+XPR-less projects passed **10 checks** for nested roots, caching, unrelated artifacts
+and source paths containing spaces. The preceding #12–#13 full CLI run passed
+**269/0 with 52 known gaps**; it is not a full run of this newer commit. Remote CI
+for this update remains pending. No real board programming is claimed.

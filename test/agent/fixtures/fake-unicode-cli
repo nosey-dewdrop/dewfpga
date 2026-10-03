@@ -1,0 +1,4 @@
+#!/bin/bash
+printf 'top module: \xff\xfe\xc3 (broken bytes)\n'
+printf 'd\xc3\xbc\xc5\x9fey.sv:2: warning [latch-inferred]: \xf0\x9f\x98\x80 latch \xff here. Fix: add an else \xe2\x9c\x93. https://nosey-dewdrop.github.io/dewfpga/errors/latch-inferred/\n' >&2
+exit 0

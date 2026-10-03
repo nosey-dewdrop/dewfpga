@@ -396,6 +396,14 @@
     <span class="step">sim / synth</span><a class="title" href="/dewfpga/errors/cannot-write-here/">dewfpga could not create its temporary work folder</a>
     <p>private Verilog-2005 source wrappers. The build directory is not writable, or the disk has no space for the temporary source copies.</p>
   </div>
+  <div class="err">
+    <span class="step">agent CLI</span><a class="title" href="/dewfpga/errors/command-timeout/">The command exceeded its time limit</a>
+    <p>JSON command deadline. The JSON wrapper stopped a command that did not finish within its deadline.</p>
+  </div>
+  <div class="err">
+    <span class="step">agent CLI</span><a class="title" href="/dewfpga/errors/internal/">The wrapper could not produce a complete command result</a>
+    <p>JSON output capture. Starting the command, reading its output or another wrapper operation failed.</p>
+  </div>
 <h2 id="your-error-is-not-here">Your error is not here?</h2>
 <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the section number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>
 <p class="mute small">All of this was hit on an M2 with 8 GB, macOS 15, on 19 September 2026, with the tool versions listed in <a href="/dewfpga/docs/#9-which-versions-were-tested">section 9 of the guide</a>. Newer versions can move the walls.</p>

@@ -1,0 +1,6 @@
+#!/bin/bash
+# fake dewfpga: floods both streams (20 MB each, no newline-poor giant lines), then one message line, exits 1
+line=$(printf 'noise %0500d' 7)
+for i in $(seq 1 40000); do echo "$line"; echo "$line" >&2; done
+echo 'a.sv:3: ERROR [undefined-name]: something is not declared. Fix: declare it. https://nosey-dewdrop.github.io/dewfpga/errors/undefined-name/' >&2
+exit 1

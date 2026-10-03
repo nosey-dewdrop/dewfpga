@@ -1,0 +1,3 @@
+#!/bin/bash
+echo "JTAG init failed with: unknown board" >&2
+exit 2
