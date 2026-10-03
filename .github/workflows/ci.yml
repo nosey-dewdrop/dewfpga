@@ -44,6 +44,10 @@ jobs:
       - name: npm package installs and runs
         run: |
           python3 scripts/package.py
+          mkdir -p "$RUNNER_TEMP/packed-cli"
+          tar -xzf ./dewfpga-*.tgz -C "$RUNNER_TEMP/packed-cli"
+          python3 "$RUNNER_TEMP/packed-cli/package/vscode/build-vsix.py" --out "$RUNNER_TEMP/packed-vsix"
+          "$RUNNER_TEMP/packed-cli/package/bin/dewfpga" vscode --print
           rm -f "$(brew --prefix)/bin/dewfpga"      # install.sh linked it there; npm wants the same path
           npm install -g ./dewfpga-*.tgz
           mkdir /tmp/w && cp templates/blink.sv templates/blink.xdc /tmp/w/

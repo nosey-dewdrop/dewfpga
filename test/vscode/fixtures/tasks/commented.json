@@ -1,0 +1,12 @@
+{
+  // my tasks
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "echo hi", /* inline */
+      "type": "shell",
+      "command": "echo \"hi\\n\"",
+      "group": { "kind": "build", "isDefault": true },
+    }, // after
+  ],
+}

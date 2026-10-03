@@ -5,9 +5,13 @@
 #   dewfpga sim | bit | flash | clean [top]
 #                                    work on the .sv files in the current folder. top = the module nothing else
 #                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
+#                                    In a Vivado project (a folder with one .xpr, or anywhere under its .srcs): the
+#                                    project's enabled files, its top module, its .xdc; outputs land next to the .xpr
+#   dewfpga tops                    the modules that could be the top, one per line: <module><tab><file> (reads only)
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
 #   dewfpga uninstall               remove what install built in ~/fpga (nextpnr-xilinx, yosys-slang, prjxray, chipdb, venv, log),
 #                                    the CLI in ~/.dewfpga and its link in Homebrew's bin. Your files and brew packages stay
+#   dewfpga vscode [--remove|--print] VS Code: companion extension + user tasks (install does this; --print only shows them)
 #   dewfpga --version
 # The toolchain lives in $FPGA_HOME (default ~/fpga). Build outputs land next to the .sv; <top>.log has the full place-and-route log.
 set -euo pipefail
@@ -23,7 +27,7 @@ die()     { local loc=""; case $1 in *:*) loc="$1: "; shift ;; esac; echo "${loc
 note()    { echo "note [$1]: ${*:2} $SITE/$1/"; }
 [[ $HERE != *[[:space:]]* && $FPGA_HOME != *[[:space:]]* ]] || die path-with-space "a path with a space ($HERE / $FPGA_HOME): the FPGA tools cannot handle that. Fix: move the folder to a path without spaces, or set FPGA_HOME to one."
 
-usage()   { sed -n '2,12s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
+usage()   { sed -n '2,16s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
 version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
 
 cmd_check() {
@@ -75,6 +79,14 @@ cmd_new() {
     echo "$dir/ ready:  cd $q && dewfpga flash    (VS Code: ⌘⇧B)"
 }
 
+cmd_vscode() {
+    # python3 from Homebrew or Xcode's tools, never the venv: this also runs from uninstall after the venv is gone.
+    # DEWFPGA_SKIP_VSCODE=1 makes install.sh and `dewfpga uninstall` skip their automatic call of this (the tests set
+    # it, so a test run never installs into or removes from the real editor); an explicit `dewfpga vscode` ignores it.
+    local py; py=$(command -v python3) || die toolchain-not-installed "python3 is missing, so the VS Code setup cannot run. Fix: dewfpga install (it brings python@3.14 through Homebrew)."
+    "$py" "$HERE/templates/vscode_setup.py" --here "$HERE" --fpga-home "$FPGA_HOME" "$@"
+}
+
 cmd_uninstall() {
     local link; link="$(brew --prefix 2>/dev/null || echo /opt/homebrew)/bin/dewfpga"
     local built=(nextpnr-xilinx yosys-slang prjxray chipdb venv install.log) gone=() e
@@ -101,6 +113,11 @@ cmd_uninstall() {
     [ -L "$link" ] && [ "$(resolve "$link")" = "$SELF" ] && gone+=("$link")      # only a link to this CLI
     if [ ${#gone[@]} -eq 0 ]; then note no-install-found "nothing to remove: no dewfpga install found in $FPGA_HOME (FPGA_HOME=/elsewhere dewfpga uninstall for one installed elsewhere)."; return; fi
     [ "$fh" = "$FPGA_HOME" ] || echo "FPGA_HOME=$FPGA_HOME is $fh"
+    # VS Code first (user tasks, then the companion extension this setup installed): it needs templates/ and the record in FPGA_HOME,
+    # both of which may be in gone[]. A failure there is reported and never stops the uninstall
+    # (subshell: cmd_vscode's die would otherwise end this uninstall)
+    if [ "${DEWFPGA_SKIP_VSCODE:-}" = 1 ]; then echo "note: DEWFPGA_SKIP_VSCODE=1, so the VS Code setup was left in place (dewfpga vscode --remove undoes it)"
+    elif [ -f "$HERE/templates/vscode_setup.py" ]; then (cmd_vscode --remove) || echo "note: the VS Code setup could not be fully removed (the lines above); the toolchain is removed anyway"; fi
     printf 'removing: %s\n' "${gone[@]}"
     rm -rf "${gone[@]}"
     if rmdir "$fh" 2>/dev/null; then echo "removed: $fh (it was empty)"
@@ -109,26 +126,108 @@ cmd_uninstall() {
     echo "done."
 }
 
+# A Vivado project: the folder that holds one <name>.xpr (or, without one, a <name>.srcs/sources_1), reached from
+# that folder or from anywhere under <name>.srcs (Vivado keeps the sources in <name>.srcs/sources_1/new, and a
+# student opens a terminal there). locate() finds that root, moves there and reads the project's file lists:
+# PROJ_SRC (design), PROJ_XDC (constraints), PROJ_SIM (simulation), PROJ_TOP (the project's top module). Paths are
+# root-relative, so a root with a space in its name never reaches the tools (a file name with a space is refused by
+# the scanner with the .xpr line). The lists come one path per line.
+# No project in sight: nothing moves, nothing is set, and the flat folder is handled exactly as before.
+PROJ_XPR=""; PROJ_TOP=""; PROJ_SRC=(); PROJ_XDC=(); PROJ_SIM=(); PROJ_SIMPROBLEM=""
+locate() {
+    local d=$PWD root="" srcs="" x xprs=() i
+    for ((i = 0; i <= 6; i++)); do
+        xprs=(); for x in "$d"/*.xpr; do [ -f "$x" ] && xprs+=("$x"); done
+        if [ ${#xprs[@]} -gt 1 ]; then die two-vivado-projects "${#xprs[@]} Vivado projects in $d ($(printf '%s ' "${xprs[@]##*/}")) and dewfpga cannot tell which one is this design. Fix: move one of them to its own folder, or copy the .sv and .xdc files to a folder outside the project and run dewfpga there."; fi
+        if [ ${#xprs[@]} -eq 1 ]; then root=$d; PROJ_XPR=${xprs[0]##*/}; break; fi
+        for x in "$d"/*.srcs/sources_1; do [ -d "$x" ] && { root=$d; srcs=${x%/sources_1}; srcs=${srcs##*/}; break; }; done
+        [ -z "$root" ] || break
+        # walk up only while inside a <name>.srcs tree, never past $HOME or /
+        [[ $d == *.srcs || $d == *.srcs/* ]] || break
+        [ "$d" != "$HOME" ] && [ "$d" != / ] || break
+        d=$(dirname "$d")
+    done
+    [ -n "$root" ] || return 0
+    cd "$root"
+    local py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    local out line problems=0
+    if [ -n "$PROJ_XPR" ]; then out=$("$py" "$HERE/templates/check_xdc.py" --xpr "$PROJ_XPR") || true
+    else out=$("$py" "$HERE/templates/check_xdc.py" --srcs "$srcs") || true; fi
+    while IFS= read -r line; do
+        case $line in
+            PROBLEM=*) echo "${line#PROBLEM=}" >&2; problems=1 ;;
+            SRC=*)     PROJ_SRC+=("${line#SRC=}") ;;   # one path per line: a space in a name is never split into two
+            XDC=*)     PROJ_XDC+=("${line#XDC=}") ;;
+            SIM=*)     PROJ_SIM+=("${line#SIM=}") ;;
+            SIMPROBLEM=*) PROJ_SIMPROBLEM=${line#SIMPROBLEM=} ;;   # the simulation set is unusable: sim stops on it, the rest go on
+            TOP=*)     PROJ_TOP=${line#TOP=} ;;
+        esac
+    done <<< "$out"
+    [ $problems -eq 0 ] || exit 1
+    PROJ_ROOT=$root
+}
+# the source files for a command: in a project, the design set, plus the simulation set for sim only (a clock
+# generator or a model in sim_1 is Vivado's simulation-only file: bit, flash, clean and tops never see it, as
+# Vivado's synthesis never does); in a flat folder, the .sv/.v files there. Every file: no space in its name (the
+# tools cannot take one), no UTF-8 byte-order mark (yosys stops at token 1). Sets FILES, XDCS (the pin files to
+# choose from: the project's constraint set, or this folder's .xdc files) and INCDIRS (the folders of the files,
+# where the tools look for `include files; make gets them as -I).
+# collect <command> [quiet]: quiet returns 1 instead of dying when there is no file.
+FILES=(); XDCS=(); INCDIRS=()
+collect() {
+    local f d target=$1
+    if [ -n "${PROJ_ROOT:-}" ]; then
+        FILES=(${PROJ_SRC[@]+"${PROJ_SRC[@]}"})
+        if [ "$target" = sim ] && [ -n "$PROJ_SIMPROBLEM" ]; then echo "$PROJ_SIMPROBLEM" >&2; exit 1; fi
+        if [ "$target" = sim ]; then for f in ${PROJ_SIM[@]+"${PROJ_SIM[@]}"}; do case " ${FILES[*]+"${FILES[*]}"} " in *" $f "*) ;; *) FILES+=("$f") ;; esac; done; fi
+        XDCS=(${PROJ_XDC[@]+"${PROJ_XDC[@]}"})
+    else
+        for f in *.sv *.v *.SV *.V; do [ -f "$f" ] && FILES+=("$f"); done
+        for f in *.xdc; do [ -f "$f" ] && XDCS+=("$f"); done
+    fi
+    for f in ${FILES[@]+"${FILES[@]}"}; do
+        [[ $f != *[[:space:]]* ]] || die file-name-with-space "'$f': file names with spaces are not supported by the tools. Fix: rename it (e.g. ${f// /_})."
+        # a UTF-8 byte-order mark (Notepad's "UTF-8 with BOM") makes yosys stop at token 1 with "invalid token"
+        [ "$(head -c 3 "$f" | LC_ALL=C od -An -tx1 | tr -d ' \n')" != "efbbbf" ] \
+            || die "$f:1" utf8-bom "$f starts with a byte-order mark (saved as 'UTF-8 with BOM'), and yosys stops at its first token. Fix: save it as plain UTF-8, or remove it:  LC_ALL=C sed -i '' \$'1s/^\\xEF\\xBB\\xBF//' $f"
+    done
+    if [ -z "${FILES[*]+x}" ]; then
+        [ "${2:-}" = quiet ] && return 1
+        [ -z "${PROJ_ROOT:-}" ] || die no-source-file "${PROJ_XPR:-$PWD} lists no .sv or .v design file (a file beside it is not in the project until it is added in Vivado: Sources > Add Sources). Fix: add your design to the project in Vivado and save it, or copy the .sv and .xdc files to a folder outside the project and run dewfpga there."
+        die no-source-file "no .sv or .v file in $PWD. Fix: cd into the folder with your design, or start one:  dewfpga new blink"
+    fi
+    # the glob's order follows the locale (design_old.sv sorts before design.sv on one macOS and after it on another);
+    # the tools read the files in this order and the messages name them in it, so it is fixed here. No spaces in names (checked above)
+    # shellcheck disable=SC2207
+    FILES=($(printf '%s\n' ${FILES[@]+"${FILES[@]}"} | LC_ALL=C sort))
+    INCDIRS=(); for f in "${FILES[@]}"; do d=${f%/*}; [ "$d" != "$f" ] || d=.; case " ${INCDIRS[*]+"${INCDIRS[*]}"} " in *" $d "*) ;; *) INCDIRS+=("$d") ;; esac; done
+}
+# DEWFPGA_ABSPATH=1 (set by the VS Code tasks, never by hand): a message's leading `<file>:<line>: ` becomes
+# `$PWD/<file>:<line>: ` when that file exists here, so the editor finds it without knowing the project root.
+# Unset: nothing is touched, and the output is byte for byte what it was.
+abspath() { perl -pe 'BEGIN { $| = 1 } s{^([^\s:][^:\n]*):(\d+): }{ -e $1 ? "$ENV{PWD}/$1:$2: " : "$1:$2: " }e'; }
+
+cmd_tops() {  # the candidates for the top, one per line, <module><tab><file>; the project's top first; nothing written
+    [ $# -eq 0 ] || die unknown-option "dewfpga tops takes no arguments. Fix: dewfpga tops  (dewfpga --help lists the commands)."
+    collect tops quiet || return 0   # no source file: no candidate, no line, exit 0 (the editor asks here before anything exists)
+    local py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    "$py" "$HERE/templates/check_xdc.py" --list-tops --project-top "$PROJ_TOP" ${FILES[@]+"${FILES[@]}"}
+}
+
 cmd_build() {  # <target> [top]
     local target=$1 top=${2:-} xdc f
     case $top in -*) die unknown-option "unknown option: $top; dewfpga $target takes a module or a file name, nothing else. Fix: dewfpga $target [top]  (dewfpga --help lists the commands)." ;; esac
     top=${top#./}
     [[ $top != */* ]] || die run-inside-the-folder "$top is a path, and dewfpga works on the .sv files in the current folder. Fix: run it inside the folder that holds the .sv files:  cd \"$(dirname "$top")\" && dewfpga $target $(basename "$top")"
-    local files=()
-    for f in *.sv *.v *.SV *.V; do
-        [ -f "$f" ] || continue
-        [[ $f != *[[:space:]]* ]] || die file-name-with-space "'$f': file names with spaces are not supported by the tools. Fix: rename it (e.g. ${f// /_})."
-        # a UTF-8 byte-order mark (Notepad's "UTF-8 with BOM") makes yosys stop at token 1 with "invalid token"
-        [ "$(head -c 3 "$f" | LC_ALL=C od -An -tx1 | tr -d ' \n')" != "efbbbf" ] \
-            || die "$f:1" utf8-bom "$f starts with a byte-order mark (saved as 'UTF-8 with BOM'), and yosys stops at its first token. Fix: save it as plain UTF-8, or remove it:  LC_ALL=C sed -i '' \$'1s/^\\xEF\\xBB\\xBF//' $f"
-        files+=("$f")
-    done
-    [ ${#files[@]} -gt 0 ] || die no-source-file "no .sv or .v file in $PWD. Fix: cd into the folder with your design, or start one:  dewfpga new blink"
-    # the glob's order follows the locale (design_old.sv sorts before design.sv on one macOS and after it on another);
-    # the tools read the files in this order and the messages name them in it, so it is fixed here. No spaces in names (checked above)
-    # shellcheck disable=SC2207
-    files=($(printf '%s\n' "${files[@]}" | LC_ALL=C sort))
-    local xn="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    collect "$target"
+    local files=(${FILES[@]+"${FILES[@]}"}) xn="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    # the project's top is the default; a module or file named on the command line wins
+    local chosen=$top
+    if [ -n "${PROJ_ROOT:-}" ]; then
+        [ -n "$top" ] || top=$PROJ_TOP
+        if [ -z "$chosen" ] && [ -n "$PROJ_TOP" ]; then echo "vivado project: $PROJ_ROOT/$PROJ_XPR (top from the project: $PROJ_TOP)"
+        else echo "vivado project: $PROJ_ROOT/${PROJ_XPR:-*.srcs}"; fi
+    fi
     # two lines Vivado accepts and yosys and iverilog refuse are written into the student's file first, and each
     # changed line is printed as a note: the course's seven-segment port line (`output [6:0] seg, logic dp`) gets
     # its direction, an instance without a name (`inv(sw[0], led[0]);`) gets one (u_inv). Before sim too: the
@@ -140,9 +239,11 @@ cmd_build() {  # <target> [top]
     # lines are the student's mistakes it saw (a $finish in a design, a start value meant as a wire, a
     # module defined twice, a netlist Vivado wrote left in the folder). Both come in the message format
     # above, with the code and the student's file:line; --cmd names this command in the fix.
-    for f in *.xdc; do [ -f "$f" ] && xn="$xn,${f%.xdc}"; done
+    for f in ${XDCS[@]+"${XDCS[@]}"}; do f=${f##*/}; xn="$xn,${f%.xdc}"; done
     local scan line design="" tb="" auto=0 problems=0 why=""
-    scan=$("$py" "$HERE/templates/check_xdc.py" --scan ${top:+--top "$top"} --xdc "${xn#,}" --cmd "$target" "${files[@]}") || true
+    local simarg=""; if [ "$target" = sim ]; then for f in ${PROJ_SIM[@]+"${PROJ_SIM[@]}"}; do simarg="$simarg$f
+"; done; fi
+    scan=$("$py" "$HERE/templates/check_xdc.py" --scan ${top:+--top "$top"} --xdc "${xn#,}" --cmd "$target" --sim "$simarg" "${files[@]}") || true
     while IFS= read -r line; do
         case $line in
             ERROR=*)   echo "${line#ERROR=}" >&2; exit 1 ;;
@@ -157,7 +258,8 @@ cmd_build() {  # <target> [top]
     [ $problems -eq 0 ] || exit 1
     [ -n "$top" ] || die no-top-module "could not find a top module in ${files[*]}. Fix: name it:  dewfpga $target <module>"
     if [ -n "$why" ]; then echo "top module: $top ($why)"
-    elif [ "$auto" = 1 ] && [ "$(wc -w <<< "$design")" -gt 1 ]; then echo "top module: $top"; fi
+    elif [ "$auto" = 1 ] && [ "$(wc -w <<< "$design")" -gt 1 ]; then echo "top module: $top"
+    elif [ -n "${PROJ_ROOT:-}" ] && [ -z "$chosen" ] && [ "$top" != "$PROJ_TOP" ]; then echo "top module: $top"; fi
     local srcs=(); read -ra srcs <<< "$design"
     xdc="$top.xdc"
     case $target in
@@ -165,10 +267,13 @@ cmd_build() {  # <target> [top]
             [ -n "$tb" ] || die no-testbench "no testbench for $top in this folder: a testbench is a module without ports that instantiates $top and ends with \$finish; ${top}_tb.sv is the usual name. Fix: write one next to the design; 'dewfpga new blink' gives an example (blink/blink_tb.sv)." ;;
         bit|flash)
             # the pin file: <top>.xdc, or the only .xdc in the folder (a lab folder usually has Basys3_Master.xdc)
-            if [ ! -f "$xdc" ]; then
-                local xdcs=(); for f in *.xdc; do [ -f "$f" ] && xdcs+=("$f"); done
-                if   [ ${#xdcs[@]} -eq 1 ]; then xdc=${xdcs[0]}
-                elif [ ${#xdcs[@]} -eq 0 ]; then die no-xdc-file "no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy $HERE/templates/Basys3_Master.xdc here and uncomment the pins you use."
+            # (in a Vivado project: the constraint set's .xdc, or the one among them named <top>.xdc)
+            if [ -n "${PROJ_ROOT:-}" ] || [ ! -f "$xdc" ]; then
+                local xdcs=() named=(); for f in ${XDCS[@]+"${XDCS[@]}"}; do xdcs+=("$f"); [ "${f##*/}" = "$top.xdc" ] && named+=("$f"); done
+                if   [ ${#named[@]} -eq 1 ]; then xdc=${named[0]}
+                elif [ ${#xdcs[@]} -eq 1 ]; then xdc=${xdcs[0]}
+                elif [ ${#xdcs[@]} -eq 0 ]; then die no-xdc-file "no .xdc pin file in ${PROJ_XPR:+the project ${PROJ_XPR} or }this folder, so nothing says which pin each port is on. Fix: copy $HERE/templates/Basys3_Master.xdc here and uncomment the pins you use."
+                elif [ -n "${PROJ_ROOT:-}" ]; then die two-xdc-files "${#xdcs[@]} .xdc files in the project's constraint set (${xdcs[*]}) and none is named $top.xdc, so nothing says which one holds the pins. Fix: in Vivado keep one of them in the set (Sources > Remove File from Project) or rename one to $top.xdc, and save the project."
                 else die two-xdc-files "${#xdcs[@]} .xdc files here (${xdcs[*]}) and none is named $top.xdc, so nothing says which one holds the pins. Fix: keep one, or name it $top.xdc."; fi
             fi
             [[ $xdc != *[[:space:]]* ]] || die file-name-with-space "'$xdc': file names with spaces are not supported by the tools. Fix: rename it (e.g. ${xdc// /_})."
@@ -181,10 +286,10 @@ cmd_build() {  # <target> [top]
     # empty stream means nothing had changed. sed always exits 0; pipefail (set above) hands back make's code.
     local trailer='/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
     if [ "$target" = sim ]; then
-        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" TB="$tb" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" sim 2> >(sed -E "$trailer" >&2)
+        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" TB="$tb" XDC="$xdc" INCDIRS="${INCDIRS[*]}" CHECKER="$HERE/templates/check_xdc.py" sim 2> >(sed -E "$trailer" >&2)
     else
         DEWFPGA_TMP=$(mktemp -t dewfpga); trap 'rm -f "$DEWFPGA_TMP"' EXIT; local tmp=$DEWFPGA_TMP
-        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
+        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" INCDIRS="${INCDIRS[*]}" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
             | sed -E "$trailer" | tee "$tmp"
         if [ "$target" = bit ] && [ ! -s "$tmp" ]; then echo "$top.bit is up to date (nothing changed since the last build; dewfpga clean forces a rebuild)"; fi
     fi
@@ -193,9 +298,11 @@ cmd_build() {  # <target> [top]
 case "${1:-}" in
     install) [ $# -eq 1 ] || die unknown-option "dewfpga install takes no arguments. Fix: dewfpga install  (FPGA_HOME=/elsewhere dewfpga install to relocate)."; exec bash "$HERE/install.sh" ;;
     uninstall) cmd_uninstall ;;
+    vscode)  shift; cmd_vscode "$@" ;;
     check)   cmd_check ;;
     new)     shift; cmd_new "$@" ;;
-    sim|bit|flash|clean) cmd_build "$@" ;;
+    sim|bit|flash|clean) locate; if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then cmd_build "$@" 2> >(abspath >&2) | abspath; else cmd_build "$@"; fi ;;
+    tops)    shift; locate; cmd_tops "$@" ;;
     -v|--version|version) version ;;
     -h|--help|help|"") usage ;;
     *) echo "ERROR [unknown-command]: unknown command: $1. Fix: one of the commands below. $SITE/unknown-command/" >&2; usage 1 ;;

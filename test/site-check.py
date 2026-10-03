@@ -9,7 +9,7 @@
 
 exit 0 = no failures. one line per failure: `file: what`. warnings do not fail.
 """
-import argparse, io, os, re, subprocess, sys, tarfile, zipfile
+import argparse, io, json, os, re, subprocess, sys, tarfile, zipfile
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from urllib.parse import unquote, urlsplit
@@ -146,6 +146,11 @@ def check_tgz(bundle_dir):
             n = m.name.split('/', 1)[1] if '/' in m.name else m.name   # strip package/
             names.append(n)
     tracked = set(subprocess.run(['git', 'ls-files', '-z'], capture_output=True, check=True).stdout.decode().split('\0'))
+    manifest = json.loads(read(os.path.join(os.path.dirname(__file__), '..', 'package.json')))
+    release_paths = [p.rstrip('/') for p in manifest['files']]
+    required = {'package.json'} | {n for n in tracked if n and any(n == p or n.startswith(p + '/') for p in release_paths)}
+    for n in sorted(required - set(names)):
+        fail('dewfpga.tgz', f'{n} is declared for release but missing from the package')
     for n in names:
         if n not in tracked: fail('dewfpga.tgz', f'{n} is not a git-tracked file')
     ign = subprocess.run(['git', 'check-ignore', '--no-index', '-z', '--stdin'], input='\0'.join(names).encode(), capture_output=True).stdout

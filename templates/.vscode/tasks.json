@@ -5,26 +5,104 @@
       "label": "FPGA: flash (build + program)",
       "type": "shell",
       "command": "make flash",
-      "options": { "cwd": "${fileDirname}" },
-      "group": { "kind": "build", "isDefault": true },
-      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
-      "problemMatcher": []
+      "options": {
+        "cwd": "${fileDirname}",
+        "env": {
+          "DEWFPGA_ABSPATH": "1"
+        }
+      },
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "dewfpga",
+        "source": "dewfpga",
+        "severity": "info",
+        "fileLocation": [
+          "autoDetect",
+          "${fileDirname}"
+        ],
+        "pattern": {
+          "regexp": "^(.+?):(\\d+): (ERROR|warning|note) \\[([a-z0-9-]+)\\]: (.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "code": 4,
+          "message": 5
+        }
+      }
     },
     {
       "label": "FPGA: simulate",
       "type": "shell",
       "command": "make sim",
-      "options": { "cwd": "${fileDirname}" },
-      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
-      "problemMatcher": []
+      "options": {
+        "cwd": "${fileDirname}",
+        "env": {
+          "DEWFPGA_ABSPATH": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "dewfpga",
+        "source": "dewfpga",
+        "severity": "info",
+        "fileLocation": [
+          "autoDetect",
+          "${fileDirname}"
+        ],
+        "pattern": {
+          "regexp": "^(.+?):(\\d+): (ERROR|warning|note) \\[([a-z0-9-]+)\\]: (.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "code": 4,
+          "message": 5
+        }
+      }
     },
     {
       "label": "FPGA: build only",
       "type": "shell",
       "command": "make bit",
-      "options": { "cwd": "${fileDirname}" },
-      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
-      "problemMatcher": []
+      "options": {
+        "cwd": "${fileDirname}",
+        "env": {
+          "DEWFPGA_ABSPATH": "1"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      },
+      "problemMatcher": {
+        "owner": "dewfpga",
+        "source": "dewfpga",
+        "severity": "info",
+        "fileLocation": [
+          "autoDetect",
+          "${fileDirname}"
+        ],
+        "pattern": {
+          "regexp": "^(.+?):(\\d+): (ERROR|warning|note) \\[([a-z0-9-]+)\\]: (.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "code": 4,
+          "message": 5
+        }
+      }
     }
   ]
 }

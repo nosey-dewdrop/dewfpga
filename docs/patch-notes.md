@@ -3369,3 +3369,70 @@ inside its own wrapper, and the page stays 320 pixels wide. Chromium checks at 3
 produces **0 pixel differences** and identical table geometry in a controlled before/after
 capture. These are browser measurements, not physical-phone or board tests. The final commit's
 full CI remains a separate acceptance check.
+
+
+### #12 · Vivado projects and editor tasks that preserve user files · 3 October
+
+Commands now discover a Vivado `.xpr` or `.srcs` layout and read the enabled design,
+constraint and simulation sets. Running from a nested source directory writes build
+outputs in the project root. The project's selected top is respected unless explicitly
+named. `dewfpga tops` lists candidates as module/file pairs without writing files.
+Missing design files and ambiguous active sets produce actionable errors; a problem
+confined to the simulation set stops `sim`, not `bit`, `tops` or `clean`.
+
+Local include directories reach both readers. `.v` files retain Verilog-2005 keywords
+in Icarus and the slang fallback. The first implementation deleted a pre-existing
+`top.kw` directory and mapped `a/b.v` and `a_b.v` to the same temporary filename.
+Root counterexamples rejected it. Wrappers now use a privately reserved directory,
+numbered filenames and scoped cleanup. `clean` leaves other recipes' temporary
+folders alone. Probe 74's RTL stage now passes; its netlist stage remains a known gap.
+
+`dewfpga vscode` builds a deterministic companion VSIX and installs user tasks only
+for the selected supported editor and named profiles with the companion available.
+JSONC comments and unrelated tasks survive. Removal checks recorded content hashes,
+keeps user edits, and rolls back task writes if the ownership record cannot be saved.
+Symlinked setup records are refused. Automatic install/uninstall hooks can be skipped
+with `DEWFPGA_SKIP_VSCODE=1`; explicit editor setup still works. Native tests use that
+flag and isolated fake editors so they cannot modify a developer's real profile.
+
+Independent review reproduced Cursor's `code` being mistaken for VS Code and a failed
+profile retry losing its earlier ownership record. A further root case showed that a
+`code` symlink into Insiders must not be selected for a Code removal. These cases have
+specific regression checks. Profile metadata was checked against Microsoft's source;
+that is distinct from testing the real editor GUI.
+
+Focused checks before final acceptance: task writer **69/0**, companion **35/0**,
+Vivado **82/0**, setup **89/0**. An additional eight editor-boundary checks passed in
+a corrected isolated copy. The first full run caught two flat-folder compile-line
+regressions despite those focused results. They are retained in the test history;
+the corrected full run passed **269, failed 0, with 52 known gaps**, in 24 minutes
+11 seconds, with the tested files unchanged. The command list contains **325 available
+checks**, not 325 executed successes. Real GUI and Basys3 acceptance remain unverified.
+Remote CI is pending for this integration.
+
+Release review then found the tracked-file package builder omitted the companion
+sources. The old archive now fails validation for all four missing files. The fixed
+archive builds a VSIX byte-identical to the source tree and runs `vscode --print`.
+Both assembled site variants pass: **101 pages, 0 failures** each. CI now builds the
+companion from the unpacked release, so source-only success cannot hide this omission.
+
+
+### #13 · Accurate lint severity and fresh waveforms · 3 October
+
+The companion offers an explicit lint-shim setup command. Icarus's specific
+constant-select `sorry` diagnostic becomes a warning; syntax errors, other diagnostics
+and exit codes remain intact. The prior global setting is restored only when dewfpga
+owns the current value; workspace overrides and user changes are preserved. Symlink,
+hard-link and copied-shim recursion cases are covered.
+
+A successful simulation task opens a new or changed VCD directly in its working
+project root. Before/after file identity, nanosecond timestamps and small-file hashes
+prevent unchanged old waveforms from opening, including same-second cases. The
+installed Verilog extension declares a default VCD viewer; actual GUI opening remains
+unverified. Nested or absolute dumpfile destinations are not discovered automatically.
+
+The top chooser uses the real Quick Pick lifecycle, remembers choices per project
+and cancels the task on Escape. The companion suite passed **35, failed 0, skipped 0**
+in the integrated tree. These extension features share the #12 installation and
+ownership boundary and are committed together. Full CLI acceptance passed **269/0**
+with **52 known gaps**. Remote CI remains pending for the combined integration.

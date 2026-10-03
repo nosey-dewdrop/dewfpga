@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parent.parent
 def main():
     tracked = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "package.json", "README.md", "README.tr.md",
-         "LICENSE", "install.sh", "bin", "templates"], cwd=ROOT).split(b"\0")
+         "LICENSE", "install.sh", "bin", "templates", "vscode"], cwd=ROOT).split(b"\0")
     with tempfile.TemporaryDirectory(prefix="dewfpga-package-") as tmp:
         stage = Path(tmp)
         for entry in tracked:

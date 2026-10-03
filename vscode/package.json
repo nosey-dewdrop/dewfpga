@@ -1,0 +1,50 @@
+{
+  "name": "dewfpga",
+  "displayName": "dewfpga",
+  "description": "Choose the top module for a dewfpga build, open the fresh VCD after a simulation, and show Icarus's constant-select 'sorry' as a warning instead of an error.",
+  "version": "0.1.0",
+  "publisher": "nosey-dewdrop",
+  "license": "MIT",
+  "repository": { "type": "git", "url": "https://github.com/nosey-dewdrop/dewfpga" },
+  "homepage": "https://nosey-dewdrop.github.io/dewfpga/",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Other"],
+  "extensionKind": ["workspace"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      { "command": "dewfpga.pickTop", "title": "dewfpga: choose the top module" },
+      { "command": "dewfpga.forgetTop", "title": "dewfpga: forget the remembered top module for this folder" },
+      { "command": "dewfpga.setupLinter", "title": "dewfpga: use the dewfpga iverilog lint shim (constant-select 'sorry' becomes a warning)" },
+      { "command": "dewfpga.removeLinter", "title": "dewfpga: stop using the dewfpga iverilog lint shim" }
+    ],
+    "configuration": {
+      "title": "dewfpga",
+      "properties": {
+        "dewfpga.cliPath": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Absolute path of the `dewfpga` command. Empty: `/opt/homebrew/bin/dewfpga`, then `/usr/local/bin/dewfpga`, then `~/.dewfpga/bin/dewfpga`, then `~/fpga/dewfpga/bin/dewfpga` (the first that exists). VS Code does not see your terminal's PATH, so a relative name is refused."
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "dewfpga",
+        "owner": "dewfpga",
+        "source": "dewfpga",
+        "severity": "info",
+        "fileLocation": ["autoDetect", "${fileDirname}"],
+        "pattern": {
+          "regexp": "^(.+?):(\\d+): (ERROR|warning|note) \\[([a-z0-9-]+)\\]: (.*)$",
+          "file": 1,
+          "line": 2,
+          "severity": 3,
+          "code": 4,
+          "message": 5
+        }
+      }
+    ]
+  }
+}

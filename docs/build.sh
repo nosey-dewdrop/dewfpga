@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 DATE=$(git log -1 --format=%cs -- docs/manual-setup.md 2>/dev/null || date +%F)
-pandoc -f gfm -t html5 --syntax-highlighting=none --wrap=none \
+pandoc -f gfm-tex_math_dollars -t html5 --syntax-highlighting=none --wrap=none \
   --template docs/site.tmpl -V date="$DATE" \
   docs/manual-setup.md -o site/docs/index.html
 # the docbar goes right under the h1

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Project Version="7" Minor="55" Path="MIX.xpr">
+  <Configuration>
+    <Option Name="ActiveSimSet" Val="sim_1"/>
+  </Configuration>
+  <FileSets Version="1" Minor="31">
+    <FileSet Name="sources_1" Type="DesignSrcs" RelSrcDir="$PSRCDIR/sources_1">
+      <File Path="$PSRCDIR/sources_1/new/defs.svh"/>
+      <File Path="$PSRCDIR/sources_1/new/top.sv"/>
+      <File Path="$PSRCDIR/sources_1/imports/helper.v"/>
+      <Config>
+        <Option Name="TopModule" Val="top"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="constrs_1" Type="Constrs" RelSrcDir="$PSRCDIR/constrs_1">
+      <File Path="$PSRCDIR/constrs_1/new/top.xdc"/>
+    </FileSet>
+    <FileSet Name="sim_1" Type="SimulationSrcs" RelSrcDir="$PSRCDIR/sim_1">
+      <File Path="$PSRCDIR/sim_1/new/clkgen.sv"/>
+      <File Path="$PSRCDIR/sim_1/new/tb.sv"/>
+      <Config>
+        <Option Name="TopModule" Val="tb"/>
+      </Config>
+    </FileSet>
+    <FileSet Name="utils_1" Type="Utils" RelSrcDir="$PSRCDIR/utils_1"/>
+  </FileSets>
+  <Runs Version="1" Minor="11">
+    <Run Id="synth_1" Type="Ft3:Synth" SrcSet="sources_1" Part="xc7a35tcpg236-1" ConstrsSet="constrs_1" State="current"/>
+  </Runs>
+</Project>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ERROR [vscode-extension-install-failed] (fix, macOS)</title>
+<meta name="description" content="The companion extension could not be built, installed or verified. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/vscode-extension-install-failed/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [vscode-extension-install-failed] (fix, macOS)">
+<meta property="og:description" content="The companion extension could not be built, installed or verified. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/vscode-extension-install-failed/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [vscode-extension-install-failed]","url":"https://nosey-dewdrop.github.io/dewfpga/errors/vscode-extension-install-failed/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-03","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">vscode</span>the companion extension installer</p>
+  <h1 class="mono">ERROR [vscode-extension-install-failed]</h1>
+<p>The diagnostic contains <code>vscode-extension-install-failed</code>. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.</p>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>User tasks require the companion's top-selection command. Setup does not write those tasks after a failed companion installation. The optional Verilog language extension can also be unavailable when the marketplace cannot be reached; the diagnostic distinguishes that case.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Read the command failure, verify the selected editor can install extensions and retry. The plain FPGA CLI remains usable. Keep existing user tasks while resolving the extension problem.</p>
+<pre data-copy="1"><code>dewfpga vscode</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

@@ -269,6 +269,16 @@ else
     echo "    $BIN_DIR not writable; add to PATH:  export PATH=\"$(dirname "$CLI"):\$PATH\""
 fi
 "$CLI" check
+# VS Code: the companion extension and the user tasks. Not part of the toolchain: no `code` command is one note,
+# and a failure here (printed above its own line) never fails the install that just succeeded.
+# DEWFPGA_SKIP_VSCODE=1 skips this automatic step (the tests set it so a test install never touches the real editor);
+# an explicit `dewfpga vscode` still runs.
+echo
+if [ "${DEWFPGA_SKIP_VSCODE:-}" = 1 ]; then
+    echo "    (DEWFPGA_SKIP_VSCODE=1: VS Code setup skipped. Later:  dewfpga vscode)"
+else
+"$CLI" vscode || echo "    (VS Code setup did not finish: the lines above; the toolchain is complete. Retry:  dewfpga vscode)"
+fi
 echo
 echo "Total: $(( $(date +%s) - T0 )) s. Log: $LOG"
 echo "Next:  dewfpga new blink && cd blink && dewfpga flash"

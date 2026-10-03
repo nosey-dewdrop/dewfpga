@@ -17,6 +17,9 @@
 # Each probe's verdict is worked out here again from expect.tsv and its four stages, and has to agree with
 # test/sv/run.sh's, whose exit code has to agree with its rows.
 set -euo pipefail
+# Installer/uninstaller coverage must not modify the developer's real editor profile.
+# The separate VS Code setup tests fence their own editor executable and scratch HOME.
+export DEWFPGA_SKIP_VSCODE=1
 LIST=0; case ${1:-} in --list) LIST=1 ;; "") ;; *) echo "usage: test/run.sh [--list]   (ONLY=regex, FULL=1, SV_OUT=file in the environment)" >&2; exit 2 ;; esac
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="$ROOT/bin/dewfpga"
@@ -41,7 +44,7 @@ say() { local rc=0; "$@" > "$T/say" 2>&1 || rc=$?; cat "$T/say"; return $rc; }
 strip() { grep -v '^# nextpnr' "$1" | sort; }
 
 sec "== static"
-check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh'"
+check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh' '$ROOT/vscode/bin/iverilog' '$ROOT/test/vivado/run.sh'"
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
 # every file is scanned, this one too: a home folder is /Users/ and a name (/Users/you/ is the guide's placeholder).
 # This file writes the pattern with no name after /Users/, and its planted paths through printf's %s
@@ -77,6 +80,12 @@ pages_count() {
 }
 check "README, README.tr and site/cli quote the numbers --list prints (checks, probes)" pages_count
 check "--version"             "v=\$('$CLI' --version); [ -n \"\$v\" ] && [ \"\$v\" = \"\$(sed -n 's/.*\"version\": *\"\([^\"]*\)\".*/\1/p' '$ROOT/package.json')\" ]"
+
+sec "== editor and Vivado project integration"
+check "VS Code user tasks preserve JSONC and ownership" "python3 -B '$ROOT/test/vscode/test-tasks.py'"
+check "VS Code extension chooser, diagnostics and fresh waveforms" "node '$ROOT/test/vscode/test-extension.js'"
+check "VS Code setup and removal stay inside their test profiles" "python3 -B '$ROOT/test/vscode/test-setup.py' && python3 -B '$ROOT/test/vscode/test-setup-editor.py'"
+check "Vivado project files, nested sources and includes" "bash '$ROOT/test/vivado/run.sh'"
 
 sec "== toolchain"
 check "check passes"          "'$CLI' check"

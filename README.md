@@ -25,13 +25,15 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-No Makefile, no project layout. Every `.sv`/`.v` in the folder that holds a module is
-synthesized (submodules can live in their own files, named anything; a file that holds no module,
-such as a package, an interface or typedefs at file scope, is left out, for now). The top is the module nothing else instantiates,
-as in Vivado; if two qualify, name it: `dewfpga flash <top>` (for now the CLI takes one named like the `.xdc` or
-like its own file without asking). A module without ports or with `$finish` or
-`$stop` is the testbench for `sim`, so for now a design module that calls either is taken for
-one too: keep `$finish` and `$stop` in the testbench. Example: `dewfpga new blink`.
+Use a flat folder of `.sv`/`.v` modules and an `.xdc`, or run inside a Vivado project:
+its `.xpr` selects the enabled design, constraint and simulation files. Commands from a
+nested `.srcs` folder use the project root; outputs go there too. `dewfpga tops` lists
+top candidates without writing files. The project's selected top wins unless you name
+one: `dewfpga bit <top>`. In a flat folder, hierarchy and a unique matching `.xdc`
+select the top; ambiguous candidates require a choice. A filename alone does not select it.
+A testbench has no ports and instantiates the design; `$finish`/`$stop` in a design module
+is an error. Standalone package/interface/typedef-only files remain a CLI limitation.
+Example: `dewfpga new blink`.
 
 ## Install
 
@@ -84,7 +86,9 @@ Re-running the script skips finished steps. Log: `~/fpga/install.log`.
 ```
 dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
-dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
+dewfpga tops                        list top candidates without writing files
+dewfpga vscode [--remove]           set up or remove the editor integration
 dewfpga new <dir>                   blink example with a VS Code task (⌘⇧B = flash)
 dewfpga uninstall                   remove what install built, the CLI and its link (your files and brew packages stay)
 dewfpga --version
@@ -113,7 +117,7 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (321 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (325 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
 probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names

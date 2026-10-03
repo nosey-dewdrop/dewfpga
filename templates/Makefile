@@ -65,9 +65,15 @@ sim: $(TOP)_sim
 # changed .mem or included .v rebuilds. $(TOP).deps and $(TOP)_sim.deps hold the whole file list, rewritten
 # only when it changes, so a file added, deleted or renamed (a dropped design file, a new testbench) rebuilds too.
 readmems = $(sort $(shell grep -ohE '\$$readmem[hb][[:space:]]*.[[:space:]]*"[^"]+"' $(1) 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/'))
+# INCDIRS (from the CLI): the folders that hold the sources (. in a flat folder; NEW.srcs/sources_1/new ... in a
+# Vivado project). The tools get them as -I, so `include "defs.svh" next to a design in a subfolder is found by
+# iverilog too (yosys and slang also look beside the including file); a header there is a dependency as well.
+INCDIRS ?= .
+INC = $(addprefix -I,$(INCDIRS))
 includes = $(sort $(shell grep -ohE '^[[:space:]]*`include[[:space:]]+"[^"]+"' $(1) 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/'))
-SRC_DEPS := $(wildcard $(call readmems,$(SRCS)) $(call includes,$(SRCS)) *.svh *.vh)
-SIM_DEPS := $(wildcard $(call readmems,$(SRCS) $(TB)) $(call includes,$(SRCS) $(TB)) *.svh *.vh)
+indirs = $(1) $(foreach d,$(INCDIRS),$(addprefix $(d)/,$(1)) $(d)/*.svh $(d)/*.vh)
+SRC_DEPS := $(wildcard $(call readmems,$(SRCS)) $(call indirs,$(call includes,$(SRCS))))
+SIM_DEPS := $(wildcard $(call readmems,$(SRCS) $(TB)) $(call indirs,$(call includes,$(SRCS) $(TB))))
 # a package must be read before the module that uses it: iverilog and yosys read the files in the order given
 # (iverilog stops at a syntax error, yosys drops the import and builds every name of the package as an undriven
 # wire). The CLI lists the files alphabetically, so a package declared next to a module (zz_util.sv: package +
@@ -89,7 +95,7 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	@[ -n "$(TB)" ] || { echo "ERROR [no-testbench]: $(TOP)_tb.sv not found: the simulation needs a testbench next to the design. Fix: write $(TOP)_tb.sv (a module that instantiates $(TOP), drives its inputs, checks its outputs with \$$error and ends with \$$finish); 'dewfpga new blink' gives an example (blink/blink_tb.sv). $(URL)no-testbench/" >&2; exit 1; }
 	@awk '$(PKG_AWK)' $(SRCS) $(TB) $(SIM_DEPS)
 	@awk '$(TYPEDEF_AWK)' $(TYPEDEF_FILES)
-	@echo "iverilog -g2012 -o $@ $(SRCS) $(TB)"; iverilog -g2012 -o $@ $(SRCS) $(TB) 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; \
+	@$(call MKKW,$(SRCS) $(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; rm -rf "$$KW"; \
 	  [ $$rc -eq 0 ] || { at=$$(grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'); \
 	    echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above). Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; }; rm -f $(TOP)_sim.err; exit $$rc
 
@@ -306,20 +312,33 @@ PKG_AWK = $(FMT_AWK) $(STRIP_AWK) \
 # build stopped short of the second reader. slang's own wording is kept, except the enum methods next()/prev()
 # ("unsupported system task 'next'": slang builds first()/last() only), which get the student's line and the fix.
 # A .v file is Verilog-2005 (in Vivado too, UG901 Ch.10: *.v is compiled as Verilog 2005, *.sv as SystemVerilog):
-# yosys' reader reads it without -sv, and yosys-slang gets --map-keyword-version 1364-2005+<folder>/*.v, so bit
-# and final are names there, not keywords. slang matches that pattern against the file's absolute path (a bare
-# *.v matches nothing), so the folder is spelled out; the option is added only when a .v is among the sources.
+# yosys' reader reads it without -sv. yosys-slang reads a copy of each .v, written into a private folder, wrapped in
+# `begin_keywords "1364-2005" ... `end_keywords (IEEE 1800-2017 22.14), with a `line directive so its messages
+# name the student's file and line, so bit and final are names there, not keywords. (slang's
+# --map-keyword-version 1364-2005+<pattern> was tried in every form, relative, absolute, repeated, and never
+# applied with this slang build; the wrapper is the form the standard defines and the one measured to work.)
 # The scans before the readers: $isunknown, the package file, ref arguments (neither reader builds those right).
 # The 2-D typedef scan is yosys' alone (slang builds such a parameter right), so it runs inside the first path.
-READ_VERILOG = $(if $(filter %.sv,$(SRCS)),read_verilog -sv $(filter %.sv,$(SRCS));) $(if $(filter %.v,$(SRCS)),read_verilog $(filter %.v,$(SRCS));)
+READ_VERILOG = $(if $(filter %.sv,$(SRCS)),read_verilog $(INC) -sv $(filter %.sv,$(SRCS));) $(if $(filter %.v,$(SRCS)),read_verilog $(INC) $(filter %.v,$(SRCS));)
+# The wrapped copies live in a private folder the recipe makes with mktemp -d .dewfpga-kw.XXXXXX in the build folder
+# (relative, no spaces, so it can sit inside the yosys command string). Never a fixed name: a folder the student owns
+# (top.kw, say) is never removed. Exactly the reserved folder is
+# removed when the recipe's shell exits, on every path (success, a refused file, a signal). The copies are numbered
+# in list order (1.v, 2.v ...), so two sources that differ only in their folder (a/b.v and a_b.v) never share a name.
+# iverilog reads every file as SystemVerilog too (-g2012), so the simulation compiles the same wrapped copies;
+# an error in a .v still names the student's file:line (the `line directive). A .v that `includes a file finds it
+# through -I (the copy sits in the private folder, not beside the header).
+# $(call MKKW,<files>) is a shell fragment: afterwards $$KWSRCS is the list the reader gets, in the original order,
+# .sv files as they are, each .v as its copy; $$KW is the folder.
+MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]: cannot create a work folder in $$(pwd). Fix: check that this folder is writable and the disk is not full. $(URL)cannot-write-here/" >&2; exit 1; }; : > "$$KW/.dewfpga-kw"; trap 'rm -rf "$$KW"' EXIT; trap 'rm -rf "$$KW"; exit 130' INT TERM HUP; n=0; KWSRCS=""; for f in $(1); do case $$f in *.v) n=$$((n+1)); { printf '`begin_keywords "1364-2005"\n`line 1 "%s" 0\n' "$$f"; cat "$$f"; printf '\n`end_keywords\n'; } > "$$KW/$$n.v" || exit 1; KWSRCS="$$KWSRCS $$KW/$$n.v" ;; *) KWSRCS="$$KWSRCS $$f" ;; esac; done
 SYNTH        = read_rtlil $(TOP).il; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; write_json $(TOP).json
 $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json $(TOP).il $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log
 	@"$(PY)" "$(CHECKER)" --fix-ports $(SRCS)
-	@yosys -p "read_verilog -sv -ppdump $(SRCS)" 2>/dev/null | awk '$(ISUNKNOWN_AWK)'
+	@yosys -p "read_verilog $(INC) -sv -ppdump $(SRCS)" 2>/dev/null | awk '$(ISUNKNOWN_AWK)'
 	@awk '$(PKG_AWK)' $(SRCS) $(SRC_DEPS)
 	@awk '$(REF_AWK)' $(SRCS) $(SRC_DEPS)
-	@ifn=$$(grep -hoE '^[[:space:]]*interface[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' $(sort $(SRCS) $(wildcard *.sv *.v *.svh)) | awk '{print $$2}' | paste -sd'|' -); ifi=""; \
+	@ifn=$$(grep -hoE '^[[:space:]]*interface[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' $(sort $(SRCS) $(foreach d,$(INCDIRS),$(wildcard $(d)/*.sv $(d)/*.v $(d)/*.svh))) | awk '{print $$2}' | paste -sd'|' -); ifi=""; \
 	  [ -z "$$ifn" ] || ifi=$$(grep -hoE "^[[:space:]]*($$ifn)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*" $(SRCS) | awk '{print $$2}' | paste -sd' ' -); ifp=""; \
 	  [ -z "$$ifn" ] || ifp=$$(cat $(SRCS) | tr '\n' ' ' | grep -oE "[(,][[:space:]]*($$ifn)(\.[A-Za-z_][A-Za-z0-9_]*)?[[:space:]]+[A-Za-z_][A-Za-z0-9_]*" | awk '{print $$NF}' | paste -sd' ' -); \
 	  set -o pipefail; rc=0; \
@@ -338,11 +357,12 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	      echo "note [second-reader-missing]: yosys' own reader refused this code, and yosys-slang, the second reader (it reads the SystemVerilog Vivado accepts: interfaces, unpacked arrays, foreach, break, enum methods first/last ...), is not installed: $(SLANG) not found. Fix: run  dewfpga install  (it builds that reader, ~3 min), then build again. $(URL)second-reader-missing/"; fi; \
 	    rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
 	  if grep -qE '\[(empty-module|always-and-assign|two-always-drivers|two-assign-drivers|multiple-drivers)\]' $(TOP).rv.out; then cat $(TOP).rv.out; rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
-	  rm -f $@ $(TOP).il; rc=0; \
-	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang $(if $(filter %.v,$(SRCS)),--map-keyword-version 1364-2005+$(CURDIR)/*.v) $(SRCS); hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
+	  rm -f $@ $(TOP).il; rc=0; $(call MKKW,$(SRCS)); \
+	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang $(INC)$$KWSRCS; hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
 	  | awk -v rd=slang -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il '$(YOSYS_AWK)' > $(TOP).sl.out || rc=$$?; \
+	  rm -rf "$$KW"; \
 	  if [ $$rc -eq 0 ]; then echo "note [read-with-slang]: $(TOP) read with yosys-slang, the second reader (yosys' own reader refused this code; the build is the same from here). $(URL)read-with-slang/"; cat $(TOP).sl.out; rm -f $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log; exit 0; fi; \
 	  rm -f $@; \
 	  if grep -qE '^(ERROR: (Design elaboration failed|Feature unimplemented)|[^ ]+:[0-9]+:[0-9]+: (error|fatal error):)' $(TOP).slang.log; then \

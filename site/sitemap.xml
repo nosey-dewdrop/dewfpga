@@ -39,6 +39,9 @@
     <lastmod>2026-09-20</lastmod>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/cannot-write-here/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/cmake-policy-version-minimum/</loc>
     <lastmod>2026-09-20</lastmod>
   </url>
@@ -227,6 +230,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/two-tops/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/two-vivado-projects/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/two-xdc-files/</loc>
   </url>
   <url>
@@ -248,7 +254,37 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/v-is-verilog-2005/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vivado-file-missing/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vivado-netlist-in-folder/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vivado-path-unknown/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vivado-project-unreadable/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vivado-set-ambiguous/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-extension-install-failed/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-linter-shim-retained/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-not-found/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-tasks-conflict/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-tasks-unreadable/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-tasks-write-failed/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/wired-net/</loc>
