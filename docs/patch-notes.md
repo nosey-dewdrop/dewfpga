@@ -3458,3 +3458,34 @@ XPR-less projects passed **10 checks** for nested roots, caching, unrelated arti
 and source paths containing spaces. The preceding #12–#13 full CLI run passed
 **269/0 with 52 known gaps**; it is not a full run of this newer commit. Remote CI
 for this update remains pending. No real board programming is claimed.
+
+
+### #15 · MCP tools backed by the checked CLI · 3 October
+
+`dewfpga mcp` exposes `check`, `new`, `sim`, `bit`, `flash` and `explain_error` over
+stdio. Build tools return the CLI's structured result; protocol stdout stays clean.
+The offline catalog ships in the release. Installation creates a pinned, optional
+SDK environment with staged replacement and ownership-aware removal. No client
+configuration is registered automatically.
+
+Independent review reproduced unbounded output buffering, contradictory JSON accepted
+as success, cancellation leaving another process session alive, a missing ownership
+marker during environment creation, and uninstall racing an active install. The
+corrected server bounds capture, validates schema/type/status agreement and tracks
+observed descendant groups. Root integration also refuses the entire CLI uninstall
+before removing toolchain files while the SDK lock is held.
+
+The root's SDK-backed suite passed **24 tests, 0 failures, 0 skips**, including the
+real JSON CLI, protocol discovery, cancellation and the uninstall lock. The combined
+installer/uninstaller, JSON, MCP and static checks passed **40/0** before the extra
+CLI lock case was added; that case separately passed. Independent review also built
+and removed the real pinned SDK in a temporary FPGA_HOME, with foreign files retained.
+The unpacked release also served real SDK calls for new, sim and offline error
+explanation; check correctly reported its temporary home had no toolchain. Both site
+bundles passed **104 pages, 0 failures**. Remote CI requires the SDK instead of accepting
+skipped protocol tests. Full CI for
+this integration remains pending; no physical board was programmed.
+
+Process-tree cleanup depends on `ps`. A daemon that reparents before observation and
+PID reuse remain limitations. Tool annotations describe effects; they are not an
+authorization enforcement mechanism. Clients must obtain user authorization for flash.

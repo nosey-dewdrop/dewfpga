@@ -20,6 +20,8 @@ set -euo pipefail
 # Installer/uninstaller coverage must not modify the developer's real editor profile.
 # The separate VS Code setup tests fence their own editor executable and scratch HOME.
 export DEWFPGA_SKIP_VSCODE=1
+# Installer fixtures must not download the optional SDK; MCP tests use their own environments.
+export DEWFPGA_SKIP_MCP=1
 LIST=0; case ${1:-} in --list) LIST=1 ;; "") ;; *) echo "usage: test/run.sh [--list]   (ONLY=regex, FULL=1, SV_OUT=file in the environment)" >&2; exit 2 ;; esac
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="$ROOT/bin/dewfpga"
@@ -89,6 +91,8 @@ check "Vivado project files, nested sources and includes" "bash '$ROOT/test/viva
 
 sec "== machine-readable CLI"
 check "JSON CLI protocol, cancellation and text parity" "python3 -B '$ROOT/test/agent/test-json.py'"
+
+check "MCP protocol and owned SDK setup" "python3 -B '$ROOT/test/agent/test-mcp.py'"
 
 sec "== toolchain"
 check "check passes"          "'$CLI' check"

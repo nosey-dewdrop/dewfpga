@@ -91,6 +91,7 @@ dewfpga tops                        list top candidates without writing files
 dewfpga vscode [--remove]           set up or remove the editor integration
 dewfpga new <dir>                   blink example with a VS Code task (⌘⇧B = flash)
 dewfpga uninstall                   remove what install built, the CLI and its link (your files and brew packages stay)
+dewfpga mcp                         agent tools over standard input/output
 dewfpga --version
 ```
 
@@ -100,6 +101,9 @@ object; the process exit matches `exit_code`. Read `diagnostics` for source loca
 error codes and fix links, and `log.tail` when no structured diagnostic is available.
 `artifacts` distinguishes new, cached and stale outputs; an old `.bit` is not proof
 that the current build succeeded. Full protocol and limits: [agent interface](docs/agent-interface.md).
+
+`dewfpga install` also builds an optional, isolated MCP SDK. Connect an MCP client
+to `dewfpga mcp`; [setup and tool arguments](docs/agent-interface.md#mcp-server).
 
 ## Scope
 
@@ -124,7 +128,7 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (326 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (327 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
 probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names

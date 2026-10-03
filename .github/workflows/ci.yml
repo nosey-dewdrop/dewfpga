@@ -37,7 +37,7 @@ jobs:
         run: yosys -m ~/fpga/yosys-slang/build/slang.so -p 'help read_slang' | grep 'read_slang \['
       - name: test suite (CLI, then the SystemVerilog probes in test/sv)
         run: test/run.sh
-        env: { SV_OUT: "${{ runner.temp }}/sv-results.tsv" }
+        env: { SV_OUT: "${{ runner.temp }}/sv-results.tsv", DEWFPGA_MCP_REQUIRE_SDK: "1" }
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: sv-results, path: "${{ runner.temp }}/sv-results.tsv" }

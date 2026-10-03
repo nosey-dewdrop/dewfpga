@@ -12,6 +12,7 @@
 #   dewfpga uninstall               remove what install built in ~/fpga (nextpnr-xilinx, yosys-slang, prjxray, chipdb, venv, log),
 #                                    the CLI in ~/.dewfpga and its link in Homebrew's bin. Your files and brew packages stay
 #   dewfpga vscode [--remove|--print] VS Code: companion extension + user tasks (install does this; --print only shows them)
+#   dewfpga mcp                     MCP server over stdio for coding agents
 #   dewfpga --version
 # The toolchain lives in $FPGA_HOME (default ~/fpga). Build outputs land next to the .sv; <top>.log has the full place-and-route log.
 set -euo pipefail
@@ -67,6 +68,10 @@ cmd_check() {
         then printf '  \033[32m✓\033[0m %-16s fasm prjxray pyyaml textx simplejson intervaltree\n' "python pkgs"
         else printf '  \033[31m✗\033[0m %-16s missing package\n' "python pkgs"; fail=1; fi
     fi
+    # Optional agent SDK; missing it does not prevent synthesis or programming.
+    if [ -x "$FPGA_HOME/mcp-venv/bin/python" ] && "$FPGA_HOME/mcp-venv/bin/python" -c "import mcp, mcp_types" 2>/dev/null
+    then printf '  ✓ %-16s %s\n' mcp "$FPGA_HOME/mcp-venv/bin/python"
+    else printf '  - %-16s not installed (optional; dewfpga install builds it)\n' mcp; fi
     [ -z "$stale" ] || echo "ERROR [yosys-slang-does-not-load]: $so was built for another yosys (brew upgrade yosys leaves it behind), so the SystemVerilog yosys' own reader refuses would not build. Fix: dewfpga install  (it rebuilds the reader, about 4 min). $SITE/yosys-slang-does-not-load/" >&2
     if [ $fail -eq 0 ]; then echo "all good."; else echo "ERROR [toolchain-not-installed]: something is missing (the ✗ rows above), so dewfpga bit and flash cannot run. Fix: dewfpga install  (safe to re-run; it only builds what is missing). $SITE/toolchain-not-installed/" >&2; return 1; fi
 }
@@ -108,6 +113,14 @@ cmd_uninstall() {
         up=$(dirname "$up")
         [ ! "$fh" -ef "$up" ] || die fpga-home-unsafe "FPGA_HOME is $FPGA_HOME, a parent of your home folder; refusing to delete that. Fix: remove the six entries by hand: ${built[*]}"
     done
+    # Refuse removal while an MCP installation holds its lock; preserve foreign directories.
+    local mcp_report=""
+    if [ -f "$HERE/templates/mcp_setup.py" ]; then
+        if ! mcp_report=$(python3 "$HERE/templates/mcp_setup.py" uninstall "$fh" 2>&1); then
+            printf '%s\n' "$mcp_report" >&2; return 1
+        fi
+        [ -z "$mcp_report" ] || printf '%s\n' "$mcp_report"
+    fi
     # only what install.sh put there: anything else in FPGA_HOME (your own projects) is left alone
     for e in "${built[@]}"; do [ -e "$fh/$e" ] && gone+=("$fh/$e"); done
     # ~/.dewfpga as the web installer made it; a link there goes, never the folder it points at; a git clone of the CLI is yours; it stays
@@ -116,7 +129,15 @@ cmd_uninstall() {
         if [ -L "$dd" ]; then gone+=("$dd"); elif [ ! -e "$HERE/.git" ] && [ ! -L "$HERE/.git" ]; then gone+=("$HERE"); fi
     fi
     [ -L "$link" ] && [ "$(resolve "$link")" = "$SELF" ] && gone+=("$link")      # only a link to this CLI
-    if [ ${#gone[@]} -eq 0 ]; then note no-install-found "nothing to remove: no dewfpga install found in $FPGA_HOME (FPGA_HOME=/elsewhere dewfpga uninstall for one installed elsewhere)."; return; fi
+    if [ ${#gone[@]} -eq 0 ]; then
+        if [[ "$mcp_report" == *"mcp_setup: removed "* ]]; then
+            rmdir "$fh" 2>/dev/null || true
+            echo "done."
+        else
+            note no-install-found "nothing to remove: no dewfpga install found in $FPGA_HOME (FPGA_HOME=/elsewhere dewfpga uninstall for one installed elsewhere)."
+        fi
+        return
+    fi
     [ "$fh" = "$FPGA_HOME" ] || echo "FPGA_HOME=$FPGA_HOME is $fh"
     # VS Code first (user tasks, then the companion extension this setup installed): it needs templates/ and the record in FPGA_HOME,
     # both of which may be in gone[]. A failure there is reported and never stops the uninstall
@@ -308,6 +329,10 @@ case "${1:-}" in
     new)     shift; cmd_new "$@" ;;
     sim|bit|flash|clean) locate; if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then cmd_build "$@" 2> >(abspath >&2) | abspath; else cmd_build "$@"; fi ;;
     tops)    shift; locate; cmd_tops "$@" ;;
+    mcp)     [ $# -eq 1 ] || die unknown-option "dewfpga mcp takes no arguments (it speaks MCP over stdio). Fix: dewfpga mcp"
+             MCP_PY="$FPGA_HOME/mcp-venv/bin/python"
+             [ -x "$MCP_PY" ] || { echo "ERROR [mcp-not-installed]: $MCP_PY is missing, so the agent interface cannot start. Fix: dewfpga install. $SITE/mcp-not-installed/" >&2; exit 3; }
+             exec "$MCP_PY" "$HERE/templates/mcp_server.py" --cli "$SELF" ;;
     -v|--version|version) version ;;
     -h|--help|help|"") usage ;;
     *) echo "ERROR [unknown-command]: unknown command: $1. Fix: one of the commands below. $SITE/unknown-command/" >&2; usage 1 ;;

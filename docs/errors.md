@@ -2308,3 +2308,20 @@ A child could not start, an output reader failed, or a descendant kept output op
 ## What is the fix?
 
 Read the diagnostic and temporary log. Verify the installed CLI files and filesystem access, then retry. Preserve the diagnostic and command when reporting a reproducible wrapper error. Do not use a leftover bitstream as proof that the interrupted command succeeded.
+
+## mcp-not-installed
+step: agent interface
+source: optional MCP SDK
+title: The optional MCP server is not installed
+summary: The isolated MCP Python environment is missing or cannot import the required SDK.
+date: 2026-10-03
+
+`ERROR [mcp-not-installed]` stops `dewfpga mcp` with exit 3. The ordinary CLI does not require this SDK.
+
+## Why does it happen?
+
+The optional SDK step was skipped or failed, or its environment was removed. The client must launch dewfpga's MCP environment rather than an unrelated Python interpreter.
+
+## What is the fix?
+
+Run `dewfpga install` without `DEWFPGA_SKIP_MCP=1` and inspect the SDK step's output. Then retry the client connection to `dewfpga mcp`. Do not install the MCP package into your system Python as a workaround.

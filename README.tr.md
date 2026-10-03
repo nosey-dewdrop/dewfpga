@@ -92,6 +92,7 @@ dewfpga tops                        top adaylarını dosya yazmadan listele
 dewfpga vscode [--remove]           editör bağlantısını kur veya kaldır
 dewfpga new <dizin>                 VS Code görevli blink örneği (⌘⇧B = flash)
 dewfpga uninstall                   kurulumun ürettiklerini, CLI'ı ve linki sil (senin dosyaların ve brew paketleri kalır)
+dewfpga mcp                         ajan araçlarını stdio üzerinden sun
 dewfpga --version
 ```
 
@@ -101,6 +102,9 @@ bulunur; süreç kodu `exit_code` ile eşleşir. `diagnostics` hata ve düzeltme
 `log.tail` ayrıştırılamayan çıktıyı gösterir. Eski `.bit` dosyası yeni derlemenin
 başarısı sayılmaz; `artifacts` yeni, önbellekteki ve bayat çıktıları ayırır.
 [Ajan arayüzü ve sınırlar](docs/agent-interface.md).
+
+`dewfpga install`, isteğe bağlı MCP SDK ortamını da kurar. İstemciyi `dewfpga mcp`
+komutuna bağlayın: [kurulum ve araç parametreleri](docs/agent-interface.md#mcp-server).
 
 ## Kapsam
 
@@ -125,7 +129,7 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (326 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (327 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
 bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün

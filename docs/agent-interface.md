@@ -44,3 +44,54 @@ number up to 3600 seconds when the option is absent. Defaults: check 60, sim 180
 bit 900, flash 120 seconds. Timeout or parent interruption stops the CLI's process
 group. A deliberately daemonized descendant that leaves that group is outside this
 cleanup boundary. No shell string is evaluated by the wrapper.
+
+
+## MCP server
+
+`dewfpga mcp` serves the same CLI through standard input/output. `dewfpga install`
+builds a separate `$FPGA_HOME/mcp-venv`, with `mcp==2.3.0` and `mcp-types==2.3.0`.
+The plain CLI remains usable if that optional installation fails. Set
+`DEWFPGA_SKIP_MCP=1` to skip the automatic SDK step. `dewfpga check` reports its
+presence without making an absent optional SDK a toolchain failure.
+
+For Claude Code, from the project folder:
+
+```sh
+claude mcp add --transport stdio --scope local dewfpga -- dewfpga mcp
+```
+
+This registers a local client configuration; the installer does not register clients.
+Other MCP clients use `command: "dewfpga"`, `args: ["mcp"]`. If the client does not
+inherit your shell PATH, use the absolute executable path printed by `command -v dewfpga`.
+The server supports the SDK's protocol negotiation; tests exercise protocol 2026-07-28.
+
+| Tool | Arguments | Behavior |
+|---|---|---|
+| `check` | none | inspect installed tools |
+| `new` | `name`, absolute `parent` | create a blink project; refuse an existing path |
+| `sim` | absolute `project`, optional `testbench`, `timeout_s` | run the testbench; default 120 s, max 600 s |
+| `bit` | absolute `project`, optional module `top`, `timeout_s` | build a bitstream; default 600 s, max 1800 s |
+| `flash` | absolute `project`, optional `timeout_s` | build and program the board; default 120 s, max 300 s |
+| `explain_error` | `code` | read the packaged error catalog offline |
+
+The CLI may fix port directions or name unnamed instances while building. `sim` and
+`bit` therefore declare that they can write project files. `flash` declares destructive
+hardware effects: call it only when the user has asked to program the connected board.
+Annotations inform the client; they do not enforce user approval by themselves.
+
+A tool failure has `isError: true`. CLI-backed structured results use the JSON schema
+above; malformed, mismatched or contradictory results are rejected. Server stdout is
+reserved for protocol messages. Child stdout is bounded at 4 MiB; stderr retains at
+most 64 KiB. Cancellation stops observed descendant process groups and waits for cleanup
+without blocking the event loop. A daemon that reparents before observation can escape
+that process-tree boundary; PID reuse and availability of `ps` remain limitations.
+
+SDK setup uses a private staging directory, an ownership marker and a lock. Failed
+replacement preserves the previous environment; uninstall refuses a concurrent SDK
+installation and keeps foreign or symlinked destinations. It does not remove unrelated
+projects or install packages into the system Python.
+
+Tests can run without an SDK, explicitly skipping protocol cases. CI sets
+`DEWFPGA_MCP_REQUIRE_SDK=1`, which makes an absent SDK a failure. For a separate test
+venv, set `DEWFPGA_MCP_TEST_PYTHON` to its Python executable. The test suite itself
+performs no network installation.

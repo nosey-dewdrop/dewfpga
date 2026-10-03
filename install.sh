@@ -255,6 +255,15 @@ else
     fi
 fi
 
+# ---------------------------------------------------------------- 6b. optional agent SDK
+if [ "${DEWFPGA_SKIP_MCP:-}" != 1 ]; then
+    if python3 "$HERE/templates/mcp_setup.py" install "$FPGA_HOME" "$PY3"; then
+        echo "  ✓ mcp-venv (dewfpga mcp)"
+    else
+        echo "  note: the optional MCP SDK did not install; retry dewfpga install to enable dewfpga mcp. The CLI remains usable." >&2
+    fi
+fi
+
 # ---------------------------------------------------------------- 7. verify
 step 7 "Verify"
 CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/dewfpga"
