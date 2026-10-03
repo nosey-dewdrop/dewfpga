@@ -640,6 +640,21 @@ def body(base):
     rc, out, err = run([cli2, "uninstall"], s.env(code_on_path=False, extra={"PATH": nopy}))
     check("uninstall without python3 on PATH: the die line, the toolchain still removed, exit 0",
           rc == 0 and "note: the VS Code setup could not be fully removed" in out and "python3 is missing" in err and out.splitlines()[-1] == "done.", out + err)
+    for entry in ("mcp-venv", "mcp-venv.lock"):
+        mcp_entry = os.path.join(s.fpga_home, entry)
+        os.makedirs(os.path.join(s.fpga_home, "venv"), exist_ok=True)
+        if entry == "mcp-venv":
+            os.makedirs(mcp_entry)
+        else:
+            os.symlink("missing-lock-target", mcp_entry)
+        rc, out, err = run([cli2, "uninstall"], s.env(code_on_path=False, extra={"PATH": nopy}))
+        check("uninstall without python3 and " + entry + ": explicit refusal preserves SDK state and toolchain",
+              rc != 0 and "python3 is missing" in err and "nothing was removed" in err
+              and os.path.lexists(mcp_entry) and os.path.isdir(os.path.join(s.fpga_home, "venv")), out + err)
+        if os.path.islink(mcp_entry):
+            os.unlink(mcp_entry)
+        else:
+            os.rmdir(mcp_entry)
     bare = os.path.join(base, "cli", "bare")
     os.makedirs(bare)
     shutil.copytree(os.path.join(cli_tree, "bin"), os.path.join(bare, "bin"))

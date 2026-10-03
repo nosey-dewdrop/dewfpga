@@ -13,6 +13,7 @@
 #         ./install.sh --help
 set -euo pipefail
 case "${1:-}" in -h|--help|help) sed -n '2,13s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;; esac
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
 # one compile job per ~3 GB of RAM (a nextpnr object peaks near that), never more than the cores. 8 GB -> 2 jobs.
@@ -266,7 +267,7 @@ fi
 
 # ---------------------------------------------------------------- 7. verify
 step 7 "Verify"
-CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bin/dewfpga"
+CLI="$HERE/bin/dewfpga"
 echo "$FPGA_HOME" > "$(dirname "$CLI")/../.fpga_home"       # the CLI reads this, so FPGA_HOME=/elsewhere sticks
 BIN_DIR="$BREW_PREFIX/bin"                 # Apple Silicon brew: user-writable, on PATH
 resolve() { local f=$1 d; while [ -L "$f" ]; do d=$(cd "$(dirname "$f")" && pwd); f=$(readlink "$f"); [[ $f = /* ]] || f="$d/$f"; done; printf '%s' "$f"; }

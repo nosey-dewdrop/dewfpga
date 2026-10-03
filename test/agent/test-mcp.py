@@ -11,6 +11,8 @@ DEWFPGA_MCP_TEST_PYTHON names a python that already has mcp==2.3.0 installed; th
 """
 import json
 import os
+from pathlib import Path
+import re
 import shutil
 import stat
 import subprocess
@@ -83,6 +85,90 @@ def make_exec(path, body):
         f.write(body)
     os.chmod(path, stat.S_IRWXU)
     return path
+
+
+class InstallerIntegrationTests(unittest.TestCase):
+    """Run the whole installer offline with MCP enabled and an isolated cached toolchain."""
+
+    def run_installer(self, helper_status=0, skip=False):
+        with tempfile.TemporaryDirectory(prefix="dewfpga-install-mcp-") as tmp:
+            base = Path(tmp)
+            repo, fpga, prefix = (base / n for n in ("repo with spaces", "fpga", "brew"))
+            fakebin = base / "bin"
+            for directory in (repo / "bin", repo / "templates", prefix / "bin", fakebin):
+                directory.mkdir(parents=True)
+            source = Path(ROOT, "install.sh").read_text()
+            (repo / "install.sh").write_text(source)
+
+            def executable(path, body="exit 0\n"):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                make_exec(path, "#!/bin/sh\n" + body)
+
+            def data(path, value):
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(value)
+
+            for name, pin in (("nextpnr-xilinx", "NEXTPNR"), ("prjxray", "PRJXRAY"),
+                              ("yosys-slang", "SLANG")):
+                sha = re.search(r'^' + pin + r'_SHA="([a-f0-9]+)"', source, re.M).group(1)
+                (fpga / name / ".git").mkdir(parents=True)
+                data(fpga / name / ".dewfpga-sha", sha + "\n")
+            for binary in ("nextpnr-xilinx/build/nextpnr-xilinx", "nextpnr-xilinx/build/bbasm",
+                           "prjxray/build/tools/xc7frames2bit", "venv/bin/python", "venv/bin/pip"):
+                executable(fpga / binary)
+            pins = re.search(r'^PIP_PKGS=\(([^)]+)\)', source, re.M).group(1)
+            data(fpga / "venv/.pins", pins + "\n")
+            data(fpga / "chipdb/xc7a35t.bin", "fixture")
+            data(fpga / "chipdb/.sha", (fpga / "nextpnr-xilinx/.dewfpga-sha").read_text())
+            data(fpga / "yosys-slang/build/slang.so", "fixture")
+            data(fpga / "yosys-slang/build/.dewfpga-yosys", "Yosys 0.69 fixture\n")
+            executable(prefix / "opt/python@3.14/bin/python3.14")
+            data(repo / "templates/mcp_setup.py", "# invocation fixture; SDK behavior tested separately\n")
+            executable(repo / "bin/dewfpga", '[ "$1" = check ] || exit 90\necho checked > "$CHECK_LOG"\n')
+            stubs = {
+                "id": "echo 1000\n",
+                "uname": '[ "$1" = -s ] && echo Darwin || echo arm64\n',
+                "xcode-select": "exit 0\n",
+                "df": "echo 'Filesystem blocks used available capacity'\necho 'fixture 100 1 99 1%'\n",
+                "sw_vers": "echo fixture\n",
+                "brew": 'case "$1" in --prefix) echo "$FAKE_PREFIX";; list) exit 0;; *) exit 91;; esac\n',
+                "git": '[ "$1" = -C ] && [ "$3" = rev-parse ] && [ "$4" = HEAD ] || exit 92\ncat "$2/.dewfpga-sha"\n',
+                "yosys": "echo 'Yosys 0.69 fixture'\n",
+                "openFPGALoader": "echo 'openFPGALoader fixture'\n",
+                "iverilog": "echo 'Icarus Verilog fixture'\n",
+                "cmake": '[ "$1" = --version ] || exit 93\necho "cmake fixture"\n',
+                "python3": '[ "$1" = "$EXPECTED_HELPER" ] && [ -f "$1" ] || exit 94\n'
+                           'printf "%s\\n" "$@" > "$HELPER_LOG"\nexit "$HELPER_STATUS"\n',
+            }
+            for name, body in stubs.items():
+                executable(fakebin / name, body)
+            env = dict(PATH=str(fakebin) + ":/usr/bin:/bin", HOME=str(base / "home"),
+                       FPGA_HOME=str(fpga), JOBS="1", LC_ALL="C", LC_CTYPE="C", LANG="C",
+                       DEWFPGA_SKIP_MCP="1" if skip else "0", DEWFPGA_SKIP_VSCODE="1",
+                       FAKE_PREFIX=str(prefix), HELPER_STATUS=str(helper_status),
+                       EXPECTED_HELPER=str(repo / "templates/mcp_setup.py"),
+                       HELPER_LOG=str(base / "helper.log"), CHECK_LOG=str(base / "check.log"))
+            result = subprocess.run(["/bin/bash", str(repo / "install.sh")], cwd=base, env=env,
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertTrue((base / "check.log").exists(), "installer must reach CLI verification")
+            if skip:
+                self.assertFalse((base / "helper.log").exists())
+            else:
+                self.assertEqual((base / "helper.log").read_text().splitlines(),
+                                 [env["EXPECTED_HELPER"], "install", str(fpga),
+                                  str(prefix / "opt/python@3.14/bin/python3.14")])
+                if helper_status:
+                    self.assertIn("optional MCP SDK did not install", result.stdout + result.stderr)
+
+    def test_installer_mcp_enabled(self):
+        self.run_installer()
+
+    def test_installer_mcp_failure_is_optional(self):
+        self.run_installer(helper_status=7)
+
+    def test_installer_mcp_explicit_skip(self):
+        self.run_installer(skip=True)
 
 
 class Base(unittest.TestCase):

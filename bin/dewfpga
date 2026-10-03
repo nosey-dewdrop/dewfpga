@@ -116,8 +116,18 @@ cmd_uninstall() {
     # Refuse removal while an MCP installation holds its lock; preserve foreign directories.
     local mcp_report=""
     if [ -f "$HERE/templates/mcp_setup.py" ]; then
-        if ! mcp_report=$(python3 "$HERE/templates/mcp_setup.py" uninstall "$fh" 2>&1); then
-            printf '%s\n' "$mcp_report" >&2; return 1
+        if command -v python3 >/dev/null 2>&1; then
+            if ! mcp_report=$(python3 "$HERE/templates/mcp_setup.py" uninstall "$fh" 2>&1); then
+                printf '%s\n' "$mcp_report" >&2; return 1
+            fi
+        else
+            # A CLI-only installation can still be removed without Python. If an SDK,
+            # staging directory or lock exists, do not guess its ownership or lock state.
+            for e in "$fh"/mcp-venv*; do
+                if [ -e "$e" ] || [ -L "$e" ]; then
+                    die toolchain-not-installed "python3 is missing, so MCP ownership and its install lock cannot be checked; nothing was removed. Fix: restore python3 on PATH, then retry dewfpga uninstall."
+                fi
+            done
         fi
         [ -z "$mcp_report" ] || printf '%s\n' "$mcp_report"
     fi

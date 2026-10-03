@@ -46,7 +46,7 @@ say() { local rc=0; "$@" > "$T/say" 2>&1 || rc=$?; cat "$T/say"; return $rc; }
 strip() { grep -v '^# nextpnr' "$1" | sort; }
 
 sec "== static"
-check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh' '$ROOT/vscode/bin/iverilog' '$ROOT/test/vivado/run.sh'"
+check "shellcheck"            "shellcheck -S style --enable=check-unassigned-uppercase '$ROOT/install.sh' && shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh' '$ROOT/vscode/bin/iverilog' '$ROOT/test/vivado/run.sh'"
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
 # every file is scanned, this one too: a home folder is /Users/ and a name (/Users/you/ is the guide's placeholder).
 # This file writes the pattern with no name after /Users/, and its planted paths through printf's %s
@@ -438,7 +438,7 @@ install_brew_diag() {
 }
 check "install: brew absent, brew off the PATH and Intel brew get three different messages" install_brew_diag
 check "install: no network -> clear error" "rm -rf '$T/e'; { GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.proxy GIT_CONFIG_VALUE_0=http://127.0.0.1:9 FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'could not fetch'"
-check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1; [ \$(( \$(date +%s) - s )) -lt 10 ]"
+check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1 && [ \$(( \$(date +%s) - s )) -lt 10 ]"
 
 sec "== project template"
 check "new + dewfpga bit"     "'$CLI' new '$T/p' && cd '$T/p' && '$CLI' bit && [ -s blink.bit ]"

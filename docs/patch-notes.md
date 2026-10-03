@@ -3489,3 +3489,24 @@ this integration remains pending; no physical board was programmed.
 Process-tree cleanup depends on `ps`. A daemon that reparents before observation and
 PID reuse remain limitations. Tool annotations describe effects; they are not an
 authorization enforcement mechanism. Clients must obtain user authorization for flash.
+
+
+#### #15 integration correction · 3 October
+
+The first remote CI run failed before verification: the optional MCP installation
+used an undefined `HERE` variable. Installation now resolves its repository path
+once before using it. The new offline whole-installer tests reproduce that failure
+with MCP enabled and check success, optional helper failure, and explicit skipping
+(**3/3 passed** after correction, **2/3 failed** before). The repeated-install test
+also checks exit status, and ShellCheck checks unassigned uppercase variables.
+
+The combined #14–#16 local run exposed a second regression: without Python on PATH,
+the new MCP removal hook prevented removal of a CLI-only installation. That path
+works again; existing SDK or lock entries cause an explicit refusal that preserves
+all files when ownership cannot be checked. Tests cover both an SDK directory and
+a dangling lock symlink.
+
+The initial full run was **272 passed, 1 failed, 52 known gaps**, with unchanged
+tested sources. After both corrections, the targeted static, installer, SDK-backed
+MCP and editor suites passed **6 top-level checks, 0 failures**. A corrected full
+run and remote CI are pending; the earlier failed runs remain recorded as failures.
