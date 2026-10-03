@@ -142,7 +142,7 @@ class UsageTests(unittest.TestCase):
 
     def test_injected_error_names_never_reach_the_message(self):
         bad = ["a" * 65, "Restricted-Key test-only-key", "x\ny", "", 42, {"k": 1}, ["restricted_api_key"],
-               "restricted_api_key ", "rÿstricted", "RESTRICTED_API_KEY", "../etc", None]
+               "restricted_api_key ", "restricted_api_key\n", "rÿstricted", "RESTRICTED_API_KEY", "../etc", None]
         for name in bad:
             with self.subTest(name=name):
                 with self.assertRaises(UsageDeferred) as exc:

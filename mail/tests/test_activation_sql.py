@@ -331,6 +331,14 @@ def main():
         ok(re.search(r"^dewfpga_mail_ledger\tt\t0\tf\tf\tt\tpostgres$", r.stdout, re.M) is not None,
            "001-003: tables section shows RLS on, 0 policies, no anon/authenticated privilege, service_role privilege")
         ok(snapshot(c) == s1, "001-003: catalog, acls, sequences and row counts identical after preflight")
+        # 3e shows the sequence grants too: 002 revokes the ledger sequence from anon/authenticated (Supabase grants
+        # every new public sequence to them by default); the report must show a grant when one is there
+        ok(section(r.stdout, "3e.") == ["dewfpga_mail_ledger_id_seq\tf\tf\tpostgres"],
+           f"001-003: sequences section shows no anon/authenticated privilege: {section(r.stdout, '3e.')}")
+        c.sql("grant usage, select on sequence public.dewfpga_mail_ledger_id_seq to anon")
+        ok(section(preflight(c).stdout, "3e.") == ["dewfpga_mail_ledger_id_seq\tt\tf\tpostgres"],
+           "sequences section shows a grant to anon when there is one")
+        c.sql("revoke all on sequence public.dewfpga_mail_ledger_id_seq from anon")
         # a database loaded the way test_sender_idem.py and test_pages.py do it still has its tables afterwards
         with Cluster() as g:
             for f in sorted(glob.glob(os.path.join(SQL_DIR, "*.sql"))):

@@ -31,7 +31,7 @@ def _http_error_reason(exc):
     try:
         parsed = json.loads(exc.read(4096))
         candidate = parsed.get("name") if isinstance(parsed, dict) else None
-        if isinstance(candidate, str) and _ERROR_NAME.match(candidate):
+        if isinstance(candidate, str) and _ERROR_NAME.fullmatch(candidate):
             name = candidate
     except Exception:
         pass

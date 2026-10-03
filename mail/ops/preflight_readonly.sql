@@ -71,8 +71,13 @@ from pg_policies where schemaname = 'public' and tablename like 'dewfpga\_%' ord
 select tablename as "table", indexname as index, indexdef
 from pg_indexes where schemaname = 'public' and tablename like 'dewfpga\_%' order by 1, 2;
 
-\echo '== 3e. dewfpga_ sequences in public =='
-select c.relname as sequence, pg_get_userbyid(c.relowner) as owner
+\echo '== 3e. dewfpga_ sequences in public (anon_any/auth_any: any sequence privilege; 002 revokes the Supabase default grant) =='
+select c.relname as sequence,
+       case when exists (select 1 from pg_roles where rolname = 'anon')
+            then has_sequence_privilege('anon', c.oid, 'usage,select,update') end as anon_any,
+       case when exists (select 1 from pg_roles where rolname = 'authenticated')
+            then has_sequence_privilege('authenticated', c.oid, 'usage,select,update') end as auth_any,
+       pg_get_userbyid(c.relowner) as owner
 from pg_class c join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind = 'S' and c.relname like 'dewfpga\_%' order by 1;
 
