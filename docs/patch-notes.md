@@ -3627,6 +3627,18 @@ Remaining limits: queue wait counts against the request timeout; a check timeout
 can interrupt a concurrent run; two identical missing-include names can locate the
 first include site. No network cold-start timing is claimed.
 
+
+**CI follow-up (3 October).** A WebKit run completed the memory design but
+exceeded the old 45-second aggregate check at 46.2 seconds. That check mixed
+worker speed with queue depth. The regression now records actual worker requests
+and replies at the Run click, requires at most one preceding check and no new
+lint while Run is active, and keeps bounded completion plus a working circuit.
+Four injected small jobs demonstrate that the same count rejects a backlog.
+The control uses a small circuit, avoiding an unnecessary second large memory
+simulation. Derived timing assertions were rejected during independent review:
+the worker's compile counter excludes hardware validation, and inferred durations
+did not provide independent evidence. Product scheduling remains unchanged.
+
 ### #21 · Board controls retain the state the student is holding · 3 October
 
 Switches and momentary buttons support pointer and keyboard input. Releasing one

@@ -45,6 +45,12 @@ sessizce kapsamdan çıkarma. Dev diaries TXT, yerelde şu başlıklarla güncel
   rıza çakışmasının temkinli atlama davranışı ve logu netleştirildi, dört önceki
   durum test edildi. Son commit'in uzak CI sonucunu PR#1 üzerinden doğrula; önceki
   db5b855 CI'ı bu adayı doğrulamaz.
+- c054097 CI37139899837: mail ve Chromium geçti; macOS271/0/52 ve paket geçti;
+  WebKit UI128/1, tek45s toplam süre beklentisi46.2s ölçtü. Takip düzeltmesi ürün
+  scheduler'ını değiştirmeden gerçek worker post/reply kuyruğunu ve bounded
+  completion'ı sınar. Dört küçük enjekte iş negatif kontroldür. Son testin
+  bağımsız Opus incelemesi sonrası süre çıkarımları kaldırıldı; gerçek click
+  capture ölçülür. Sonuç için her zaman PR#1'in güncel head CI'ını kontrol et.
 - #27 kapanış belgeleri hazırlanıyor; canlı duyuru yapılmadı. Gerçek Basys3,
   VS Code GUI ve gerçek Safari/telefon kabulü açık. Kanonik site GitHub Pages,
   Vercel aynası `deploy.sh` akışı; bu koşuda canlı yayın yapılmadı.

@@ -214,7 +214,33 @@ await waitStatus(/combinational|not running|simulated clock/, 120000);
 check('board view after lint churn: valid design actually runs with no errors', !(await runDisabled()) && /combinational|simulated clock/.test(await status()) && !!(await page.evaluate(() => window.dewfpga.sim)) && !(await lintState()).hasErrors, await status());
 console.log('== #20 typing on a design yosys reads slowly: checks do not queue up behind each other');
 // a 1024-word memory takes yosys ~2 s per read; a keystroke every 450 ms outlives the 400 ms debounce each time
-await page.evaluate(() => { window.__lintPosts = 0; const post = Worker.prototype.postMessage; Worker.prototype.postMessage = function (m, ...r) { if (m && m.kind === 'lint') window.__lintPosts++; return post.call(this, m, ...r); }; });
+// every lint/compile message to the yosys worker and every reply, stamped on the page clock: who waited behind whom
+await page.evaluate(() => {
+  const q = window.__yq = { posts: [], replies: [], worker: null, lastLint: null, hooked: new WeakSet() };
+  window.__lintPosts = 0;
+  const post = Worker.prototype.postMessage; q.post = post;
+  Worker.prototype.postMessage = function (m, ...r) {
+    if (m && (m.kind === 'lint' || m.kind === 'compile')) {
+      if (m.kind === 'lint') { window.__lintPosts++; q.lastLint = m; }
+      if (!q.hooked.has(this)) { q.hooked.add(this); q.worker = this; this.addEventListener('message', (e) => { const d = e.data || {}; if (typeof d.id === 'number') q.replies.push({ id: d.id, t: performance.now(), lint: !!d.lint, ms: d.ms, ok: d.ok }); }); }
+      q.posts.push({ id: m.id, kind: m.kind, t: performance.now() });
+    }
+    return post.call(this, m, ...r);
+  };
+  // Count observed requests and replies. Browser message delivery does not expose
+  // the worker's actual start time; reply.ms also omits hardware validation.
+  window.__yqReport = (tClick) => {
+    const c = q.posts.find((p) => p.kind === 'compile' && p.t >= tClick);
+    const reply = c && q.replies.find((r) => r.id === c.id);
+    return {
+      openAtClick: q.posts.filter((p) => p.kind === 'lint' && p.t < tClick && !q.replies.some((r) => r.id === p.id && r.t <= tClick)).length,
+      compilePosts: q.posts.filter((p) => p.kind === 'compile' && p.t >= tClick).length,
+      lintPostsAfter: q.posts.filter((p) => p.kind === 'lint' && p.t >= tClick).length,
+      lintRepliesBefore: q.replies.filter((r) => r.lint && r.t > tClick && (!reply || r.t < reply.t)).map((r) => r.id),
+      compileReplied: !!reply, elapsedMs: reply ? Math.round(reply.t - tClick) : null,
+    };
+  };
+});
 await page.evaluate(() => window.dewfpga.files.set('design.sv', 'module blink(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic [15:0] m [0:1023]; logic [9:0] wa, ra;\n  always_ff @(posedge clk) begin m[wa] <= sw; wa <= wa + 1; ra <= ra + 3; led <= m[ra]; end\n  // notes:\nendmodule'));
 await waitLint(120000);
 await page.evaluate(() => { window.__lintPosts = 0; });
@@ -226,11 +252,44 @@ for (let i = 0; i < 20; i++) { await page.keyboard.type('x'); await page.waitFor
 const burstPosts = await page.evaluate(() => window.__lintPosts);
 check('20 keystrokes: at most one check waits in the yosys queue', burstPending <= 1, `max pending ${burstPending}, lint posts ${burstPosts}`);
 check('20 keystrokes: fewer checks than keystrokes reach yosys', burstPosts < 20, String(burstPosts));
-const tBurst = Date.now();
+// A run may wait for one existing check, which includes hardware validation.
+// The old 45 s bound mixed worker speed with queue depth. Check the actual
+// request/reply counts and keep the independent 120 s completion bound.
+// Stamp dispatch in capture phase, before the Run handler; actionability waits
+// before the click must not count legitimate pre-click lint as post-click work.
+await page.evaluate(() => document.querySelector('#run').addEventListener('click', () => { window.__yq.click = performance.now(); }, { capture: true, once: true }));
+await page.click('#run');
+const tClick = await page.evaluate(() => window.__yq.click);
+let runLive = true;
+try { await waitStatus(/simulated clock|combinational|not running|did not finish/, 120000); } catch { runLive = false; }
+await waitLint(60000).catch(() => {});
+const rq = await page.evaluate((t) => window.__yqReport(t), tClick);
+const rqDetail = JSON.stringify(rq) + ' · ' + await status() + ' · ' + await page.locator('#problems-label').innerText();
+check('run after the burst: the run itself completes within 120 s (liveness)', runLive && rq.compileReplied, rqDetail);
+check('run after the burst: at most one check was open in the worker when run was pressed', rq.openAtClick <= 1, rqDetail);
+check('run after the burst: the run posted one compile and started no further check', rq.compilePosts === 1 && rq.lintPostsAfter === 0, rqDetail);
+check('run after the burst: the compile waited behind at most one check', rq.lintRepliesBefore.length <= 1, rqDetail);
+check('run after the burst: the design runs and the panel says none', /simulated clock/.test(await status()) && /problems · none/.test(await page.locator('#problems-label').innerText()), rqDetail);
+console.log('== #20 control: work the page cannot see, queued in the worker, is caught by the same queue checks');
+// The negative control needs queued work, not a second large DigitalJS memory
+// circuit. Settle a small design before injecting jobs into the same worker.
+const queueControlDesign = 'module blink(input logic clk, input logic [15:0] sw, output logic [15:0] led); assign led = sw; endmodule';
+await page.evaluate((text) => window.dewfpga.files.set('design.sv', text), queueControlDesign);
+await waitLint(120000);
+// Four small checks bypass page bookkeeping. Their replies must still be seen
+// ahead of the compile, so the real <=1 check would reject this injected backlog.
+const tCtl = await page.evaluate((tiny) => {
+  const q = window.__yq;
+  for (let i = 0; i < 4; i++) q.post.call(q.worker, { ...q.lastLint, id: 900001 + i, files: { 'design.sv': tiny } });
+  return performance.now();
+}, queueControlDesign);
 await page.click('#run');
 await waitStatus(/simulated clock|combinational|not running|did not finish/, 120000);
 await waitLint(60000);
-check('a run pressed after the burst settles without waiting out a backlog', Date.now() - tBurst < 45000 && /simulated clock/.test(await status()) && /problems · none/.test(await page.locator('#problems-label').innerText()), `${Date.now() - tBurst} ms · ${await status()} · ${await page.locator('#problems-label').innerText()}`);
+const cq = await page.evaluate((t) => window.__yqReport(t), tCtl);
+const cqDetail = JSON.stringify(cq);
+check('control: the queue check sees the four hidden checks ahead of the compile (it would fail the real check)', cq.lintRepliesBefore.length >= 4, cqDetail);
+check('control: the page itself still posted one compile and no check', cq.compilePosts === 1 && cq.lintPostsAfter === 0 && cq.openAtClick === 0, cqDetail);
 console.log('== #20 a check that runs out of time leaves the sources unchecked, not clean and not broken');
 await page.evaluate(() => { window.__workers = 0; const W = window.Worker; window.Worker = class extends W { constructor(...a) { super(...a); window.__workers++; } }; window.dewfpga.lintTimeout.board = 1; });
 await page.evaluate(() => window.dewfpga.files.set('design.sv', 'module blink(input logic clk, input logic [15:0] sw, output logic [15:0] led); assign led = ~sw; endmodule'));
