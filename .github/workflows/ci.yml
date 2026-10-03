@@ -1,6 +1,30 @@
 name: ci
 on: [push, pull_request, workflow_dispatch]
 jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: sim/package-lock.json }
+      - name: site links, metadata, navigation and sitemap
+        run: |
+          python3 test/site-check-test.py
+          python3 test/site-check.py
+      - name: install simulator dependencies and Chromium
+        working-directory: sim
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium
+      - name: real browser simulator and testbench tests
+        working-directory: sim
+        run: npm test
+        env: { E2E_OUT: "${{ runner.temp }}/web-e2e" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: web-e2e, path: "${{ runner.temp }}/web-e2e" }
+
   macos-arm64:
     runs-on: macos-15          # Apple Silicon runner
     timeout-minutes: 60
@@ -47,11 +71,13 @@ jobs:
           git ls-files -z templates | tar -cf - --null -T - | tar -xf - -C out   # tracked files only, as deploy.sh
           (cd templates && zip -q ../out/blink.zip blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json .vscode/settings.json .vscode/extensions.json)
           mkdir -p out/sim && cp -R sim/dist/. out/sim/
+      - name: validate the assembled Pages artifact
+        run: python3 test/site-check.py --bundle out
       - uses: actions/upload-pages-artifact@v3
         with: { path: out }
 
   pages:
-    needs: macos-arm64
+    needs: [macos-arm64, web]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: { pages: write, id-token: write }

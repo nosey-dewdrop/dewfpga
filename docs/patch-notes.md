@@ -3259,3 +3259,31 @@ intentionally pointed the real CLI link at the tested checkout and confirmed it 
 A builder's initial mutation claim was rejected because its fixture setup was absent; the
 independent corrected run passed 15 on the original and failed the intended check on the mutant.
 A physical Basys3 test, this commit's remote CI and deployment are not claimed by these local results.
+
+
+### #8 · Browser tests and checks before publishing · 3 October
+
+`cd sim && npm test` now builds the simulator, serves it on a free local port and runs
+31 real browser checks. It uses Playwright's installed browser by default, closes the preview,
+and returns failure for failed assertions or a timeout. On macOS/Linux, timeout cleanup also
+terminates browser descendants still attached to the test process. The old machine-specific
+executable path is gone. Both a cached-browser run and an independent default-browser run
+passed **31, failed 0**; the latter used Chromium 145.0.7632.6. A forced timeout returned 124
+and left no new Chromium process. Processes already reparented outside the test tree are a
+known limit of this cleanup; it is not a general process supervisor.
+
+The Ubuntu CI job installs the locked dependencies and Chromium, then runs those browser tests.
+Pages publication requires that job and the macOS CLI job. The assembled Pages artifact and
+the rewritten mirror bundle must pass `test/site-check.py` before publication. Checks cover
+links and anchors, navigation presence and consistency, canonical metadata, sitemap membership,
+duplicate IDs, question punctuation and unexpected package files. The question rule is a
+language heuristic. Ten deliberately broken site fixtures now run in CI, including deleted
+navigation, missing local anchors and questions outside h1–h6; an earlier review showed those
+cases could pass silently.
+
+The source check exposed 69 missing error-page sitemap entries. `docs/sitemap-build.py` now
+regenerates the sitemap from tracked indexable pages and is called by the documentation builders.
+Local validation after rebuilding both artifacts: **86 source pages, 0 failures; 88 Pages bundle
+pages, 0 failures; 88 mirror pages, 0 failures**. The same-page anchor fix and the sitemap fix
+were checked together on rebuilt artifacts. Remote CI is pending for this commit; local browser
+results are not represented as Ubuntu results. Commands are in `sim/test/README.md`.

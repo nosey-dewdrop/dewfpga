@@ -1,9 +1,23 @@
-// one workspace, two views. run: npm run build && npm run preview, then node test/e2e.mjs
-import { chromium, webkit } from 'playwright';
+// one workspace, two views. run: npm test (builds, serves dist on a free localhost port, runs this file, stops the server).
+// by hand: BASE=http://127.0.0.1:4173/ node test/e2e.mjs against a running `npm run preview`.
+//   BROWSER=chromium|webkit|firefox   playwright's installed browser (npx playwright install <name>); default chromium
+//   E2E_EXECUTABLE=/path/to/browser   explicit executable override (a locally cached browser); nothing is hardcoded
+//   E2E_OUT=dir                       screenshots (e2e-*.png); default $TMPDIR/dewfpga-e2e
+import { chromium, webkit, firefox } from 'playwright';
 import lz from 'lz-string';
-const S = process.env.SHOTS || '/tmp';
-const BASE = process.env.BASE || 'http://localhost:4173/';
-const browser = process.env.BROWSER === 'webkit' ? await webkit.launch() : await chromium.launch({ executablePath: process.env.HOME + '/Library/Caches/ms-playwright/chromium-1243/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing' });
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+const S = process.env.E2E_OUT || process.env.SHOTS || path.join(os.tmpdir(), 'dewfpga-e2e');
+fs.mkdirSync(S, { recursive: true });
+const BASE = process.env.BASE || 'http://127.0.0.1:4173/';
+const browsers = { chromium, webkit, firefox };
+const browserName = process.env.BROWSER || 'chromium';
+if (!browsers[browserName]) { console.error(`BROWSER=${browserName}: use chromium, webkit or firefox`); process.exit(2); }
+const launch = { headless: !process.env.E2E_HEADED };
+if (process.env.E2E_EXECUTABLE) launch.executablePath = process.env.E2E_EXECUTABLE;
+const browser = await browsers[browserName].launch(launch);
+console.log(`browser ${browserName} ${browser.version()}  base ${BASE}  out ${S}`);
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 const errs = [];
 let pass = 0, fail = 0;
@@ -13,8 +27,9 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(m.type() + ': ' 
 const status = () => page.locator('#status').innerText();
 const waitStatus = (re, t = 180000) => page.waitForFunction((src) => new RegExp(src).test(document.querySelector('#status').textContent), re.source, { timeout: t });
 const ledClass = (i) => page.locator('#board .b-led').nth(i).getAttribute('class');
-const typeInto = async (tab, text) => { await page.click(`.ftab[data-tab="${tab}"]`); await page.locator('#editors .editor:not([hidden]) .cm-content').click(); await page.keyboard.press('Meta+a'); await page.keyboard.type(text); };
+const typeInto = async (tab, text) => { await page.click(`.ftab[data-tab="${tab}"]`); await page.locator('#editors .editor:not([hidden]) .cm-content').click(); await page.keyboard.press('ControlOrMeta+a'); await page.keyboard.type(text); };
 
+try {
 console.log('== boot: the default project is the cli template (blink)');
 await page.goto(BASE);
 await waitStatus(/simulated clock|combinational|error|not running/);
@@ -114,6 +129,11 @@ check('old {sv, tb} link: tb.sv came from the link', (await page.locator('#out')
 await page.goto(BASE + '?view=tb');
 await waitStatus(/compile \d+ ms|failed|stopped/, 120000);
 check('?view=tb boots straight into the testbench', await page.locator('#view-tb').getAttribute('class') === 'on');
+} catch (e) {
+  fail++;
+  console.log(`  FAIL (step threw) ${e.message.split('\n')[0]}`);
+  await page.screenshot({ path: S + '/e2e-failed.png' }).catch(() => {});
+}
 
 console.log(`\npassed ${pass}, failed ${fail}`);
 console.log('page errors:', errs.length ? errs : 'none');

@@ -33,6 +33,7 @@ cp -R sim/dist/. "$OUT/sim/"
 find "$OUT" -type f \( -name '*.html' -o -name '*.css' -o -name '*.js' -o -name '*.xml' -o -name '*.txt' -o -name '*.json' \) -print0 \
   | xargs -0 perl -pi -e 's{(?<=["'"'"'(=\s])/dewfpga/}{/}g'
 # the sim's CSS references the nav strip with url(/dewfpga/art/nav.png) -> url(/art/nav.png): covered above.
+python3 test/site-check.py --bundle "$OUT" --prefix /
 
 # 3. vercel config next to the files: the installer must be served as plain text, redirects for old tb links
 cat > "$OUT/vercel.json" <<'JSON'

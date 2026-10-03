@@ -191,3 +191,4 @@ if bad:
     sys.exit("links that do not resolve:\n  " + "\n  ".join(bad))
 print("links: every /dewfpga/ href in site/errors resolves")
 PY
+python3 docs/sitemap-build.py
