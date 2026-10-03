@@ -1,0 +1,11 @@
+This folder is a small Basys3 FPGA project built with the dewfpga CLI (dewfpga sim, dewfpga bit; run them inside this folder).
+It does not do what its owner intends: run the tools, read the output and repair it.
+
+Rules:
+- Keep the intended behaviour and the module name, port names, port widths and port directions of module top.
+- Do not change the .xdc file (pins and I/O standards), do not rename or add top-level ports.
+- Keep the testbench's checks: it fails with $error on a wrong value and ends with $finish. Do not weaken or delete a check.
+  If there is no testbench, write one (tb.sv) that does the same for the behaviour described in README.md.
+- Fix the cause in the design, not the symptom. A warning that mentions a latch is a defect here.
+- Do not run dewfpga flash; there is no board attached.
+- Stop when dewfpga sim and dewfpga bit both succeed.

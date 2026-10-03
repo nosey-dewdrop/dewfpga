@@ -46,7 +46,7 @@ say() { local rc=0; "$@" > "$T/say" 2>&1 || rc=$?; cat "$T/say"; return $rc; }
 strip() { grep -v '^# nextpnr' "$1" | sort; }
 
 sec "== static"
-check "shellcheck"            "shellcheck -S style --enable=check-unassigned-uppercase '$ROOT/install.sh' && shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh' '$ROOT/vscode/bin/iverilog' '$ROOT/test/vivado/run.sh'"
+check "shellcheck"            "shellcheck -S style --enable=check-unassigned-uppercase '$ROOT/install.sh' && shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh' '$ROOT/vscode/bin/iverilog' '$ROOT/test/vivado/run.sh' '$ROOT/test/agent/experiment/acceptance.sh' '$ROOT/test/agent/experiment/self-test.sh'"
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
 # every file is scanned, this one too: a home folder is /Users/ and a name (/Users/you/ is the guide's placeholder).
 # This file writes the pattern with no name after /Users/, and its planted paths through printf's %s
@@ -81,6 +81,18 @@ pages_count() {
     && grep -qE "(^|[^0-9])$np SystemVerilog probes" "$ROOT/README.md" && grep -qE "(^|[^0-9])$np SystemVerilog probe" "$ROOT/README.tr.md" && grep -qE "(^|[^0-9])$np of them the SystemVerilog probes" "$ROOT/site/cli/index.html"
 }
 check "README, README.tr and site/cli quote the numbers --list prints (checks, probes)" pages_count
+# site/llms.txt (llmstxt.org) is generated from docs/errors.md and the guide: regenerating changes nothing, every code has a line and a page
+llms_txt() {
+    local f="$ROOT/site/llms.txt" c
+    [ -s "$f" ] && head -1 "$f" | grep -q '^# dewfpga$' && sed -n 3p "$f" | grep -q '^> ' && grep -q '^## Errors$' "$f" \
+    && cp "$f" "$T/llms.before" && (cd "$ROOT" && python3 -B docs/llms-build.py > /dev/null) && cmp -s "$f" "$T/llms.before" \
+    && ! grep -q '](/' "$f" || return 1
+    # every linked error page exists, every code of errors.md has a line, every guide anchor exists in the guide
+    grep -oE 'errors/[a-z0-9-]+/' "$f" | cut -d/ -f2 | sort -u | while read -r c; do [ -s "$ROOT/site/errors/$c/index.html" ] || exit 1; done || return 1
+    grep -oE '^## [a-z0-9][a-z0-9-]*$' "$ROOT/docs/errors.md" | cut -c4- | while read -r c; do grep -q "^- \[$c\](" "$f" || exit 1; done || return 1
+    grep -oE 'docs/#[a-z0-9-]+' "$f" | cut -d# -f2 | while read -r c; do grep -q "id=\"$c\"" "$ROOT/site/docs/index.html" || exit 1; done
+}
+check "site/llms.txt: generated, idempotent, every error code listed with an existing page, guide anchors exist" llms_txt
 check "--version"             "v=\$('$CLI' --version); [ -n \"\$v\" ] && [ \"\$v\" = \"\$(sed -n 's/.*\"version\": *\"\([^\"]*\)\".*/\1/p' '$ROOT/package.json')\" ]"
 
 sec "== editor and Vivado project integration"
@@ -442,6 +454,30 @@ check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/nu
 
 sec "== project template"
 check "new + dewfpga bit"     "'$CLI' new '$T/p' && cd '$T/p' && '$CLI' bit && [ -s blink.bit ]"
+# agents_md <dir>: the guidance new writes for a coding agent. A subshell, so a failed step cannot exit run.sh (check evals).
+# Every `dewfpga <cmd>` it names (code block or backticks) is a label of the CLI's dispatch case, every --option is one the
+# CLI or the JSON wrapper reads, the exit table matches agent_json.py, and the code block's tops and sim --json run as written
+agents_md() { (
+    set -e; cd "$1"
+    [ "$(cat CLAUDE.md)" = '@AGENTS.md' ]; cmp -s AGENTS.md "$ROOT/templates/AGENTS.md"; [ "$(wc -l < AGENTS.md)" -le 60 ]
+    labels=$(sed -n '/^case "${1:-}" in/,/^esac/p' "$ROOT/bin/dewfpga" | sed -nE 's/^ +([a-z|-]+)\).*/\1/p' | tr '|' '\n')
+    named=$( { awk '/^```/{f=!f; next} f && $1=="dewfpga"{print $2}' AGENTS.md; grep -oE '`dewfpga [a-z]+' AGENTS.md | cut -d' ' -f2; } | sort -u)
+    [ -n "$named" ]
+    for w in $named; do grep -qx -- "$w" <<< "$labels" || { echo "AGENTS.md names dewfpga $w, bin/dewfpga has no such command"; false; }; done
+    grep -oE -- '--[a-z][a-z-]*' AGENTS.md | sort -u | while read -r o; do
+        grep -q -- "$o" "$ROOT/bin/dewfpga" "$ROOT/templates/agent_json.py" || { echo "AGENTS.md names $o, the CLI does not read it"; false; }; done
+    python3 -B - "$ROOT/templates/agent_json.py" AGENTS.md <<'EOF'
+import re, sys
+src, doc = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+table = {int(n) for n in re.findall(r"^\| (\d+) \|", doc, re.M)}
+real = {0} | {int(n) for n in re.findall(r"\b(\d+)\b", src[src.index("EXIT_FOR_CODE"):src.index("SITE =")])}
+assert table and table <= real, f"exit table {sorted(table)} vs agent_json.py {sorted(real)}"
+EOF
+    "$CLI" tops | grep -q '^blink'
+    "$CLI" sim --json > "$T/agents.json"
+    python3 -B -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["schema"]=="dewfpga/result@1" and r["ok"] is True and r["exit_code"]==0, r' "$T/agents.json"
+) }
+check "new: AGENTS.md + CLAUDE.md for a coding agent (CLAUDE.md is the one-line import; every command, option and exit code it names is the CLI's; tops and sim --json run)" "agents_md '$T/p'"
 check "new: no Makefile, task uses dewfpga" "cd '$T/p' && [ ! -e Makefile ] && grep -q '\"dewfpga flash\"' .vscode/tasks.json && ! grep -q 'make ' .vscode/tasks.json && python3 -c 'import json;json.load(open(\".vscode/settings.json\"));json.load(open(\".vscode/extensions.json\"))'"
 check "manual path: templates/Makefile"  "mkdir '$T/mk' && cp '$ROOT'/templates/{blink.sv,blink_tb.sv,blink.xdc,check_xdc.py,Makefile} '$T/mk/' && cd '$T/mk' && make -s bit > out.txt && grep -q '^pnr ok' out.txt && [ -s blink.bit ] && ! make check | grep -q MISSING"
 

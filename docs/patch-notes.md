@@ -3435,7 +3435,7 @@ The top chooser uses the real Quick Pick lifecycle, remembers choices per projec
 and cancels the task on Escape. The companion suite passed **35, failed 0, skipped 0**
 in the integrated tree. These extension features share the #12 installation and
 ownership boundary and are committed together. Full CLI acceptance passed **269/0**
-with **52 known gaps**. Remote CI remains pending for the combined integration.
+with **52 known gaps**. Remote CI passed for the combined integration.
 
 
 ### #14 · Machine-readable CLI results · 3 October
@@ -3457,7 +3457,7 @@ bit commands, text-mode parity and interruption cleanup. Separate real XPR and
 XPR-less projects passed **10 checks** for nested roots, caching, unrelated artifacts
 and source paths containing spaces. The preceding #12–#13 full CLI run passed
 **269/0 with 52 known gaps**; it is not a full run of this newer commit. Remote CI
-for this update remains pending. No real board programming is claimed.
+for this update passed. No real board programming is claimed.
 
 
 ### #15 · MCP tools backed by the checked CLI · 3 October
@@ -3483,8 +3483,7 @@ and removed the real pinned SDK in a temporary FPGA_HOME, with foreign files ret
 The unpacked release also served real SDK calls for new, sim and offline error
 explanation; check correctly reported its temporary home had no toolchain. Both site
 bundles passed **104 pages, 0 failures**. Remote CI requires the SDK instead of accepting
-skipped protocol tests. Full CI for
-this integration remains pending; no physical board was programmed.
+skipped protocol tests. The first CI failed in the installer; the correction below passed remote CI. No physical board was programmed.
 
 Process-tree cleanup depends on `ps`. A daemon that reparents before observation and
 PID reuse remain limitations. Tool annotations describe effects; they are not an
@@ -3508,5 +3507,37 @@ a dangling lock symlink.
 
 The initial full run was **272 passed, 1 failed, 52 known gaps**, with unchanged
 tested sources. After both corrections, the targeted static, installer, SDK-backed
-MCP and editor suites passed **6 top-level checks, 0 failures**. A corrected full
-run and remote CI are pending; the earlier failed runs remain recorded as failures.
+MCP and editor suites passed **6 top-level checks, 0 failures**. The corrected combined local tree (also containing pending #16 guidance) passed **273/0 with 52 known gaps** in 18 minutes; tested source hashes were unchanged. Remote CI for the correction passed, including clean macOS installation, the full suite and Ubuntu browser tests. The earlier failed runs remain recorded as failures.
+
+
+### #16 · Project instructions and a measured repair experiment · 3 October
+
+`dewfpga new` now writes `AGENTS.md` and a one-line `CLAUDE.md` import into the
+project. The instructions name actual CLI commands, structured result fields and
+exit codes, preserve ports and constraints, and reserve board programming for an
+explicit user request. The generated `llms.txt` links the guide and error catalog;
+regeneration and all referenced error pages are checked. The listed suite grows
+from **327 to 329 checks**.
+
+The replacement experiment ran **16 fresh Fable 5.1 sessions**, one attempt for
+each of eight fixtures in each arm. Both arms passed **8/8 repairs** and all
+**130 acceptance checks**, including fresh builds, testbench mutations, port
+interfaces and netlist equivalence. Plain/guided observations were **50/41 tool
+calls**, **516.87/550.92 process seconds**, and **0/13 Bash calls containing
+`--json`**. These numbers do not demonstrate a guidance benefit: the sample is
+small, two fixtures are CLI auto-repair controls, and most reference testbenches
+were visible in the input.
+
+Root invalidated the previous batch after finding guidance in a shared ancestor
+and an explicit read by a plain agent. Its results remain in the repository as
+invalid. The replacement checked both lexical and resolved ancestors before every
+call; root found no plain-arm guide or reference access in the transcripts. One
+guided agent used an outside-project temporary backup of its own source; this
+protocol deviation is disclosed. The protocol is not a filesystem sandbox.
+See the [full results and limits](https://github.com/nosey-dewdrop/dewfpga/blob/main/test/agent/experiment/results-2026-10-03.md).
+
+The combined local #15 correction and #16 product sources passed **273/0 with
+52 known gaps**. The only previously tested files changed afterward are the
+experiment README and manifest; product source hashes match that run. The
+experiment's 63 frozen harness files remained unchanged throughout the batch.
+Remote CI for this commit is pending; no physical board acceptance is claimed.

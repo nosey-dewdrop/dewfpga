@@ -82,6 +82,7 @@ cmd_new() {
     [ -e "$dir" ] && die folder-exists "$dir already exists, and dewfpga new does not overwrite. Fix: pick another name, or cd $dir and work there."
     mkdir -p "$dir/.vscode"
     cp "$HERE"/templates/{blink.sv,blink_tb.sv,blink.xdc} "$dir/"
+    cp "$HERE"/templates/{AGENTS.md,CLAUDE.md} "$dir/"     # project instructions for a coding agent (CLAUDE.md is one line: @AGENTS.md)
     # the template task says `make ...` for the manual (Makefile) setup; here the CLI does the work
     sed 's/"make /"dewfpga /' "$HERE/templates/.vscode/tasks.json" > "$dir/.vscode/tasks.json"
     cp "$HERE"/templates/.vscode/{settings.json,extensions.json} "$dir/.vscode/"     # iverilog as the linter, the extension recommended

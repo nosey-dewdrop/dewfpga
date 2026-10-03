@@ -12,3 +12,5 @@ echo "site/docs/index.html: $(wc -c < site/docs/index.html) bytes"
 # the nav comes from one source, docs/nav.py (the template above holds a stub)
 python3 docs/nav.py
 python3 docs/sitemap-build.py
+# the machine-readable index (llmstxt.org) from the same sources
+python3 docs/llms-build.py

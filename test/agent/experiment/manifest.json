@@ -1,0 +1,443 @@
+{
+  "schema": "dewfpga/agent-experiment@1",
+  "prepared": "2026-10-03",
+  "status": "v3 completed: 8/8 repairs in each arm; no observed plain guide/reference leak; one guided external-backup protocol deviation; no demonstrated guidance benefit",
+  "question": "Does a coding agent repair a small broken Basys3 project more often, or with fewer steps, when the project carries templates/AGENTS.md (+ CLAUDE.md) and the agent uses `--json`, than with the bare CLI? One attempt per cell, never repeated: 2 arms x 8 fixtures = 16 runs, enough to see gross differences and failure modes, not to conclude statistically.",
+  "arms": {
+    "plain": {
+      "setup": "fixture folder copied as is",
+      "agent_sees": "prompt.txt; dewfpga text output"
+    },
+    "guided": {
+      "setup": "fixture folder copied, plus templates/AGENTS.md and templates/CLAUDE.md (what `dewfpga new` writes)",
+      "agent_sees": "prompt.txt; AGENTS.md via CLAUDE.md; `dewfpga sim --json` / `dewfpga bit --json` as AGENTS.md tells it"
+    }
+  },
+  "runner": {
+    "who": "the root session, with the terminal Claude subscription; never launched from here",
+    "per_run": [
+      "once per batch: RUNS=$(mktemp -d /tmp/dewfpga-exp.XXXXXX) (outside the repo: a run inside it would load the repo's own CLAUDE.md in both arms and reach reference/ by a relative path)",
+      "once per batch: CLI=$(mktemp -d /tmp/dewfpga-cli.XXXXXX); git -C <repo> archive HEAD bin templates package.json | tar -x -C $CLI; cp <repo>/.fpga_home $CLI/ 2>/dev/null; export PATH=$CLI/bin:$PATH (so `command -v dewfpga` does not lead into the repo, where test/agent/experiment lives)",
+      "RUN=$RUNS/<arm>/<fixture>; mkdir -p $RUN; cp test/agent/experiment/fixtures/<fixture>/* $RUN/",
+      "guided arm only: cp templates/AGENTS.md templates/CLAUDE.md $RUN/",
+      "cd $RUN && claude -p \"$(cat <repo>/test/agent/experiment/prompt.txt)\" --allowedTools Bash,Read,Edit,Write > $RUNS/<arm>/<fixture>.log 2>&1   (the tool list and flags are the root's call; record the exact command used)",
+      "record: wall time, number of tool calls (from the log), number of dewfpga invocations, whether the agent ran flash (must be 0)",
+      "Inspect tool inputs AND outputs for harness/reference paths, ancestor guide reads, relative ../ and absolute outside-project reads; report every observed violation. No substring scan alone proves isolation.",
+      "DEWFPGA=$CLI/bin/dewfpga <repo>/test/agent/experiment/acceptance.sh $RUN <fixture> > $RUN.accept 2>&1"
+    ],
+    "do_not": [
+      "flash the board",
+      "run inside the repo, or let the agent see test/agent/experiment/reference, acceptance.sh or self-test.sh (copy only the fixture folder)",
+      "run a cell twice: one attempt per cell; a failed cell is reported as failed, never re-run until it passes"
+    ],
+    "env": "LC_ALL=C LC_CTYPE=C LANG=C PYTHONDONTWRITEBYTECODE=1; toolchain installed (dewfpga check)"
+  },
+  "acceptance": {
+    "script": "test/agent/experiment/acceptance.sh <run-dir> <fixture>",
+    "checks": {
+      "xdc": "exact: exactly one .xdc in the run, byte-identical (cmp) to fixtures/<n>/top.xdc: no re-pinning, no whitespace edit, no added command",
+      "design": "exact, fixture 7 only: top.sv byte-identical to the fixture's (the task is a testbench, not a design change)",
+      "sim": "exit: dewfpga sim exit 0 in a fresh folder holding only the agent's sources",
+      "bit": "exit: dewfpga bit exit 0 and a .bit written, fresh folder (no stale .bit)",
+      "tb-good": "behaviour: the agent's testbench (files with a port-less module) + reference/<n>/top.sv, dewfpga sim exit 0",
+      "tb-wrong": "behaviour: the agent's testbench + each reference/<n>/wrong/*.sv as top.sv, dewfpga sim exit != 0 on every one (none present = FAIL)",
+      "ref-tb": "exit: reference/<n>/tb.sv + the agent's design files, dewfpga sim exit 0 (for fixtures 1-6 and 8 this tb is the fixture's own tb.sv; only fixture 7's is unseen by the agent)",
+      "ports": "exact: (name, direction, width) of module top's ports in the agent's top.json == the reference's",
+      "eqv": "equivalence: test/sv/eqv.sh, the agent's netlist against the reference RTL; any exit but 0 (including 2 = skipped) is a FAIL"
+    },
+    "pass": "every check PASS (the script exits 0); there is no SKIP",
+    "self_test": "test/agent/experiment/self-test.sh: solved folders (fixture .xdc + reference tb.sv + reference top.sv, fixture top.sv for 7) must pass; each wrong design, each unrepaired fixture 3-8, a whitespace-only .xdc edit and an edited fixture-7 design must fail"
+  },
+  "fixtures": [
+    {
+      "id": "1_port_direction",
+      "class": "port direction inherited by a later port in the same list (`output [6:0] seg, logic dp`)",
+      "error_code": "port-neither-input-nor-output",
+      "control": true,
+      "control_note": "the CLI already auto-fixes this in the file; measures whether the agent leaves a working project alone",
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 0, PASS",
+        "bit": "exit 0 (text) with note [port-neither-input-nor-output]: the CLI writes `output` into top.sv and builds"
+      },
+      "reference_intention": "sw[6:0] inverted on seg, sw[7] on dp, sw[11:8] inverted on an. The only defect is the port line; the CLI already fixes it.",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/1_port_direction",
+        "1_port_direction"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "dp_inverted.sv"
+      ]
+    },
+    {
+      "id": "2_unnamed_instance",
+      "class": "module instance without an instance name",
+      "error_code": "unnamed-instance",
+      "control": true,
+      "control_note": "the CLI already auto-fixes this in the file; measures whether the agent leaves a working project alone",
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 0, PASS (iverilog accepts it)",
+        "bit": "exit 0 (text) with note [unnamed-instance]: the CLI names the instance in top.sv and builds"
+      },
+      "reference_intention": "led[0] = ~sw[0]; led[15:1] = sw[15:1].",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/2_unnamed_instance",
+        "2_unnamed_instance"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "not_inverted.sv"
+      ]
+    },
+    {
+      "id": "3_async_reset_nonconst",
+      "class": "asynchronous reset branch loads a signal (sw) instead of a constant",
+      "error_code": "async-reset-nonconst",
+      "control": false,
+      "control_note": null,
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 0, PASS (iverilog simulates the async load)",
+        "bit": "exit 2 (text) / 1 (--json), ERROR [async-reset-nonconst], no .bit"
+      },
+      "reference_intention": "4-bit counter on led[3:0]: while btnC is held the next clock loads sw[3:0], otherwise it counts up by one per clock. A synchronous load is the fix; the testbench only looks after a clock edge, so it accepts both.",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/3_async_reset_nonconst",
+        "3_async_reset_nonconst"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "load_ignored.sv"
+      ]
+    },
+    {
+      "id": "4_dual_edge",
+      "class": "always block sensitive to both clock edges",
+      "error_code": "dual-edge",
+      "control": false,
+      "control_note": null,
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 2 (text) / 1 (--json): tb.sv:9 '3 clock periods = 3 counts: led=0006 want 0003', ERROR [testbench-error]",
+        "bit": "exit 2 (text) / 1 (--json), ERROR [dual-edge], no .bit"
+      },
+      "reference_intention": "4-bit counter on led[3:0], one count per clock period (rising edge).",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/4_dual_edge",
+        "4_dual_edge"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "two_per_period.sv"
+      ]
+    },
+    {
+      "id": "5_two_always_drivers",
+      "class": "one register written from two always_ff blocks",
+      "error_code": "two-always-drivers",
+      "control": false,
+      "control_note": null,
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 2 (text) / 1 (--json): 2 testbench errors (iverilog lets the last block win), ERROR [testbench-error]",
+        "bit": "exit 2 (text) / 1 (--json), ERROR [two-always-drivers] in text; `--json` exit 1 with diagnostics [] (see findings), no .bit"
+      },
+      "reference_intention": "cnt counts rising edges of btnU (one count per press, synchronous edge detect), btnC clears it on the next clock and has priority over a press.",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/5_two_always_drivers",
+        "5_two_always_drivers"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "no_edge_detect.sv"
+      ]
+    },
+    {
+      "id": "6_enum_method_next",
+      "class": "FSM stepped with enum methods first()/next()/last()",
+      "error_code": "enum-method-next-prev",
+      "control": false,
+      "control_note": null,
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 0, PASS (iverilog implements the methods)",
+        "bit": "exit 2 (text) / 1 (--json), ERROR [enum-method-next-prev], no .bit"
+      },
+      "reference_intention": "3-state FSM IDLE(0) -> RUN(1) -> DONE(3) -> IDLE, btnC returns to IDLE; led[1:0] = state code, led[2] = in DONE.",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/6_enum_method_next",
+        "6_enum_method_next"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "done_to_run.sv"
+      ]
+    },
+    {
+      "id": "7_no_testbench",
+      "class": "correct design, no testbench (the task is to write one)",
+      "error_code": "no-testbench",
+      "control": false,
+      "control_note": null,
+      "fixture_files": [
+        "README.md",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 1, ERROR [no-testbench]",
+        "bit": "exit 0, builds (25 LUT, 9 FF)"
+      },
+      "reference_intention": "The design is correct and must not change. The task is a testbench that fails loudly ($error on a wrong value, $finish at the end) for a registered 8+8-bit adder with carry on led[8:0].",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/7_no_testbench",
+        "7_no_testbench"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports",
+        "design"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "carry_dropped.sv",
+        "not_registered.sv",
+        "subtracts.sv"
+      ]
+    },
+    {
+      "id": "8_latch_missing_else",
+      "class": "always_comb if without else: a latch where combinational logic was meant",
+      "error_code": "latch",
+      "control": false,
+      "control_note": null,
+      "fixture_files": [
+        "tb.sv",
+        "top.sv",
+        "top.xdc"
+      ],
+      "baseline_measured_2026_10_03": {
+        "sim": "exit 2 (text) / 1 (--json): tb.sv:9 'sw[1]=0 -> led[0]=0, not the old value: led=0001 want 0000', ERROR [testbench-error]",
+        "bit": "exit 0 with warning [latch] (builds an LDCE like Vivado: 0 LUT, 1 FF)"
+      },
+      "reference_intention": "Combinational: led[0] = sw[1] ? sw[0] : 0. No storage.",
+      "reference_files": [
+        "EXPECTED.md",
+        "tb.sv",
+        "top.sv"
+      ],
+      "acceptance_argv": [
+        "test/agent/experiment/acceptance.sh",
+        "$RUNS/<arm>/8_latch_missing_else",
+        "8_latch_missing_else"
+      ],
+      "exact_checks": [
+        "xdc",
+        "ports"
+      ],
+      "exit_checks": [
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb"
+      ],
+      "equivalence_checks": [
+        "eqv"
+      ],
+      "wrong_designs": [
+        "latch.sv"
+      ]
+    }
+  ],
+  "acceptance_self_test": {
+    "run": "2026-10-03, test/agent/experiment/self-test.sh, macOS arm64 toolchain from dewfpga install (is_tb later widened to also take `module name();`; the fixtures' and references' testbenches are all `module tb;`, unaffected)",
+    "result": "self-test: 0 bad",
+    "cases": [
+      "ok 1_port_direction.solved (pass)",
+      "ok 1_port_direction.wrong.dp_inverted (fail)",
+      "ok 2_unnamed_instance.solved (pass)",
+      "ok 2_unnamed_instance.wrong.not_inverted (fail)",
+      "ok 3_async_reset_nonconst.solved (pass)",
+      "ok 3_async_reset_nonconst.wrong.load_ignored (fail)",
+      "ok 3_async_reset_nonconst.unrepaired (fail)",
+      "ok 4_dual_edge.solved (pass)",
+      "ok 4_dual_edge.wrong.two_per_period (fail)",
+      "ok 4_dual_edge.unrepaired (fail)",
+      "ok 5_two_always_drivers.solved (pass)",
+      "ok 5_two_always_drivers.wrong.no_edge_detect (fail)",
+      "ok 5_two_always_drivers.unrepaired (fail)",
+      "ok 6_enum_method_next.solved (pass)",
+      "ok 6_enum_method_next.wrong.done_to_run (fail)",
+      "ok 6_enum_method_next.unrepaired (fail)",
+      "ok 7_no_testbench.solved (pass)",
+      "ok 7_no_testbench.wrong.carry_dropped (fail)",
+      "ok 7_no_testbench.wrong.not_registered (fail)",
+      "ok 7_no_testbench.wrong.subtracts (fail)",
+      "ok 7_no_testbench.unrepaired (fail)",
+      "ok 8_latch_missing_else.solved (pass)",
+      "ok 8_latch_missing_else.wrong.latch (fail)",
+      "ok 8_latch_missing_else.unrepaired (fail)",
+      "ok 4_dual_edge.xdc-space (fail)",
+      "ok 7_no_testbench.design-edited (fail)"
+    ]
+  },
+  "invalid_batch_report": "invalid-results-2026-10-03.md",
+  "result_report": "results-2026-10-03.md",
+  "result_data": "results-2026-10-03.json"
+}
