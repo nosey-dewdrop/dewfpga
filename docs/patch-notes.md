@@ -3287,3 +3287,22 @@ Local validation after rebuilding both artifacts: **86 source pages, 0 failures;
 pages, 0 failures; 88 mirror pages, 0 failures**. The same-page anchor fix and the sitemap fix
 were checked together on rebuilt artifacts. Remote CI is pending for this commit; local browser
 results are not represented as Ubuntu results. Commands are in `sim/test/README.md`.
+
+
+### #9 · One navigation source, unchanged desktop layout · 3 October
+
+`docs/nav.py` now generates navigation from one chip table, and `docs/nav.css` supplies the
+shared navigation CSS. The guide and error-page builders use the same source. Generated copies
+are checked by `test/site-check.py`; changes to an active-page marker, Turkish language label,
+chip link or generated CSS are detected. A second generator run is byte-identical across the
+89 checked copies. Eleven unreferenced simulator debug/screenshot scripts were removed; the
+browser test runner and engine checks remain.
+
+Measured at 1366px: all nine navigation crops have **0 differing pixels**, and all eight static
+full-page captures have **0 differing pixels**. The simulator's animated area differs below the
+navigation strip and is not claimed identical. At phone width, the CLI's nine differing pixels
+also occur between two unchanged baseline captures; simulator captures remain dynamic.
+An independent comparison of computed styles at seven widths found no non-custom-property
+change. Both documentation generators, site checks, ten fault-injection fixtures and the Vite
+build passed. Rebuilt Pages and mirror artifacts each contain 88 clean pages. Physical GUI and
+this commit's remote CI are not claimed by these local measurements.

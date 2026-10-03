@@ -289,6 +289,11 @@ def main():
                 diff = [f'{h} "{t}"' for h, t in key if (h, t) not in refkey]
                 for r in rels: fail(r, f'nav differs from {ref}: {", ".join(diff) or "missing entries"}')
 
+    # 4b. every nav copy matches the one source, docs/nav.py
+    r = subprocess.run([sys.executable, 'docs/nav.py', '--check'], capture_output=True, text=True)
+    if r.returncode != 0:
+        fail('docs/nav.py', '--check: ' + (r.stdout + r.stderr).strip().replace('\n', '; '))
+
     # 5. headings: a heading in question form ends with "?"
     q_start = re.compile(r'^(why|how|what|which|who|when|where|is|are|do|does|did|can|could|should|would|will|has|have|was|were|neden|nasıl|ne|hangi|kim|ne zaman|nerede)\b', re.I)
     q_particle = re.compile(r'\b(mı|mi|mu|mü)(yım|yim|yum|yüm|sın|sin|sun|sün|yız|yiz|yuz|yüz|sınız|siniz|sunuz|sünüz|lar|ler)?\s*$', re.I)
