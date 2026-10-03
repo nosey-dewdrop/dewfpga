@@ -14,7 +14,8 @@ prove real JWT verification, SMTP delivery, inbox receipt or hosted redirects.
 
 1. Identify the existing Supabase project shared with dewsletter. Review and
    apply `sql/001_dewfpga_newsletter.sql`, `002_dewfpga_mail_ledger.sql`, then
-   `003_dewfpga_account.sql` as the project owner. These create `dewfpga_`
+   `003_dewfpga_account.sql` as the project owner, with `PGOPTIONS='-c lock_timeout=5s'`
+   (003's `auth.users` foreign key takes a short ShareRowExclusiveLock). These create `dewfpga_`
    objects. Do not delete or replace shared `auth.users` or other applications'
    objects. Normal Supabase signup still creates a sign-in identity; dewfpga
    enrolment and deletion operate on its own profile and linked subscriptions.
@@ -49,7 +50,9 @@ prove real JWT verification, SMTP delivery, inbox receipt or hosted redirects.
 4. Set Auth's site URL and allowed redirect to the actual published
    `/dewfpga/account/` URL. Preserve signup for new users. Review the project's
    Auth mail rate limits: an hourly setting is not proof of a reserved daily
-   allowance. [Supabase custom SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp)
+   allowance. Custom SMTP defaults to 30 mails/hour = 720/day, more than the whole
+   free 100/day quota: set the hourly limit so Auth + dewsletter + this worker's share fit in it.
+   [Supabase custom SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp)
    describes the separate default and custom-SMTP restrictions.
 5. Put only the public project URL and public anon key in `site/config.js`.
    Never put the service key or Resend key in site files, git, browser storage
@@ -57,7 +60,9 @@ prove real JWT verification, SMTP delivery, inbox receipt or hosted redirects.
    environment. Blank public configuration leaves the forms disabled.
 6. Choose the worker's own daily allocation and account-wide daily/monthly
    headroom after reviewing the existing account's actual use. Verify that
-   `GET https://api.resend.com/usage` works with the worker's credential. Do not
+   `GET https://api.resend.com/usage` works with the worker's credential: it must be
+   a `full_access` key, a `sending_access` key gets `401 restricted_api_key` and the
+   worker defers every run (cost: this key can manage the account; operator environment only). Do not
    assume dewsletter always consumes exactly 90 messages or that its repository
    JSON counter coordinates other senders.
 
@@ -70,10 +75,11 @@ capacity between the observation and the request. Provider quota refusal must
 defer work. Missing, malformed or unavailable usage data also defers work;
 there is no fallback that sends blindly.
 
-Current provider documents conflict about whether the daily window is rolling
-or a UTC calendar day. The application can use its own conservative rolling
-policy without claiming it is the provider's exact reset policy. Recheck usage
-on a later run instead of promising delivery at a guessed reset time. See
+Resend documents the free plan's daily quota as a UTC calendar day (00:00-24:00
+UTC, reset at midnight UTC), not a rolling 24-hour window. The application keeps
+its own conservative rolling 24 h / 30 d count anyway: it never frees capacity
+earlier than the provider could, and it does not promise delivery at the reset.
+Recheck usage on a later run instead of scheduling against midnight UTC. See
 [Usage API](https://resend.com/docs/api-reference/usage/retrieve-usage),
 [account limits](https://resend.com/docs/knowledge-base/account-quotas-and-limits)
 and [quota errors](https://resend.com/docs/api-reference/errors).

@@ -89,9 +89,12 @@ alter table public.dewfpga_mail_ledger alter column logical_key set not null;
 create index if not exists dewfpga_mail_ledger_created_at on public.dewfpga_mail_ledger (created_at);
 create index if not exists dewfpga_mail_ledger_logical_key on public.dewfpga_mail_ledger (logical_key);
 
--- other senders were seeded as required by an earlier version of this file; they are not part of it
+-- other senders were seeded as required by an earlier version of this file; they are not part of it.
+-- Only an UNCONFIGURED seed goes (never enrolled, no share, no ledger row). A row the operator set up by
+-- hand (e.g. 'dewsletter' with its own share and no ledger row yet) is theirs and survives a re-apply.
 delete from public.dewfpga_mail_consumers c
-  where c.name <> 'dewfpga' and not exists (select 1 from public.dewfpga_mail_ledger l where l.consumer = c.name);
+  where c.name <> 'dewfpga' and c.enrolled_at is null and c.daily_cap is null and c.monthly_cap is null
+    and not exists (select 1 from public.dewfpga_mail_ledger l where l.consumer = c.name);
 
 create table if not exists public.dewfpga_mail_approvals (
   content_hash          text primary key check (content_hash ~ '^[0-9a-f]{64}$'),
@@ -112,6 +115,17 @@ revoke all on table public.dewfpga_mail_consumers, public.dewfpga_mail_ledger, p
   from public, anon, authenticated;
 grant select, insert, update, delete on table public.dewfpga_mail_consumers, public.dewfpga_mail_ledger, public.dewfpga_mail_approvals
   to service_role;
+-- Existing Supabase projects grant anon/authenticated ALL on every new sequence in public by default
+-- (ALTER DEFAULT PRIVILEGES), so the ledger's identity sequence would leak the send count (last_value)
+-- and take nextval(). The identity column draws its ids as the table owner: service_role's insert
+-- needs no sequence grant, and the sequence name is read from the catalogue, not assumed.
+do $$
+declare s text := pg_get_serial_sequence('public.dewfpga_mail_ledger', 'id');
+begin
+  if s is not null then
+    execute format('revoke all on sequence %s from public, anon, authenticated', s);
+  end if;
+end $$;
 
 -- The constants, in one place. Provider numbers: Resend free plan (resend.com/pricing, 2026-10-03).
 -- inbound_reserve: Resend counts received mail against the same quota; a slice is kept for it.

@@ -387,7 +387,106 @@ def main():
            "an identity deletion done elsewhere cascades to dewfpga's profile and linked subscription")
         ok(c.value("select count(*) from public.dewfpga_subscribers where email = 'student@example.org'") == "1", "...and leaves unlinked subscriptions (they were never tied to that identity)")
 
+        # ---------------------------------------------------------------- identity column needs no sequence grant
+        seq = c.value("select pg_get_serial_sequence('public.dewfpga_mail_ledger', 'id')")
+        ok(c.value(f"select has_sequence_privilege('service_role', '{seq}', 'usage') or has_sequence_privilege('service_role', '{seq}', 'update')") == "f",
+           "service_role holds no privilege on the ledger's identity sequence")
+        lid = c.value(f"insert into public.dewfpga_mail_ledger (consumer, kind, recipient_hash, idempotency_key, logical_key, payload_hash) "
+                      f"values ('dewfpga', 'other', '{H}', 'direct-k1', 'direct-k1', '{P}') returning id", role="service_role")
+        ok(lid.isdigit(), f"...and still inserts a ledger row directly: the identity column draws id {lid} as the table owner")
+        c.sql("delete from public.dewfpga_mail_ledger where idempotency_key = 'direct-k1'")
+
+        # ---------------------------------------------------------------- re-apply keeps what the operator configured
+        # 002 drops the other senders an EARLIER version seeded. The operator may also add a consumer row
+        # by hand (e.g. dewsletter with its own share, no ledger row yet): a re-apply must not delete it.
+        c.sql("insert into public.dewfpga_mail_consumers (name, enrolled_at, daily_cap, monthly_cap, note) values "
+              "('dewsletter', now(), 90, 2700, 'operator-configured, no ledger row yet'), "
+              "('half_set', null, 40, null, 'partly configured: only a daily share'), "
+              "('old_seed', null, null, null, 'seeded by an earlier 002, never configured'), "
+              "('old_sender', null, null, null, 'never configured but has a ledger row')")
+        c.sql(f"insert into public.dewfpga_mail_ledger (consumer, kind, recipient_hash, idempotency_key, logical_key, payload_hash, status) "
+              f"values ('old_sender', 'other', '{H}', 'old-sender-k1', 'old-sender-k1', '{P}', 'failed')")
+        c.load_migrations()
+        names = c.value("select string_agg(name, ',' order by name) from public.dewfpga_mail_consumers")
+        ok(names == "dewfpga,dewsletter,half_set,old_sender",
+           f"re-apply deletes only the unconfigured seed without a ledger row (old_seed); kept: {names}")
+        ok(c.value("select enrolled_at is not null, daily_cap, monthly_cap from public.dewfpga_mail_consumers where name = 'dewsletter'", extra=("-At", "-F", "/")) == "t/90/2700",
+           "the operator-configured foreign consumer keeps its enrolment and share across a re-apply")
+
+    # ---------------------------------------------------------------- Supabase default privileges (existing projects)
+    default_privileges_cluster()
     print(f"\npassed {PASSED}, failed 0")
+
+
+# What an EXISTING Supabase project does to every new object in public (supabase/postgres init scripts;
+# docs/guides/database/hardening-data-api): anon, authenticated and service_role get ALL on new tables,
+# functions and sequences by default. The plain harness does not model this, so these checks run on a
+# second private cluster with the same default privileges set BEFORE the migrations.
+SUPABASE_DEFAULT_PRIVILEGES = """
+alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema public grant all on sequences to anon, authenticated, service_role;
+"""
+
+# Everything README/SQL allow anon and authenticated to touch; anything else granted is a leak.
+ALLOWED = {
+    ("function", "anon", "dewfpga_subscribe", "execute"), ("function", "anon", "dewfpga_confirm", "execute"),
+    ("function", "anon", "dewfpga_unsubscribe", "execute"),
+    ("function", "authenticated", "dewfpga_subscribe", "execute"), ("function", "authenticated", "dewfpga_confirm", "execute"),
+    ("function", "authenticated", "dewfpga_unsubscribe", "execute"), ("function", "authenticated", "dewfpga_enrol_me", "execute"),
+    ("function", "authenticated", "dewfpga_link_subscription", "execute"), ("function", "authenticated", "dewfpga_export_me", "execute"),
+    ("function", "authenticated", "dewfpga_delete_me", "execute"),
+    ("column", "authenticated", "dewfpga_profiles", "select"),  # 003: select (user_id, created_at, premium_since), RLS self only
+}
+
+PRIVILEGE_SWEEP = """
+with roles(r) as (values ('anon'), ('authenticated')),
+rel as (select c.oid, c.relname, c.relkind from pg_class c join pg_namespace n on n.oid = c.relnamespace
+        where n.nspname = 'public' and c.relname like 'dewfpga\\_%'),
+fns as (select p.oid, p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+        where n.nspname = 'public' and p.proname like 'dewfpga\\_%')
+select 'table', r, relname, priv, has_table_privilege(r, oid, priv)
+  from roles, rel, unnest(array['select','insert','update','delete','truncate','references','trigger']) priv where relkind in ('r','p','v','m')
+union all
+select 'column', r, relname, priv, has_any_column_privilege(r, oid, priv)
+  from roles, rel, unnest(array['select','insert','update','references']) priv where relkind in ('r','p','v','m')
+union all
+select 'sequence', r, relname, priv, has_sequence_privilege(r, oid, priv)
+  from roles, rel, unnest(array['usage','select','update']) priv where relkind = 'S'
+union all
+select 'function', r, proname, 'execute', has_function_privilege(r, oid, 'execute') from roles, fns
+order by 1, 2, 3, 4
+"""
+
+
+def default_privileges_cluster():
+    global CLUSTER
+    with Cluster() as c:
+        CLUSTER = c
+        c.sql(SUPABASE_DEFAULT_PRIVILEGES)
+        c.load_migrations()
+        c.load_migrations()
+        rows = c.rows(PRIVILEGE_SWEEP)
+        kinds = {k: len({name for kk, _, name, _, _ in rows if kk == k}) for k in ("table", "sequence", "function")}
+        ok(kinds["table"] >= 5 and kinds["sequence"] >= 1 and kinds["function"] >= 15,
+           f"default-privilege cluster: swept {kinds['table']} tables, {kinds['sequence']} sequences, {kinds['function']} functions x anon/authenticated = {len(rows)} (object, role, privilege) checks")
+        granted = {(k, r, name, priv) for k, r, name, priv, has in rows if has == "t"}
+        extra = sorted(granted - ALLOWED)
+        missing = sorted(ALLOWED - granted)
+        ok(not extra, f"anon/authenticated hold {len(granted)} privileges, all in the documented allow-list of {len(ALLOWED)}; extra: {extra}")
+        ok(not missing, f"every documented anon/authenticated privilege is present; missing: {missing}")
+        seq = c.value("select pg_get_serial_sequence('public.dewfpga_mail_ledger', 'id')")
+        ok(seq == "public.dewfpga_mail_ledger_id_seq", f"the ledger's identity sequence is {seq}")
+        for role in ("anon", "authenticated"):
+            ok(c.fails(f"select nextval('{seq}')", "permission denied", role=role), f"{role} cannot nextval() the ledger sequence")
+            ok(c.fails(f"select last_value from {seq}", "permission denied", role=role), f"{role} cannot read the ledger sequence (send volume)")
+        # the identity column still draws ids for the worker: no sequence grant is needed by service_role
+        lid = c.value(f"insert into public.dewfpga_mail_ledger (consumer, kind, recipient_hash, idempotency_key, logical_key, payload_hash) "
+                      f"values ('dewfpga', 'other', '{H}', 'direct-k1', 'direct-k1', '{P}') returning id", role="service_role")
+        ok(lid.isdigit() and int(lid) >= 1, f"service_role inserts a ledger row directly after the sequence revoke (id {lid})")
+        c.sql("update public.dewfpga_mail_consumers set enrolled_at = now(), daily_cap = 10, monthly_cap = 100 where name = 'dewfpga'")
+        r = c.rows(f"select ledger_id, action from public.dewfpga_mail_reserve('dewfpga', 'confirm', 'rpc-k1', '{H}', '{P}', null, 'rpc-k1')", role="service_role")
+        ok(len(r) == 1 and r[0][1] == "send" and int(r[0][0]) > int(lid), f"the reserve RPC still mints ledger ids after the revoke: {r}")
 
 
 if __name__ == "__main__":

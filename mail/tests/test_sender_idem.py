@@ -108,6 +108,10 @@ def make_classes(dm):
                 return dm.SendResult(200, k["id"])
             if action == "reject429":
                 return dm.SendResult(429, None, "rate_limit_exceeded", "too many requests")
+            if action == "reject429_retry_after_2":  # the 429 carried `retry-after: 2`
+                res = dm.SendResult(429, None, "rate_limit_exceeded", "too many requests")
+                res.retry_after = 2.0
+                return res
             if action == "reject_conflict":  # the provider holds this key with a body we do not know
                 return dm.SendResult(409, None, "invalid_idempotent_request", "payload differs")
             if action == "reject503":  # no answer we can read: the provider may or may not have it
@@ -550,6 +554,47 @@ def main():
         report("S24 campaign eligibility recheck", "r2 unsubscribes while r1's mail is in flight: r2 is not sent (ineligible); r1 and owner sent with their own unsubscribe tokens",
                {"result": res, "sent_to": sent_to, "own_tokens": tokened},
                res["sent"] == 2 and res["ineligible"] == 1 and sent_to == ["r1@example.invalid", OWNER] and tokened)
+
+        # ---- S25: a 429 refusal waits before the next derived key (the rate limit is per team, 10 rps,
+        #      shared with dewsletter: three keys in a few ms would burn all MAX_ATTEMPTS at once)
+        reset(); prov = FakeResend(["reject429_retry_after_2", "reject429"]); sleeps = []
+        m = dm.Mailer(PgRpc(c), prov, "dewfpga <a@example.invalid>", "https://example.invalid",
+                      log=lambda *_: None, sleep=sleeps.append)
+        r = send(m); L = layers(prov)
+        statuses = [s for s, in c.rows("select status from public.dewfpga_mail_ledger order by id", role="postgres")]
+        backoff = dm.BACKOFF[min(1, len(dm.BACKOFF) - 1)]
+        report("S25 429 twice, then accept: wait between keys", f"sleeps [2.0 (retry-after), {backoff} (BACKOFF for the 2nd key)]; outcome sent; ledger failed, failed, sent; 1 delivery",
+               {**L, "outcome": r.get("outcome"), "sleeps": sleeps, "statuses": statuses},
+               sleeps == [2.0, backoff] and r.get("outcome") == "sent" and statuses == ["failed", "failed", "sent"]
+               and L["delivered"] == 1 and len(L["calls"]) == 3 and L["counted_24h"] == 3)
+
+        # ---- S26: the real transport carries a sane retry-after (numeric seconds, 0 < x <= 60) and drops the rest
+        import email.message, io, urllib.error
+        seen = {}
+
+        def fake_urlopen(req, timeout=None):
+            hdrs = email.message.Message()
+            if seen["value"] is not None:
+                hdrs["Retry-After"] = seen["value"]
+            raise urllib.error.HTTPError(req.full_url, 429, "Too Many Requests", hdrs,
+                                         io.BytesIO(b'{"statusCode":429,"name":"rate_limit_exceeded","message":"Too many requests"}'))
+
+        real_urlopen = dm.urllib.request.urlopen
+        got = {}
+        try:
+            dm.urllib.request.urlopen = fake_urlopen
+            t = dm.ResendTransport("test-only-key")
+            for value in ("2", "60", "0.5", None, "0", "61", "-3", "abc", "Wed, 21 Oct 2026 07:28:00 GMT", "nan", "inf"):
+                seen["value"] = value
+                res = t.send({"from": "a", "to": ["b"], "subject": "s", "html": "h", "text": "t", "headers": {}}, "k")
+                got[value] = (res.status, res.name, getattr(res, "retry_after", "missing"))
+        finally:
+            dm.urllib.request.urlopen = real_urlopen
+        want = {"2": 2.0, "60": 60.0, "0.5": 0.5, None: None, "0": None, "61": None, "-3": None, "abc": None,
+                "Wed, 21 Oct 2026 07:28:00 GMT": None, "nan": None, "inf": None}
+        report("S26 real transport: retry-after header on 429", "classified refused (429 rate_limit_exceeded); retry_after = 2.0/60.0/0.5 for sane numeric values, None for absent, 0, 61, negative, text, date, nan, inf",
+               {"got": got},
+               all(got[v][0] == 429 and got[v][1] == "rate_limit_exceeded" and got[v][2] == want[v] for v in want))
     finally:
         c.__exit__(None, None, None)
 

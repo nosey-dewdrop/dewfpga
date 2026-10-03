@@ -6,12 +6,40 @@ remain authoritative. No observation means defer, never silently send anyway.
 See https://resend.com/docs/api-reference/usage/retrieve-usage .
 """
 import json
+import re
 import urllib.error
 import urllib.request
+
+# Resend's documented error names (resend.com/docs/api-reference/errors) are lowercase identifiers.
+_ERROR_NAME = re.compile(r"^[a-z_]{1,64}$")
 
 
 class UsageDeferred(Exception):
     """No mail should be attempted until a later successful capacity check."""
+
+
+def _http_error_reason(exc):
+    """Status code plus the body's documented `name`, nothing else.
+
+    The body's message, the headers and the raw body may echo the credential or
+    other account detail; only a name matching _ERROR_NAME is repeated. A
+    sending_access key gets 401 restricted_api_key from GET /usage: say so,
+    otherwise the worker defers forever without a visible cause.
+    """
+    reason = f"HTTP {exc.code}"
+    name = None
+    try:
+        parsed = json.loads(exc.read(4096))
+        candidate = parsed.get("name") if isinstance(parsed, dict) else None
+        if isinstance(candidate, str) and _ERROR_NAME.match(candidate):
+            name = candidate
+    except Exception:
+        pass
+    if name:
+        reason += " " + name
+    if exc.code == 401 and name == "restricted_api_key":
+        reason += ": this key can only send mail; GET /usage needs a full_access key"
+    return reason
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -31,8 +59,9 @@ class AccountUsageGate:
 
     The cushion is best effort, not capacity reserved for Auth/dewsletter. The
     ceilings also preserve the configured account policy when a provider limit
-    is null or larger. We do not infer a reset instant: current primary sources
-    disagree on rolling versus UTC-day semantics.
+    is null or larger. We do not infer a reset instant: Resend documents the free
+    plan's daily quota as a UTC calendar day; the ledger's rolling count is the
+    conservative side of that and nothing here schedules against midnight UTC.
     """
 
     def __init__(self, api_key, *, day_headroom, month_headroom,
@@ -66,6 +95,10 @@ class AccountUsageGate:
                 data = json.loads(raw)
         except UsageDeferred:
             raise
+        except urllib.error.HTTPError as exc:
+            # Status and documented error name only; the rest of the answer may contain secrets.
+            reason = _http_error_reason(exc)
+            raise UsageDeferred(f"account usage unavailable ({reason}); mail deferred") from None
         except Exception:
             # Provider response bodies/transport exceptions may contain secrets.
             raise UsageDeferred("account usage unavailable; mail deferred") from None

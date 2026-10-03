@@ -50,7 +50,10 @@ What a provider answer means, and what the code does with it:
              settles `unknown` instead; a refusal after an unknown try of the same claim settles
              `unknown` too) reserve a NEW derived key, bounded by MAX_ATTEMPTS, through
              the full gates again. The ledger itself refuses a new key while any earlier key of the
-             same logical mail is uncertain.
+             same logical mail is uncertain. Before the next key the sender WAITS (the answer's
+             retry-after when it is a sane number of seconds, else BACKOFF per key, at most
+             REFUSAL_WAIT_MAX): the rate limit is per team, 10 rps, shared with dewsletter, and three
+             keys fired within milliseconds would burn every attempt on the same burst.
   released   4xx validation (400/403/404/405/422): the request itself is wrong; settle released (not
              counted), no retry: the same body would be refused again.
 
@@ -70,7 +73,8 @@ RESEND_ENDPOINT = "https://api.resend.com/emails"
 CONSUMER = "dewfpga"
 MAX_ATTEMPTS = 3          # fresh derived keys after definite refusals (429), per logical mail
 SAME_KEY_TRIES = 3        # provider calls with the SAME key per claim when the answer is unknown
-BACKOFF = (1.0, 3.0)      # seconds between same-key tries
+BACKOFF = (1.0, 3.0)      # seconds between same-key tries; also the wait before the next key after a 429
+REFUSAL_WAIT_MAX = 60.0   # seconds: the longest wait after a 429 refusal, whatever retry-after says
 DEADLINE_MARGIN = 60      # seconds before the ledger's same-key window ends: no call after this
 LIVE_ENV = ("RESEND_API_KEY", "SUPABASE_URL", "SUPABASE_SERVICE_KEY", "MAIL_FROM", "SITE_URL")
 # provider names that mean our ledger under-counted: stop the run, keep the row as failed
@@ -155,9 +159,26 @@ class NullRpc(Rpc):
 
 # ------------------------------------------------------------------ provider
 
+def retry_after_seconds(headers):
+    """A 429 answer's retry-after as seconds, only when it is a plain number in (0, REFUSAL_WAIT_MAX]; else None."""
+    try:
+        value = float(str(headers.get("Retry-After", "")).strip())
+    except (AttributeError, ValueError, TypeError):
+        return None
+    return value if 0 < value <= REFUSAL_WAIT_MAX else None  # nan and inf fail the comparison too
+
+
+def refusal_wait(attempt, retry_after):
+    """Seconds to wait after the `attempt`-th key was refused (429), before the next derived key."""
+    if isinstance(retry_after, (int, float)) and not isinstance(retry_after, bool) and 0 < retry_after <= REFUSAL_WAIT_MAX:
+        return float(retry_after)
+    return min(float(BACKOFF[min(attempt - 1, len(BACKOFF) - 1)]), REFUSAL_WAIT_MAX)
+
+
 class SendResult:
-    def __init__(self, status, message_id=None, name=None, message=""):
+    def __init__(self, status, message_id=None, name=None, message="", retry_after=None):
         self.status, self.message_id, self.name, self.message = status, message_id, name, message
+        self.retry_after = retry_after  # seconds the provider asked us to wait (429 only), already sanity-checked
 
     def classify(self):
         """'accepted' | 'unknown' | 'conflict' | 'quota' | 'refused' | 'released' (see module docstring)."""
@@ -209,7 +230,8 @@ class ResendTransport(Transport):
                 name, message = parsed.get("name"), parsed.get("message") or raw
             except ValueError:
                 pass
-            return SendResult(exc.code, None, name, message)
+            retry_after = retry_after_seconds(exc.headers) if exc.code == 429 else None
+            return SendResult(exc.code, None, name, message, retry_after)
         except Exception as exc:  # URLError, timeout, socket
             return SendResult(0, None, None, f"{type(exc).__name__}: {exc}")
 
@@ -344,8 +366,14 @@ class Mailer:
             if cls == "conflict":
                 out["error"] = f"intent conflict: {result.message}" + (f"; {err}" if err else "")
             if cls == "refused" and status == "failed":
-                self.log(f"  {key}: refused ({result.status} {result.name or ''}); next key passes the gates again")
                 last = out
+                if attempt < MAX_ATTEMPTS:
+                    # The team-wide rate limit (shared with dewsletter) refused this burst: wait before the next key.
+                    wait = refusal_wait(attempt, result.retry_after)
+                    self.log(f"  {key}: refused ({result.status} {result.name or ''}); waiting {wait:g} s, then the next key passes the gates again")
+                    self.sleep(wait)
+                else:
+                    self.log(f"  {key}: refused ({result.status} {result.name or ''}); no key left")
                 continue
             return out
         return {**last, "outcome": "failed", "error": f"{last.get('error')}; gave up after {MAX_ATTEMPTS} keys"}
