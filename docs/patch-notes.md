@@ -3680,4 +3680,97 @@ archive already tested with real sim and bit commands. The required SDK-backed f
 CLI rerun passed **273/0 with 52 known gaps** in 20 minutes 26 seconds; all product
 and test hashes stayed unchanged (only these release notes and their HTML changed).
 A first local attempt omitted the SDK Python setting, failed the required MCP check
-and was stopped; that attempt is preserved separately. Remote CI is pending.
+and was stopped; that attempt is preserved separately. Remote CI run 37129232619 then passed on the exact db5b855 head: both web jobs and macOS succeeded. CI CLI counted 271/0 with 52 known gaps; two version-dependent checks were skipped with the CI Yosys build. The Pages deployment job was skipped.
+
+
+### #24 · Newsletter consent and working management links · 3 October
+
+The optional [newsletter page](/dewfpga/newsletter/) records a versioned consent
+request and queues a confirmation message. No account is required. Patch notes
+become eligible only after confirmation. Confirmation and newsletter messages
+carry the actual unsubscribe token in their body and List-Unsubscribe header.
+Public configuration is empty by default, so collection stays disabled until
+the operator configures the existing project and completes the notice.
+
+A new consent generation now rotates its management token and clears the old
+account binding. Previously, an old mail link and linked account could continue
+to control fresh consent. A late completion for confirmation T1 can no longer
+mark a newer T2 request as mailed: the service RPC checks the token it actually
+sent. Cleanup also preserves a newly mailed link's 48-hour validity instead of
+removing it when an older pending request reaches seven days. Removal requires
+an operated cleanup; these thresholds are not an automatic deletion promise.
+
+The [data and privacy draft](/dewfpga/privacy/) separates application records
+from provider logs and identifies the controller, contact, processing and
+retention details still missing. It does not claim KVKK/GDPR compliance.
+
+### #25 · Mail attempts retain uncertainty and campaigns require an owner test · 3 October
+
+The operator's sender now binds each idempotency key to its exact payload and
+logical mail. A lost response, ambiguous server failure or concurrent-key reply
+retains the same key within a bounded window. A later refusal cannot erase an
+earlier uncertain attempt, including within the same claim. Claims carry an
+ownership token so a delayed refusal cannot release a newer sender's claim.
+Quota accounting includes delayed acceptance and outstanding uncertainty.
+These controls do not claim exactly-once delivery.
+
+The ledger limits dewfpga's own allocation. A live sender observes the existing
+Resend account's usage before each ledger claim; unavailable usage or insufficient
+operator-chosen headroom defers work without creating a claim. External senders
+can still consume capacity between that observation and a request. Provider
+quota refusal stops the run; no guaranteed Auth reservation is claimed.
+
+An owner test requires the owner's explicit confirmed subscription, a usable
+unsubscribe link and a receipt note with measured or explicitly attested
+unsubscribe evidence before the matching campaign can run. Acceptance by the
+provider is not inbox receipt. The campaign rechecks subscriber eligibility
+before each dispatch. If fresh consent changes a previous campaign payload,
+that recipient is reported as conflicted without changing the old intent or
+sending again; unrelated recipients continue. The operator guide is `mail/README.md`.
+
+**Before/after evidence.** Earlier immutable candidates reproduced duplicate-key
+retry, stale-claim, accounting and token-lifecycle failures. The final integrated
+local gates use the shipped migrations rather than substitute SQL: SQL **173/0**,
+mail flow **60/0**, sender fault scenarios **27 passed**, lifecycle **112/0**,
+account-usage unit tests **10/0**, and usage/sender integration **8/0**. Counts are
+checks within their suites, not distinct defects. Provider replies are modeled;
+no real mail was sent. An intermediate same-claim snapshot failed two root
+expectations; the final sender retains uncertainty and the integration regression
+passes. A worker mutation removing that rule made the mail test fail as intended.
+
+### #26 · Optional accounts with local session handling and scoped deletion · 3 October
+
+The [account page](/dewfpga/account/) uses Supabase magic-link signup/sign-in and
+explicit dewfpga enrolment. Premium is marked coming soon; existing free features
+remain available without membership. Export and deletion apply to the dewfpga
+profile and token-linked subscriptions. They preserve the shared Auth identity
+and other applications' records. Anonymous subscriptions remain managed by their
+own links. The application installs no shared Auth signup trigger.
+
+Forms ship disabled until their handlers and configuration are ready. Malformed
+Auth fragments are removed without breaking the page; blocked storage and expired
+sessions produce explicit feedback. Temporary service failures preserve the
+session for retry. Logout requests use local scope. A failed logout distinguishes
+local clearing from unconfirmed server revocation. A lost response to a write
+says its result is unknown, rather than falsely claiming no change occurred.
+
+**Validation.** On the integrated schema, real Chromium and WebKit ran **79 checks
+each, 158/0 total**, against private PostgreSQL, a PostgREST-shaped test adapter
+and fake Auth. This includes disabled/no-JS forms, malformed links, consent,
+account controls, expired sessions and a real SQL write followed by a dropped
+HTTP response. Source/helper checks passed **137/0**. The private database now
+shuts down cleanly after browser tests. CI adds a separate offline-mail gate and
+the Pages job depends on it; no CI step enables live sending.
+
+**Activation and closure are still open.** Supabase configuration, sender domain,
+SMTP delivery, real owner receipt/unsubscribe, final notice details and a live
+announcement have not been verified or performed. This combined candidate's SDK-backed
+full CLI run passed **273/0 with 52 known gaps** in 17 minutes 35 seconds; tested
+source hashes stayed unchanged. Pages and mirror bundles each passed **109 pages,
+2006 links, 0 failures**; the CLI archive remains byte-identical to the previously
+accepted release. A separate Opus review exercised the consent-conflict path and
+found no demonstrated safety fault within its stated inspection scope. It exposed
+the conservative limitation that even a proven refusal is not automatically
+reissued for fresh consent; that policy and per-run log are now explicit, with
+all four prior outcomes covered. Exact-head remote CI remains a required PR gate.
+No live publication, main-branch merge or physical-board/GUI acceptance is implied.

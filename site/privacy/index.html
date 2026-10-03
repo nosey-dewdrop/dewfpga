@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dewfpga data and privacy</title>
+<meta name="description" content="How dewfpga newsletter and account data are used, and which details still need to be published.">
+<meta name="referrer" content="no-referrer">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/privacy/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="dewfpga data and privacy">
+<meta property="og:description" content="How dewfpga newsletter and account data are used, and which details still need to be published.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/privacy/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+<h1>Data and privacy</h1>
+<p class="lead">Newsletter and account information · KVKK / GDPR notice preparation</p>
+<p><strong>This notice is not ready for activation.</strong> The operator must publish their controller identity and contact, processing locations, applicable terms, retention arrangements and request procedure before enabling collection. These details have not been verified. This draft does not claim legal compliance.</p>
+
+<h2>What do the optional features collect?</h2>
+<p>The newsletter stores your email address, consent text version and time, confirmation state, and the tokens used to confirm or stop mail. Signing up for the newsletter does not require an account. A confirmation message is sent first; patch notes are sent only after confirmation.</p>
+<p>Account sign-in uses a Supabase email magic link, delivered through the operator's Resend SMTP account. Supabase manages the sign-in identity. A dewfpga profile is created when you enrol in dewfpga; joining another application in the shared Supabase project does not enrol you here.</p>
+<p>A confirmed newsletter subscription can be linked to your signed-in dewfpga account with its confirmation token. An anonymous subscription remains separate until you prove that link. CLI tools, documentation and the simulator stay available without membership.</p>
+
+<h2>Where does the data go?</h2>
+<p>Newsletter and profile records are stored in the operator's Supabase project. Resend processes the messages, recipient addresses and delivery information. GitHub Pages hosts the site. The shared site stylesheet requests Google Fonts. These services can process network and request information under their own terms; the dewfpga tables do not represent all data held by those services.</p>
+<p>The mailer records a hash of the recipient address, message identifiers, request status and timestamps to control retries and its sending allocation. An email hash is not a promise of anonymity. The mail templates include no tracking pixel.</p>
+
+<h2>How can I stop mail or manage my account?</h2>
+<p>Every dewfpga newsletter message, including its confirmation message, includes an unsubscribe link. Open it and confirm the action; no sign-in is required. Keep the link private because it authorizes this action.</p>
+<p>The <a href="/dewfpga/account/">account page</a> offers export and deletion of your dewfpga profile and linked subscriptions. Deleting dewfpga data does not delete the shared Supabase sign-in identity or data belonging to other applications. Anonymous subscriptions are managed through their own unsubscribe links.</p>
+<p>The operator must publish a contact and a request procedure for access, correction, erasure and other applicable data rights, including records held by processors. Self-service export covers the dewfpga records described on the account page; it is not an export of every provider's logs.</p>
+
+<h2>How long are records retained?</h2>
+<p>Unsubscribe stops eligibility for future newsletter dispatch. Data removal is a separate maintenance operation. Cleanup removes eligible unconfirmed requests after at least seven days, preserving the promised 48-hour validity of an actually mailed confirmation. Unsubscribed rows become eligible after 30 days. These are cleanup eligibility rules, not a guarantee that a scheduled deletion job is already operating.</p>
+<p>Delivery ledger records and provider records have separate retention arrangements that the operator must publish. Deleting a profile does not claim to erase historical mail-provider logs or delivery-ledger records.</p>
+
+<h2>Which details must be supplied?</h2>
+<ul>
+<li>Controller name, contact address and the procedure for data requests.</li>
+<li>Processing purposes and applicable legal grounds, processor details, locations and any applicable transfer arrangements.</li>
+<li>Retention periods for account, mail-ledger and provider records, plus an operated cleanup schedule.</li>
+<li>Terms and notice version shown before consent; how a changed purpose or consent text is handled.</li>
+</ul>
+<p><a href="/dewfpga/newsletter/">Newsletter signup and consent text</a> · <a href="/dewfpga/account/">Account controls</a></p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/">home</a></span>
+</footer>
+</body>
+</html>

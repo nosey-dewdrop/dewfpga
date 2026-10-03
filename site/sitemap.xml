@@ -7,6 +7,9 @@
     <xhtml:link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/" />
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/account/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/cli/</loc>
     <lastmod>2026-09-20</lastmod>
   </url>
@@ -315,7 +318,13 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/yosys-slang-does-not-load/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/newsletter/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/privacy/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/sim/</loc>

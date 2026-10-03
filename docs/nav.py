@@ -39,6 +39,11 @@ PAGES = {
     "site/cli/index.html": ("en", "c-cli"),
     "site/docs/index.html": ("en", None),
     "site/patch-notes/index.html": ("en", "c-notes"),
+    "site/account/index.html": ("en", None),
+    "site/privacy/index.html": ("en", None),
+    "site/newsletter/index.html": ("en", None),
+    "site/newsletter/confirm/index.html": ("en", None),
+    "site/newsletter/unsubscribe/index.html": ("en", None),
     "site/tr/index.html": ("tr", None),
     "sim/index.html": ("en", None),
 }
