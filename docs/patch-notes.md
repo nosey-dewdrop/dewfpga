@@ -3306,3 +3306,37 @@ An independent comparison of computed styles at seven widths found no non-custom
 change. Both documentation generators, site checks, ten fault-injection fixtures and the Vite
 build passed. Rebuilt Pages and mirror artifacts each contain 88 clean pages. Physical GUI and
 this commit's remote CI are not claimed by these local measurements.
+
+
+### #10 · Patch notes on the site and working navigation hit areas · 3 October
+
+The seventh navigation chip opens `/patch-notes/`, generated from this file by
+`python3 docs/patch-notes-build.py`. The index lists updates newest first and `#latest`
+links to the highest numbered entry. The Turkish navigation calls it “yama notları”.
+The generator disables dollar-delimited mathematics: an independent review reproduced
+Pandoc treating a paragraph containing `$finish` as mathematics and corrupting its prose.
+Raw HTML is disabled too; code and prose remain text. The page's modification date comes
+from this file's last Git commit, not from an invented release date.
+
+The review also found that the existing transparent desktop link boxes used percentage
+units for their vertical positions. At widths 900, 1024 and 1366, the visible chips' centres
+hit the navigation bar instead of their links; the home link was affected too. Container
+width units now place all eight link boxes over the artwork. Independent hit tests and real
+mouse clicks passed at 900, 1024, 1366, 1920, 390 and 320 pixels on five pages. At desktop
+widths, every changed pixel on the checked static pages lies inside the added chip; the six
+existing chips keep their artwork and positions. Mobile chips remain 44 pixels high.
+The simulator's animated content is not claimed pixel-identical.
+
+Two generator runs are byte-identical. The final source check passed on **87 pages**;
+rebuilt Pages and mirror artifacts each passed on **89 pages, 0 failures**. The clean baseline
+and ten deliberately broken site fixtures passed, as did the Vite build. A root rerun
+verified **210 chip clicks across 30 page/viewport combinations**, with no failed hit or click. A 320-pixel CLI table overflow was reproduced in the previous
+page too and is corrected in #11. Chromium is the measured browser; Safari, Firefox,
+physical phones and older browsers without container width units remain unverified.
+The page is long, mostly because of the historical #2 report; its newest-first index and
+latest link provide direct access. Remote CI and publication are separate checks.
+
+CI evidence now available for #8: clean macOS installation and suite **261 passed, 0 failed,
+52 known gaps**; Ubuntu browser suite **31 passed, 0 failed**; assembled Pages artifact
+**88 clean pages, 0 failures**. Run: [37107944441](https://github.com/nosey-dewdrop/dewfpga/actions/runs/37107944441).
+These results apply to that commit and do not claim that the later Vivado or VS Code changes passed.

@@ -24,6 +24,7 @@ CHIPS = [  # class, href, label (en), label (tr)
     ("c-why", "/dewfpga/why/", "why", "neden"),
     ("c-err", "/dewfpga/errors/", "errors", "hatalar"),
     ("c-github", "https://github.com/nosey-dewdrop/dewfpga", "github", "github"),
+    ("c-notes", "/dewfpga/patch-notes/", "patch notes", "yama notları"),
     ("c-cli", "/dewfpga/cli/", "cli", "cli"),
     ("c-docs", "/dewfpga/docs/", "docs", "rehber"),
     ("c-sim", "/dewfpga/sim/", "simulator", "simülatör"),
@@ -37,6 +38,7 @@ PAGES = {
     "site/why/index.html": ("en", "c-why"),
     "site/cli/index.html": ("en", "c-cli"),
     "site/docs/index.html": ("en", None),
+    "site/patch-notes/index.html": ("en", "c-notes"),
     "site/tr/index.html": ("tr", None),
     "sim/index.html": ("en", None),
 }
