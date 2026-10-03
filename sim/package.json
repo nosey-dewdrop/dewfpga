@@ -1,8 +1,13 @@
 {
-  "name": "sim",
+  "name": "dewfpga-sim",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "dewfpga simulator: SystemVerilog in the browser (icarus verilog and yosys as webassembly)",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nosey-dewdrop/dewfpga.git",
+    "directory": "sim"
+  },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "vite",
@@ -10,8 +15,8 @@
     "preview": "vite preview"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Damla Su Bilge",
+  "license": "MIT",
   "type": "module",
   "dependencies": {
     "@codemirror/commands": "^6.11.1",

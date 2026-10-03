@@ -3218,3 +3218,44 @@ there and started the whole suite); "the same number on every machine" shipped t
 second kind of machine (`env -i` would have caught `yosys: command not found` at line 83 and the board and
 FULL modes); a check that hides the product's output prints a bare FAIL (fixed in round 3 with `say`/`shown`);
 "each new check broken once" was promised and not evidenced in the integrator's report (the judge did three).
+
+
+### #7 · Safer installation and reproducible simulator distribution · 3 October
+
+**The installer checks the destination before replacing it.** HOME, its parents and aliases,
+the filesystem root, Git checkouts, unreadable directories and unrelated nonempty folders are
+refused. An update reserves a private backup beside the destination and restores the previous
+installation if moving the new copy fails. If restoration or cleanup is blocked, the error names
+the retained backup. A failed first installation removes its partial copy when possible.
+
+**Uninstall checks and removes the same physical directory.** A path containing a symbolic link
+followed by `..` previously passed a check of one directory and removed entries in another.
+The reproduced scratch-HOME case now exits with `ERROR [fpga-home-unsafe]` and keeps both the
+home files and the decoy directory. `CDPATH` no longer redirects a relative installation path.
+
+**Only tracked files enter the release package and static site.** `scripts/package.py` stages
+tracked package inputs and rejects symbolic links. CI and the mirror copy tracked site and
+project-template files. The mirror refuses uncommitted tracked changes and untracked files in
+Vite's public directory, including ignored dotfiles. Its temporary Vercel state is removed on
+failure as well as success. Fixtures proved an untracked template file entered the old npm
+package and is excluded by the new packaging command.
+
+**The simulator ships its license files.** Its footer links to the actual MIT license, Icarus
+GPL text and generated third-party notices in the built distribution. The inventory identifies
+JointJS as MPL-2.0 and distinguishes installed dependencies from confirmed bundled code.
+The Icarus recipe pins a full source commit and applies the required JavaScript compatibility
+edit automatically. A clean rebuild with Emscripten 6.0.2-git reproduced all four shipped files
+byte-for-byte; `node sim/src/tb/wasm/build/smoke.mjs` checks compilation, includes, counter output,
+plusargs, VCD output and rejection of invalid source. Hashes and commands are in the build README.
+
+**Validation and limits.** The first full local run passed 258 checks, failed 0, with 52 known
+compiler gaps. After the additional security fixes, the second full run passed 262 and failed 1:
+the personal-path scan found a local Python bytecode cache. All 133 probe outcomes were unchanged
+(108 synthesize, 64 pass all four stages, 59/111 Vivado-supported probes pass all four).
+After removing that cache and isolating two new uninstall tests from the real Homebrew link,
+the affected security, static, count and privacy checks passed **35, failed 0**. The verification
+intentionally pointed the real CLI link at the tested checkout and confirmed it survived.
+`--list` reports 319 available checks; that is not the number executed on this machine.
+A builder's initial mutation claim was rejected because its fixture setup was absent; the
+independent corrected run passed 15 on the original and failed the intended check on the mutant.
+A physical Basys3 test, this commit's remote CI and deployment are not claimed by these local results.

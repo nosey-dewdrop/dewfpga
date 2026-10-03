@@ -3,11 +3,24 @@
 # autoconf, automake, bison, flex, gperf, python3. Keep -j4 on 8 GB machines.
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
+# the exact upstream commit the shipped iverilog.wasm/vvp.wasm came from (v13-branch head on 2026-09-19)
+UPSTREAM=https://github.com/steveicarus/iverilog
+COMMIT=07dd50d37e36af1397f51bfeadaa5b5d0dc62fb5
+PATCH="$ROOT/build/patches/0001-iverilog-wasm-static-modules-inprocess-exec.patch"
 cd "$ROOT"
-[ -d src ] || git clone --depth 1 --branch v13-branch https://github.com/steveicarus/iverilog src
+[ -f "$PATCH" ] || { echo "build.sh: patch missing: $PATCH" >&2; exit 1; }
+if [ ! -d src ]; then
+    mkdir src && cd src
+    git init -q && git remote add origin "$UPSTREAM"
+    git fetch -q --depth 1 origin "$COMMIT"
+    git checkout -q FETCH_HEAD
+    cd ..
+fi
 cd src
-git apply --check ../dist/patches/0001-iverilog-wasm-static-modules-inprocess-exec.patch 2>/dev/null && \
-  git apply ../dist/patches/0001-iverilog-wasm-static-modules-inprocess-exec.patch
+[ "$(git rev-parse HEAD)" = "$COMMIT" ] || { echo "build.sh: src is at $(git rev-parse HEAD), not $COMMIT. Remove src/ and rerun." >&2; exit 1; }
+# the patch is required; a tree where it does not apply (already patched, or another commit) is an error, not a skip
+git apply --check "$PATCH" || { echo "build.sh: the patch does not apply to src/ (already applied? remove src/ and rerun)" >&2; exit 1; }
+git apply "$PATCH"
 sh autoconf.sh
 emconfigure ./configure --prefix=/usr/local --host=wasm32-unknown-emscripten
 emmake make -j4 -k version_tag.h dep config.h _pli_types.h || true
@@ -34,4 +47,9 @@ mkdir -p ../dist
 em++ $FLAGS -sEXPORT_NAME=createVvp -o ../dist/vvp.mjs vvp/*.o vpi/*.o wasm/ivl_static_modules_vvp.o
 em++ $FLAGS -sEXPORT_NAME=createIverilog --embed-file ../lib/ivl@/usr/local/lib/ivl -o ../dist/iverilog.mjs \
   driver/*.o ivlpp/*.o *.o tgt-vvp/*.o vpi/*.o wasm/ivl_static_modules_ivl.o wasm/ivl_wasm_system.o
+# Chrome's TextDecoder rejects views over a resizable ArrayBuffer: make getMemoryBuffer() return
+# wasmMemory.buffer in both glue files. The script exits 1 if the function is missing or ambiguous.
+python3 "$ROOT/build/fix-glue.py" ../dist/vvp.mjs ../dist/iverilog.mjs
 ls -la ../dist
+# the shipped files are dist/{iverilog,vvp}.{mjs,wasm} copied into wasm/ (one level up from dist/):
+#   cp ../dist/iverilog.mjs ../dist/iverilog.wasm ../dist/vvp.mjs ../dist/vvp.wasm "$ROOT"/

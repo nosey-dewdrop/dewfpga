@@ -1,22 +1,64 @@
 # Icarus Verilog (iverilog + vvp) as WebAssembly
 
-Built 2026-09-19 from https://github.com/steveicarus/iverilog `v13-branch` (commit 07dd50d)
+Built 2026-09-19 from https://github.com/steveicarus/iverilog `v13-branch` at commit
+`07dd50d37e36af1397f51bfeadaa5b5d0dc62fb5` (https://github.com/steveicarus/iverilog/commit/07dd50d37e36af1397f51bfeadaa5b5d0dc62fb5;
+`build.sh` pins that commit, not the moving branch)
 with Emscripten 6.0.2 (Homebrew `/opt/homebrew/bin/emcc`) on macOS arm64, Node 26.5.
+Icarus Verilog is GPL-2.0: the source is the upstream repository at that commit plus `patches/0001-*.patch` in this folder.
 
 ## Files
 
 | file | size | what |
 |---|---|---|
-| `iverilog.mjs` | 70,577 B | ES module, `export default createIverilog` |
+| `iverilog.mjs` | 70,520 B | ES module, `export default createIverilog` (after the `fix-glue.py` edit below; `em++` wrote 70,577 B) |
 | `iverilog.wasm` | 1,855,111 B | driver + ivlpp + ivl + tgt-vvp + vpi tables, one binary (includes embedded `/usr/local/lib/ivl/{vvp.conf,vvp-s.conf,include/*.vams}`) |
-| `vvp.mjs` | 66,641 B | ES module, `export default createVvp` |
+| `vvp.mjs` | 66,584 B | ES module, `export default createVvp` (after the `fix-glue.py` edit below; `em++` wrote 66,641 B) |
 | `vvp.wasm` | 962,344 B | vvp runtime with system.vpi, v2005_math, v2009, va_math, vhdl_sys, vhdl_textio, vpi_debug linked in |
-| `patches/0001-*.patch` | | all source changes (apply with `git apply` in the iverilog checkout) |
-| `build.sh` | | the exact build, start to finish |
-| `run-node-test.mjs` | | acceptance test; `node run-node-test.mjs` |
-| `test-output.txt` | | its output |
+| `build/patches/0001-*.patch` | | all source changes (this folder is `build/`) (apply with `git apply` in the iverilog checkout) |
+| `build/build.sh` | | the build, start to finish: `sh build/build.sh` from `wasm/`; it writes `dist/` (two `em++` links, then `fix-glue.py` on both `.mjs`); the four files above are `dist/{iverilog,vvp}.{mjs,wasm}` copied into `wasm/` |
+| `build/fix-glue.py` | | the one edit applied to the Emscripten glue after linking (see "Glue edit" below); exits 1 instead of guessing when the function is missing or appears twice |
+
+The acceptance test that produced the first build (`run-node-test.mjs`, `test-output.txt`) is not in the repository; `sim/test/` holds the tests that run now.
 
 Not gzipped. Both wasm files are -O2, no debug info.
+
+Sizes above are the files in `wasm/` as shipped. On 2026-10-03 a clean rebuild with Emscripten
+6.0.2-git on macOS arm64 reproduced all four files byte-for-byte. This checks that specific
+toolchain; other toolchain versions have not been tested. The 2026-09-19 build applied the glue
+edit by hand after `em++`; `build.sh` now does it with `fix-glue.py`.
+
+| file | SHA-256 (shipped and clean rebuild) |
+|---|---|
+| `iverilog.mjs` | `6b2616112a95233c5c41d3834818ab5e76845391f8a45dfc0b03c7c97c2c6143` |
+| `iverilog.wasm` | `3947b1c577d87d1c4c7360da16e608e46322e7d3b7deb70f607517d0c9b0c545` |
+| `vvp.mjs` | `af49bd5519a5b34fa2618dd7a061b43c5e5f6f795d18199d6aab81f08cbee825` |
+| `vvp.wasm` | `5f790dbb35a34ebc5a080b130562e5414e57d967304a903747dc1abd039165ba` |
+
+Run `node build/smoke.mjs dist` from `wasm/` to test the freshly generated files. The check
+compiles two SystemVerilog files with an include, verifies a counter's output and a plusarg,
+reads its VCD, and asserts that invalid source is rejected. It passed on the clean rebuild.
+
+## Glue edit (`fix-glue.py`)
+
+Emscripten 6.0.2 with `ALLOW_MEMORY_GROWTH=1` (its default `GROWABLE_ARRAYBUFFERS=1`) emits
+
+```js
+function getMemoryBuffer(){try{var b=wasmMemory.toResizableBuffer();return b}catch{}return wasmMemory.buffer}
+```
+
+In Chrome, `TextDecoder.decode()` throws on a view over a resizable `ArrayBuffer`, so every string the
+runtime reads out of wasm memory would fail. The shipped glue returns the plain buffer instead:
+
+```js
+function getMemoryBuffer(){return wasmMemory.buffer}
+```
+
+`fix-glue.py FILE...` makes that edit in place and prints old/new size and sha256. It requires exactly one
+`getMemoryBuffer()` definition whose body calls `toResizableBuffer` and falls back to `wasmMemory.buffer`;
+anything else (absent, two definitions, a body it does not recognise, unbalanced braces) is exit 1 with no
+write. Running it on an already edited file reports `unchanged` and exits 0, so it is safe on the shipped
+copies in `wasm/`. Checked on 2026-10-03: the edit on the generated form above, on an unminified copy
+with nested braces and comments, and the no-op on the shipped `iverilog.mjs`/`vvp.mjs` (byte-identical).
 
 ## JS calling sequence
 
@@ -60,8 +102,9 @@ See `build.sh` (it is the literal sequence). Summary:
 
 ```sh
 brew install autoconf automake            # bison flex gperf were already in /usr/bin
-git clone --depth 1 --branch v13-branch https://github.com/steveicarus/iverilog src
-cd src && git apply ../dist/patches/0001-iverilog-wasm-static-modules-inprocess-exec.patch
+mkdir src && cd src && git init && git remote add origin https://github.com/steveicarus/iverilog
+git fetch --depth 1 origin 07dd50d37e36af1397f51bfeadaa5b5d0dc62fb5 && git checkout FETCH_HEAD
+git apply ../build/patches/0001-iverilog-wasm-static-modules-inprocess-exec.patch
 sh autoconf.sh
 emconfigure ./configure --prefix=/usr/local --host=wasm32-unknown-emscripten
 emmake make -j4 -k CFLAGS=-O2 CXXFLAGS="-O2 -std=c++11" LDFLAGS= ivl      # objects only, link fails (expected)
@@ -76,6 +119,8 @@ FLAGS="-O2 -sALLOW_MEMORY_GROWTH=1 -sMODULARIZE=1 -sEXPORT_ES6=1 -sENVIRONMENT=w
 em++ $FLAGS -sEXPORT_NAME=createVvp -o vvp.mjs vvp/*.o vpi/*.o wasm/ivl_static_modules_vvp.o
 em++ $FLAGS -sEXPORT_NAME=createIverilog --embed-file ../lib/ivl@/usr/local/lib/ivl -o iverilog.mjs \
      driver/*.o ivlpp/*.o *.o tgt-vvp/*.o vpi/*.o wasm/ivl_static_modules_ivl.o wasm/ivl_wasm_system.o
+python3 ../build/fix-glue.py vvp.mjs iverilog.mjs          # getMemoryBuffer() -> wasmMemory.buffer (see "Glue edit")
+cp iverilog.mjs iverilog.wasm vvp.mjs vvp.wasm ..          # dist/ -> wasm/, the files the page loads
 ```
 Full compile of all objects: about 6 minutes at -j4. The Makefile's own link steps and `version.exe`
 (a host tool) fail; that is why every make is `-k` and the links are done by hand.

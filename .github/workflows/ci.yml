@@ -19,7 +19,7 @@ jobs:
         with: { name: sv-results, path: "${{ runner.temp }}/sv-results.tsv" }
       - name: npm package installs and runs
         run: |
-          npm pack
+          python3 scripts/package.py
           rm -f "$(brew --prefix)/bin/dewfpga"      # install.sh linked it there; npm wants the same path
           npm install -g ./dewfpga-*.tgz
           mkdir /tmp/w && cp templates/blink.sv templates/blink.xdc /tmp/w/
@@ -41,9 +41,10 @@ jobs:
       - name: site bundle (page, installer, package, templates, docs pdf, sim)
         run: |
           mkdir -p out/templates/.vscode
-          cp -R site/. out/ && cp dewfpga-*.tgz out/dewfpga.tgz
+          git ls-files -z site | tar -cf - --null -T - | tar -xf - -C out --strip-components 1   # tracked files only, as deploy.sh
+          cp dewfpga-*.tgz out/dewfpga.tgz
           (cd out && shasum -a 256 dewfpga.tgz > dewfpga.tgz.sha256)
-          cp templates/* out/templates/ && cp templates/.vscode/*.json out/templates/.vscode/
+          git ls-files -z templates | tar -cf - --null -T - | tar -xf - -C out   # tracked files only, as deploy.sh
           (cd templates && zip -q ../out/blink.zip blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json .vscode/settings.json .vscode/extensions.json)
           mkdir -p out/sim && cp -R sim/dist/. out/sim/
       - uses: actions/upload-pages-artifact@v3

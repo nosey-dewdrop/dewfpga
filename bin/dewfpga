@@ -78,16 +78,33 @@ cmd_new() {
 cmd_uninstall() {
     local link; link="$(brew --prefix 2>/dev/null || echo /opt/homebrew)/bin/dewfpga"
     local built=(nextpnr-xilinx yosys-slang prjxray chipdb venv install.log) gone=() e
-    case "$FPGA_HOME" in "$HOME"|/|"") die fpga-home-unsafe "FPGA_HOME is $FPGA_HOME; refusing to delete that. Fix: remove the six entries by hand: ${built[*]}" ;; esac
+    # compare physical paths (symlinks resolved): FPGA_HOME=~/fpga/.. or a link that points at $HOME must refuse too.
+    # cd -P, and no CDPATH: `cd x/l/..` folds the string to x while rm follows the link l first and lands in its target's
+    # parent, so the guard and the deletes below must both use the folder the kernel resolves (fh), never the string
+    unset CDPATH
+    local fh home; fh=$(cd -P -- "$FPGA_HOME" 2>/dev/null && pwd -P || echo "$FPGA_HOME")
+    home=$(cd -P -- "$HOME" 2>/dev/null && pwd -P) || die fpga-home-unsafe "HOME=$HOME cannot be opened, so FPGA_HOME=$FPGA_HOME cannot be checked against it; refusing to delete anything. Fix: remove the six entries by hand: ${built[*]}"
+    # -ef, not the strings: //Users/you or /users/YOU (APFS ignores case) name the same folder
+    if [ -z "$fh" ] || [ "$fh" -ef "$HOME" ] || [ "$fh" -ef / ]; then die fpga-home-unsafe "FPGA_HOME is $FPGA_HOME; refusing to delete that. Fix: remove the six entries by hand: ${built[*]}"; fi
+    local up=$home
+    while [ "$up" != / ] && [ -n "$up" ]; do
+        up=$(dirname "$up")
+        [ ! "$fh" -ef "$up" ] || die fpga-home-unsafe "FPGA_HOME is $FPGA_HOME, a parent of your home folder; refusing to delete that. Fix: remove the six entries by hand: ${built[*]}"
+    done
     # only what install.sh put there: anything else in FPGA_HOME (your own projects) is left alone
-    for e in "${built[@]}"; do [ -e "$FPGA_HOME/$e" ] && gone+=("$FPGA_HOME/$e"); done
-    [ "$HERE" = "$HOME/.dewfpga" ] && gone+=("$HOME/.dewfpga")      # a git clone of the CLI is yours; it stays
+    for e in "${built[@]}"; do [ -e "$fh/$e" ] && gone+=("$fh/$e"); done
+    # ~/.dewfpga as the web installer made it; a link there goes, never the folder it points at; a git clone of the CLI is yours; it stays
+    local dd="$HOME/.dewfpga"
+    if [ "$(cd -P -- "$HERE" && pwd -P)" = "$(cd -P -- "$dd" 2>/dev/null && pwd -P)" ]; then
+        if [ -L "$dd" ]; then gone+=("$dd"); elif [ ! -e "$HERE/.git" ] && [ ! -L "$HERE/.git" ]; then gone+=("$HERE"); fi
+    fi
     [ -L "$link" ] && [ "$(resolve "$link")" = "$SELF" ] && gone+=("$link")      # only a link to this CLI
     if [ ${#gone[@]} -eq 0 ]; then note no-install-found "nothing to remove: no dewfpga install found in $FPGA_HOME (FPGA_HOME=/elsewhere dewfpga uninstall for one installed elsewhere)."; return; fi
+    [ "$fh" = "$FPGA_HOME" ] || echo "FPGA_HOME=$FPGA_HOME is $fh"
     printf 'removing: %s\n' "${gone[@]}"
     rm -rf "${gone[@]}"
-    if rmdir "$FPGA_HOME" 2>/dev/null; then echo "removed: $FPGA_HOME (it was empty)"
-    elif [ -d "$FPGA_HOME" ]; then echo "kept: $FPGA_HOME (other files live there)"; fi
+    if rmdir "$fh" 2>/dev/null; then echo "removed: $fh (it was empty)"
+    elif [ -d "$fh" ]; then echo "kept: $fh (other files live there)"; fi
     echo "kept: the Homebrew packages (brew uninstall yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14 if you want them gone)"
     echo "done."
 }

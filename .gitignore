@@ -30,3 +30,9 @@ out/
 # 2409workflow run: plan and script stay local (strategy, not product)
 2409workflow.md
 .claude/
+
+# iverilog wasm rebuild scratch (sim/src/tb/wasm/build/build.sh): upstream checkout, staged lib, fresh dist
+sim/src/tb/wasm/src/
+sim/src/tb/wasm/lib/
+sim/src/tb/wasm/dist/
+sim/src/tb/wasm/build/__pycache__/
