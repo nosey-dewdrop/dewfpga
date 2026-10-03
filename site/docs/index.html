@@ -18,7 +18,7 @@
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"TechArticle","headline":"How do you run CS223 labs on a Mac without Vivado?",
  "url":"https://nosey-dewdrop.github.io/dewfpga/docs/","author":{"@type":"Person","name":"Damla Su Bilge"},
- "datePublished":"2026-09-19","dateModified":"2026-09-27","inLanguage":"en","proficiencyLevel":"Beginner",
+ "datePublished":"2026-09-19","dateModified":"2026-10-03","inLanguage":"en","proficiencyLevel":"Beginner",
  "about":["Basys3","Vivado alternative macOS","nextpnr-xilinx","Yosys","prjxray","openFPGALoader","SystemVerilog"]}
 </script>
 </head>
@@ -28,6 +28,7 @@
   <a class="c-why" href="/dewfpga/why/">why</a>
   <a class="c-err" href="/dewfpga/errors/">errors</a>
   <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
   <a class="c-cli" href="/dewfpga/cli/">cli</a>
   <a class="c-docs" href="/dewfpga/docs/">docs</a>
   <a class="c-sim" href="/dewfpga/sim/">simulator</a>
@@ -91,16 +92,12 @@
 <h2 id="1-what-do-you-need-before-you-start">1. What do you need before you start?</h2>
 <p><strong>The board.</strong> A Digilent Basys3 and its micro-USB cable. Apple Silicon MacBooks have only USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is powered from the cable; leave the JP2 jumper on USB.</p>
 <p><strong>The terminal.</strong> Press Cmd Space, type <code>Terminal</code>, press Enter. Every command in this guide goes into that window: paste it, press Enter, wait until the line ending in <code>%</code> comes back before you paste the next one. Some commands span several lines and end in <code>\</code>; copy the whole grey block at once.</p>
-<p><strong>Apple's command line tools.</strong> They give your Mac <code>git</code>, <code>make</code> and the C compiler.</p>
-<pre class="bash"><code>xcode-select --install</code></pre>
-<p>A window pops up; click Install and wait. If instead the terminal prints <code>xcode-select: note: Command line tools are already installed</code>, that is fine. Check:</p>
-<pre class="bash"><code>xcode-select -p
-# /Library/Developer/CommandLineTools</code></pre>
-<p><strong>Homebrew.</strong> It installs developer tools by name.</p>
+<p><strong>Homebrew.</strong> It installs developer tools by name, and on a Mac that does not have them it first installs Apple's command line tools (<code>git</code>, <code>make</code>, the C compiler), which the chain is built with; that is the installer's own <code>should_install_command_line_tools</code> step. So this one line covers both:</p>
 <pre class="bash"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;</code></pre>
-<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those into the terminal too, or the next command answers <code>command not found</code>. Check:</p>
+<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those into the terminal too: they put <code>/opt/homebrew/bin</code> on your PATH, and without them the next command answers <code>command not found</code>. Open a new terminal window and check:</p>
 <pre class="bash"><code>brew --version
 # Homebrew 4.x</code></pre>
+<p>If <code>dewfpga install</code> later stops with <code>Xcode Command Line Tools missing</code> (a Homebrew copied over by Migration Assistant, or a tools download that failed), run <code>xcode-select --install</code>, click Install in the window, and run it again. If it stops with <code>Homebrew is installed (...) but not on your PATH</code>, the "Next steps" lines were the missing part; it prints the one line that fixes it.</p>
 <p><strong>VS Code.</strong> Download it from code.visualstudio.com. Then in VS Code press Cmd Shift P, type <code>shell command</code>, choose "Install 'code' command in PATH". After that <code>code .</code> in the terminal opens the current folder. Do not edit these files in TextEdit; it saves rich text, and the tools cannot read that.</p>
 <hr />
 <h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
@@ -128,7 +125,7 @@ bash install.sh</code></pre>
   ✓ venv             /Users/you/fpga/venv/bin/python
   ✓ python pkgs      fasm prjxray pyyaml textx simplejson intervaltree
 all good.</code></pre>
-<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> has two causes: the Homebrew "Next steps" lines from section 1 were not pasted (paste them, open a new terminal window), or the installer stopped before its last line; scroll up to the first <code>ERROR:</code> line and look it up on the errors page.</p>
+<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> has two causes: the Homebrew "Next steps" lines from section 1 were not pasted (the installer says so, <code>Homebrew is installed (...) but not on your PATH</code>, and prints the line to paste), or the installer stopped before its last line; scroll up to the first <code>ERROR:</code> line and look it up on the errors page.</p>
 <p>Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power switch) and flip the power switch on. Make the example project and flash it:</p>
 <pre class="bash"><code>dewfpga new blink    # prints: blink/ ready:  cd blink &amp;&amp; dewfpga flash    (VS Code: ⌘⇧B)
 cd blink
@@ -157,17 +154,20 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
 <p>If it prints <code>ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</code> instead, the Mac does not see the board: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper. The <a href="https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/">board not found</a> page goes through them in order.</p>
 <p>The rules <code>dewfpga</code> follows in a folder:</p>
 <ul>
-<li>Every <code>.sv</code> and <code>.v</code> in the folder that holds a module is synthesized, so submodules can live in their own files, and a file can be named anything: <code>lab5.sv</code> may hold <code>module top_design</code>. A file that holds no module (a package, an interface, or typedefs at file scope, alone in their file) is left out, for now. A module without ports, or one that calls <code>$finish</code> or <code>$stop</code>, is a testbench and stays out of the bitstream, so for now a design module that calls either is taken for one too: keep them in the testbench. One design per folder.</li>
-<li>The top module is the design module that no other module instantiates, as Vivado picks it. When two modules qualify, <code>dewfpga</code> names both and you choose: <code>dewfpga bit lab4</code> (a module name, or a file name). For now there is one exception: when one of the two is named like the <code>.xdc</code> or like its own file (<code>counter.sv</code> holding <code>module counter</code>), <code>dewfpga</code> takes that one without asking, even when your Vivado project names the other, so name the top whenever two qualify. With several files, <code>bit</code> prints the top it chose.</li>
+<li>Every <code>.sv</code> and <code>.v</code> in the folder that holds a module is synthesized, so submodules can live in their own files, and a file can be named anything: <code>lab5.sv</code> may hold <code>module top_design</code>. A file that holds no module (a package, an interface, or typedefs at file scope, alone in their file) is left out, for now. A testbench has no ports and instantiates the design. <code>$finish</code> or <code>$stop</code> in a design module is an error; keep them in the testbench.</li>
+<li>In a flat folder, hierarchy and a unique matching <code>.xdc</code> select the top. If several modules qualify, name one: <code>dewfpga bit lab4</code> (module or source filename). A module's own filename alone does not select it. <code>dewfpga tops</code> lists candidates without changing files.</li>
+<li>Inside a Vivado project, the <code>.xpr</code> chooses the enabled design, constraint and simulation sets and their top modules. A command inside its <code>.srcs</code> subfolders runs at the project root; outputs go beside the <code>.xpr</code>. Without an <code>.xpr</code>, a <code>.srcs</code> tree with <code>sources_1</code>, <code>constrs_1</code> and <code>sim_1</code> is supported. Missing design files stop the build; a problem confined to the simulation set stops <code>sim</code>. Multiple projects or ambiguous active sets produce an error. <code>.v</code> files retain Verilog-2005 keywords, and local include directories are passed to both readers. IP Catalog and Block Design generation are not supported.</li>
 <li>The pin file is <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder. Pins in it that the design does not use are ignored, so a fully uncommented <code>Basys3_Master.xdc</code> is fine.</li>
 <li><code>dewfpga sim</code> needs a testbench that instantiates the top; <code>&lt;top&gt;_tb.sv</code> is the usual name but any name works. <code>bit</code> and <code>flash</code> do not need one. A testbench that never reaches <code>$finish</code> is stopped after 120 s with an error; <code>SIM_TIMEOUT=600 dewfpga sim</code> waits longer. <code>$stop</code> ends the run like <code>$finish</code>. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
 <li>Code that Vivado lets through and Yosys refuses: the course's <code>SevSeg_4digit.sv</code> port line (<code>output [6:0]seg, logic dp</code>) gets its direction written in by <code>bit</code>, with a note naming the line. Some other cases stop with the line and the fix, such as an instance without a name (<code>clk_div(clk, out);</code>) or a latch in an <code>always_comb</code>. Others stop with no line, or with advice that does not fit, and some build a bitstream that does not do what the code says, with no error. Section 7 lists what the course's files and old student repos hit; section 8 links the full measurement.</li>
-<li><code>dewfpga bit</code> writes no bitstream when timing is not met, and a build that fails removes the previous <code>.bit</code>, so <code>flash</code> can never load yesterday's design by mistake. Without a <code>create_clock</code> in the XDC every clock is checked at 100 MHz, a divided one too, which Vivado does not time; a multiplier that Yosys puts in a DSP48E1 with a register inside is not timed at all (nextpnr-xilinx). When nothing changed, <code>bit</code> prints one line saying so. <code>$display</code> in synthesizable code is dropped, as Vivado does. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
+<li><code>dewfpga bit</code> writes no bitstream when timing is not met, and synthesis failures remove the previous <code>.bit</code>. A failure during XDC validation can still leave an old <code>.bit</code> on disk; a file being present does not prove that the latest build succeeded. Without a <code>create_clock</code> in the XDC every clock is checked at 100 MHz, a divided one too, which Vivado does not time; a multiplier that Yosys puts in a DSP48E1 with a register inside is not timed at all (nextpnr-xilinx). When nothing changed, <code>bit</code> prints one line saying so. <code>$display</code> in synthesizable code is dropped, as Vivado does. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
 <li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>), <code>sim</code> leaves <code>&lt;top&gt;_sim</code>, <code>&lt;top&gt;_sim.out</code> and <code>&lt;top&gt;.vcd</code>, <code>flash</code> leaves <code>&lt;top&gt;_flash.out</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
 </ul>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
-dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
+dewfpga tops                        list top candidates without writing files
+dewfpga vscode [--remove]           set up or remove the editor integration
 dewfpga new &lt;dir&gt;                   blink example with a VS Code task (Cmd Shift B = flash)
 dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link;
                                     your files in ~/fpga and the brew packages stay
@@ -330,9 +330,10 @@ XDC  := Basys3_Master.xdc</code></pre>
 <p>Either way, simulation looks for a testbench (with the Makefile: <code>&lt;top&gt;_tb.sv</code>); the bitstream does not need one. The course's <code>SevSeg_4digit.sv</code> builds as it is when it is source code (<code>bit</code> writes one port direction in); the course also hands it out in netlist form, which the CLI refuses for now. Section 7 says what was changed and why.</p>
 <hr />
 <h2 id="6-how-do-you-set-up-vs-code">6. How do you set up VS Code?</h2>
-<p>Syntax colors and error marks for SystemVerilog:</p>
-<pre class="bash"><code>code --install-extension mshr-h.veriloghdl</code></pre>
-<p><code>dewfpga new</code> and <code>blink.zip</code> both put a <code>.vscode</code> folder in the project: <code>tasks.json</code> (Cmd Shift B builds and flashes the open design), <code>settings.json</code> (Icarus Verilog as the linter, so a syntax error gets a red underline when you save) and <code>extensions.json</code> (VS Code offers to install the extension above when you open the folder). For a folder you made yourself, copy the <code>.vscode</code> folder out of a <code>dewfpga new</code> project; its three tasks already say <code>dewfpga</code>. On the Makefile path, take the three files from <a href="https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json"><code>templates/.vscode/</code></a> instead; there the tasks say <code>make</code>.</p>
+<p>Run <code>dewfpga vscode</code> to install the companion extension and user tasks in supported local VS Code profiles. Existing JSONC comments, unrelated tasks and shortcuts are preserved. <code>dewfpga vscode --remove</code> removes only unchanged entries recorded as dewfpga's; user edits stay. A missing editor or optional setup failure does not prevent terminal use.</p>
+<p>Open the Command Palette and use <strong>dewfpga: choose the top module</strong>. The chooser reads <code>dewfpga tops</code>, remembers the selection per project, and offers it again on the next build. The tasks use absolute file locations so compiler diagnostics can appear in Problems when the project lives under Vivado's <code>.srcs</code> tree. <code>dewfpga new</code> also includes project tasks; the Makefile-only download retains its <code>make</code> tasks.</p>
+<p>For linting, install <code>mshr-h.veriloghdl</code>, then explicitly run <strong>dewfpga: use the dewfpga iverilog lint shim</strong>. It changes Icarus's constant-select “sorry” diagnostic to a warning; syntax errors stay errors. <strong>dewfpga: stop using the dewfpga iverilog lint shim</strong> restores the previous setting if it has not been edited since setup. Workspace overrides take precedence. After a successful simulation, the companion can open a new or changed VCD in the project root. An unchanged old waveform is not opened. Nested and absolute dumpfile locations are not discovered automatically.</p>
+<p>The command and filesystem behavior is tested in isolated profiles. Real VS Code GUI acceptance remains a separate manual check.</p>
 <hr />
 <p><a id="7-which-course-file-breaks"></a></p>
 <h2 id="7-which-errors-does-the-cli-stop-with-and-what-do-they-mean">7. Which errors does the CLI stop with, and what do they mean?</h2>

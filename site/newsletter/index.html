@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dewfpga patch notes by mail</title>
+<meta name="description" content="One mail per dewfpga patch note. Double opt-in, unsubscribe without signing in, a factual list of what is stored and for how long.">
+<meta name="referrer" content="no-referrer">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/newsletter/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="dewfpga patch notes by mail">
+<meta property="og:description" content="One mail per dewfpga patch note. Double opt-in, unsubscribe without signing in, a factual list of what is stored and for how long.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/newsletter/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script src="/dewfpga/config.js"></script>
+<script defer src="/dewfpga/mail.js"></script>
+<style>
+/* page-local form styles; s.css has none. Scoped under main.wrap so nothing else moves. */
+main.wrap form.mf{display:grid;gap:.6rem;max-width:34rem;margin:1rem 0 1.4rem}
+main.wrap form.mf label{display:block;font-size:.95rem}
+main.wrap form.mf label.chk{display:grid;grid-template-columns:1.4rem 1fr;gap:.5rem;align-items:start;color:var(--fg)}
+main.wrap form.mf input[type=email]{width:100%;box-sizing:border-box;font:inherit;padding:.55rem .7rem;color:var(--fg);
+  background:var(--code);border:1px solid var(--line);border-radius:7px}
+main.wrap form.mf input[type=email]:focus{border-color:var(--accent);outline:none}
+main.wrap form.mf input[type=checkbox]{width:1.1rem;height:1.1rem;margin:.15rem 0 0;accent-color:var(--accent)}
+main.wrap button.act{font:inherit;font-weight:600;padding:.5rem 1rem;border-radius:7px;cursor:pointer;
+  color:var(--accent);background:var(--bg);border:1px solid var(--accent);justify-self:start}
+main.wrap button.act:hover:not(:disabled){background:var(--accent);color:var(--bg)}
+main.wrap button.act.danger{color:#f2a07e;border-color:#f2a07e}
+main.wrap button.act.danger:hover:not(:disabled){background:#f2a07e;color:var(--bg)}
+main.wrap button:disabled,main.wrap input:disabled{opacity:.5;cursor:not-allowed}
+main.wrap .status{min-height:1.4em;font-size:.95rem;color:var(--mute);margin:.4rem 0 1rem;white-space:pre-line}
+main.wrap .status.ok{color:var(--accent)}
+main.wrap .status.warn{color:#e9c46a}
+main.wrap .status.err{color:#f2a07e}
+main.wrap .box{border:1px solid var(--line);border-radius:9px;padding:.9rem 1.1rem;margin:1rem 0}
+main.wrap [hidden]{display:none}
+</style>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap" data-page="newsletter">
+<h1>Patch notes by mail</h1>
+<p class="lead">One mail per published patch note. Nothing is sent until you confirm, and every mail carries its own unsubscribe link.</p>
+<noscript><p class="status warn">JavaScript is off in this browser, so this form cannot send anything. The buttons stay disabled; nothing is stored. Turn JavaScript on for this page, or come back later.</p></noscript>
+<form class="mf" id="subscribe-form" novalidate data-off="1">
+  <label for="sub-email">Email address</label>
+  <input type="email" id="sub-email" name="email" autocomplete="email" required maxlength="254" disabled>
+  <label class="chk"><input type="checkbox" id="sub-consent" name="consent" required disabled>
+    <span>Send me dewfpga patch notes by email. I can stop them with the link in every mail. (consent text version <code id="consent-version">2026-10-03</code>)</span></label>
+  <button class="act" type="submit" disabled>Send confirmation mail</button>
+</form>
+<p class="status" id="subscribe-status" aria-live="polite">Loading the form script… the buttons stay off until it has loaded. If this line does not go away, the script failed to load and nothing was sent; reload the page.</p>
+
+<h2>What happens after you submit?</h2>
+<table>
+<tr><th>step</th><th>what happens</th></tr>
+<tr><td>1</td><td>The address and the consent text version are stored as <em>pending</em>. No mail is sent to you yet.</td></tr>
+<tr><td>2</td><td>A confirmation mail with a one-time link goes out in the next batch. The daily mail budget is shared with other projects of the same operator, so delivery may take several days when capacity is limited.</td></tr>
+<tr><td>3</td><td>Opening the link and pressing <em>Confirm</em> turns the subscription on. The link is valid for 48 hours. A pending request that was never confirmed is removed when the operator runs the mailer's cleanup (it runs at the start of each mail run, not on a fixed schedule), at the earliest 7 days after the request.</td></tr>
+<tr><td>4</td><td>Each patch-notes mail links to the patch note on this site and carries an unsubscribe link that works without signing in.</td></tr>
+</table>
+
+<h2>What is stored?</h2>
+<table>
+<tr><th>field</th><th>why</th><th>kept until</th></tr>
+<tr><td>email address (lower-cased)</td><td>to send the mail</td><td>removed by the operator's cleanup: at the earliest 30 days after unsubscribe, or 7 days after the request if never confirmed; there is no automatic schedule</td></tr>
+<tr><td>consent text version, time of request, time of confirmation</td><td>record of the opt-in</td><td>same as the address</td></tr>
+<tr><td>source (<code>site</code>)</td><td>which form was used</td><td>same as the address</td></tr>
+<tr><td>confirmation and unsubscribe tokens</td><td>the one-time links</td><td>confirmation token is cleared on confirm; the unsubscribe token lives with the row</td></tr>
+<tr><td>time of unsubscribe</td><td>to stop sending and to let the cleanup remove the row</td><td>at the earliest 30 days, when the cleanup runs</td></tr>
+<tr><td>a per-mail ledger row (recipient hash, provider message id, time)</td><td>to control repeated attempts and the application's sending allocation</td><td>operator maintenance; it holds a hash, not the address</td></tr>
+</table>
+<p class="mute small">dewfpga's own tables store no IP address, browser, opens or clicks, and the mails carry no tracking pixel. The hosting of this page (GitHub Pages) and the Supabase project keep their own request logs under their own terms; this page does not control them. Newsletter mail is delivered by Resend from the operator's account. The shared stylesheet of this site loads fonts from Google Fonts, so opening the page requests them from Google.</p>
+
+<h2>Does this need an account?</h2>
+<p>No. The newsletter works without signing in. If you are signed in on the <a href="/dewfpga/account/">account page</a> in the same tab when you confirm, the subscription is attached to that account so it shows up in the account export and goes away with the account. A subscription made without signing in stays separate; manage it with the unsubscribe link in any mail.</p>
+
+<h2>Who is responsible for this data?</h2>
+<p><a href="/dewfpga/privacy/">Data and privacy notice</a></p>
+<p class="mute small">Controller contact, hosting and processing region, and terms are <b>not yet published</b>. The data sits in the operator's Supabase project; the mail provider is Resend. Until the operator publishes these lines, treat them as missing rather than assumed.</p>
+<!-- OPERATOR: replace the paragraph above with the controller name + contact, the Supabase project region, the Resend sending region and a link to the terms before the page goes live. mail/README.md lists these as blockers. -->
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/">home</a></span>
+</footer>
+</body>
+</html>

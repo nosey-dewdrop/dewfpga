@@ -2015,3 +2015,313 @@ Power the board off and on, unplug and replug the cable, then:
 ```copy
 dewfpga flash
 ```
+
+
+## two-vivado-projects
+step: project discovery
+source: dewfpga, before choosing a project
+title: ERROR [two-vivado-projects]
+summary: More than one .xpr file is present, so the CLI cannot choose the intended project.
+date: 2026-10-03
+
+The diagnostic contains `two-vivado-projects`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+The project folder contains multiple Vivado project files. Choosing one silently could build a different design.
+
+## What is the fix?
+
+Keep each project in its own directory. Alternatively, copy the required source and constraint files to a flat directory outside the Vivado project tree, then run dewfpga there.
+
+```copy
+dewfpga tops
+```
+
+
+## vivado-file-missing
+step: project discovery
+source: the Vivado project file list
+title: NEW.xpr:11: ERROR [vivado-file-missing]: NEW.xpr lists $PPRDIR/../archive/counter2.sv (../archive/counter2.sv), and that file is not there.
+summary: An enabled source or constraint entry names a file that is absent from this checkout.
+date: 2026-10-03
+
+The diagnostic contains `vivado-file-missing`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+The .xpr is authoritative. A file copied from another machine, omitted from Git, moved, or deleted can still be listed by the project.
+
+## What is the fix?
+
+Restore the named file, or remove its entry through Vivado and save the project. To use a flat layout instead, copy the files to a directory outside the project tree; running inside .srcs still discovers the parent project.
+
+```copy
+dewfpga tops
+```
+
+
+## vivado-project-unreadable
+step: project discovery
+source: the Vivado XML reader
+title: NEW.xpr:1: ERROR [vivado-project-unreadable]
+summary: The project file is not parseable Vivado XML.
+date: 2026-10-03
+
+The diagnostic contains `vivado-project-unreadable`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+A truncated or manually edited .xpr cannot supply a reliable source list. The CLI stops instead of guessing from nearby files.
+
+## What is the fix?
+
+Open and save a valid project in Vivado, or restore the .xpr from its backup. A flat copy must be outside the original project tree.
+
+```copy
+dewfpga tops
+```
+
+
+## vivado-path-unknown
+step: project discovery
+source: the Vivado source path reader
+title: MIX.xpr:1: ERROR [vivado-path-unknown]
+summary: A listed path uses a Vivado variable that this CLI cannot resolve.
+date: 2026-10-03
+
+The diagnostic contains `vivado-path-unknown`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+The reader resolves $PSRCDIR and $PPRDIR. A cache or generated-IP variable can refer to a Vivado-specific directory whose contents are not available to this toolchain.
+
+## What is the fix?
+
+Copy the required source into the project source directory and add that file through Vivado, then save. Generated IP and block designs are not automatically converted into supported RTL.
+
+```copy
+dewfpga tops
+```
+
+
+## vivado-set-ambiguous
+step: project discovery
+source: the active Vivado file-set selection
+title: MIX.xpr:1: ERROR [vivado-set-ambiguous]
+summary: The project does not identify which of several source, constraint or simulation sets to use.
+date: 2026-10-03
+
+The diagnostic contains `vivado-set-ambiguous`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+The reader follows synth_1 source/constraint selection and ActiveSimSet. It refuses a missing or inconsistent selection when multiple sets exist. An ambiguous simulation set stops simulation; it does not choose a random testbench.
+
+## What is the fix?
+
+Select the intended active set in Vivado and save the project. Re-run the command for that project; a flat copy outside the project tree is the explicit alternative.
+
+```copy
+dewfpga sim
+```
+
+
+## vscode-tasks-unreadable
+step: vscode
+source: the user-task configuration reader
+title: tasks.json:1: ERROR [vscode-tasks-unreadable]
+summary: The task document or its ownership record cannot be interpreted safely.
+date: 2026-10-03
+
+The diagnostic contains `vscode-tasks-unreadable`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+The writer accepts JSON with comments and trailing commas. Malformed JSON, duplicate object keys, an unsupported ownership-record schema or a non-regular file is refused. Existing user content is preserved.
+
+## What is the fix?
+
+Inspect the named file and restore a known-good backup if necessary. Do not delete the ownership record to force adoption: without it, the writer cannot prove that matching tasks belong to it. The print command shows the configuration for a manual merge.
+
+```copy
+dewfpga vscode --print
+```
+
+
+## vscode-tasks-conflict
+step: vscode
+source: the user-task ownership check
+title: tasks.json:1: ERROR [vscode-tasks-conflict]
+summary: An existing task label or input id collides with the proposed configuration without verified ownership.
+date: 2026-10-03
+
+The diagnostic contains `vscode-tasks-conflict`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+A matching label or command is not proof that dewfpga created the entry. The writer refuses to overwrite or adopt the user's task, even when the command text is identical.
+
+## What is the fix?
+
+Keep the user task. Rename the colliding label or input in VS Code if appropriate, or merge the printed configuration manually with distinct names. Preserve the ownership file for entries installed by dewfpga.
+
+```copy
+dewfpga vscode --print
+```
+
+
+## vscode-tasks-write-failed
+step: vscode
+source: the user-task file writer
+title: tasks.json:1: ERROR [vscode-tasks-write-failed]
+summary: Writing or replacing the task document or ownership record failed.
+date: 2026-10-03
+
+The diagnostic contains `vscode-tasks-write-failed`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+Permissions, unavailable storage or a filesystem error can block the update. Both new files are prepared first; if committing the ownership file fails, the previous task document is restored. If restoration itself is blocked, the diagnostic names the retained recovery copy.
+
+## What is the fix?
+
+Read the complete diagnostic before retrying. Keep the backup or recovery copy, fix the reported filesystem problem and then run setup again. Do not assume a failed update completed.
+
+```copy
+dewfpga vscode
+```
+
+
+## vscode-not-found
+step: vscode
+source: the optional editor setup
+title: note [vscode-not-found]
+summary: The VS Code command is unavailable; the FPGA command-line toolchain can still be used.
+date: 2026-10-03
+
+The diagnostic contains `vscode-not-found`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+Editor integration is optional. The setup looks for an editor CLI on PATH or in supported macOS application bundles.
+
+## What is the fix?
+
+Open the installed editor and enable its shell command, then retry setup. A missing editor does not require reinstalling the FPGA toolchain.
+
+```copy
+dewfpga vscode
+```
+
+
+## vscode-extension-install-failed
+step: vscode
+source: the companion extension installer
+title: ERROR [vscode-extension-install-failed]
+summary: The companion extension could not be built, installed or verified.
+date: 2026-10-03
+
+The diagnostic contains `vscode-extension-install-failed`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+User tasks require the companion's top-selection command. Setup does not write those tasks after a failed companion installation. The optional Verilog language extension can also be unavailable when the marketplace cannot be reached; the diagnostic distinguishes that case.
+
+## What is the fix?
+
+Read the command failure, verify the selected editor can install extensions and retry. The plain FPGA CLI remains usable. Keep existing user tasks while resolving the extension problem.
+
+```copy
+dewfpga vscode
+```
+
+
+## vscode-linter-shim-retained
+step: vscode removal
+source: the companion extension ownership check
+title: note [vscode-linter-shim-retained]
+summary: The companion is retained because a settings value still points to its linter shim, or settings cannot be checked safely.
+date: 2026-10-03
+
+The diagnostic contains `vscode-linter-shim-retained`. File paths, line numbers and the detailed reason depend on the project or editor configuration; read the complete line printed by the command.
+
+## Why does it happen?
+
+Deleting the extension while verilog.linting.path points inside it would break linting. The task remover does not overwrite user settings to force removal.
+
+## What is the fix?
+
+In VS Code run “dewfpga: stop using the dewfpga iverilog lint shim”. That command restores only the value the extension owns. Then retry removal. If the setting was entered manually, review it manually rather than deleting unrelated settings.
+
+```copy
+dewfpga vscode --remove
+```
+
+## cannot-write-here
+step: sim / synth
+source: private Verilog-2005 source wrappers
+title: dewfpga could not create its temporary work folder
+summary: The build directory is not writable, or the disk has no space for the temporary source copies.
+date: 2026-10-03
+
+`ERROR [cannot-write-here]: cannot create a work folder ...`
+
+## Why does it happen?
+
+The compiler needs a privately reserved directory for Verilog-2005 source copies. Creating it failed before compilation began.
+
+## What is the fix?
+
+Check the project folder's permissions with `ls -ld .` and available disk space with `df -h .`. Use a writable project folder or free space, then retry. Do not delete another running build's temporary directory.
+
+## command-timeout
+step: agent CLI
+source: JSON command deadline
+title: The command exceeded its time limit
+summary: The JSON wrapper stopped a command that did not finish within its deadline.
+date: 2026-10-03
+
+`ERROR [command-timeout]` appears as a JSON diagnostic with exit 124.
+
+## Why does it happen?
+
+The command took longer than the selected timeout. A stalled simulation, slow build or disconnected programmer can require investigation.
+
+## What is the fix?
+
+Read `log.tail` and `log.path`. Fix an unbounded testbench or tool problem first. If the command is making progress, retry with a larger limit, for example `dewfpga bit --json --timeout=1200`.
+
+## internal
+step: agent CLI
+source: JSON output capture
+title: The wrapper could not produce a complete command result
+summary: Starting the command, reading its output or another wrapper operation failed.
+date: 2026-10-03
+
+The JSON result contains `code: "internal"`. Exit 70 reports a wrapper failure; interrupted calls use exit 130 or 143.
+
+## Why does it happen?
+
+A child could not start, an output reader failed, or a descendant kept output open after the command exited. These cases cannot be treated as successful results. A parent signal can also interrupt the command.
+
+## What is the fix?
+
+Read the diagnostic and temporary log. Verify the installed CLI files and filesystem access, then retry. Preserve the diagnostic and command when reporting a reproducible wrapper error. Do not use a leftover bitstream as proof that the interrupted command succeeded.
+
+## mcp-not-installed
+step: agent interface
+source: optional MCP SDK
+title: The optional MCP server is not installed
+summary: The isolated MCP Python environment is missing or cannot import the required SDK.
+date: 2026-10-03
+
+`ERROR [mcp-not-installed]` stops `dewfpga mcp` with exit 3. The ordinary CLI does not require this SDK.
+
+## Why does it happen?
+
+The optional SDK step was skipped or failed, or its environment was removed. The client must launch dewfpga's MCP environment rather than an unrelated Python interpreter.
+
+## What is the fix?
+
+Run `dewfpga install` without `DEWFPGA_SKIP_MCP=1` and inspect the SDK step's output. Then retry the client connection to `dewfpga mcp`. Do not install the MCP package into your system Python as a workaround.

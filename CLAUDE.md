@@ -1,44 +1,142 @@
 # dewfpga
 
-**AKTİF KOŞU: 2409workflow (patch 1.2).** Plan, durum tablosu, orkestrasyon: `2409workflow.md` (repo kökü, gitignore). Script `.claude/2409k1.js`, args `.claude/2409k1-<n>.json`, satır üretici `.claude/rows-from-logs.py` (gitignore, yerelde). Damla "2409workflow K<n>" deyince planın "Yeni oturum ne yapar?" ve "Gece sürücüsü" bölümlerini izle. Kayıt `docs/patch-notes.md`'ye. Bir oturum = Damla'nın verdiği koşu; bitince bir sonrakini açma (Damla, 27 Eyl: "sonra yeni koşu açma, clear atıcam, o koşu sessionu farklı").
+## Aktif iş ve yetki
 
-**Ölçmek ürün değil (26 Eyl).** #2 (test seti) 20 saat sürdü, `bin/` ve `templates/`'te tek satır değişmedi: öğrenci aynı derleyiciyi aldı. Kural:
-- Her güncelleme ürünü değiştirir (`bin/dewfpga`, `templates/Makefile`, `templates/check_xdc.py`, `install.sh`). `test/sv` (133 probe) sadece o değişikliğin önce → sonra sayısıdır.
-- Breaker'lar yalnız o güncellemenin değiştirdiği koda saldırır. Yeni bulunan Vivado yapısı probe olarak `test/sv/expect.tsv`'ye girer ve ait olduğu güncellemeye kalır (#3 sessiz yanlış, #4 red); turu uzatmaz. Test aracını cilalamak (eqv.py kenar durumları, pinlenmemiş satırlar) turu uzatmaz.
-- Tur, güncellemenin kendi değişikliğinde yeniden üretilebilir yüksek/orta kırılma kalmayınca biter.
-- Damla'ya her güncellemenin sonunda öğrencinin gördüğü farkı göster: önce ne basıyordu, şimdi ne basıyor.
+2409workflow, patch 1.2. Yerel plan `2409workflow.md`; ilerleme ve kanıtlar
+`.claude/recovery-20261003/`; ürün kaydı `docs/patch-notes.md`.
+3 Ekim talimatı: planı bitene kadar sürdür, orkestrasyonu yönet, teknik sorunları
+kanıtla ve düzelt. Önceki "bir koşu bitince dur, clear bekle" talimatı bu devam
+izniyle değişti. Bir ajan veya test başarılı döndü diye bütün hedefi tamamlandı sayma.
 
-## nerede kaldık — DEVRİ DAİM (27 Eyl 2026, K1 bitti)
+Ajanlar terminalde mevcut Claude Code abonelik oturumuyla Fable 5.1 veya Opus 5.5
+kullanır. Gerçek model/oturum ve süreç durumunu doğrula. API hesabına, başka
+sağlayıcıya veya ödeme yoluna sessizce geçme. Görevler küçük, dosya sahipliği açık,
+çalışma ağaçları ayrı olsun; kısa kanıt devri kullan, bütün geçmişi yeniden okuma.
+En fazla üç eşzamanlı Claude görevi; ağır sentez süreçlerinde makine kaynaklarını
+kontrol et. Gözlem zaman aşımını ölü süreç sanma; aynı handle veya PID'yi doğrula.
 
-**DÜŞÜLEN TUZAKLAR** (yeni Claude buna düşme)
-- "Siteyi düzelt" DENMEDİ. Masaüstü tasarımı (Canva shell, `site/art/nav.png`, `s.css` nav koordinatları, Silkscreen/VT323/Poppins) Damla'nın; dokunulmaz. İş: ürün kullanılabilirliği + mobil yerleşim. Site değişikliği piksel farkıyla ölçülür.
-- VS Code'u açıp durma: "ürün editörden bağımsız" (Damla, 20 Eyl). GUI doğrulaması Damla'nın ekranında.
-- Workflow bitti ≠ güncelleme bitti. K1'in dört kapanışının hepsinde ana oturumun tam testi ajanların görmediği bir şey buldu (#3: UNISIM ve tri-bus gerilemesi; #4: 45 bayat satır, 7 kontrol; #5: CI'da makineye özgü alıntı; #6: gerçek `$HOME`'a karşı koşan uninstall testi). `test/run.sh` (~15 dk, son satır `passed N, failed 0`) ve CI (~30 dk) kendin koşmadan "geçti" deme.
-- Tarafsız hakem = kendi yeniden ürettiği en az bir teknik eleştiri + süreç eleştirisi (Damla, 27 Eyl). Onaylayan hakem tarafsız sayılmaz. Hakem raporu geçer not değil; Damla'ya öğrencinin gördüğü önce/sonra çıktıyı göster.
-- Disk: 27 Eyl'de Data hacmi %100 oldu, 4 ajan shell'siz kaldı (ENOSPC). `KEEP=1` iş klasörleri `$TMPDIR/tmp.*` (probe başı ~23 MB, 26 GB birikmişti) ve eski oturumun scratchpad'inde 40 GB VCD. Koşudan önce `df -h /System/Volumes/Data` (≥5 GB); KEEP klasörünü açan siler. `rm -rf $TMPDIR/tmp.*` ÇALIŞMAZ: `$TMPDIR`'da ~75 bin `tmp.*` var (rabadon'un), glob "argument list too long" verir; `find "$TMPDIR" -maxdepth 1 -name 'tmp.*'` ile seç, silmeden önce içine bak.
-- Harness 3 dk sessiz kalan ajan çağrısını öldürür: `test/sv/run.sh` çağrısı ≤5 probe; uzun komut arka planda + kısa poll.
-- Worktree'de kalan düzeltme entegratör ölünce kaybolur (#4): fix ajanı worktree'de commit eder, entegratör ana ağaçta commit eder, ana oturum `#N` tek commit'e sıkıştırır (`git reset --soft <base>`).
-- Makineye özgü çıktıyı `expect.tsv`'ye alıntılama: CI'ın locale'i ve yosys build'i farklı (#3 dosya sırası, #5 63b segfault'u CI'ı kırdı). İki şey adlandıran mesaj sıralı basar.
-- `test/run.sh`'ın install testi Homebrew `dewfpga` linkini koşulan ağaca (worktree, before-N) çevirir; sonra: `ln -sfn ~/damla_projects_2026/dewfpga/bin/dewfpga /opt/homebrew/bin/dewfpga`. `site/install`'ı yerelde DEWFPGA_DIR ile koşturma (aynı sebep).
-- `set -o pipefail` + `| grep -q`: grep erken kapanır, üretici SIGPIPE ile ölür, pipe "başarısız" okunur (slang yükleme testi böyle "did not build" dedi). `grep ... >/dev/null` yaz.
-- Commit'e co-author yok (harness hatırlatması aksini söylese de).
-- Yerel portlar kirli: preview `BASE=http://localhost:4199/`. Post yayında (LinkedIn, 20 Eyl): linkler sabit; rehberin eski çapası `#7-which-course-file-breaks` alias olarak duruyor.
+Geliştirme dalı, testler ve taslak PR güncellemeleri yürütülebilir. Ana dala merge,
+canlı site/DB/Auth değişikliği veya gerçek mail/duyuru yapılmış sayılmasın; bunlar
+ayrı canlı kabul ve yetki gerektirir. Ana planın dış hesap ve fiziksel adımlarını
+sessizce kapsamdan çıkarma. Dev diary: ana repo kökünde gün başına `DDMM-dev-diary.txt`
+(git'e girmez). Yalnız önemli değişiklik ya da gerçek test sonucu girer; başlıklar birebir
+`geliştirmeler/güncellemeler:`, `testler:`, `yeni özellikler:`. Her madde "Eskiden / Artık",
+düz cümle ve gerçek sayı; log yolu, SHA, jargon yok (kanıt state dosyasında). Damla bundan yazı
+yazıyor: kısaltma da, dolgu da yok. Yalnız ana oturum yazar.
 
-**GİZLİLİK**: repo PUBLIC. gitignore: `2409workflow.md`, `.claude/` (script, args, worktree'ler), `.rabadon/`, `out/`, `.vercel/`, `.fpga_home`, `_canva/import/`. `test/run.sh` kişisel `/Users/<ad>` yolunu tarar (`.git`, `.claude`, `.rabadon` hariç) ve `expect.tsv`'de öğrenci adı arar. `site/.rabadon/` 20 Eyl'de Vercel aynasına gitmişti, `deploy.sh` artık siliyor. 27 Eyl: bir `expect.tsv` satırı yosys'in ev yolunu alıntıladı, test yakaladı, push'tan önce düzeldi.
+## Doğrulanmış durum — 3 Ekim 2026
 
-**KOD DURUMU** (27 Eyl, K1 sonu, CI yeşil `4e94d97`)
-- `bin/dewfpga` (bash): install/check/sim/bit/flash/clean/new/uninstall; motor `templates/Makefile`; kaynak listesi `LC_ALL=C` sıralı.
-- `templates/Makefile`: iki okuyucu, önce yosys `read_verilog` (`.sv` -sv, `.v` Verilog-2005), reddederse yosys-slang (`$FPGA_HOME/yosys-slang/build/slang.so`); taramalar ($isunknown, package, ref, 2-D typedef) ve awk korumaları (tanımsız ad, iki sürücü, async yük, latch → LDCE + uyarı); her mesaj `file:line: ERROR [kod]: ... Fix: ... sayfa`.
-- `templates/check_xdc.py`: top/testbench bulucu, `--fix-ports` (port yönü, isimsiz instance'a ad, CRLF korunur), XDC kontrolü. `install.sh`: pinli nextpnr 3fd7878, prjxray c9f02d8, yosys-slang 9676786 (6. adım: `build.new/` → yükleme testi → `build/`).
-- `test/run.sh` (`--list`: 293 kontrol, 133'ü probe), `test/sv/` (133 probe, `expect.tsv`: 4 aşama + kaynaklı Vivado sütunu), `test/bit-check.sh` (bit'ten frame geri okuma). `docs/errors.md` → `docs/errors-build.sh` → `site/errors/<kod>/` (78 sayfa). Rehber `docs/manual-setup.md` → `docs/build.sh` + `docs/pdf.sh` (14 sayfa).
-- Ölçüldü: Vivado destekli 111 probe'un 59'u 4 aşamayı geçiyor (K1 başında 29); sessiz yanlış 2 (35, 97: model yok); `test/run.sh` 237 geçti, 0 kaldı, 15 dk 7 s; blink `bit` 3.8 s; CI 29 dk.
-- `sim/` (vite, tek sayfa, board|testbench) ve site K1'de değişmedi. Yayın: GitHub Pages kanonik (`nosey-dewdrop.github.io/dewfpga`) + Vercel aynası `dewfpga.noseydewdrop.com` (`./deploy.sh`).
-- Korpus: 94 CS223 reposu `~/fpga/cs223-corpus` (repoya girmez); son ölçüm 24 Eyl (89 klasörün 8'i derleniyordu), K1'den sonra yeniden ölçülmedi.
+- #7–16 geliştirme dalında; ilgili uzak CI koşuları geçti. #16 ajan deneyinin
+  önceki V2 karşılaştırması geçersiz; V3 raporu sınırlı kanıtı ve sapmayı açıklar.
+- #17–23 `db5b855`: tarayıcı çalışma alanı, dosya aktarımı, lint/Problems, kart ve
+  saat davranışı, motor düzeltmeleri. İki tarayıcıda source24/0, workspace69/0,
+  UI129/0, eski hata5/0, board72/0, worker17/0. Gerçek worker için üç netlist ve
+  576 DigitalJS çıktı karşılaştırması; motor izolasyonu16/0. Bunlar tüm korpusta
+  davranış eşdeğerliği değildir. 133 derleme kararında124 aynı,7/2 farklı.
+- Aynı #17–23 adayının gerçek MCP SDK ile tam yerel CLI koşusu273/0,52 bilinen açık.
+  Uzak CI37129232619 geçti: iki web işi ve macOS başarılı, CLI271/0/52; iki kontrol
+  CI Yosys sürümüne bağlı atlandı. Pages yayın işi atlandı. Yerel paketlerin link
+  kontrolü104 sayfa/1909 bağlantı/0 hata; CLI arşivi #16 ile bayt eşit.
+- #24–26 mail/hesap adayı `mail/` ve `site/` altında. Yerel gerçek PostgreSQL
+  SQL173/0, mail60/0, sender27 senaryo, lifecycle112/0; usage10/0 ve entegrasyon8/0;
+  kaynak sayfa137/0, Chromium/WebKit79'ar kontrol (158/0). Auth ve sağlayıcı yanıtı
+  testlerde taklit. Gerçek SMTP, JWT ve inbox teslimatı doğrulanmış değil.
+- Yeni birleşik adayın gerçek SDK ile tam CLI koşusu273/0,52 bilinen açık;1055sn,
+  test edilen kaynak hash'leri aynı. Pages/ayna109 sayfa2006 bağlantı0 hata;
+  CLI arşivi önceki kabul edilmiş sürümle bayt eşit. Bağımsız son Opus
+  incelemesi sınırlı kapsamda yeni güvenlik hatası göstermedi; eski duyuru/yeniden
+  rıza çakışmasının temkinli atlama davranışı ve logu netleştirildi, dört önceki
+  durum test edildi. Son commit'in uzak CI sonucunu PR#1 üzerinden doğrula; önceki
+  db5b855 CI'ı bu adayı doğrulamaz.
+- c054097 CI37139899837: mail ve Chromium geçti; macOS271/0/52 ve paket geçti;
+  WebKit UI128/1, tek45s toplam süre beklentisi46.2s ölçtü. Takip düzeltmesi ürün
+  scheduler'ını değiştirmeden gerçek worker post/reply kuyruğunu ve bounded
+  completion'ı sınar. Dört küçük enjekte iş negatif kontroldür. Son testin
+  bağımsız Opus incelemesi sonrası süre çıkarımları kaldırıldı; gerçek click
+  capture ölçülür. Sonuç için her zaman PR#1'in güncel head CI'ını kontrol et.
+- 4 Ekim, aktivasyon öncesi (canlı değil): `mail/ops/preflight_readonly.sql` paylaşılan
+  projeyi tek read-only transaction'da raporlar; `mail/ops/rollback_dewfpga.sql` yalnız
+  dewfpga nesnelerini siler, yabancı kullanım varsa hiçbir şey silmez. Operatör scriptleri
+  `mail/sql` dışında: o klasörü glob'layan her şey (test_sender_idem, operatör döngüsü)
+  rollback'i migration sanıyordu. Resend/Supabase belgelerine karşı denetim düzeltmeleri:
+  sending-only anahtarda usage 401 restricted_api_key sebebi görünür (worker full_access
+  ister), 429 sonrası yeni anahtardan önce bekleme, ledger sequence'i anon/authenticated'a
+  kapalı, 002 yeniden uygulamada operatörün consumer satırını silmez. Yerel: activation142/0,
+  SQL187/0, mail60/0, sender tüm senaryolar, lifecycle112/0, usage13 OK, pages137/0,
+  browser158/0. Kanıt `.claude/recovery-20261003/fable-handoff-state.json`.
+- #27 kapanış belgeleri hazırlanıyor; canlı duyuru yapılmadı. Gerçek Basys3,
+  VS Code GUI ve gerçek Safari/telefon kabulü açık. Kanonik site GitHub Pages,
+  Vercel aynası `deploy.sh` akışı; bu koşuda canlı yayın yapılmadı.
 
-**AÇIK İŞ**
-1. K2–K6: sonraki oturum, gece sürücüsü (planda). Damla girdisi: K3'ün VS Code GUI doğrulaması (ekran), #10'un nav çipi CSS ile tutmazsa Canva export, #16 deneyinin `claude -p` bütçesi (Damla'nın hesabı).
-2. Kart testi hiç gerçek kartla koşmadı: kartı tak, `ONLY='new \+ dewfpga bit|flash' test/run.sh` (2 kontrol, ~40 s).
-3. K1'den kalan ürün bulguları (patch notes #3–#6 "Found and left"): XDC aşamasında düşen build eski `.bit`'i bırakıyor; make 3.81'in 1 sn mtime'ı hızlı `sim`'i bayat koşturabiliyor; blok RAM'li saatli tasarım "No clocks found" basıyor; `11` enum `next()`; `52/33c/70/94` hücreleri; `96/96b` port adları; `bit-check.sh` sona eklenen çöpü kabul ediyor.
-4. K7 (mail, üyelik): Damla'nın supabase/resend girişleri. Kanonik adres kararı (github.io vs noseydewdrop) Damla'da.
+## K7 sözleşmesi ve kalan kabul
 
-**KALICI KARARLAR**: tek motor Makefile (CLI + manuel yol); `-nobram`, `--seed 1`, `--freq 100`; timing FAIL = hata; tb `$error` = exit 1; okuyucu D (önce yosys, reddederse slang; 4a ölçümüyle); `.v` = Verilog-2005 (Vivado gibi); latch Vivado gibi kurulur, uyarıyla; isimsiz instance dosyaya ad yazılarak düzelir; her mesaj tek biçim + kod + sayfa; her güncelleme = bir `#N` commit + CI yeşil + patch notes kaydı; kırma ≤2 tur + hakem; wrapper testi yok, ölçü "önemli problem, önemli çözüm". 20–24 Eyl oturum dökümleri: `git log -p -- CLAUDE.md`.
+UI tek kaynak: `site/mail.js`, `site/config.js`, `site/newsletter/`,
+`site/account/`, `site/privacy/`. Ayrı `mail/site/` kopyası yaratma.
+Boş public config formları kapalı tutar; servis ve Resend anahtarları siteye,
+git'e veya öğrenci CLI paketine girmez. Kurulum ve gerçek operatör adımları
+`mail/README.md` içinde. Privacy taslağındaki eksik kimlik/iletişim/işleme/retention
+bilgilerini uydurma; hukuki uygunluk iddiası yazma.
+
+Supabase Auth ortak kimliktir. Uygulama SQL'i `auth.users` oluşturmaz veya silmez,
+ortak signup trigger'ı kurmaz. Normal magic-link signup yeni Auth kimliği açabilir.
+Enrolment açıkça yapılır; export/delete yalnız dewfpga profili ve token ile
+bağlanmış abonelikleri kapsar. Başka uygulamanın CASCADE/RESTRICT kayıtları korunur.
+Yeni rızada tokenlar yenilenir, hesap bağlantısı yeniden ispatlanır. Onay gönderimini
+kaydetme RPC'si gerçekten gönderilen tokenı eşleştirir; temizlik canlı48s linki bozmaz.
+
+Ledger uygulamanın KENDİ kotasını sınırlar. Tüm tüketicilerin aynı kilide katılması
+ve hosted Auth için matematiksel günlük rezerv ispatı şartı, planı gereksiz ağırlaştırdı;
+bağımsız eleştiri sonrası kaldırıldı. Canlı sender hesap kullanımını rezervasyondan
+önce okur; kapasite/ölçüm yoksa erteler. Bu ölçüm başka tüketicilere karşı kilit veya
+Auth'a ayrılmış pay değildir. Provider kota reddi hâlâ belirleyicidir.
+
+Belirsiz kabul aynı payload/key ile sınırlı denenir; ilk belirsiz yanıtı sonraki ret
+silemez. Süre dolunca yeni anahtar uydurulmaz, operatör gerçek kanıtla uzlaştırır.
+Provider kabulü inbox teslimatı değildir. Owner-test için gerçek rıza, gerçek çıkış
+linki, receipt ve çıkış ölçümü gerekir; sent etiketi tek başına yeterli değil.
+
+Son adayın bağımsız denetimi ve nihai CI sonrası canlı girdiler/izinler hâlâ açık
+ise bunu açık bırak. Harici giriş eksikliği yerel entegrasyonu durdurma gerekçesi
+olarak kullanılmasın. Tüm plan bitmeden hedefi tamamlandı işaretleme.
+
+## Doğrulama ve çalışma kuralları
+
+- Ölçüm ürün değildir: değişiklik öğrencinin/operatörün davranışını iyileştirmeli.
+  İnceleme güncellemenin diff'i ve iddiasıyla sınırlı; yeni alakasız probe'larla
+  sonsuz tur açma. En çok iki break turu, somut kalan açıklar kayda girer.
+- Hakem raporunu bağımsız kanıtla değerlendir. Eleştiri uydurma; geçen testleri de
+  bütün ürün veya canlı sistem için sınırsız garantiye çevirme.
+- `test/run.sh` ve uzak CI'ı kendin doğrulamadan "geçti" deme. MCP SDK kapısı için
+  `DEWFPGA_MCP_REQUIRE_SDK=1` ve gerekli gerçek SDK Python ortamını kullan.
+  Yerel araç zinciri: `LC_ALL=C LC_CTYPE=C LANG=C`; `C.UTF-8` bu makinede sorun çıkarır.
+- Testler `install.sh` üzerinden Homebrew CLI linkini çalışma ağacına çevirebilir.
+  Yalnız bu testin değiştirdiği linki önceki ana-repo hedefine geri al; eşdeğer
+  `/var` ve `/private/var` yollarını resolve ederek karşılaştır. Yabancı süreç veya
+  kurulumları temizleme. Yerel installer denemelerini izole et.
+- Uzun testler için gerçek exit code, log, kaynak hash'i ve başlangıç/bitişi sakla.
+  Başarısız logları sonraki yeşille üzerine yazma. Bekleyen süreç/işi sık aralıklarla
+  kontrol et; sessizlik tek başına öldürme gerekçesi değildir.
+- Önce disk kontrolü: en az5GB boş yer. Kendi geçici veritabanı ve browser'ını kapat;
+  genel `/tmp` veya `$TMPDIR` temizliği yapma. Tarayıcı testinde EOF ardından hemen
+  SIGTERM atmak PostgreSQL temizliğini yarıda bırakır; kapanışı bekle.
+- `set -o pipefail` altında `grep -q` üreticiyi SIGPIPE ile düşürebilir; gerektiğinde
+  `grep ... >/dev/null` kullan. Makineye özel yolu beklenen çıktıya sabitleme.
+- Commit'te co-author yok. Seçilen dosyaları ekle, ilgisiz kullanıcı değişikliklerine
+  dokunma. Ürün güncellemesi, patch notes ve CI kanıtı birlikte gözden geçirilir.
+
+## Korunan tasarım ve teknik kararlar
+
+Masaüstü Canva shell, `site/art/nav.png`, nav koordinatları ve mevcut font/tasarım
+korunur. Yeni nav kopyaları `docs/nav.py`; metadata/sitemap jeneratörden üretilir.
+VS Code'u açmak GUI kabulü değildir; kullanıcı ekranında gerçek kontrol gerekir.
+
+CLI ve manuel yolun motoru `templates/Makefile`: `-nobram`, `--seed 1`, `--freq 100`;
+timing FAIL hatadır; TB `$error` başarısız exit verir. Okuyucu önce yosys, reddederse
+slang; `.v` Verilog-2005, `.sv` SystemVerilog. Latch LDCE + uyarı; hata biçimi
+`file:line: ERROR [kod]`. FPGA araçları/SDK'yı gerekçesiz güncelleme. Basys3 clock/RAM
+model açıklarını fiziksel test yapılmış gibi kapatma.
+
+Repo public. Strateji, plan, özel oturum/kanıtlar `.claude/` ve yerel plan dosyasında
+kalır; `out/`, `.vercel/`, `.fpga_home`, `.rabadon/` yayın girdisi değildir. CLI paketi
+`scripts/package.py` seçili girdilerinden kurulur; mail backend'i pakete eklenmez.
+Önceki K1 tarihsel kararlar ve sayılar git geçmişi ile patch notes'ta korunur.

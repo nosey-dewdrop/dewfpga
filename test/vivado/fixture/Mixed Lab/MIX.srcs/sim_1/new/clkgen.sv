@@ -1,0 +1,4 @@
+module clkgen(output logic clk);
+    initial begin clk = 0; #1000 $finish; end
+    always #5 clk = ~clk;
+endmodule

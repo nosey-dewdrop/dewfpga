@@ -22,6 +22,7 @@
   <a class="c-why" href="/dewfpga/why/">why</a>
   <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
   <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
   <a class="c-cli" href="/dewfpga/cli/">cli</a>
   <a class="c-docs" href="/dewfpga/docs/">docs</a>
   <a class="c-sim" href="/dewfpga/sim/">simulator</a>
@@ -346,6 +347,66 @@
   <div class="err">
     <span class="step">flash</span><a class="title" href="/dewfpga/errors/openfpgaloader-failed/">ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit 1 (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on.</a>
     <p>openFPGALoader, when you program the board. The board was found, and programming still failed; openFPGALoader&#x27;s own lines above say why.</p>
+  </div>
+  <div class="err">
+    <span class="step">project discovery</span><a class="title" href="/dewfpga/errors/two-vivado-projects/">ERROR [two-vivado-projects]</a>
+    <p>dewfpga, before choosing a project. More than one .xpr file is present, so the CLI cannot choose the intended project.</p>
+  </div>
+  <div class="err">
+    <span class="step">project discovery</span><a class="title" href="/dewfpga/errors/vivado-file-missing/">NEW.xpr:11: ERROR [vivado-file-missing]: NEW.xpr lists $PPRDIR/../archive/counter2.sv (../archive/counter2.sv), and that file is not there.</a>
+    <p>the Vivado project file list. An enabled source or constraint entry names a file that is absent from this checkout.</p>
+  </div>
+  <div class="err">
+    <span class="step">project discovery</span><a class="title" href="/dewfpga/errors/vivado-project-unreadable/">NEW.xpr:1: ERROR [vivado-project-unreadable]</a>
+    <p>the Vivado XML reader. The project file is not parseable Vivado XML.</p>
+  </div>
+  <div class="err">
+    <span class="step">project discovery</span><a class="title" href="/dewfpga/errors/vivado-path-unknown/">MIX.xpr:1: ERROR [vivado-path-unknown]</a>
+    <p>the Vivado source path reader. A listed path uses a Vivado variable that this CLI cannot resolve.</p>
+  </div>
+  <div class="err">
+    <span class="step">project discovery</span><a class="title" href="/dewfpga/errors/vivado-set-ambiguous/">MIX.xpr:1: ERROR [vivado-set-ambiguous]</a>
+    <p>the active Vivado file-set selection. The project does not identify which of several source, constraint or simulation sets to use.</p>
+  </div>
+  <div class="err">
+    <span class="step">vscode</span><a class="title" href="/dewfpga/errors/vscode-tasks-unreadable/">tasks.json:1: ERROR [vscode-tasks-unreadable]</a>
+    <p>the user-task configuration reader. The task document or its ownership record cannot be interpreted safely.</p>
+  </div>
+  <div class="err">
+    <span class="step">vscode</span><a class="title" href="/dewfpga/errors/vscode-tasks-conflict/">tasks.json:1: ERROR [vscode-tasks-conflict]</a>
+    <p>the user-task ownership check. An existing task label or input id collides with the proposed configuration without verified ownership.</p>
+  </div>
+  <div class="err">
+    <span class="step">vscode</span><a class="title" href="/dewfpga/errors/vscode-tasks-write-failed/">tasks.json:1: ERROR [vscode-tasks-write-failed]</a>
+    <p>the user-task file writer. Writing or replacing the task document or ownership record failed.</p>
+  </div>
+  <div class="err">
+    <span class="step">vscode</span><a class="title" href="/dewfpga/errors/vscode-not-found/">note [vscode-not-found]</a>
+    <p>the optional editor setup. The VS Code command is unavailable; the FPGA command-line toolchain can still be used.</p>
+  </div>
+  <div class="err">
+    <span class="step">vscode</span><a class="title" href="/dewfpga/errors/vscode-extension-install-failed/">ERROR [vscode-extension-install-failed]</a>
+    <p>the companion extension installer. The companion extension could not be built, installed or verified.</p>
+  </div>
+  <div class="err">
+    <span class="step">vscode removal</span><a class="title" href="/dewfpga/errors/vscode-linter-shim-retained/">note [vscode-linter-shim-retained]</a>
+    <p>the companion extension ownership check. The companion is retained because a settings value still points to its linter shim, or settings cannot be checked safely.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim / synth</span><a class="title" href="/dewfpga/errors/cannot-write-here/">dewfpga could not create its temporary work folder</a>
+    <p>private Verilog-2005 source wrappers. The build directory is not writable, or the disk has no space for the temporary source copies.</p>
+  </div>
+  <div class="err">
+    <span class="step">agent CLI</span><a class="title" href="/dewfpga/errors/command-timeout/">The command exceeded its time limit</a>
+    <p>JSON command deadline. The JSON wrapper stopped a command that did not finish within its deadline.</p>
+  </div>
+  <div class="err">
+    <span class="step">agent CLI</span><a class="title" href="/dewfpga/errors/internal/">The wrapper could not produce a complete command result</a>
+    <p>JSON output capture. Starting the command, reading its output or another wrapper operation failed.</p>
+  </div>
+  <div class="err">
+    <span class="step">agent interface</span><a class="title" href="/dewfpga/errors/mcp-not-installed/">The optional MCP server is not installed</a>
+    <p>optional MCP SDK. The isolated MCP Python environment is missing or cannot import the required SDK.</p>
   </div>
 <h2 id="your-error-is-not-here">Your error is not here?</h2>
 <p>Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the section number on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>.</p>

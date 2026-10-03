@@ -97,16 +97,11 @@ while j < len(pre) and pre[j].strip():
 lead = " ".join(l.strip() for l in pre[i:j])
 rest = "\n".join(pre[j:]).strip("\n") + "\n"
 
-NAV = """<nav class="top" aria-label="Site">
-  <a class="brand" href="/dewfpga/">dewfpga</a>
-  <a class="c-why" href="/dewfpga/why/">why</a>
-  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
-  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
-  <a class="c-cli" href="/dewfpga/cli/">cli</a>
-  <a class="c-docs" href="/dewfpga/docs/">docs</a>
-  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
-</nav>
-"""
+# the nav comes from one source, docs/nav.py
+sys.dont_write_bytecode = True
+sys.path.insert(0, "docs")
+from nav import render
+NAV = render("en", "c-err")
 ICON = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
@@ -191,3 +186,4 @@ if bad:
     sys.exit("links that do not resolve:\n  " + "\n  ".join(bad))
 print("links: every /dewfpga/ href in site/errors resolves")
 PY
+python3 docs/sitemap-build.py

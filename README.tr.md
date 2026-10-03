@@ -25,14 +25,15 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-Makefile yok, proje yapısı yok. Klasörde modül tutan her `.sv`/`.v` sentezlenir (alt modüller
-kendi dosyalarında olabilir, dosya adı serbest; içinde modül olmayan bir dosya, yani tek başına bir
-package, interface ya da dosya düzeyinde typedef, şimdilik dışarıda kalıyor). Top modül, başka hiçbir modülün instantiate
-etmediği modüldür, Vivado'daki gibi; iki modül uyuyorsa adını ver: `dewfpga flash <top>` (şimdilik CLI, `.xdc` ile
-ya da kendi dosyasıyla aynı adı taşıyanı sormadan seçiyor). Portu olmayan
-ya da `$finish` veya `$stop` çağıran modül `sim` için testbench'tir, bu yüzden bunlardan birini
-çağıran bir tasarım modülü de şimdilik testbench sayılıyor: `$finish` ile `$stop`'u testbench'te
-tut. Örnek: `dewfpga new blink`.
+`.sv`/`.v` modülleri ve `.xdc` bulunan düz bir klasörde veya Vivado projesinde çalışır.
+`.xpr`, etkin tasarım, kısıt ve simülasyon dosyalarını seçer. İç içe bir `.srcs` klasöründen
+çalıştırılan komut proje kökünü kullanır; çıktılar da oraya yazılır. `dewfpga tops`, dosya
+bırakmadan top adaylarını listeler. Adını ayrıca vermediğinde projenin seçili top modülü
+kullanılır: `dewfpga bit <top>`. Düz klasörde hiyerarşi ve tek eşleşen `.xdc` seçim yapar;
+belirsiz durumda top adını vermen gerekir. Dosya adı tek başına seçim nedeni değildir.
+Testbench, portu olmayan ve tasarımı instantiate eden modüldür; tasarım modülündeki
+`$finish`/`$stop` hatadır. Yalnız package/interface/typedef içeren dosyalar hâlâ CLI sınırıdır.
+Örnek: `dewfpga new blink`.
 
 ## Kurulum
 
@@ -46,8 +47,10 @@ CLI'ı `~/.dewfpga`'ya koyar (sha256 `dewfpga.tgz.sha256` ile karşılaştırıl
 kontrolü, imza değil), `dewfpga`'yı Homebrew'un bin klasörüne bağlar ve `dewfpga install`'u
 çalıştırır. Güncellemek için aynı satırı tekrar çalıştır. `dewfpga uninstall` kurulumun
 `~/fpga`'da ürettiklerini (nextpnr-xilinx, prjxray, chipdb, venv, log), `~/.dewfpga`'yı ve
-linki siler; `~/fpga`'daki başka dosyalara dokunmaz. Gerekenler: Apple Silicon'da macOS,
-Xcode Command Line Tools, Homebrew. Sonradan npm paketine geçeceksen önce
+linki siler; `~/fpga`'daki başka dosyalara dokunmaz. Gerekenler: Apple Silicon'da macOS ve
+Homebrew. Derlemeler Apple'ın Command Line Tools'unu da ister (git, make, clang); Homebrew'un
+kurucusu eksikse onları kendi kurar, iki kurucu da kontrol eder ve biri eksikse ya da Homebrew
+PATH'te değilse çalıştırılacak tek satırı basar. Sonradan npm paketine geçeceksen önce
 `$(brew --prefix)/bin/dewfpga`'yı sil, npm aynı yolu istiyor.
 
 ## Ne kuruyor?
@@ -84,11 +87,24 @@ Script'i tekrar çalıştırınca biten adımlar atlanır. Log: `~/fpga/install.
 ```
 dewfpga install                     zinciri kur (tekrar çalıştırmak güvenli)
 dewfpga check                       her parça yerinde mi
-dewfpga sim|bit|flash|clean [top]   bulunduğun klasördeki .sv dosyaları
+dewfpga sim|bit|flash|clean [top]   düz klasör veya Vivado projesi
+dewfpga tops                        top adaylarını dosya yazmadan listele
+dewfpga vscode [--remove]           editör bağlantısını kur veya kaldır
 dewfpga new <dizin>                 VS Code görevli blink örneği (⌘⇧B = flash)
 dewfpga uninstall                   kurulumun ürettiklerini, CLI'ı ve linki sil (senin dosyaların ve brew paketleri kalır)
+dewfpga mcp                         ajan araçlarını stdio üzerinden sun
 dewfpga --version
 ```
+
+Ajanlar için `check`, `sim`, `bit` ve `flash`, `--json` kabul eder:
+`dewfpga sim --json --timeout=180`. Standart çıktıda tek `dewfpga/result@1` nesnesi
+bulunur; süreç kodu `exit_code` ile eşleşir. `diagnostics` hata ve düzeltmeleri,
+`log.tail` ayrıştırılamayan çıktıyı gösterir. Eski `.bit` dosyası yeni derlemenin
+başarısı sayılmaz; `artifacts` yeni, önbellekteki ve bayat çıktıları ayırır.
+[Ajan arayüzü ve sınırlar](docs/agent-interface.md).
+
+`dewfpga install`, isteğe bağlı MCP SDK ortamını da kurar. İstemciyi `dewfpga mcp`
+komutuna bağlayın: [kurulum ve araç parametreleri](docs/agent-interface.md#mcp-server).
 
 ## Kapsam
 
@@ -113,7 +129,7 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (293 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (329 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
 bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün

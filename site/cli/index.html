@@ -26,6 +26,7 @@
   <a class="c-why" href="/dewfpga/why/">why</a>
   <a class="c-err" href="/dewfpga/errors/">errors</a>
   <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
   <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
   <a class="c-docs" href="/dewfpga/docs/">docs</a>
   <a class="c-sim" href="/dewfpga/sim/">simulator</a>
@@ -37,14 +38,26 @@
   <p class="mute">No Mac or no board with you? The <a href="/dewfpga/sim/">Basys3 simulator</a> and the <a href="/dewfpga/sim/?view=tb">testbench runner</a> do the same first two steps in a browser, with nothing installed.</p>
 
 <pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, 1.4 GB, once</span></code></pre>
-  <p class="mute small">Requirements: macOS on Apple Silicon, Xcode Command Line Tools, Homebrew. It puts the CLI in <code>~/.dewfpga</code>, links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update. No Node needed.</p>
+  <p class="mute small">Requirements: macOS on Apple Silicon and Homebrew (its installer brings Apple's Command Line Tools along; the CLI checks and says so if either is missing). It puts the CLI in <code>~/.dewfpga</code>, links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update. No Node needed.</p>
+
+  <h2 id="cli-to-basys3">CLI to Basys3: how to use the CLI?</h2>
+  <ol class="walls">
+    <li><b>Homebrew.</b> No <code>brew</code> yet? Run the one line on <a href="https://brew.sh">brew.sh</a>, paste the lines it prints under "Next steps", open a new terminal window. It installs Apple's Command Line Tools on the way.</li>
+    <li><b>The chain.</b> Paste the <code>curl ... | bash</code> line above. About four minutes; it ends with <code>dewfpga check</code> printing <code>all good.</code> A red line instead names the missing piece: run the same line again, it skips what is done.</li>
+    <li><b>A project.</b> <code>dewfpga new blink &amp;&amp; cd blink</code> gives you the blinking LED: <code>blink.sv</code>, <code>blink_tb.sv</code>, <code>blink.xdc</code>, a VS Code task. Your own lab goes the same way: the <code>.sv</code> files and the <code>.xdc</code> in one folder.</li>
+    <li><b>Simulate, build.</b> <code>dewfpga sim</code> runs the testbench; <code>dewfpga bit</code> turns the <code>.sv</code> into <code>blink.bit</code>. An error is one line, <code>file:line: ERROR [code]</code>, with the fix and its page.</li>
+    <li><b>The board.</b> Plug the Basys3 into the PROG port, switch it on, <code>dewfpga flash</code>. It builds first when the <code>.bit</code> is older than the <code>.sv</code>. The LED blinks.</li>
+  </ol>
 
   <h2>How do you use it?</h2>
   <p>In any folder with <code>blink.sv</code> and <code>blink.xdc</code>:</p>
 <pre data-copy="1"><code>dewfpga sim      <span class="c"># iverilog</span>
 dewfpga bit      <span class="c"># .sv -> .bit   (4.6 s)</span>
 dewfpga flash    <span class="c"># program the board: the LED blinks</span></code></pre>
-  <p>No Makefile, no project layout. Every <code>.sv</code> and <code>.v</code> in the folder that holds a module is synthesized, so submodules can live in their own files (a file that holds no module, such as a package, an interface or typedefs at file scope, is left out, for now). Files can be named anything: the top is the module nothing else instantiates, as in Vivado; if two qualify, name it: <code>dewfpga flash &lt;top&gt;</code> (for now the CLI takes one named like the <code>.xdc</code> or like its own file without asking). A module without ports, or with <code>$finish</code> or <code>$stop</code>, is the testbench <code>sim</code> runs, so for now a design module that calls either is taken for one too: keep <code>$finish</code> and <code>$stop</code> in the testbench. The course's seven-segment file builds as it is when it comes as source code; the course also hands it out in netlist form, which the CLI refuses for now (<a href="/dewfpga/docs/#71-which-course-file-breaks">guide, section 7.1</a>). First time? <code>dewfpga new blink</code> gives you the blinking LED to start from, with a VS Code task (⌘⇧B = flash).</p>
+  <p>For an existing lab, keep the design's <code>.sv</code>/<code>.v</code> files and pin file in one folder and run the commands there. Submodules can live in separate files. The top comes from the module hierarchy; a uniquely matching <code>.xdc</code> can select among candidates, and the CLI prints that choice. Otherwise it stops and asks you to name the module: <code>dewfpga flash &lt;top&gt;</code>. File names alone never silently choose the top.</p>
+  <p>A testbench is a module without ports that instantiates the design. A <code>$finish</code> or <code>$stop</code> in a design module is reported as an error, not used to reclassify it as a testbench. Files containing only packages, interfaces or typedefs are still a CLI limitation; see <a href="/dewfpga/docs/#8-what-can-it-not-do">the guide's limits</a>. The course's seven-segment source can be repaired automatically; a Vivado-generated simulation netlist is rejected with an explanation.</p>
+
+  <p>Already using Vivado? Run inside the folder containing your <code>.xpr</code> or its <code>.srcs</code> subfolders. The active project sets and top are used; output files land at the project root. <code>dewfpga tops</code> lists candidates without writing files. For editor tasks and the top chooser, run <code>dewfpga vscode</code>; see <a href="/dewfpga/docs/#6-how-do-you-set-up-vs-code">VS Code setup</a>.</p>
 
   <h2>What does an error look like?</h2>
   <p>When <code>sim</code>, <code>bit</code> or <code>flash</code> stops, it prints one line in one format, <code>file:line: ERROR [code]: message</code>, then the fix and the address of that code's page. Every code, with what you saw, why, the fix and an example: <a href="/dewfpga/errors/">the error catalog</a>.</p>
@@ -52,12 +65,15 @@ dewfpga flash    <span class="c"># program the board: the LED blinks</span></cod
   <h2>Commands</h2>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
-dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
+dewfpga tops                        list top candidates without writing files
+dewfpga vscode [--remove]           set up or remove the editor integration
 dewfpga new &lt;dir&gt;                   blink example with a VS Code task (⌘⇧B = flash)
 dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link (your files and brew packages stay)
 dewfpga --version</code></pre>
 
   <h2>What does it install?</h2>
+  <div class="tablewrap cli-tools">
   <table>
     <tr><th>stage</th><th>tool</th><th>from</th></tr>
     <tr><td>simulation</td><td>iverilog</td><td>brew</td></tr>
@@ -68,6 +84,7 @@ dewfpga --version</code></pre>
     <tr><td>chipdb XC7A35T</td><td><code>bbaexport</code> + <code>bbasm</code></td><td>generated, ~90 MB</td></tr>
     <tr><td>programming</td><td>openFPGALoader</td><td>brew</td></tr>
   </table>
+  </div>
   <p>Everything goes into <code>~/fpga</code>. Re-running the script skips finished steps. Log: <code>~/fpga/install.log</code>.</p>
 
   <h2>What was measured?</h2>
@@ -78,7 +95,7 @@ dewfpga --version</code></pre>
     <dt><code>bit</code></dt><dd>4.6 s, peak 552 MB RAM</dd>
     <dt>chipdb generation</dt><dd>peak 859 MB RAM</dd>
     <dt>output</dt><dd>byte-identical <code>.frames</code> to the hand-built chain that lit the LED</dd>
-    <dt>tests</dt><dd>293 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 133 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
+    <dt>tests</dt><dd>329 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 133 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
   </dl>
 
   <h2>Scope</h2>

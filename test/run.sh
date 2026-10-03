@@ -17,6 +17,11 @@
 # Each probe's verdict is worked out here again from expect.tsv and its four stages, and has to agree with
 # test/sv/run.sh's, whose exit code has to agree with its rows.
 set -euo pipefail
+# Installer/uninstaller coverage must not modify the developer's real editor profile.
+# The separate VS Code setup tests fence their own editor executable and scratch HOME.
+export DEWFPGA_SKIP_VSCODE=1
+# Installer fixtures must not download the optional SDK; MCP tests use their own environments.
+export DEWFPGA_SKIP_MCP=1
 LIST=0; case ${1:-} in --list) LIST=1 ;; "") ;; *) echo "usage: test/run.sh [--list]   (ONLY=regex, FULL=1, SV_OUT=file in the environment)" >&2; exit 2 ;; esac
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CLI="$ROOT/bin/dewfpga"
@@ -41,7 +46,7 @@ say() { local rc=0; "$@" > "$T/say" 2>&1 || rc=$?; cat "$T/say"; return $rc; }
 strip() { grep -v '^# nextpnr' "$1" | sort; }
 
 sec "== static"
-check "shellcheck"            "shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh'"
+check "shellcheck"            "shellcheck -S style --enable=check-unassigned-uppercase '$ROOT/install.sh' && shellcheck -S style '$ROOT/install.sh' '$CLI' '$ROOT/test/run.sh' '$ROOT/test/sv/run.sh' '$ROOT/test/sv/eqv.sh' '$ROOT/test/sv/eqv_check.sh' '$ROOT/test/bit-check.sh' '$ROOT/site/install' '$ROOT/deploy.sh' '$ROOT/vscode/bin/iverilog' '$ROOT/test/vivado/run.sh' '$ROOT/test/agent/experiment/acceptance.sh' '$ROOT/test/agent/experiment/self-test.sh'"
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
 # every file is scanned, this one too: a home folder is /Users/ and a name (/Users/you/ is the guide's placeholder).
 # This file writes the pattern with no name after /Users/, and its planted paths through printf's %s
@@ -76,7 +81,30 @@ pages_count() {
     && grep -qE "(^|[^0-9])$np SystemVerilog probes" "$ROOT/README.md" && grep -qE "(^|[^0-9])$np SystemVerilog probe" "$ROOT/README.tr.md" && grep -qE "(^|[^0-9])$np of them the SystemVerilog probes" "$ROOT/site/cli/index.html"
 }
 check "README, README.tr and site/cli quote the numbers --list prints (checks, probes)" pages_count
+# site/llms.txt (llmstxt.org) is generated from docs/errors.md and the guide: regenerating changes nothing, every code has a line and a page
+llms_txt() {
+    local f="$ROOT/site/llms.txt" c
+    [ -s "$f" ] && head -1 "$f" | grep -q '^# dewfpga$' && sed -n 3p "$f" | grep -q '^> ' && grep -q '^## Errors$' "$f" \
+    && cp "$f" "$T/llms.before" && (cd "$ROOT" && python3 -B docs/llms-build.py > /dev/null) && cmp -s "$f" "$T/llms.before" \
+    && ! grep -q '](/' "$f" || return 1
+    # every linked error page exists, every code of errors.md has a line, every guide anchor exists in the guide
+    grep -oE 'errors/[a-z0-9-]+/' "$f" | cut -d/ -f2 | sort -u | while read -r c; do [ -s "$ROOT/site/errors/$c/index.html" ] || exit 1; done || return 1
+    grep -oE '^## [a-z0-9][a-z0-9-]*$' "$ROOT/docs/errors.md" | cut -c4- | while read -r c; do grep -q "^- \[$c\](" "$f" || exit 1; done || return 1
+    grep -oE 'docs/#[a-z0-9-]+' "$f" | cut -d# -f2 | while read -r c; do grep -q "id=\"$c\"" "$ROOT/site/docs/index.html" || exit 1; done
+}
+check "site/llms.txt: generated, idempotent, every error code listed with an existing page, guide anchors exist" llms_txt
 check "--version"             "v=\$('$CLI' --version); [ -n \"\$v\" ] && [ \"\$v\" = \"\$(sed -n 's/.*\"version\": *\"\([^\"]*\)\".*/\1/p' '$ROOT/package.json')\" ]"
+
+sec "== editor and Vivado project integration"
+check "VS Code user tasks preserve JSONC and ownership" "python3 -B '$ROOT/test/vscode/test-tasks.py'"
+check "VS Code extension chooser, diagnostics and fresh waveforms" "node '$ROOT/test/vscode/test-extension.js'"
+check "VS Code setup and removal stay inside their test profiles" "python3 -B '$ROOT/test/vscode/test-setup.py' && python3 -B '$ROOT/test/vscode/test-setup-editor.py'"
+check "Vivado project files, nested sources and includes" "bash '$ROOT/test/vivado/run.sh'"
+
+sec "== machine-readable CLI"
+check "JSON CLI protocol, cancellation and text parity" "python3 -B '$ROOT/test/agent/test-json.py'"
+
+check "MCP protocol and owned SDK setup" "python3 -B '$ROOT/test/agent/test-mcp.py'"
 
 sec "== toolchain"
 check "check passes"          "'$CLI' check"
@@ -149,7 +177,13 @@ check "failed build removes the old .bit" "rm -rf '$T/ob' && cp -Rp '$T/w' '$T/o
 # uninstall, from a copy of the CLI: the real one may be what Homebrew's bin/dewfpga links to, and uninstall
 # removes that link when it points at the CLI that runs (a fake FPGA_HOME holds three of the six entries and a file of the student's)
 un_copy() { rm -rf "$T/un" && mkdir -p "$T/un" && cp -R "$ROOT/bin" "$ROOT/package.json" "$T/un/" && cp "$ROOT/.fpga_home" "$T/un/" 2>/dev/null || true; }
-check "uninstall removes what install built, keeps the rest, keeps the folder" "un_copy && mkdir -p '$T/uh/nextpnr-xilinx' '$T/uh/chipdb' '$T/uh/mine' && touch '$T/uh/install.log' '$T/uh/mine/keep.sv' && FPGA_HOME='$T/uh' '$T/un/bin/dewfpga' uninstall >'$T/un.out' 2>&1 && grep -q '^removing: $T/uh/chipdb$' '$T/un.out' && grep -q '^kept: $T/uh (other files live there)$' '$T/un.out' && grep -q '^done\.$' '$T/un.out' && [ ! -e '$T/uh/chipdb' ] && [ ! -e '$T/uh/install.log' ] && [ -e '$T/uh/mine/keep.sv' ] && [ -L /opt/homebrew/bin/dewfpga -o ! -e /opt/homebrew/bin/dewfpga ]"
+# the lines name the folder uninstall resolved (physical path, /private/var on macos); the harness holds the symlinked one
+un_basic() {
+    local p; un_copy && mkdir -p "$T/uh/nextpnr-xilinx" "$T/uh/chipdb" "$T/uh/mine" && touch "$T/uh/install.log" "$T/uh/mine/keep.sv" && p=$(cd "$T/uh" && pwd -P) \
+    && FPGA_HOME="$T/uh" "$T/un/bin/dewfpga" uninstall >"$T/un.out" 2>&1 && grep -qF "removing: $p/chipdb" "$T/un.out" && grep -qF "kept: $p (other files live there)" "$T/un.out" && grep -q '^done\.$' "$T/un.out" \
+    && [ ! -e "$T/uh/chipdb" ] && [ ! -e "$T/uh/install.log" ] && [ -e "$T/uh/mine/keep.sv" ] && { [ -L /opt/homebrew/bin/dewfpga ] || [ ! -e /opt/homebrew/bin/dewfpga ]; }
+}
+check "uninstall removes what install built, keeps the rest, keeps the folder" un_basic
 check "uninstall with nothing installed -> note, exit 0" "un_copy && mkdir -p '$T/uh2' && FPGA_HOME='$T/uh2' '$T/un/bin/dewfpga' uninstall >'$T/un.out' 2>&1 && grep -q '^note \[no-install-found\]: nothing to remove: no dewfpga install found in $T/uh2' '$T/un.out'"
 # the second reader (#4): an unpacked array concatenation, which yosys' own reader refuses and yosys-slang builds
 slang_design() { mkdir -p "$1" && printf 'module top(input logic [15:0] sw, output logic [15:0] led);\n  logic [3:0] arr [0:1];\n  assign arr = {sw[3:0], sw[7:4]};\n  assign led = {8'"'"'d0, arr[0], arr[1]};\nendmodule\n' > "$1/top.sv" && sed 's/blink/top/' "$ROOT/templates/blink.xdc" > "$1/top.xdc"; }
@@ -171,15 +205,279 @@ ui_build() { mkdir -p "$T/ui" && printf 'module sub(input a, output b); assign b
 check "unnamed instance -> named in place with a note, build goes through" "ui_build && grep -q 'ui.sv:3: note \[unnamed-instance\]: named the instance:  sub u_sub(' out && grep -q 'sub u_sub(sw\\[0\\], led\\[0\\]);' ui.sv && [ -s ui.bit ]"
 # run against a scratch HOME: the day the guard breaks, the test must delete a scratch folder, not the real ~/venv
 check "uninstall refuses FPGA_HOME=HOME" "mkdir -p '$T/home/fpga' '$T/home/venv' && ! HOME='$T/home' FPGA_HOME='$T/home' '$CLI' uninstall >out 2>&1 && grep -q 'refusing' out && [ -d '$T/home/fpga' ] && [ -d '$T/home/venv' ]"
+# physical paths (#7): FPGA_HOME=$HOME/., a link that points at HOME and a parent of HOME name the same folder
+check "uninstall refuses FPGA_HOME=HOME/. and a link to HOME" "rm -rf '$T/home' && mkdir -p '$T/home/venv' && ln -sfn '$T/home' '$T/hlink' && ! HOME='$T/home' FPGA_HOME='$T/home/.' say '$CLI' uninstall && grep -q 'ERROR \[fpga-home-unsafe\]' '$T/say' && ! HOME='$T/home' FPGA_HOME='$T/hlink' say '$CLI' uninstall && grep -q 'ERROR \[fpga-home-unsafe\]' '$T/say' && [ -d '$T/home/venv' ]"
+check "uninstall refuses FPGA_HOME = a parent of HOME" "mkdir -p '$T/par/home/venv' '$T/par/venv' && ! HOME='$T/par/home' FPGA_HOME='$T/par' say '$CLI' uninstall && grep -q 'parent of your home folder' '$T/say' && [ -d '$T/par/venv' ] && [ -d '$T/par/home/venv' ]"
+# x/l/.. with l a link: bash's cd folds the string to x, rm follows the link first and lands beside its target. The guard
+# and the deletes must both act on the folder the kernel resolves: y/venv goes (named), x/venv stays; and when the link
+# points into HOME, x/l/.. is HOME and uninstall refuses (the string x/l/.. spelled ~/venv without saying so)
+un_link() {
+    un_copy || return 1
+    local u="$T/ul" y; rm -rf "$u" && mkdir -p "$u/home/sub" "$u/home/venv" "$u/y/sub" "$u/y/venv" "$u/x/venv" && ln -s "$u/y/sub" "$u/x/l" && ln -s "$u/home/sub" "$u/x/lh" && y=$(cd "$u/y" && pwd -P) \
+    && HOME="$u/home" FPGA_HOME="$u/x/l/.." say "$T/un/bin/dewfpga" uninstall && grep -qF "removing: $y/venv" "$T/say" && ! grep -q 'removing: .*/x/l/' "$T/say" && [ ! -e "$u/y/venv" ] && [ -d "$u/x/venv" ] \
+    && ! HOME="$u/home" FPGA_HOME="$u/x/lh/.." say "$T/un/bin/dewfpga" uninstall && grep -q 'ERROR \[fpga-home-unsafe\]' "$T/say" && [ -d "$u/home/venv" ] && [ -d "$u/x/venv" ]
+}
+check "uninstall through a link's .. acts on the folder the path resolves to, not the one the string spells; refuses when that is HOME" un_link
+# CDPATH set and a relative FPGA_HOME: cd would pick CDPATH's folder and print it; uninstall must take the one under the current folder
+un_cdpath() {
+    un_copy || return 1
+    local c="$T/cdp" p; rm -rf "$c" && mkdir -p "$c/cwd/fh/venv" "$c/other/fh/venv" "$c/home" && p=$(cd "$c/cwd/fh" && pwd -P) \
+    && (cd "$c/cwd" && CDPATH="$c/other" HOME="$c/home" FPGA_HOME=fh say "$T/un/bin/dewfpga" uninstall) && grep -qF "removing: $p/venv" "$T/say" && [ ! -e "$c/cwd/fh" ] && [ -d "$c/other/fh/venv" ]
+}
+check "uninstall with CDPATH set and a relative FPGA_HOME removes under the current folder, not CDPATH's" un_cdpath
+# the web installer (site/install) against a scratch HOME, a scratch brew prefix and a stub release on a file:// url.
+# It replaces DEWFPGA_DIR, so it must refuse HOME, HOME/., a link to HOME, /, a parent of HOME and a folder with the
+# student's files and a git clone of the repo, and must accept an empty folder, a path that does not exist yet and an earlier dewfpga install
+# shellcheck disable=SC2016  # the stub brew's $1 is meant for its own shell
+wi_setup() {
+    rm -rf "$T/wi" && mkdir -p "$T/wi/home" "$T/wi/brew/bin" "$T/wi/bin" "$T/wi/site" "$T/wi/rel/dewfpga/bin" \
+    && printf '#!/bin/sh\n[ "$1" = --prefix ] && echo "%s"\n' "$T/wi/brew" > "$T/wi/bin/brew" && chmod +x "$T/wi/bin/brew" \
+    && printf '#!/bin/sh\necho stub\n' > "$T/wi/rel/dewfpga/bin/dewfpga" && printf '#!/bin/sh\n' > "$T/wi/rel/dewfpga/install.sh" \
+    && printf '{ "name": "dewfpga", "version": "0.0.0" }\n' > "$T/wi/rel/dewfpga/package.json" \
+    && (cd "$T/wi/rel" && tar -czf "$T/wi/site/dewfpga.tgz" dewfpga) && (cd "$T/wi/site" && LC_ALL=C shasum -a 256 dewfpga.tgz > dewfpga.tgz.sha256)
+}
+# wi <DEWFPGA_DIR, or "" for the default>: runs the installer, prints its output (kept in $T/wi/out), returns its status
+# shellcheck disable=SC2030  # the exports are for the installer's subshell only
+wi() { ( export LC_ALL=C HOME="$T/wi/home" PATH="$T/wi/bin:$PATH" DEWFPGA_URL="file://$T/wi/site"; [ -z "$1" ] || export DEWFPGA_DIR="$1"; bash "$ROOT/site/install" ) >"$T/wi/out" 2>&1; local r=$?; cat "$T/wi/out"; return $r; }
+check "web installer: fresh HOME -> ~/.dewfpga, link in brew's bin, sha256 ok" "wi_setup && wi '' && grep -q 'sha256 ok' '$T/wi/out' && [ -f '$T/wi/home/.dewfpga/bin/dewfpga' ] && [ '$T/wi/brew/bin/dewfpga' -ef '$T/wi/home/.dewfpga/bin/dewfpga' ]"
+check "web installer: re-run replaces the folder, a file removed upstream does not linger" "touch '$T/wi/home/.dewfpga/stale.txt' && wi '' && [ -f '$T/wi/home/.dewfpga/bin/dewfpga' ] && [ ! -e '$T/wi/home/.dewfpga/stale.txt' ]"
+check "web installer: refuses DEWFPGA_DIR=HOME, HOME/. and a link to HOME, keeps HOME" "touch '$T/wi/home/mine.txt' && ln -sfn '$T/wi/home' '$T/wi/hlink' && ! wi '$T/wi/home' && grep -q 'refusing to replace that folder' '$T/wi/out' && ! wi '$T/wi/home/.' && grep -q 'refusing' '$T/wi/out' && ! wi '$T/wi/hlink' && grep -q 'refusing' '$T/wi/out' && [ -f '$T/wi/home/mine.txt' ] && [ -f '$T/wi/home/.dewfpga/bin/dewfpga' ]"
+check "web installer: refuses / and a parent of HOME" "! wi / && grep -q 'refusing' '$T/wi/out' && ! wi '$T/wi' && grep -q 'parent of your home folder' '$T/wi/out' && [ -f '$T/wi/home/mine.txt' ] && [ -f '$T/wi/site/dewfpga.tgz' ]"
+check "web installer: refuses a folder with the student's files, keeps them" "mkdir -p '$T/wi/mine' && echo keep > '$T/wi/mine/lab.sv' && ! wi '$T/wi/mine' && grep -q 'not a dewfpga install' '$T/wi/out' && [ \"\$(cat '$T/wi/mine/lab.sv')\" = keep ]"
+check "web installer: a path that does not exist yet is created" "wi '$T/wi/new/deep' && [ -f '$T/wi/new/deep/bin/dewfpga' ]"
+# the earlier install is moved aside before the new tree moves in, never removed first: a parent folder the
+# installer cannot write makes that first move fail, and the install in place has to stay whole
+wi_ro() { chmod 555 "$T/wi/new"; local r=0; wi "$T/wi/new/deep" && r=1; chmod 755 "$T/wi/new"; [ "$r" = 0 ] && grep -q 'could not reserve a backup folder beside' "$T/wi/out" && [ -f "$T/wi/new/deep/bin/dewfpga" ] && ! ls -d "$T/wi/new/.dewfpga-backup."* >/dev/null 2>&1; }
+check "web installer: a parent folder it cannot write -> stops, the install in place stays" wi_ro
+# a move of the new tree that fails halfway leaves part of it at the target: the old tree must go back whole, not inside it
+# shellcheck disable=SC2016  # the stub mv's $1 and $2 are meant for its own shell
+wi_rb() {
+    local d="$T/wi/new/deep" r=0 prior="$T/wi/new/.dewfpga-backup.prior" b
+    mkdir -p "$prior/old" && echo prior > "$prior/old/keep.txt" \
+    && printf '#!/bin/sh\ncase "$1" in */new) mkdir -p "$2" && touch "$2/partial"; exit 1 ;; esac\nexec /bin/mv "$@"\n' > "$T/wi/bin/mv" && chmod +x "$T/wi/bin/mv" && echo old > "$d/old.txt"
+    wi "$d" && r=1; rm -f "$T/wi/bin/mv"
+    [ "$r" = 0 ] && grep -q 'the earlier install is back in place' "$T/wi/out" && [ "$(cat "$d/old.txt")" = old ] && [ -f "$d/bin/dewfpga" ] && [ ! -e "$d/partial" ] \
+    && [ "$(cat "$prior/old/keep.txt")" = prior ] && b=$(ls -d "$T/wi/new"/.dewfpga-backup.*) && [ "$(wc -l <<< "$b")" -eq 1 ] && rm -rf "$prior"
+}
+check "web installer: the new tree's move fails halfway -> the earlier install is back whole, and only then says so; a backup left by an earlier run stays" wi_rb
+# the move back fails too: the earlier install is still whole, in the backup folder the message names; nothing half-moved stays at the target
+# shellcheck disable=SC2016  # the stub mv's $1 and $2 are meant for its own shell
+wi_rb2() {
+    local d="$T/wi/new/deep" r=0 b bp
+    printf '#!/bin/sh\ncase "$1" in */new) mkdir -p "$2" && touch "$2/partial"; exit 1 ;; */old) exit 1 ;; esac\nexec /bin/mv "$@"\n' > "$T/wi/bin/mv" && chmod +x "$T/wi/bin/mv"
+    wi "$d" && r=1; rm -f "$T/wi/bin/mv"
+    b=$(ls -d "$T/wi/new"/.dewfpga-backup.* 2>/dev/null) || b=
+    # the message prints the physical path (/private/var on macos), the harness has the symlinked one
+    [ "$r" = 0 ] && grep -q 'nor the earlier install back; it is in' "$T/wi/out" && [ ! -e "$d" ] \
+    && [ -n "$b" ] && [ "$(wc -l <<< "$b")" -eq 1 ] && bp=$(cd "$b" && pwd -P) && grep -qF "it is in $bp/old" "$T/wi/out" \
+    && [ "$(cat "$b/old/old.txt")" = old ] && [ -f "$b/old/bin/dewfpga" ] && r=0 || r=1
+    # put the earlier install back for the checks after this one, whatever the verdict
+    if [ -n "$b" ] && [ -d "$b/old" ] && [ ! -e "$d" ]; then mv "$b/old" "$d" && rmdir "$b"; fi
+    [ "$r" = 0 ]
+}
+check "web installer: the move back fails too -> the earlier install is whole in the folder the message names, nothing at the target" wi_rb2
+# the same on a fresh install: the half-moved folder must go, or the next run refuses it as somebody's files
+# shellcheck disable=SC2016  # the stub mv's $1 and $2 are meant for its own shell
+wi_fresh() {
+    local d="$T/wi/fresh" r=0
+    rm -rf "$d" && printf '#!/bin/sh\ncase "$1" in */new) mkdir -p "$2" && touch "$2/partial"; exit 1 ;; esac\nexec /bin/mv "$@"\n' > "$T/wi/bin/mv" && chmod +x "$T/wi/bin/mv"
+    wi "$d" && r=1; rm -f "$T/wi/bin/mv"
+    [ "$r" = 0 ] && grep -q 'could not move the files into' "$T/wi/out" && [ ! -e "$d" ] && ! ls -d "$T/wi/.dewfpga-backup."* >/dev/null 2>&1 \
+    && wi "$d" && [ -f "$d/bin/dewfpga" ] && ! ls -d "$T/wi/.dewfpga-backup."* >/dev/null 2>&1
+}
+check "web installer: a fresh install's move fails halfway -> nothing half-moved is left, the next run installs" wi_fresh
+# a folder the installer cannot read (mode 0100) lists as empty: its files would be moved aside unseen and never come back
+wi_unread() {
+    local d="$T/wi/unread" r=0; rm -rf "$d" && mkdir -p "$d" && echo keep > "$d/lab.sv" && chmod 0100 "$d"
+    wi "$d" && r=1; chmod 755 "$d" "$T/wi"/.dewfpga-backup.*/old 2>/dev/null
+    if ! { [ "$r" = 0 ] && grep -q 'cannot be read' "$T/wi/out" && [ "$(cat "$d/lab.sv")" = keep ] && ! ls -d "$T/wi/.dewfpga-backup."* >/dev/null 2>&1; }; then r=1; fi
+    rm -rf "$T/wi"/.dewfpga-backup.*; [ "$r" = 0 ]
+}
+check "web installer: a folder it cannot read -> stops, the files in it stay where they are" wi_unread
+# the same three Macs as install_brew_diag, through the front door: a curl|bash student with brew in /opt/homebrew but
+# off the PATH must get the PATH line here too, not "Homebrew missing" (before #11 site/install only ran `command -v brew`).
+# PATH is cut to the system dirs, no scratch brew; the installer stops before any download, so no release is needed
+wi_brew_diag() {
+    local d="$T/wbd" out
+    rm -rf "$d"; mkdir -p "$d/as/opt/homebrew/bin" "$d/intel/usr/local/bin" "$d/home"
+    printf '#!/bin/sh\n: > "%s"\nexit 77\n' "$d/invoked" > "$d/as/opt/homebrew/bin/brew"; cp "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    chmod +x "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    run() { out=$( { PATH=/usr/bin:/bin HOME="$d/home" DEWFPGA_URL="file://$d/nosite" DEWFPGA_BREW_PATHS="$1" bash "$ROOT/site/install" || true; } 2>&1 ); }
+    run "$d/none/opt/homebrew/bin/brew $d/none/usr/local/bin/brew"
+    grep -q 'ERROR: Homebrew missing' <<< "$out" || { echo "no brew: $out"; return 1; }
+    run "$d/as/opt/homebrew/bin/brew $d/intel/usr/local/bin/brew"
+    grep -q "Homebrew is installed ($d/as/opt/homebrew/bin/brew) but not on your PATH" <<< "$out" || { echo "brew off PATH: $out"; return 1; }
+    grep -q 'Homebrew missing' <<< "$out" && { echo "brew off PATH still says missing: $out"; return 1; }
+    local line; line=$(grep "zprofile" <<< "$out")
+    (cd "$d/home" && HOME="$d/home" /bin/sh -c "$line") || { echo "echo line failed: $line"; return 1; }
+    [ "$(PATH=/usr/bin:/bin /bin/sh -c '. '"$d"'/home/.zprofile && command -v brew')" = "$d/as/opt/homebrew/bin/brew" ] || { echo "brew not resolvable after .zprofile: $(cat "$d/home/.zprofile")"; return 1; }
+    run "$d/intel/usr/local/bin/brew"
+    grep -q "Intel Homebrew was found at $d/intel/usr/local/bin/brew" <<< "$out" || { echo "intel brew: $out"; return 1; }
+    out=$( { PATH="$d/intel/usr/local/bin:/usr/bin:/bin" HOME="$d/home" FPGA_HOME="$T/e" DEWFPGA_URL="file://$d/nosite" DEWFPGA_BREW_PATHS="$d/as/opt/homebrew/bin/brew" bash "$ROOT/site/install" || true; } 2>&1 )
+    grep -q "brew command on your PATH is $d/intel/usr/local/bin/brew" <<< "$out" || { echo "Intel brew on PATH: $out"; return 1; }
+    [ ! -e "$d/invoked" ] || { echo "a brew candidate was executed during diagnosis"; return 1; }
+    [ ! -e "$d/home/.dewfpga" ] || { echo "the installer went on past the brew check"; return 1; }
+}
+check "web installer: brew absent, brew off the PATH and Intel brew get the three install.sh messages, and stop before any download" wi_brew_diag
+# the earlier install holds a folder rm cannot empty (mode 000 with a file inside): the new install is in place, so the
+# installer goes on and names where the old one is left, instead of ending on rm's line alone (set -e)
+wi_keep() {
+    local d="$T/wi/new/deep" r=0 b; mkdir -p "$d/locked/inner" && echo lock > "$d/locked/inner/f" && chmod 000 "$d/locked"
+    wi "$d" || r=1
+    b=$(ls -d "$T/wi/new"/.dewfpga-backup.* 2>/dev/null) || b=
+    [ "$r" = 0 ] && grep -q 'sha256 ok' "$T/wi/out" && grep -q 'note: the earlier install could not be removed; it is in' "$T/wi/out" && [ -f "$d/bin/dewfpga" ] && [ ! -e "$d/locked" ] \
+    && [ -n "$b" ] && [ "$(wc -l <<< "$b")" -eq 1 ] && grep -qF "it is in $(cd "$b" && pwd -P)/old" "$T/wi/out" && [ -d "$b/old/locked" ] || r=1
+    chmod -R u+rwx "$T/wi/new"/.dewfpga-backup.* 2>/dev/null; rm -rf "$T/wi/new"/.dewfpga-backup.*; [ "$r" = 0 ]
+}
+check "web installer: the earlier install has a folder rm cannot remove -> the new one is in place, the message names where the old one is left" wi_keep
+# the new tree's move fails halfway and the half-moved copy cannot be removed either (a locked folder in it): a fresh
+# install says so and names it; over an earlier install, the old tree stays whole in the backup folder the message names
+# shellcheck disable=SC2016  # the stub mv's $1 and $2 are meant for its own shell
+wi_stuck() {
+    local d="$T/wi/stuck" e="$T/wi/new/deep" r=0 b
+    rm -rf "$d" && printf '#!/bin/sh\ncase "$1" in */new) mkdir -p "$2/partial/inner" && touch "$2/partial/inner/f" && chmod 000 "$2/partial"; exit 1 ;; esac\nexec /bin/mv "$@"\n' > "$T/wi/bin/mv" && chmod +x "$T/wi/bin/mv"
+    wi "$d" && r=1
+    [ "$r" = 0 ] && grep -q 'could not move the files into' "$T/wi/out" && grep -qF "A half-moved copy is left at $(cd "$T/wi" && pwd -P)/stuck" "$T/wi/out" && [ -d "$d/partial" ] && ! ls -d "$T/wi/.dewfpga-backup."* >/dev/null 2>&1 || r=1
+    chmod -R u+rwx "$d" 2>/dev/null; rm -rf "$d" "$T/wi"/.dewfpga-backup.*
+    if [ "$r" = 0 ]; then
+        echo old > "$e/old.txt"; wi "$e" && r=1
+        b=$(ls -d "$T/wi/new"/.dewfpga-backup.* 2>/dev/null) || b=
+        [ "$r" = 0 ] && grep -q 'nor the earlier install back; it is in' "$T/wi/out" && grep -q 'A half-moved copy is left at' "$T/wi/out" && [ -d "$e/partial" ] \
+        && [ -n "$b" ] && [ "$(wc -l <<< "$b")" -eq 1 ] && [ "$(cat "$b/old/old.txt")" = old ] && [ -f "$b/old/bin/dewfpga" ] || r=1
+        chmod -R u+rwx "$e" 2>/dev/null; rm -rf "$e"
+        if [ -n "$b" ] && [ -d "$b/old" ]; then mv "$b/old" "$e" && rmdir "$b"; fi
+    fi
+    rm -f "$T/wi/bin/mv"; [ "$r" = 0 ]
+}
+check "web installer: the move fails halfway and the half-moved copy cannot be removed -> says so and names it; over an earlier install that one is whole in the folder named" wi_stuck
+check "web installer: sha256 mismatch -> stops, the install in place stays" "echo x >> '$T/wi/site/dewfpga.tgz' && ! wi '$T/wi/new/deep' && grep -q 'sha256 mismatch' '$T/wi/out' && [ -f '$T/wi/new/deep/bin/dewfpga' ]"
+# a developer's clone of the repo has bin/dewfpga and package.json like an install, and .git (a file in a worktree) with work in it
+wi_clone() {
+    rm -rf "$T/wi/clone" && mkdir -p "$T/wi/clone/bin" "$T/wi/clone/.git" && echo stub > "$T/wi/clone/bin/dewfpga" && cp "$T/wi/rel/dewfpga/package.json" "$T/wi/clone/" && echo wip > "$T/wi/clone/lab.sv" \
+    && ! wi "$T/wi/clone" && grep -q 'git clone' "$T/wi/out" && [ -d "$T/wi/clone/.git" ] && [ "$(cat "$T/wi/clone/lab.sv")" = wip ] \
+    && rmdir "$T/wi/clone/.git" && echo 'gitdir: /elsewhere/.git/worktrees/x' > "$T/wi/clone/.git" \
+    && ! wi "$T/wi/clone" && grep -q 'git clone' "$T/wi/out" && [ -f "$T/wi/clone/.git" ] && [ "$(cat "$T/wi/clone/lab.sv")" = wip ]
+}
+check "web installer: refuses a git clone of dewfpga (.git folder, or a worktree's .git file), keeps it" wi_clone
+# `nope/..` past a folder that does not exist: mkdir -p makes nope, and the path then names HOME or Documents
+wi_dotdot() {
+    mkdir -p "$T/wi/home/Documents" && echo keep > "$T/wi/home/Documents/cv.txt" \
+    && ! wi "$T/wi/home/nope/../Documents" && grep -q 'does not exist yet' "$T/wi/out" \
+    && ! wi "$T/wi/home/nope/../../home" && grep -q 'does not exist yet' "$T/wi/out" \
+    && [ "$(cat "$T/wi/home/Documents/cv.txt")" = keep ] && [ -f "$T/wi/home/mine.txt" ] && [ ! -e "$T/wi/home/nope" ] && ! ls -d "$T/wi/.dewfpga-backup."* >/dev/null 2>&1
+}
+check "web installer: refuses a .. after a folder that does not exist yet, keeps HOME and its folders" wi_dotdot
+# a folder on the way it cannot open: the path must not fall back to the part after it (an absolute path somewhere else)
+wi_locked() {
+    local r=0; rm -rf "$T/wi/victim" && mkdir -p "$T/wi/locked" "$T/wi/victim" && echo keep > "$T/wi/victim/lab.sv" && chmod 000 "$T/wi/locked"
+    wi "$T/wi/locked$T/wi/victim" && r=1; chmod 755 "$T/wi/locked"
+    [ "$r" = 0 ] && grep -q 'cannot be opened' "$T/wi/out" && [ "$(cat "$T/wi/victim/lab.sv")" = keep ] && [ ! -e "$T/wi/victim/bin" ]
+}
+check "web installer: a folder on the way it cannot open -> stops, replaces nothing elsewhere" wi_locked
+# //HOME (bash's pwd keeps the double slash) and HOME in other letters (APFS ignores case) are HOME
+wi_alias() {
+    local up; up=$(printf '%s' "$T/wi/home" | tr '[:lower:]' '[:upper:]')
+    ! wi "/$T/wi/home" && grep -q 'refusing' "$T/wi/out" && ! wi "/$T/wi" && grep -q 'parent of your home folder' "$T/wi/out" \
+    && { [ ! "$up" -ef "$T/wi/home" ] || { ! wi "$up" && grep -q 'refusing' "$T/wi/out"; }; } && [ -f "$T/wi/home/mine.txt" ]
+}
+check "web installer: refuses //HOME, //parent of HOME and HOME in other letters" wi_alias
+# uninstall from ~/.dewfpga: the web installer's folder goes; a link there to a developer's clone goes, the clone stays
+# shellcheck disable=SC2031  # PATH here is this shell's own, wi's export never reached it
+un_dewdir() {
+    local h="$T/udh" c="$T/uclone"
+    rm -rf "$h" "$c" && mkdir -p "$h/fpga" "$c/.git" && cp -R "$ROOT/bin" "$ROOT/package.json" "$c/" && echo wip > "$c/lab.sv" && ln -s "$c" "$h/.dewfpga" \
+    && ln -sfn "$c/bin/dewfpga" "$T/wi/brew/bin/dewfpga" \
+    && HOME="$h" FPGA_HOME="$h/fpga" PATH="$T/wi/bin:$PATH" "$T/wi/brew/bin/dewfpga" uninstall >"$T/un.out" 2>&1 \
+    && [ ! -L "$h/.dewfpga" ] && [ ! -L "$T/wi/brew/bin/dewfpga" ] && [ -d "$c/.git" ] && [ "$(cat "$c/lab.sv")" = wip ] && [ -f "$c/bin/dewfpga" ] \
+    && rm -rf "$c/.git" && mv "$c" "$h/.dewfpga" \
+    && HOME="$h" FPGA_HOME="$h/fpga" PATH="$T/wi/bin:$PATH" "$h/.dewfpga/bin/dewfpga" uninstall >"$T/un.out" 2>&1 \
+    && grep "^removing: .*/udh/.dewfpga$" "$T/un.out" >/dev/null && [ ! -e "$h/.dewfpga" ]
+}
+check "uninstall from ~/.dewfpga: removes the installer's folder; a link to a git clone goes, the clone stays" un_dewdir
+# ~/.dewfpga itself a developer's clone, uninstall run through brew's link to it: the link goes, the clone stays (also with a dangling .git link)
+# shellcheck disable=SC2031  # PATH here is this shell's own, wi's export never reached it
+un_clone() {
+    local h="$T/uch" c="$T/uch/.dewfpga"
+    rm -rf "$h" && mkdir -p "$h/fpga" "$c/.git" && cp -R "$ROOT/bin" "$ROOT/package.json" "$c/" && echo wip > "$c/lab.sv" \
+    && ln -sfn "$c/bin/dewfpga" "$T/wi/brew/bin/dewfpga" \
+    && HOME="$h" FPGA_HOME="$h/fpga" PATH="$T/wi/bin:$PATH" "$T/wi/brew/bin/dewfpga" uninstall >"$T/un.out" 2>&1 \
+    && [ ! -L "$T/wi/brew/bin/dewfpga" ] && [ -d "$c/.git" ] && [ "$(cat "$c/lab.sv")" = wip ] && [ -f "$c/bin/dewfpga" ] \
+    && rmdir "$c/.git" && ln -s "$T/nowhere" "$c/.git" \
+    && HOME="$h" FPGA_HOME="$h/fpga" PATH="$T/wi/bin:$PATH" "$c/bin/dewfpga" uninstall >"$T/un.out" 2>&1 \
+    && [ -L "$c/.git" ] && [ "$(cat "$c/lab.sv")" = wip ]
+}
+check "uninstall: ~/.dewfpga a git clone, run through brew's link -> the link goes, the clone stays" un_clone
+# //HOME and HOME in other letters name HOME; a string compare let them through and ~/venv went
+un_alias() {
+    local h="$T/uah" up; up=$(printf '%s' "$T/uah" | tr '[:lower:]' '[:upper:]')
+    rm -rf "$h" && mkdir -p "$h/venv" "$h/chipdb" "$h/x" \
+    && ! HOME="$h" FPGA_HOME="/$h" say "$CLI" uninstall && grep -q 'ERROR \[fpga-home-unsafe\]' "$T/say" \
+    && ! HOME="$h/x" FPGA_HOME="/$h" say "$CLI" uninstall && grep -q 'parent of your home folder' "$T/say" \
+    && { [ ! "$up" -ef "$h" ] || { ! HOME="$h" FPGA_HOME="$up" say "$CLI" uninstall && grep -q 'ERROR \[fpga-home-unsafe\]' "$T/say"; }; } \
+    && [ -d "$h/venv" ] && [ -d "$h/chipdb" ]
+}
+check "uninstall refuses //HOME, //parent of HOME and HOME in other letters" un_alias
+check "uninstall with a HOME that cannot be opened -> refuses, deletes nothing" "mkdir -p '$T/unh/venv' && ! HOME='$T/nowhere' FPGA_HOME='$T/unh' say '$CLI' uninstall && grep -q 'ERROR \[fpga-home-unsafe\]: HOME=$T/nowhere cannot be opened' '$T/say' && [ -d '$T/unh/venv' ]"
 check "corrupt .fasm -> error, no .frames" "cd '$T/w' && '$CLI' clean && '$CLI' bit >/dev/null && sleep 1.1 && echo garbage > blink.fasm && ! '$CLI' bit >out 2>&1 && grep -q 'no FASM features' out"
 check "port missing in xdc"   "cd '$T/w' && sed '/led\[15\]/d' blink.xdc > bad.xdc && cp blink.sv b.sv && mkdir x && mv b.sv x/blink.sv && cp bad.xdc x/blink.xdc && cd x && { '$CLI' bit || true; } 2>&1 | grep -q 'led\[15\]'"
 check "install: refuses sudo" "mkdir -p '$T/fb' && printf '#!/bin/sh\n[ \"\$1\" = -u ] && echo 0 || /usr/bin/id \"\$@\"\n' > '$T/fb/id' && chmod +x '$T/fb/id' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'sudo'"
 check "install: refuses x86"  "rm -f '$T/fb/id'; printf '#!/bin/sh\n[ \"\$1\" = -m ] && echo x86_64 || /usr/bin/uname \"\$@\"\n' > '$T/fb/uname' && chmod +x '$T/fb/uname' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'arm64'"
+# install.sh step 0 looks for brew where brew.sh puts it before saying "Homebrew missing"; DEWFPGA_BREW_PATHS points it at
+# stubs here, PATH is cut to the system dirs so the Mac's real brew is not found. Three Macs: no Homebrew, Homebrew in
+# /opt/homebrew that was never put on the PATH (the message must name it and its echo line, pasted, must make brew
+# resolvable), an Intel Homebrew in /usr/local.
+install_brew_diag() {
+    local d="$T/bd" out
+    rm -rf "$d"; mkdir -p "$d/as/opt/homebrew/bin" "$d/intel/usr/local/bin" "$d/home"
+    printf '#!/bin/sh\n: > "%s"\nexit 77\n' "$d/invoked" > "$d/as/opt/homebrew/bin/brew"; cp "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    chmod +x "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    run() { out=$( { PATH=/usr/bin:/bin FPGA_HOME="$T/e" DEWFPGA_BREW_PATHS="$1" "$ROOT/install.sh" || true; } 2>&1 ); }
+    run "$d/none/opt/homebrew/bin/brew $d/none/usr/local/bin/brew"
+    grep -q 'ERROR: Homebrew missing' <<< "$out" || { echo "no brew: $out"; return 1; }
+    run "$d/as/opt/homebrew/bin/brew $d/intel/usr/local/bin/brew"
+    grep -q "Homebrew is installed ($d/as/opt/homebrew/bin/brew) but not on your PATH" <<< "$out" || { echo "brew off PATH: $out"; return 1; }
+    grep -q 'Homebrew missing' <<< "$out" && { echo "brew off PATH still says missing: $out"; return 1; }
+    # the echo line it prints, pasted as is, must leave a .zprofile that makes brew resolvable
+    local line; line=$(grep "zprofile" <<< "$out")
+    (cd "$d/home" && HOME="$d/home" /bin/sh -c "$line") || { echo "echo line failed: $line"; return 1; }
+    grep -qx "export PATH=\"$d/as/opt/homebrew/bin:\$PATH\"" "$d/home/.zprofile" || { echo ".zprofile got: $(cat "$d/home/.zprofile")"; return 1; }
+    [ "$(PATH=/usr/bin:/bin /bin/sh -c '. '"$d"'/home/.zprofile && command -v brew')" = "$d/as/opt/homebrew/bin/brew" ] || { echo "brew not resolvable after .zprofile"; return 1; }
+    run "$d/intel/usr/local/bin/brew"
+    grep -q "Intel Homebrew was found at $d/intel/usr/local/bin/brew" <<< "$out" || { echo "intel brew: $out"; return 1; }
+    out=$( { PATH="$d/intel/usr/local/bin:/usr/bin:/bin" HOME="$d/home" FPGA_HOME="$T/e" DEWFPGA_URL="file://$d/nosite" DEWFPGA_BREW_PATHS="$d/as/opt/homebrew/bin/brew" "$ROOT/install.sh" || true; } 2>&1 )
+    grep -q "brew command on your PATH is $d/intel/usr/local/bin/brew" <<< "$out" || { echo "Intel brew on PATH: $out"; return 1; }
+    [ ! -e "$d/invoked" ] || { echo "a brew candidate was executed during diagnosis"; return 1; }
+}
+check "install: brew absent, brew off the PATH and Intel brew get three different messages" install_brew_diag
 check "install: no network -> clear error" "rm -rf '$T/e'; { GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.proxy GIT_CONFIG_VALUE_0=http://127.0.0.1:9 FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'could not fetch'"
-check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1; [ \$(( \$(date +%s) - s )) -lt 10 ]"
+check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1 && [ \$(( \$(date +%s) - s )) -lt 10 ]"
 
 sec "== project template"
 check "new + dewfpga bit"     "'$CLI' new '$T/p' && cd '$T/p' && '$CLI' bit && [ -s blink.bit ]"
+# agents_md <dir>: the guidance new writes for a coding agent. A subshell, so a failed step cannot exit run.sh (check evals).
+# Every `dewfpga <cmd>` it names (code block or backticks) is a label of the CLI's dispatch case, every --option is one the
+# CLI or the JSON wrapper reads, the exit table matches agent_json.py, and the code block's tops and sim --json run as written
+agents_md() { (
+    set -e; cd "$1"
+    [ "$(cat CLAUDE.md)" = '@AGENTS.md' ]; cmp -s AGENTS.md "$ROOT/templates/AGENTS.md"; [ "$(wc -l < AGENTS.md)" -le 60 ]
+    labels=$(sed -n '/^case "${1:-}" in/,/^esac/p' "$ROOT/bin/dewfpga" | sed -nE 's/^ +([a-z|-]+)\).*/\1/p' | tr '|' '\n')
+    named=$( { awk '/^```/{f=!f; next} f && $1=="dewfpga"{print $2}' AGENTS.md; grep -oE '`dewfpga [a-z]+' AGENTS.md | cut -d' ' -f2; } | sort -u)
+    [ -n "$named" ]
+    for w in $named; do grep -qx -- "$w" <<< "$labels" || { echo "AGENTS.md names dewfpga $w, bin/dewfpga has no such command"; false; }; done
+    grep -oE -- '--[a-z][a-z-]*' AGENTS.md | sort -u | while read -r o; do
+        grep -q -- "$o" "$ROOT/bin/dewfpga" "$ROOT/templates/agent_json.py" || { echo "AGENTS.md names $o, the CLI does not read it"; false; }; done
+    python3 -B - "$ROOT/templates/agent_json.py" AGENTS.md <<'EOF'
+import re, sys
+src, doc = open(sys.argv[1]).read(), open(sys.argv[2]).read()
+table = {int(n) for n in re.findall(r"^\| (\d+) \|", doc, re.M)}
+real = {0} | {int(n) for n in re.findall(r"\b(\d+)\b", src[src.index("EXIT_FOR_CODE"):src.index("SITE =")])}
+assert table and table <= real, f"exit table {sorted(table)} vs agent_json.py {sorted(real)}"
+EOF
+    "$CLI" tops | grep -q '^blink'
+    "$CLI" sim --json > "$T/agents.json"
+    python3 -B -c 'import json,sys; r=json.load(open(sys.argv[1])); assert r["schema"]=="dewfpga/result@1" and r["ok"] is True and r["exit_code"]==0, r' "$T/agents.json"
+) }
+check "new: AGENTS.md + CLAUDE.md for a coding agent (CLAUDE.md is the one-line import; every command, option and exit code it names is the CLI's; tops and sim --json run)" "agents_md '$T/p'"
 check "new: no Makefile, task uses dewfpga" "cd '$T/p' && [ ! -e Makefile ] && grep -q '\"dewfpga flash\"' .vscode/tasks.json && ! grep -q 'make ' .vscode/tasks.json && python3 -c 'import json;json.load(open(\".vscode/settings.json\"));json.load(open(\".vscode/extensions.json\"))'"
 check "manual path: templates/Makefile"  "mkdir '$T/mk' && cp '$ROOT'/templates/{blink.sv,blink_tb.sv,blink.xdc,check_xdc.py,Makefile} '$T/mk/' && cd '$T/mk' && make -s bit > out.txt && grep -q '^pnr ok' out.txt && [ -s blink.bit ] && ! make check | grep -q MISSING"
 

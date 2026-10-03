@@ -1,0 +1,439 @@
+{
+  "date": "2026-10-03",
+  "batch": "v3",
+  "model": "claude-fable-5-1",
+  "attempts_per_cell": 1,
+  "scope": "observed repair outcomes after correcting shared-ancestor guidance; not a statistical estimate of guidance benefit",
+  "summary": {
+    "plain": {
+      "cells": 8,
+      "repair_checks_passed": 8,
+      "tool_calls": 50,
+      "cli_process_seconds": 516.87,
+      "bash_tool_calls_with_json_flag": 0,
+      "external_backup_protocol_deviations": 0
+    },
+    "guided": {
+      "cells": 8,
+      "repair_checks_passed": 8,
+      "tool_calls": 41,
+      "cli_process_seconds": 550.92,
+      "bash_tool_calls_with_json_flag": 13,
+      "external_backup_protocol_deviations": 1
+    }
+  },
+  "frozen_harness_files_verified": 63,
+  "cell_order": [
+    "plain/1_port_direction",
+    "guided/1_port_direction",
+    "guided/2_unnamed_instance",
+    "plain/2_unnamed_instance",
+    "plain/3_async_reset_nonconst",
+    "guided/3_async_reset_nonconst",
+    "guided/4_dual_edge",
+    "plain/4_dual_edge",
+    "plain/5_two_always_drivers",
+    "guided/5_two_always_drivers",
+    "guided/6_enum_method_next",
+    "plain/6_enum_method_next",
+    "plain/7_no_testbench",
+    "guided/7_no_testbench",
+    "guided/8_latch_missing_else",
+    "plain/8_latch_missing_else"
+  ],
+  "cells": [
+    {
+      "fixture": "1_port_direction",
+      "arm": "plain",
+      "tool_calls": 6,
+      "seconds": 59.11,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "1_port_direction",
+      "arm": "guided",
+      "tool_calls": 5,
+      "seconds": 49.55,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 2,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "2_unnamed_instance",
+      "arm": "guided",
+      "tool_calls": 5,
+      "seconds": 82.74,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 3,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "2_unnamed_instance",
+      "arm": "plain",
+      "tool_calls": 6,
+      "seconds": 83.58,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "3_async_reset_nonconst",
+      "arm": "plain",
+      "tool_calls": 7,
+      "seconds": 52.44,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "3_async_reset_nonconst",
+      "arm": "guided",
+      "tool_calls": 5,
+      "seconds": 77.41,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "4_dual_edge",
+      "arm": "guided",
+      "tool_calls": 6,
+      "seconds": 88.04,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "4_dual_edge",
+      "arm": "plain",
+      "tool_calls": 4,
+      "seconds": 38.78,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "5_two_always_drivers",
+      "arm": "plain",
+      "tool_calls": 7,
+      "seconds": 65.02,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "5_two_always_drivers",
+      "arm": "guided",
+      "tool_calls": 6,
+      "seconds": 53.61,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 4,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "6_enum_method_next",
+      "arm": "guided",
+      "tool_calls": 4,
+      "seconds": 48.73,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 2,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "6_enum_method_next",
+      "arm": "plain",
+      "tool_calls": 6,
+      "seconds": 46.13,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "7_no_testbench",
+      "arm": "plain",
+      "tool_calls": 7,
+      "seconds": 83.9,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "design",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "7_no_testbench",
+      "arm": "guided",
+      "tool_calls": 6,
+      "seconds": 108.37,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "design",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 2,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": true
+    },
+    {
+      "fixture": "8_latch_missing_else",
+      "arm": "guided",
+      "tool_calls": 4,
+      "seconds": 42.47,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    },
+    {
+      "fixture": "8_latch_missing_else",
+      "arm": "plain",
+      "tool_calls": 7,
+      "seconds": 87.91,
+      "model": "claude-fable-5-1",
+      "repair_checks_passed": true,
+      "checks": [
+        "xdc",
+        "sim",
+        "bit",
+        "tb-good",
+        "tb-wrong",
+        "ref-tb",
+        "ports",
+        "eqv"
+      ],
+      "bash_tool_calls_with_json_flag": 0,
+      "observed_guidance_or_reference_leak": false,
+      "external_backup_protocol_deviation": false
+    }
+  ],
+  "limitations": [
+    "one attempt per fixture and arm",
+    "fixtures 1 and 2 are CLI auto-repair controls",
+    "reference testbench was visible in seven of eight fixtures",
+    "finite wrong-design mutations",
+    "instruction protocol is not a filesystem sandbox",
+    "same user-level Claude configuration and hooks remain available to both arms",
+    "one guided cell copied its own source to an external temporary backup and restored it; no reference or plain-arm guide access observed",
+    "process durations exclude external acceptance tests and are not token counts or cost measurements",
+    "invalid v2 batch retained separately; no cells reused"
+  ],
+  "root_audit": {
+    "all_16_tool_inputs_inspected": true,
+    "tool_outputs_scanned_for_guidance_and_harness_paths": true,
+    "lexical_and_resolved_ancestors_rechecked": true,
+    "plain_arm_guide_or_reference_access_observed": false,
+    "total_acceptance_checks": 130
+  },
+  "invocation": {
+    "argv": [
+      "claude",
+      "--print",
+      "--model",
+      "claude-fable-5-1",
+      "--effort",
+      "high",
+      "--permission-mode",
+      "auto",
+      "--permission-prompts",
+      "none",
+      "--tools",
+      "Bash,Read,Edit,Write,Glob,Grep",
+      "--strict-mcp-config",
+      "--mcp-config",
+      "{\"mcpServers\":{}}",
+      "--autocompact",
+      "100k",
+      "--output-format",
+      "stream-json",
+      "--verbose",
+      "--disallowedTools",
+      "Task,Workflow,CronCreate,ScheduleWakeup,RemoteTrigger",
+      "--name",
+      "dewfpga experiment <arm>/<fixture>",
+      "<prompt>"
+    ],
+    "extra_prompt": "Work only in this project folder. Do not search other folders for solutions or test fixtures. Do not read ../ paths or absolute paths outside this project, including ancestor AGENTS.md files. The CLI is on PATH; use it to inspect and validate this project. Do not use agents or remote services. Never run flash. Report what you changed and the commands you actually ran.",
+    "concurrency": 1,
+    "seconds_per_cell": 600,
+    "cli": "frozen bin/ and templates/ copy placed first on PATH",
+    "guidance_sha256": {
+      "AGENTS.md": "40a6718b32f583224885bae69bd31b92c30f9eb93619d8c602c7023e97731651",
+      "CLAUDE.md": "336cc4fbf19beaada7ccf9986414fa91851a8d7a07dfb3ccbe800a69eed0ab49"
+    }
+  }
+}

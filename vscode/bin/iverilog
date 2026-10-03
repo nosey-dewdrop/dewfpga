@@ -1,0 +1,33 @@
+#!/bin/bash
+# dewfpga lint shim for the veriloghdl extension (verilog.linting.path points at this folder).
+# Runs the real iverilog with the same arguments. One change: Icarus prints
+#   <file>:<line>: sorry: constant selects in always_* processes are not fully supported (...)
+# for LEGAL code (exit 0; Vivado and yosys build it), and the extension draws every unknown
+# severity red. That one line becomes "warning:" (the sensitivity really does differ, so it is
+# not hidden). Every other line, stdout, and the exit status pass through unchanged.
+# VS Code may start the linter with a minimal PATH; the tools below live in /usr/bin and /bin.
+export PATH="${PATH:+$PATH:}/usr/bin:/bin"
+# Never run this file again: an iverilog on PATH that is this file through a symlink or a hard link
+# (-ef: same device and inode after following links) or a byte-for-byte copy (cmp) is skipped. A changed
+# copy is caught by the variable on its second start instead of looping (two PATH links used to fork forever).
+if [ -n "${DEWFPGA_LINT_SHIM:-}" ]; then
+    echo "iverilog: a second dewfpga lint shim ($0) was on PATH before the real iverilog. Fix: keep one dewfpga shim folder on PATH, or brew install icarus-verilog" >&2
+    exit 127
+fi
+export DEWFPGA_LINT_SHIM=1
+real=""
+IFS=: read -r -a dirs <<< "${PATH:-}"
+for d in "${dirs[@]}" /opt/homebrew/bin /usr/local/bin; do
+    [ -n "$d" ] && [ -f "$d/iverilog" ] && [ -x "$d/iverilog" ] || continue
+    if [ "$d/iverilog" -ef "$0" ] || cmp -s "$d/iverilog" "$0"; then continue; fi
+    real=$(cd "$d" 2>/dev/null && pwd -P)/iverilog; break
+done
+if [ -z "$real" ]; then
+    echo "iverilog: not found (the dewfpga lint shim looked on PATH, /opt/homebrew/bin and /usr/local/bin). Fix: brew install icarus-verilog" >&2
+    exit 127
+fi
+# stderr goes through sed, stdout stays on the original fd 1 (via fd 3); the exit status is iverilog's own.
+{
+    "$real" "$@" 2>&1 1>&3 | LC_ALL=C sed -E 's/^(.+:[0-9]+): sorry: constant selects in always_\* processes/\1: warning: constant selects in always_* processes/' 1>&2
+    exit "${PIPESTATUS[0]}"
+} 3>&1

@@ -3218,3 +3218,597 @@ there and started the whole suite); "the same number on every machine" shipped t
 second kind of machine (`env -i` would have caught `yosys: command not found` at line 83 and the board and
 FULL modes); a check that hides the product's output prints a bare FAIL (fixed in round 3 with `say`/`shown`);
 "each new check broken once" was promised and not evidenced in the integrator's report (the judge did three).
+
+
+### #7 · Safer installation and reproducible simulator distribution · 3 October
+
+**The installer checks the destination before replacing it.** HOME, its parents and aliases,
+the filesystem root, Git checkouts, unreadable directories and unrelated nonempty folders are
+refused. An update reserves a private backup beside the destination and restores the previous
+installation if moving the new copy fails. If restoration or cleanup is blocked, the error names
+the retained backup. A failed first installation removes its partial copy when possible.
+
+**Uninstall checks and removes the same physical directory.** A path containing a symbolic link
+followed by `..` previously passed a check of one directory and removed entries in another.
+The reproduced scratch-HOME case now exits with `ERROR [fpga-home-unsafe]` and keeps both the
+home files and the decoy directory. `CDPATH` no longer redirects a relative installation path.
+
+**Only tracked files enter the release package and static site.** `scripts/package.py` stages
+tracked package inputs and rejects symbolic links. CI and the mirror copy tracked site and
+project-template files. The mirror refuses uncommitted tracked changes and untracked files in
+Vite's public directory, including ignored dotfiles. Its temporary Vercel state is removed on
+failure as well as success. Fixtures proved an untracked template file entered the old npm
+package and is excluded by the new packaging command.
+
+**The simulator ships its license files.** Its footer links to the actual MIT license, Icarus
+GPL text and generated third-party notices in the built distribution. The inventory identifies
+JointJS as MPL-2.0 and distinguishes installed dependencies from confirmed bundled code.
+The Icarus recipe pins a full source commit and applies the required JavaScript compatibility
+edit automatically. A clean rebuild with Emscripten 6.0.2-git reproduced all four shipped files
+byte-for-byte; `node sim/src/tb/wasm/build/smoke.mjs` checks compilation, includes, counter output,
+plusargs, VCD output and rejection of invalid source. Hashes and commands are in the build README.
+
+**Validation and limits.** The first full local run passed 258 checks, failed 0, with 52 known
+compiler gaps. After the additional security fixes, the second full run passed 262 and failed 1:
+the personal-path scan found a local Python bytecode cache. All 133 probe outcomes were unchanged
+(108 synthesize, 64 pass all four stages, 59/111 Vivado-supported probes pass all four).
+After removing that cache and isolating two new uninstall tests from the real Homebrew link,
+the affected security, static, count and privacy checks passed **35, failed 0**. The verification
+intentionally pointed the real CLI link at the tested checkout and confirmed it survived.
+`--list` reports 319 available checks; that is not the number executed on this machine.
+A builder's initial mutation claim was rejected because its fixture setup was absent; the
+independent corrected run passed 15 on the original and failed the intended check on the mutant.
+A physical Basys3 test, this commit's remote CI and deployment are not claimed by these local results.
+
+
+### #8 · Browser tests and checks before publishing · 3 October
+
+`cd sim && npm test` now builds the simulator, serves it on a free local port and runs
+31 real browser checks. It uses Playwright's installed browser by default, closes the preview,
+and returns failure for failed assertions or a timeout. On macOS/Linux, timeout cleanup also
+terminates browser descendants still attached to the test process. The old machine-specific
+executable path is gone. Both a cached-browser run and an independent default-browser run
+passed **31, failed 0**; the latter used Chromium 145.0.7632.6. A forced timeout returned 124
+and left no new Chromium process. Processes already reparented outside the test tree are a
+known limit of this cleanup; it is not a general process supervisor.
+
+The Ubuntu CI job installs the locked dependencies and Chromium, then runs those browser tests.
+Pages publication requires that job and the macOS CLI job. The assembled Pages artifact and
+the rewritten mirror bundle must pass `test/site-check.py` before publication. Checks cover
+links and anchors, navigation presence and consistency, canonical metadata, sitemap membership,
+duplicate IDs, question punctuation and unexpected package files. The question rule is a
+language heuristic. Ten deliberately broken site fixtures now run in CI, including deleted
+navigation, missing local anchors and questions outside h1–h6; an earlier review showed those
+cases could pass silently.
+
+The source check exposed 69 missing error-page sitemap entries. `docs/sitemap-build.py` now
+regenerates the sitemap from tracked indexable pages and is called by the documentation builders.
+Local validation after rebuilding both artifacts: **86 source pages, 0 failures; 88 Pages bundle
+pages, 0 failures; 88 mirror pages, 0 failures**. The same-page anchor fix and the sitemap fix
+were checked together on rebuilt artifacts. Remote CI is pending for this commit; local browser
+results are not represented as Ubuntu results. Commands are in `sim/test/README.md`.
+
+
+### #9 · One navigation source, unchanged desktop layout · 3 October
+
+`docs/nav.py` now generates navigation from one chip table, and `docs/nav.css` supplies the
+shared navigation CSS. The guide and error-page builders use the same source. Generated copies
+are checked by `test/site-check.py`; changes to an active-page marker, Turkish language label,
+chip link or generated CSS are detected. A second generator run is byte-identical across the
+89 checked copies. Eleven unreferenced simulator debug/screenshot scripts were removed; the
+browser test runner and engine checks remain.
+
+Measured at 1366px: all nine navigation crops have **0 differing pixels**, and all eight static
+full-page captures have **0 differing pixels**. The simulator's animated area differs below the
+navigation strip and is not claimed identical. At phone width, the CLI's nine differing pixels
+also occur between two unchanged baseline captures; simulator captures remain dynamic.
+An independent comparison of computed styles at seven widths found no non-custom-property
+change. Both documentation generators, site checks, ten fault-injection fixtures and the Vite
+build passed. Rebuilt Pages and mirror artifacts each contain 88 clean pages. Physical GUI and
+this commit's remote CI are not claimed by these local measurements.
+
+
+### #10 · Patch notes on the site and working navigation hit areas · 3 October
+
+The seventh navigation chip opens `/patch-notes/`, generated from this file by
+`python3 docs/patch-notes-build.py`. The index lists updates newest first and `#latest`
+links to the highest numbered entry. The Turkish navigation calls it “yama notları”.
+The generator disables dollar-delimited mathematics: an independent review reproduced
+Pandoc treating a paragraph containing `$finish` as mathematics and corrupting its prose.
+Raw HTML is disabled too; code and prose remain text. The page's modification date comes
+from this file's last Git commit, not from an invented release date.
+
+The review also found that the existing transparent desktop link boxes used percentage
+units for their vertical positions. At widths 900, 1024 and 1366, the visible chips' centres
+hit the navigation bar instead of their links; the home link was affected too. Container
+width units now place all eight link boxes over the artwork. Independent hit tests and real
+mouse clicks passed at 900, 1024, 1366, 1920, 390 and 320 pixels on five pages. At desktop
+widths, every changed pixel on the checked static pages lies inside the added chip; the six
+existing chips keep their artwork and positions. Mobile chips remain 44 pixels high.
+The simulator's animated content is not claimed pixel-identical.
+
+Two generator runs are byte-identical. The final source check passed on **87 pages**;
+rebuilt Pages and mirror artifacts each passed on **89 pages, 0 failures**. The clean baseline
+and ten deliberately broken site fixtures passed, as did the Vite build. A root rerun
+verified **210 chip clicks across 30 page/viewport combinations**, with no failed hit or click. A 320-pixel CLI table overflow was reproduced in the previous
+page too and is corrected in #11. Chromium is the measured browser; Safari, Firefox,
+physical phones and older browsers without container width units remain unverified.
+The page is long, mostly because of the historical #2 report; its newest-first index and
+latest link provide direct access. Remote CI and publication are separate checks.
+
+CI evidence now available for #8: clean macOS installation and suite **261 passed, 0 failed,
+52 known gaps**; Ubuntu browser suite **31 passed, 0 failed**; assembled Pages artifact
+**88 clean pages, 0 failures**. Run: [37107944441](https://github.com/nosey-dewdrop/dewfpga/actions/runs/37107944441).
+These results apply to that commit and do not claim that the later Vivado or VS Code changes passed.
+
+
+### #11 · Five CLI steps and accurate Homebrew diagnosis · 3 October
+
+The CLI page now explains the path from Homebrew to a blinking Basys3 in five steps.
+The guide relies on Homebrew's normal Command Line Tools installation and retains the
+explicit `xcode-select` recovery command for a missing developer-tools check. Its top-module
+explanation now matches the CLI: hierarchy and a uniquely matching XDC can select a design;
+a file name alone does not silently select it. A design containing `$finish` is an error,
+not automatically a testbench. The existing standalone-package limitation is stated.
+
+Both the downloadable installer and `install.sh` distinguish a missing Homebrew installation,
+an Apple Silicon installation missing from PATH and an Intel Homebrew installation. They
+print the relevant next step before downloading the toolchain. An additional root check found
+that an Intel `brew` already on PATH bypassed the first implementation: that case now stops
+before executing it and explains the Apple Silicon path. Tests use executable sentinels to
+prove that none of those diagnostic branches invokes the discovered Homebrew binary.
+
+The final affected installer, security, static, privacy and documentation-count checks passed
+**24, failed 0**. `test/run.sh --list` now reports **321 available checks**; it is not a count of
+checks executed by that focused run. Independent review approved the original installer patch;
+the root's extra Intel-on-PATH cases passed for both entry points.
+
+At 320 pixels, the toolchain table previously widened the page to 384 pixels. It now scrolls
+inside its own wrapper, and the page stays 320 pixels wide. Chromium checks at 320, 390 and
+1366 pixels find all five steps with no page overflow. Wrapping the unchanged desktop table
+produces **0 pixel differences** and identical table geometry in a controlled before/after
+capture. These are browser measurements, not physical-phone or board tests. The final commit's
+full CI remains a separate acceptance check.
+
+
+### #12 · Vivado projects and editor tasks that preserve user files · 3 October
+
+Commands now discover a Vivado `.xpr` or `.srcs` layout and read the enabled design,
+constraint and simulation sets. Running from a nested source directory writes build
+outputs in the project root. The project's selected top is respected unless explicitly
+named. `dewfpga tops` lists candidates as module/file pairs without writing files.
+Missing design files and ambiguous active sets produce actionable errors; a problem
+confined to the simulation set stops `sim`, not `bit`, `tops` or `clean`.
+
+Local include directories reach both readers. `.v` files retain Verilog-2005 keywords
+in Icarus and the slang fallback. The first implementation deleted a pre-existing
+`top.kw` directory and mapped `a/b.v` and `a_b.v` to the same temporary filename.
+Root counterexamples rejected it. Wrappers now use a privately reserved directory,
+numbered filenames and scoped cleanup. `clean` leaves other recipes' temporary
+folders alone. Probe 74's RTL stage now passes; its netlist stage remains a known gap.
+
+`dewfpga vscode` builds a deterministic companion VSIX and installs user tasks only
+for the selected supported editor and named profiles with the companion available.
+JSONC comments and unrelated tasks survive. Removal checks recorded content hashes,
+keeps user edits, and rolls back task writes if the ownership record cannot be saved.
+Symlinked setup records are refused. Automatic install/uninstall hooks can be skipped
+with `DEWFPGA_SKIP_VSCODE=1`; explicit editor setup still works. Native tests use that
+flag and isolated fake editors so they cannot modify a developer's real profile.
+
+Independent review reproduced Cursor's `code` being mistaken for VS Code and a failed
+profile retry losing its earlier ownership record. A further root case showed that a
+`code` symlink into Insiders must not be selected for a Code removal. These cases have
+specific regression checks. Profile metadata was checked against Microsoft's source;
+that is distinct from testing the real editor GUI.
+
+Focused checks before final acceptance: task writer **69/0**, companion **35/0**,
+Vivado **82/0**, setup **89/0**. An additional eight editor-boundary checks passed in
+a corrected isolated copy. The first full run caught two flat-folder compile-line
+regressions despite those focused results. They are retained in the test history;
+the corrected full run passed **269, failed 0, with 52 known gaps**, in 24 minutes
+11 seconds, with the tested files unchanged. The command list contains **325 available
+checks**, not 325 executed successes. Real GUI and Basys3 acceptance remain unverified.
+Remote CI is pending for this integration.
+
+Release review then found the tracked-file package builder omitted the companion
+sources. The old archive now fails validation for all four missing files. The fixed
+archive builds a VSIX byte-identical to the source tree and runs `vscode --print`.
+Both assembled site variants pass: **101 pages, 0 failures** each. CI now builds the
+companion from the unpacked release, so source-only success cannot hide this omission.
+
+
+### #13 · Accurate lint severity and fresh waveforms · 3 October
+
+The companion offers an explicit lint-shim setup command. Icarus's specific
+constant-select `sorry` diagnostic becomes a warning; syntax errors, other diagnostics
+and exit codes remain intact. The prior global setting is restored only when dewfpga
+owns the current value; workspace overrides and user changes are preserved. Symlink,
+hard-link and copied-shim recursion cases are covered.
+
+A successful simulation task opens a new or changed VCD directly in its working
+project root. Before/after file identity, nanosecond timestamps and small-file hashes
+prevent unchanged old waveforms from opening, including same-second cases. The
+installed Verilog extension declares a default VCD viewer; actual GUI opening remains
+unverified. Nested or absolute dumpfile destinations are not discovered automatically.
+
+The top chooser uses the real Quick Pick lifecycle, remembers choices per project
+and cancels the task on Escape. The companion suite passed **35, failed 0, skipped 0**
+in the integrated tree. These extension features share the #12 installation and
+ownership boundary and are committed together. Full CLI acceptance passed **269/0**
+with **52 known gaps**. Remote CI passed for the combined integration.
+
+
+### #14 · Machine-readable CLI results · 3 October
+
+`check`, `sim`, `bit` and `flash` now accept `--json`. One result object carries a
+stable schema tag, process and child exit codes, bounded diagnostics and logs,
+source locations and artifact provenance. Text commands keep their original output.
+The timeout option bounds the child process group; parent SIGINT and SIGTERM also
+stop that group. A deliberately daemonized process outside the group is not covered.
+
+Independent review rejected false success after reader failures or open orphan
+pipes, warning floods that hid errors, stale artifacts attributed to the wrong top,
+and relative artifact scans from a nested Vivado directory. Root follow-ups fixed
+similarly named old bitstreams and multi-driver diagnostics containing several
+source locations. Unknown top/artifact provenance remains unknown instead of guessed.
+
+The integrated tree passed **30 tests, 0 failures, 0 skips**, including real sim and
+bit commands, text-mode parity and interruption cleanup. Separate real XPR and
+XPR-less projects passed **10 checks** for nested roots, caching, unrelated artifacts
+and source paths containing spaces. The preceding #12–#13 full CLI run passed
+**269/0 with 52 known gaps**; it is not a full run of this newer commit. Remote CI
+for this update passed. No real board programming is claimed.
+
+
+### #15 · MCP tools backed by the checked CLI · 3 October
+
+`dewfpga mcp` exposes `check`, `new`, `sim`, `bit`, `flash` and `explain_error` over
+stdio. Build tools return the CLI's structured result; protocol stdout stays clean.
+The offline catalog ships in the release. Installation creates a pinned, optional
+SDK environment with staged replacement and ownership-aware removal. No client
+configuration is registered automatically.
+
+Independent review reproduced unbounded output buffering, contradictory JSON accepted
+as success, cancellation leaving another process session alive, a missing ownership
+marker during environment creation, and uninstall racing an active install. The
+corrected server bounds capture, validates schema/type/status agreement and tracks
+observed descendant groups. Root integration also refuses the entire CLI uninstall
+before removing toolchain files while the SDK lock is held.
+
+The root's SDK-backed suite passed **24 tests, 0 failures, 0 skips**, including the
+real JSON CLI, protocol discovery, cancellation and the uninstall lock. The combined
+installer/uninstaller, JSON, MCP and static checks passed **40/0** before the extra
+CLI lock case was added; that case separately passed. Independent review also built
+and removed the real pinned SDK in a temporary FPGA_HOME, with foreign files retained.
+The unpacked release also served real SDK calls for new, sim and offline error
+explanation; check correctly reported its temporary home had no toolchain. Both site
+bundles passed **104 pages, 0 failures**. Remote CI requires the SDK instead of accepting
+skipped protocol tests. The first CI failed in the installer; the correction below passed remote CI. No physical board was programmed.
+
+Process-tree cleanup depends on `ps`. A daemon that reparents before observation and
+PID reuse remain limitations. Tool annotations describe effects; they are not an
+authorization enforcement mechanism. Clients must obtain user authorization for flash.
+
+
+#### #15 integration correction · 3 October
+
+The first remote CI run failed before verification: the optional MCP installation
+used an undefined `HERE` variable. Installation now resolves its repository path
+once before using it. The new offline whole-installer tests reproduce that failure
+with MCP enabled and check success, optional helper failure, and explicit skipping
+(**3/3 passed** after correction, **2/3 failed** before). The repeated-install test
+also checks exit status, and ShellCheck checks unassigned uppercase variables.
+
+The combined #14–#16 local run exposed a second regression: without Python on PATH,
+the new MCP removal hook prevented removal of a CLI-only installation. That path
+works again; existing SDK or lock entries cause an explicit refusal that preserves
+all files when ownership cannot be checked. Tests cover both an SDK directory and
+a dangling lock symlink.
+
+The initial full run was **272 passed, 1 failed, 52 known gaps**, with unchanged
+tested sources. After both corrections, the targeted static, installer, SDK-backed
+MCP and editor suites passed **6 top-level checks, 0 failures**. The corrected combined local tree (also containing pending #16 guidance) passed **273/0 with 52 known gaps** in 18 minutes; tested source hashes were unchanged. Remote CI for the correction passed, including clean macOS installation, the full suite and Ubuntu browser tests. The earlier failed runs remain recorded as failures.
+
+
+### #16 · Project instructions and a measured repair experiment · 3 October
+
+`dewfpga new` now writes `AGENTS.md` and a one-line `CLAUDE.md` import into the
+project. The instructions name actual CLI commands, structured result fields and
+exit codes, preserve ports and constraints, and reserve board programming for an
+explicit user request. The generated `llms.txt` links the guide and error catalog;
+regeneration and all referenced error pages are checked. The listed suite grows
+from **327 to 329 checks**.
+
+The replacement experiment ran **16 fresh Fable 5.1 sessions**, one attempt for
+each of eight fixtures in each arm. Both arms passed **8/8 repairs** and all
+**130 acceptance checks**, including fresh builds, testbench mutations, port
+interfaces and netlist equivalence. Plain/guided observations were **50/41 tool
+calls**, **516.87/550.92 process seconds**, and **0/13 Bash calls containing
+`--json`**. These numbers do not demonstrate a guidance benefit: the sample is
+small, two fixtures are CLI auto-repair controls, and most reference testbenches
+were visible in the input.
+
+Root invalidated the previous batch after finding guidance in a shared ancestor
+and an explicit read by a plain agent. Its results remain in the repository as
+invalid. The replacement checked both lexical and resolved ancestors before every
+call; root found no plain-arm guide or reference access in the transcripts. One
+guided agent used an outside-project temporary backup of its own source; this
+protocol deviation is disclosed. The protocol is not a filesystem sandbox.
+See the [full results and limits](https://github.com/nosey-dewdrop/dewfpga/blob/main/test/agent/experiment/results-2026-10-03.md).
+
+The combined local #15 correction and #16 product sources passed **273/0 with
+52 known gaps**. The only previously tested files changed afterward are the
+experiment README and manifest; product source hashes match that run. The
+experiment's 63 frozen harness files remained unchanged throughout the batch.
+Remote CI for a80556d passed: clean macOS installation, the full CLI suite, packaged
+commands, assembled site and Ubuntu browser tests. No physical board acceptance is claimed.
+
+
+### #17 · Browser compilation checks the design and clears failed runs · 3 October
+
+Yosys errors now open their source file at the reported line. Missing module errors
+point to the instance. Synthesizable `$display` calls are removed with an explanation;
+a failed compile clears old outputs and DONE while POWER stays on. Edits survive a
+reload even when Run was never pressed. All five original regressions passed in
+Chromium and WebKit (**5/0 each**).
+
+The worker checks the hierarchy, uses the Yosys reader with a Slang fallback and
+checks hardware without `SIM` before accepting the simulation netlist. Guards for
+undefined names, multiple drivers, non-constant asynchronous loads and unsupported
+source constructs remain active; latches produce a warning. Source file extensions
+retain Verilog-2005 versus SystemVerilog semantics. Package/interface dependencies,
+hierarchical references, temporary-name collisions and Xilinx library read state
+were corrected during review.
+
+Root found a wrong interface output (`00Zz`) that the earlier direct-Yosys test did
+not cover. Flattening the actual worker netlist without scope-info cells fixed the
+DigitalJS boundary. Three actual worker netlists now pass their original native
+testbenches and **576 DigitalJS output comparisons**. The additional engine-isolation
+suite passed **16 checks**, including file collisions, a unit-scope enum, a user
+module named INV and four guard controls.
+
+The last compilation-decision audit covers **133 cases: 124 matching decisions,
+7 native-accept/browser-reject cases, 2 reverse differences and 0 infrastructure
+errors**. The remaining rejects are unnamed instances, inherited procedural port
+direction, BUFG, MMCM, internal tristate, a netlist-form module and a bitstream cast.
+The two reverse differences are separate interface/package source files that the
+native CLI source selector omits; their browser behavior was tested above. These
+counts do not establish corpus-wide behavioral equivalence or hardware timing.
+
+### #18 · A workspace that keeps names, choices and edits · 3 October
+
+A directory tree and freely named sources, headers, memory data and multiple XDC
+files replace the fixed-name workspace. Top and testbench selection use source
+content; ambiguous choices are shown instead of guessed. Active XPR filesets
+exclude disabled/inactive files. A selected constraints file follows renames,
+including case-only renames, and a deleted selection does not transfer to a new
+file with the same name.
+
+Autosave preserves original BOM/CRLF bytes until a file is edited. Share links keep
+top/testbench/XDC choices, file roles, active file and bytes in a fresh browser
+profile; old links still load. A failed link offers ZIP export. Workspace unit
+checks passed **69/0**. Review found and fixed choice loss during rename and stale
+choice inheritance after deletion.
+
+### #19 · Bring a lab folder and take it back to the CLI · 3 October
+
+Open-folder and drop import retain relative source/header/memory paths and reject
+invalid imports atomically. ZIP export includes the selected project manifest;
+a real nested ROM project exported from the browser passed CLI sim and bit checks.
+Missing or external active XPR references are reported rather than silently omitted.
+
+WebKit exposed an unreadable FileSystemEntry for an otherwise readable in-memory
+File. Loose files now use the direct File; directories retain entry recursion.
+Root also found that stripping a shared `../` prefix could turn an unsafe path into
+a safe-looking name. Such roots remain invalid. Independent review proved that the
+old drop-rejection test could pass on a read error without reaching validation;
+it now requires the invalid path in the diagnostic.
+
+Physical directory-entry drag/drop remains unverified: browser automation did not
+expose usable directory entries. Recursion is covered by unit tests, and real
+browser folder-input and direct-file drop flows are covered separately.
+
+### #20 · Located diagnostics while typing · 3 October
+
+Live checks mark source lines and list problems. Actual errors disable Run; warnings
+remain runnable. Each diagnostic has a non-clickable hint showing `coming soon!`.
+Header paths, missing includes and repeated messages now produce useful locations.
+
+Independent review reproduced a valid design timing out behind **50 pending
+checks after 60 edits**. Checks are now coalesced: the same probe posted **7 checks
+with at most 1 pending**, and Run completed in **16 seconds**. A check timeout now
+says the sources are unchecked, replaces the worker and leaves Run available to
+compile again. The old board path blocked valid Run; the old testbench path falsely
+said there were no problems. Both behaviors were corrected.
+
+The reviewer's final source checks passed **24/0** and its UI suite **126/0**.
+Root tightened an older check that accepted `not running` as valid recovery.
+Remaining limits: queue wait counts against the request timeout; a check timeout
+can interrupt a concurrent run; two identical missing-include names can locate the
+first include site. No network cold-start timing is claimed.
+
+
+**CI follow-up (3 October).** A WebKit run completed the memory design but
+exceeded the old 45-second aggregate check at 46.2 seconds. That check mixed
+worker speed with queue depth. The regression now records actual worker requests
+and replies at the Run click, requires at most one preceding check and no new
+lint while Run is active, and keeps bounded completion plus a working circuit.
+Four injected small jobs demonstrate that the same count rejects a backlog.
+The control uses a small circuit, avoiding an unnecessary second large memory
+simulation. Derived timing assertions were rejected during independent review:
+the worker's compile counter excludes hardware validation, and inferred durations
+did not provide independent evidence. Product scheduling remains unchanged.
+
+### #21 · Board controls retain the state the student is holding · 3 October
+
+Switches and momentary buttons support pointer and keyboard input. Releasing one
+input method no longer releases a button still held by the other; focus loss
+releases held controls. Source and board hover links use the bound port/pin, without
+mistaking a helper-module port for the top-level output. Mobile tooltips stay inside
+the viewport. Failed runs retain POWER and clear DONE and outputs.
+
+Independent browser checks passed **72/0**. The expanded WebKit gate initially
+failed because its touch-hold test called Chromium-only CDP. Chromium still tests a
+trusted touch hold; WebKit tests the same handlers with explicitly labelled
+synthetic touch pointer events. This is not physical Safari/phone acceptance.
+Board pitch still limits mobile target width; LED changes are not announced by a
+screen reader.
+
+### #22 · Explain slow counters and keep Max responsive · 3 October
+
+Detected divider bits and threshold comparisons explain why a 100 MHz design looks
+still at browser speed and suggest an explicit `SIM` divider. Closing the advice
+panel persists across reruns until the advice changes. Threshold comparisons,
+including strict versus inclusive bounds and mirrored operands, were corrected.
+Finite and Max clock modes both use a bounded per-frame work budget.
+
+The repeated two-counter experiment measured roughly **5.8–5.9 thousand UI-driven
+DigitalJS cycles/s**. Its isolated DigitalJS kernel reached **12–13 thousand/s**;
+a CXXRTL kernel compiled locally to WASM ran in Chromium at **198–206 million/s**,
+with **14 output comparisons**. This measures a precompiled browser kernel, not a
+dynamic browser C++ compiler or a general equivalence result. Divider advice was
+selected; down-counter hints
+remain absent and Max does not promise a physical 100 MHz rate.
+
+### #23 · Prepare simulator discovery and enforce its browser checks · 3 October
+
+The simulator's noindex directive is removed, its source metadata enters sitemap
+validation, and the home page distinguishes the available simulator/testbench/CLI
+from the future browser bitstream compiler. Existing source checks plus deliberately
+broken metadata catch a restored noindex, missing sitemap entry and bad canonical.
+
+CI now runs the UI, five original regressions, board and hardware worker suites on
+both Chromium and WebKit. macOS additionally checks actual worker netlists and engine
+isolation with native tools. The original expanded WebKit gate failed before the CDP
+fixture repair; that failure is retained. Final combined acceptance is recorded below.
+The main-only deployment guard remains; this development update does not publish a
+live site or establish physical-board or GUI acceptance.
+
+Combined #17–#23 root acceptance passed in both Chromium and WebKit: source **24/0**,
+workspace **69/0**, UI **129/0**, original regressions **5/0**, board **72/0** and worker
+**17/0**, with no page errors. The assembled Pages and mirror packages each passed
+**104 pages, 0 failures, 1909 links**. Their CLI archive is byte-identical to the #16
+archive already tested with real sim and bit commands. The required SDK-backed full
+CLI rerun passed **273/0 with 52 known gaps** in 20 minutes 26 seconds; all product
+and test hashes stayed unchanged (only these release notes and their HTML changed).
+A first local attempt omitted the SDK Python setting, failed the required MCP check
+and was stopped; that attempt is preserved separately. Remote CI run 37129232619 then passed on the exact db5b855 head: both web jobs and macOS succeeded. CI CLI counted 271/0 with 52 known gaps; two version-dependent checks were skipped with the CI Yosys build. The Pages deployment job was skipped.
+
+
+### #24 · Newsletter consent and working management links · 3 October
+
+The optional [newsletter page](/dewfpga/newsletter/) records a versioned consent
+request and queues a confirmation message. No account is required. Patch notes
+become eligible only after confirmation. Confirmation and newsletter messages
+carry the actual unsubscribe token in their body and List-Unsubscribe header.
+Public configuration is empty by default, so collection stays disabled until
+the operator configures the existing project and completes the notice.
+
+A new consent generation now rotates its management token and clears the old
+account binding. Previously, an old mail link and linked account could continue
+to control fresh consent. A late completion for confirmation T1 can no longer
+mark a newer T2 request as mailed: the service RPC checks the token it actually
+sent. Cleanup also preserves a newly mailed link's 48-hour validity instead of
+removing it when an older pending request reaches seven days. Removal requires
+an operated cleanup; these thresholds are not an automatic deletion promise.
+
+The [data and privacy draft](/dewfpga/privacy/) separates application records
+from provider logs and identifies the controller, contact, processing and
+retention details still missing. It does not claim KVKK/GDPR compliance.
+
+### #25 · Mail attempts retain uncertainty and campaigns require an owner test · 3 October
+
+The operator's sender now binds each idempotency key to its exact payload and
+logical mail. A lost response, ambiguous server failure or concurrent-key reply
+retains the same key within a bounded window. A later refusal cannot erase an
+earlier uncertain attempt, including within the same claim. Claims carry an
+ownership token so a delayed refusal cannot release a newer sender's claim.
+Quota accounting includes delayed acceptance and outstanding uncertainty.
+These controls do not claim exactly-once delivery.
+
+The ledger limits dewfpga's own allocation. A live sender observes the existing
+Resend account's usage before each ledger claim; unavailable usage or insufficient
+operator-chosen headroom defers work without creating a claim. External senders
+can still consume capacity between that observation and a request. Provider
+quota refusal stops the run; no guaranteed Auth reservation is claimed.
+
+An owner test requires the owner's explicit confirmed subscription, a usable
+unsubscribe link and a receipt note with measured or explicitly attested
+unsubscribe evidence before the matching campaign can run. Acceptance by the
+provider is not inbox receipt. The campaign rechecks subscriber eligibility
+before each dispatch. If fresh consent changes a previous campaign payload,
+that recipient is reported as conflicted without changing the old intent or
+sending again; unrelated recipients continue. The operator guide is `mail/README.md`.
+
+**Before/after evidence.** Earlier immutable candidates reproduced duplicate-key
+retry, stale-claim, accounting and token-lifecycle failures. The final integrated
+local gates use the shipped migrations rather than substitute SQL: SQL **173/0**,
+mail flow **60/0**, sender fault scenarios **27 passed**, lifecycle **112/0**,
+account-usage unit tests **10/0**, and usage/sender integration **8/0**. Counts are
+checks within their suites, not distinct defects. Provider replies are modeled;
+no real mail was sent. An intermediate same-claim snapshot failed two root
+expectations; the final sender retains uncertainty and the integration regression
+passes. A worker mutation removing that rule made the mail test fail as intended.
+
+**Before activation (4 October).** A review against Resend's and Supabase's own
+documentation found gaps that local tests could not show. A sending-only Resend
+key is refused by the usage endpoint (401 `restricted_api_key`): the worker used
+to defer every run with "account usage unavailable" and no cause; it now names the
+status and error and says a full-access key is needed, without echoing the key or
+the response text. After a 429 rate-limit refusal the sender now waits before its
+next derived key (the provider's retry-after when sane, else 1 s then 3 s, at most
+60 s); before, all three keys were spent within milliseconds and that recipient
+missed the issue. The limit is per team and shared with dewsletter. Re-applying
+002 no longer deletes a consumer row the operator configured, and the ledger's id
+sequence is revoked from `anon` and `authenticated`, which existing Supabase
+projects grant on every new public sequence.
+
+Two operator scripts prepare the first live apply. `mail/ops/preflight_readonly.sql`
+reports the shared project in one read-only transaction: dewfpga objects and
+grants, other applications' tables tied to `auth.users`, triggers, default
+privileges, foreign callers and which migration parts already exist.
+`mail/ops/rollback_dewfpga.sql` removes only dewfpga's objects and drops nothing
+when another application uses them. Both live outside `mail/sql`: in the first
+draft a loop over that folder ran the rollback right after the migrations, which
+a sender test caught. Local gates on the integrated head: activation scripts
+**142/0**, SQL **187/0**, mail flow **60/0**, every sender scenario including the
+429 wait, lifecycle **112/0**, usage **13 tests OK**, pages **137/0**, Chromium and
+WebKit **158/0**. Provider and Auth replies are modeled; nothing was applied to
+the live project and no mail was sent.
+
+### #26 · Optional accounts with local session handling and scoped deletion · 3 October
+
+The [account page](/dewfpga/account/) uses Supabase magic-link signup/sign-in and
+explicit dewfpga enrolment. Premium is marked coming soon; existing free features
+remain available without membership. Export and deletion apply to the dewfpga
+profile and token-linked subscriptions. They preserve the shared Auth identity
+and other applications' records. Anonymous subscriptions remain managed by their
+own links. The application installs no shared Auth signup trigger.
+
+Forms ship disabled until their handlers and configuration are ready. Malformed
+Auth fragments are removed without breaking the page; blocked storage and expired
+sessions produce explicit feedback. Temporary service failures preserve the
+session for retry. Logout requests use local scope. A failed logout distinguishes
+local clearing from unconfirmed server revocation. A lost response to a write
+says its result is unknown, rather than falsely claiming no change occurred.
+
+**Validation.** On the integrated schema, real Chromium and WebKit ran **79 checks
+each, 158/0 total**, against private PostgreSQL, a PostgREST-shaped test adapter
+and fake Auth. This includes disabled/no-JS forms, malformed links, consent,
+account controls, expired sessions and a real SQL write followed by a dropped
+HTTP response. Source/helper checks passed **137/0**. The private database now
+shuts down cleanly after browser tests. CI adds a separate offline-mail gate and
+the Pages job depends on it; no CI step enables live sending.
+
+**Activation and closure are still open.** Supabase configuration, sender domain,
+SMTP delivery, real owner receipt/unsubscribe, final notice details and a live
+announcement have not been verified or performed. This combined candidate's SDK-backed
+full CLI run passed **273/0 with 52 known gaps** in 17 minutes 35 seconds; tested
+source hashes stayed unchanged. Pages and mirror bundles each passed **109 pages,
+2006 links, 0 failures**; the CLI archive remains byte-identical to the previously
+accepted release. A separate Opus review exercised the consent-conflict path and
+found no demonstrated safety fault within its stated inspection scope. It exposed
+the conservative limitation that even a proven refusal is not automatically
+reissued for fresh consent; that policy and per-run log are now explicit, with
+all four prior outcomes covered. Exact-head remote CI remains a required PR gate.
+No live publication, main-branch merge or physical-board/GUI acceptance is implied.

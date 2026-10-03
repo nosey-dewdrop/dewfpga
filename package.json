@@ -3,7 +3,7 @@
   "version": "1.2.0",
   "description": "Basys3 on macOS Apple Silicon without Vivado: write SystemVerilog, flash the board.",
   "bin": { "dewfpga": "bin/dewfpga" },
-  "files": ["bin/", "install.sh", "templates/", "README.md", "LICENSE"],
+  "files": ["bin/", "install.sh", "templates/", "vscode/package.json", "vscode/extension.js", "vscode/bin/", "vscode/build-vsix.py", "README.md", "docs/agent-interface.md", "docs/errors.md", "README.tr.md", "LICENSE"],
   "scripts": { "test": "test/run.sh" },
   "os": ["darwin"],
   "cpu": ["arm64"],

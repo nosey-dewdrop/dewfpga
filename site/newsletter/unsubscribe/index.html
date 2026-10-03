@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Unsubscribe from dewfpga patch-notes mail</title>
+<meta name="description" content="Stop patch-notes mail for the address in the link. No sign-in needed.">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script src="/dewfpga/config.js"></script>
+<script defer src="/dewfpga/mail.js"></script>
+<style>
+/* page-local form styles; s.css has none. Scoped under main.wrap so nothing else moves. */
+main.wrap form.mf{display:grid;gap:.6rem;max-width:34rem;margin:1rem 0 1.4rem}
+main.wrap form.mf label{display:block;font-size:.95rem}
+main.wrap form.mf label.chk{display:grid;grid-template-columns:1.4rem 1fr;gap:.5rem;align-items:start;color:var(--fg)}
+main.wrap form.mf input[type=email]{width:100%;box-sizing:border-box;font:inherit;padding:.55rem .7rem;color:var(--fg);
+  background:var(--code);border:1px solid var(--line);border-radius:7px}
+main.wrap form.mf input[type=email]:focus{border-color:var(--accent);outline:none}
+main.wrap form.mf input[type=checkbox]{width:1.1rem;height:1.1rem;margin:.15rem 0 0;accent-color:var(--accent)}
+main.wrap button.act{font:inherit;font-weight:600;padding:.5rem 1rem;border-radius:7px;cursor:pointer;
+  color:var(--accent);background:var(--bg);border:1px solid var(--accent);justify-self:start}
+main.wrap button.act:hover:not(:disabled){background:var(--accent);color:var(--bg)}
+main.wrap button.act.danger{color:#f2a07e;border-color:#f2a07e}
+main.wrap button.act.danger:hover:not(:disabled){background:#f2a07e;color:var(--bg)}
+main.wrap button:disabled,main.wrap input:disabled{opacity:.5;cursor:not-allowed}
+main.wrap .status{min-height:1.4em;font-size:.95rem;color:var(--mute);margin:.4rem 0 1rem;white-space:pre-line}
+main.wrap .status.ok{color:var(--accent)}
+main.wrap .status.warn{color:#e9c46a}
+main.wrap .status.err{color:#f2a07e}
+main.wrap .box{border:1px solid var(--line);border-radius:9px;padding:.9rem 1.1rem;margin:1rem 0}
+main.wrap [hidden]{display:none}
+</style>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap" data-page="unsubscribe">
+<h1>Unsubscribe</h1>
+<p class="lead">Press the button and no more mail goes to this address. No sign-in needed.</p>
+<noscript><p class="status warn">JavaScript is off in this browser, so this form cannot send anything. The buttons stay disabled; nothing is stored. Turn JavaScript on for this page, or come back later.</p></noscript>
+<form class="mf" id="unsubscribe-form" novalidate data-off="1">
+  <button class="act" type="submit" disabled>Unsubscribe</button>
+</form>
+<p class="status" id="unsubscribe-status" aria-live="polite">Loading the form script… the buttons stay off until it has loaded. If this line does not go away, the script failed to load and nothing was sent; reload the page.</p>
+<p class="mute small">Unsubscribed rows are removed by the operator's cleanup, at the earliest 30 days later; there is no automatic schedule. The link is cleared from the address bar as soon as this page loads.</p>
+
+<form class="mf box" id="link-form" novalidate hidden data-off="1">
+  <p class="mute small">You are signed in on the <a href="/dewfpga/account/">account page</a> in this tab. The same link can attach this subscription to that dewfpga account instead, so the export lists it and deleting the account removes it.</p>
+  <button class="act" type="submit" disabled>Link this subscription to my signed-in account</button>
+</form>
+<p class="status" id="link-status" aria-live="polite"></p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/">home</a></span>
+</footer>
+</body>
+</html>

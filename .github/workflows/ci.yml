@@ -1,6 +1,70 @@
 name: ci
 on: [push, pull_request, workflow_dispatch]
 jobs:
+  web:
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: sim/package-lock.json }
+      - name: site links, metadata, navigation and sitemap
+        run: |
+          python3 test/site-check-test.py
+          python3 test/site-check.py
+      - name: install simulator dependencies and browser
+        working-directory: sim
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: real browser UI, board and WASM worker tests
+        working-directory: sim
+        run: npm test
+        env: { BROWSER: "${{ matrix.browser }}", E2E_OUT: "${{ runner.temp }}/web-e2e" }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: "web-e2e-${{ matrix.browser }}", path: "${{ runner.temp }}/web-e2e" }
+
+  offline-mail:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      LC_ALL: C
+      LC_CTYPE: C
+      LANG: C
+      PYTHONDONTWRITEBYTECODE: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: sim/package-lock.json }
+      - name: install private database test tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql libpq-dev
+          echo "$(pg_config --bindir)" >> "$GITHUB_PATH"
+      - name: install locked browser dependencies
+        working-directory: sim
+        run: |
+          npm ci --ignore-scripts
+          npx playwright install --with-deps chromium webkit
+      - name: SQL, sender, lifecycle, account usage and deployed page sources
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/mail-tests"
+          for suite in test_sql test_activation_sql test_mail test_sender_idem test_lifecycle test_usage test_integration test_pages; do
+            python3 -B "mail/tests/$suite.py" 2>&1 | tee "$RUNNER_TEMP/mail-tests/$suite.log"
+          done
+      - name: real browsers with private PostgreSQL and fake Auth
+        shell: bash
+        run: node mail/tests/test_browser.mjs 2>&1 | tee "$RUNNER_TEMP/mail-tests/browser.log"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: offline-mail-tests, path: "${{ runner.temp }}/mail-tests" }
+
   macos-arm64:
     runs-on: macos-15          # Apple Silicon runner
     timeout-minutes: 60
@@ -13,13 +77,17 @@ jobs:
         run: yosys -m ~/fpga/yosys-slang/build/slang.so -p 'help read_slang' | grep 'read_slang \['
       - name: test suite (CLI, then the SystemVerilog probes in test/sv)
         run: test/run.sh
-        env: { SV_OUT: "${{ runner.temp }}/sv-results.tsv" }
+        env: { SV_OUT: "${{ runner.temp }}/sv-results.tsv", DEWFPGA_MCP_REQUIRE_SDK: "1" }
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: sv-results, path: "${{ runner.temp }}/sv-results.tsv" }
       - name: npm package installs and runs
         run: |
-          npm pack
+          python3 scripts/package.py
+          mkdir -p "$RUNNER_TEMP/packed-cli"
+          tar -xzf ./dewfpga-*.tgz -C "$RUNNER_TEMP/packed-cli"
+          python3 "$RUNNER_TEMP/packed-cli/package/vscode/build-vsix.py" --out "$RUNNER_TEMP/packed-vsix"
+          "$RUNNER_TEMP/packed-cli/package/bin/dewfpga" vscode --print
           rm -f "$(brew --prefix)/bin/dewfpga"      # install.sh linked it there; npm wants the same path
           npm install -g ./dewfpga-*.tgz
           mkdir /tmp/w && cp templates/blink.sv templates/blink.xdc /tmp/w/
@@ -35,22 +103,29 @@ jobs:
           /tmp/cli/bin/dewfpga check
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: sim/package-lock.json }
-      - name: simulator and testbench (vite, yosys and iverilog as webassembly)
+      - name: build simulator and verify actual worker netlists against original testbenches
         run: |
-          cd sim && npm ci --ignore-scripts && npm run build
+          cd sim
+          npm ci --ignore-scripts
+          npx playwright install chromium
+          node test/probe-behavior.mjs
+          node test/engine-isolation.mjs
       - name: site bundle (page, installer, package, templates, docs pdf, sim)
         run: |
           mkdir -p out/templates/.vscode
-          cp -R site/. out/ && cp dewfpga-*.tgz out/dewfpga.tgz
+          git ls-files -z site | tar -cf - --null -T - | tar -xf - -C out --strip-components 1   # tracked files only, as deploy.sh
+          cp dewfpga-*.tgz out/dewfpga.tgz
           (cd out && shasum -a 256 dewfpga.tgz > dewfpga.tgz.sha256)
-          cp templates/* out/templates/ && cp templates/.vscode/*.json out/templates/.vscode/
+          git ls-files -z templates | tar -cf - --null -T - | tar -xf - -C out   # tracked files only, as deploy.sh
           (cd templates && zip -q ../out/blink.zip blink.sv blink_tb.sv blink.xdc check_xdc.py Makefile .vscode/tasks.json .vscode/settings.json .vscode/extensions.json)
           mkdir -p out/sim && cp -R sim/dist/. out/sim/
+      - name: validate the assembled Pages artifact
+        run: python3 test/site-check.py --bundle out
       - uses: actions/upload-pages-artifact@v3
         with: { path: out }
 
   pages:
-    needs: macos-arm64
+    needs: [macos-arm64, web, offline-mail]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions: { pages: write, id-token: write }

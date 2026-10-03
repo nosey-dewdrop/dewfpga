@@ -3,7 +3,7 @@
 Usage: check_xdc.py <top.json> <top.xdc>
        check_xdc.py --fix-ports <file.sv>...   (before the tools run: the two lines Vivado accepts and yosys refuses
                                                 are written into the student's file, and each changed line is printed)"""
-import json, re, sys
+import json, os, re, sys
 
 SITE = "https://nosey-dewdrop.github.io/dewfpga/errors/"
 
@@ -217,13 +217,12 @@ def _decl_init_problems(f, body, bline, typedefs):
                                 fix, loc=f"{f}:{line}"))
     return problems
 
-def scan(files, want=None, xdc_names=(), cmd="bit"):
-    """Which file holds the top module, which files are testbenches. Printed as KEY=value lines for the shell.
-    A testbench is a module with no ports (or an empty port list); a module with ports is a design, even
-    when it calls $finish (that is a PROBLEM: Vivado ignores $finish, UG901 Table 21, and yosys stops on it).
-    The top is the design module that no other design module instantiates. File names are free: lab5.sv may
-    hold `module top_design`. When two modules could be the top and nothing names one, the scanner stops and
-    names both, unless exactly one is named like a .xdc in the folder: then WHY= says so, and the CLI prints it."""
+def _parse(files, sim=()):
+    """Every module in the files: mods (name -> dict(file, tb, body, line)), their order, what each instantiates
+    (inst: module -> set of modules), and the problems seen on the way. scan() and list_tops() share this; there
+    is no second discovery logic. Files in sim (a Vivado simulation set) are simulation-only: their modules may
+    call $finish and are never the top; they still compile into the simulation."""
+    sim = set(sim)
     mods = {}                       # name -> dict(file, tb, body, line)
     order = []
     problems = []
@@ -246,9 +245,9 @@ def scan(files, want=None, xdc_names=(), cmd="bit"):
             ports = re.search(r"\)\s*$", head) and re.sub(r"#\s*\(.*?\)", "", head, flags=re.S)
             has_ports = bool(ports and re.search(r"\(\s*[^\s)]", ports))
             bline = src.count("\n", 0, m.start(2)) + 1
-            mods[name] = dict(file=f, tb=not has_ports, body=body, line=line, off=m.start())
+            mods[name] = dict(file=f, tb=not has_ports, body=body, line=line, off=m.start(), sim=f in sim)
             order.append(name)
-            if has_ports:
+            if has_ports and f not in sim:
                 # what synthesis sees: a check under `ifndef SYNTHESIS is simulation-only and is fine
                 sbody = synth[m.start(2):m.end(2)]
                 for fm in re.finditer(r"\$(finish|stop)\b", sbody):
@@ -282,11 +281,34 @@ def scan(files, want=None, xdc_names=(), cmd="bit"):
                     line = d["line"] + d["body"].count("\n", 0, m.start())
                     problems.append(msg("ERROR", "unnamed-instance", f"`{other}(` is an instance without a name: Vivado lets that pass; the standard and Yosys do not.",
                                         f"write  {other} u_{other}(", loc=f"{d['file']}:{line}"))
-    for pr in problems: print("PROBLEM=" + pr)
-    if problems: return 1
+    return mods, order, inst, problems
+
+def _roots(mods, order, inst):
     design = [n for n in order if not mods[n]["tb"]]
     used = set().union(*(inst[n] for n in design)) if design else set()
-    roots = [n for n in design if n not in used]
+    return design, [n for n in design if n not in used and not mods[n]["sim"]]
+
+def list_tops(files, project_top=None):
+    """`dewfpga tops`: one candidate per line, `<module>\t<file>`: the design modules nothing instantiates
+    (testbenches excluded), the Vivado project's top first when it is one of them. No lines when there is none;
+    the problems scan() would stop on are not this command's business, so nothing is printed about them."""
+    mods, order, inst, _ = _parse(files)
+    _, roots = _roots(mods, order, inst)
+    if project_top in roots: roots = [project_top] + [n for n in roots if n != project_top]
+    for n in roots: print(f"{n}\t{mods[n]['file']}")
+    return 0
+
+def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
+    """Which file holds the top module, which files are testbenches. Printed as KEY=value lines for the shell.
+    A testbench is a module with no ports (or an empty port list); a module with ports is a design, even
+    when it calls $finish (that is a PROBLEM: Vivado ignores $finish, UG901 Table 21, and yosys stops on it).
+    The top is the design module that no other design module instantiates. File names are free: lab5.sv may
+    hold `module top_design`. When two modules could be the top and nothing names one, the scanner stops and
+    names both, unless exactly one is named like a .xdc in the folder: then WHY= says so, and the CLI prints it."""
+    mods, order, inst, problems = _parse(files, sim)
+    for pr in problems: print("PROBLEM=" + pr)
+    if problems: return 1
+    design, roots = _roots(mods, order, inst)
     top = None; why = ""
     where = lambda n: f"{mods[n]['file']}:{mods[n]['line']}"          # a module's declaration, the student's file:line
     listed = lambda ns: ", ".join(f"{n} ({where(n)})" for n in ns)
@@ -295,7 +317,9 @@ def scan(files, want=None, xdc_names=(), cmd="bit"):
         base = re.sub(r"\.(sv|v|SV|V)$", "", want)
         if want in mods and not mods[want]["tb"]: top = want
         else:
-            infile = [n for n in design if re.sub(r"\.(sv|v|SV|V)$", "", mods[n]["file"]) == base]
+            # by file: the name as given, or its base name (a Vivado project's files sit under <name>.srcs/...)
+            infile = [n for n in design if re.sub(r"\.(sv|v|SV|V)$", "", mods[n]["file"]) == base
+                      or re.sub(r"\.(sv|v|SV|V)$", "", os.path.basename(mods[n]["file"])) == base]
             if len(infile) == 1: top = infile[0]
             elif want in mods:
                 return stop("top-is-a-testbench", f"{want} is a testbench (it has no ports), not a design.",
@@ -328,15 +352,147 @@ def scan(files, want=None, xdc_names=(), cmd="bit"):
     print("AUTO=" + ("1" if not want else "0"))
     return 0
 
+def _vivado_files(src_dir, xdc_dir, sim_dir):
+    """The three Vivado folders without an .xpr: every .sv/.v under sources_1 (imports/ and new/), .xdc under
+    constrs_1, .sv/.v under sim_1; one order on every machine (byte order, as the CLI sorts)."""
+    def under(d, exts):
+        out = []
+        for root, _, names in os.walk(d):
+            out += [os.path.normpath(os.path.join(root, n)) for n in names if n.lower().endswith(exts)]
+        return sorted(out)
+    return under(src_dir, (".sv", ".v")), under(xdc_dir, (".xdc",)), under(sim_dir, (".sv", ".v"))
+
+def vivado_project(xpr=None, srcs=None):
+    """--xpr <file.xpr>: the enabled files of the project's active design, constraint and simulation sets, as the
+    .xpr lists them (xml), root-relative (the CLI runs in the folder that holds the .xpr): $PSRCDIR is
+    <name>.srcs, $PPRDIR is that folder. The sets are the ones Vivado builds with: synth_1's SrcSet and
+    ConstrsSet, and the ActiveSimSet; without those, the only set of each Type (DesignSrcs, Constrs,
+    SimulationSrcs). Two sets of a type and nothing saying which is active is a PROBLEM= (not a guess); for the
+    simulation set it is SIMPROBLEM=, which stops sim only (the other commands never read that set). A file
+    with <Attr Name="AutoDisabled" Val="1"/> or IsEnabled 0 is skipped, as Vivado skips it. Headers (.svh/.vh)
+    are not sources; .sv/.v/.xdc are kept. A listed file that is not there, a path under a Vivado variable this
+    reader does not know ($PCACHEDIR ...), or a name with a space is a PROBLEM= line with the .xpr line.
+    --srcs <name>.srcs: the same three folders by glob when there is no .xpr. Prints one file per line
+    (SRC=<path>, XDC=<path>, SIM=<path>, repeated; the CLI reads them line by line, so a space in a path is
+    never split), then TOP= (design set TopModule) and SIMTOP= (simulation set TopModule)."""
+    def emit(key, files):
+        for f in files: print(key + "=" + f)
+    escape = "or copy the .sv and .xdc files to a folder outside the project and run dewfpga there"
+    if xpr is None:
+        name = re.sub(r"\.srcs$", "", os.path.basename(srcs))
+        src, xdc, sim = _vivado_files(os.path.join(srcs, "sources_1"), os.path.join(srcs, "constrs_1"), os.path.join(srcs, "sim_1"))
+        bad = 0
+        for kind, files in (("PROBLEM", src + xdc), ("SIMPROBLEM", sim)):
+            for f in files:
+                if re.search(r"\s", f):
+                    print(kind + "=" + msg("ERROR", "file-name-with-space", f"'{f}': file names with spaces are not supported by the tools.",
+                                           f"rename it (e.g. {'_'.join(f.split())}), {escape}."))
+                    if kind == "PROBLEM": bad = 1
+        if bad: return 1
+        emit("SRC", src); emit("XDC", xdc); emit("SIM", sim); print("TOP="); print("SIMTOP=")
+        return 0
+    import xml.etree.ElementTree as ET
+    raw = open(xpr, encoding="utf-8", errors="replace").read()
+    try: tree = ET.fromstring(raw)
+    except ET.ParseError as e:
+        print("PROBLEM=" + msg("ERROR", "vivado-project-unreadable", f"{xpr} is not the XML Vivado writes ({e}).",
+                               f"open the project in Vivado once and save it, {escape}.", loc=f"{xpr}:{getattr(e, 'position', (1,))[0]}"))
+        return 1
+    name = re.sub(r"\.xpr$", "", os.path.basename(xpr))
+    def lineof(text):
+        return raw[:raw.find(text)].count("\n") + 1 if text and text in raw else 1
+    # which set of each type Vivado builds with (deterministic; never a guess between two)
+    sets = {}                                   # (type, set name) -> FileSet element
+    for fs in tree.iter("FileSet"):
+        if fs.get("Type") in ("DesignSrcs", "Constrs", "SimulationSrcs"): sets[(fs.get("Type"), fs.get("Name", ""))] = fs
+    want = {"DesignSrcs": "", "Constrs": "", "SimulationSrcs": ""}
+    for r in tree.iter("Run"):
+        if r.get("Id") == "synth_1":
+            want["DesignSrcs"] = r.get("SrcSet", ""); want["Constrs"] = r.get("ConstrsSet", "")
+    for o in tree.iter("Option"):
+        if o.get("Name") == "ActiveSimSet": want["SimulationSrcs"] = o.get("Val", "")
+    label = {"DesignSrcs": "design source", "Constrs": "constraint", "SimulationSrcs": "simulation"}
+    how = {"DesignSrcs": "synth_1's SrcSet", "Constrs": "synth_1's ConstrsSet", "SimulationSrcs": "ActiveSimSet"}
+    chosen = {}
+    bad = 0
+    for t in want:
+        names = [n for (tt, n) in sets if tt == t]
+        if want[t] and want[t] in names: chosen[t] = want[t]
+        elif len(names) == 1 and not want[t]: chosen[t] = names[0]
+        elif not names: chosen[t] = None
+        else:
+            # two simulation sets and no active one: only sim needs that set, so the CLI gets it as SIMPROBLEM= and
+            # stops there for sim alone; bit, flash, clean and tops never read the simulation set (R2) and go on
+            what = f"names {want[t]}, which is not a {label[t]} set" if want[t] else "does not say which one is active"
+            key = "SIMPROBLEM" if t == "SimulationSrcs" else "PROBLEM"
+            print(key + "=" + msg("ERROR", "vivado-set-ambiguous", f"{xpr} has {len(names)} {label[t]} sets ({', '.join(names)}) and {how[t]} {what}; dewfpga does not guess.",
+                                  f"in Vivado make the set you build with active (Sources > right-click the set > Make Active) and save the project, {escape}.", loc=f"{xpr}:{lineof(want[t] and 'Name=' + chr(34) + want[t] + chr(34))}"))
+            if key == "PROBLEM": bad = 1
+            else: chosen[t] = None
+    if bad: return 1
+    out = {"DesignSrcs": [], "Constrs": [], "SimulationSrcs": []}
+    tops = {"DesignSrcs": "", "SimulationSrcs": ""}
+    def enabled(fe):
+        for a in fe.iter("Attr"):
+            if a.get("Name") == "AutoDisabled" and a.get("Val") == "1": return False
+            if a.get("Name") == "IsEnabled" and a.get("Val") in ("0", "FALSE", "false"): return False
+        return True
+    for t, setname in chosen.items():
+        if setname is None: continue
+        fs = sets[(t, setname)]
+        key = "SIMPROBLEM" if t == "SimulationSrcs" else "PROBLEM"
+        for fe in fs.findall("File"):
+            p = fe.get("Path", "")
+            if not enabled(fe): continue
+            ext = os.path.splitext(p)[1].lower()
+            if t == "Constrs" and ext != ".xdc": continue
+            if t != "Constrs" and ext not in (".sv", ".v"): continue
+            rel = p.replace("$PSRCDIR", name + ".srcs").replace("$PPRDIR", ".")
+            m = re.match(r"\$([A-Za-z_]\w*)", rel)
+            if m:                           # $PCACHEDIR, $PIPUSERFILESDIR ...: a place only Vivado knows
+                print(key + "=" + msg("ERROR", "vivado-path-unknown", f"{xpr} lists {p}, and dewfpga does not know where Vivado keeps ${m.group(1)} (it knows $PSRCDIR and $PPRDIR).",
+                                       f"copy that file into {name}.srcs/sources_1/new and add it to the project from there (Sources > Add Sources), {escape}.", loc=f"{xpr}:{lineof(p)}"))
+                if key == "PROBLEM": bad = 1
+                continue
+            rel = os.path.normpath(rel)
+            if re.search(r"\s", rel):
+                print(key + "=" + msg("ERROR", "file-name-with-space", f"{xpr} lists '{rel}', and file names with spaces are not supported by the tools.",
+                                       f"rename it (e.g. {'_'.join(rel.split())}) in Vivado (Sources > right-click > Rename) and save the project, {escape}.", loc=f"{xpr}:{lineof(p)}"))
+                if key == "PROBLEM": bad = 1
+                continue
+            if not os.path.isfile(rel):
+                print(key + "=" + msg("ERROR", "vivado-file-missing", f"{xpr} lists {p} ({rel}), and that file is not there.",
+                                       f"put the file back, or remove it from the project in Vivado (Sources > Remove File from Project), {escape}.", loc=f"{xpr}:{lineof(p)}"))
+                if key == "PROBLEM": bad = 1
+                continue
+            if rel not in out[t]: out[t].append(rel)
+        for o in fs.iter("Option"):
+            if o.get("Name") == "TopModule" and t in tops: tops[t] = o.get("Val", "")
+    if bad: return 1
+    emit("SRC", out["DesignSrcs"]); emit("XDC", out["Constrs"]); emit("SIM", out["SimulationSrcs"])
+    print("TOP=" + tops["DesignSrcs"]); print("SIMTOP=" + tops["SimulationSrcs"])
+    return 0
+
+if len(sys.argv) >= 3 and sys.argv[1] == "--xpr":
+    sys.exit(vivado_project(xpr=sys.argv[2]))
+if len(sys.argv) >= 3 and sys.argv[1] == "--srcs":
+    sys.exit(vivado_project(srcs=sys.argv[2]))
+if len(sys.argv) >= 2 and sys.argv[1] == "--list-tops":
+    # --list-tops [--project-top NAME] files...
+    args = sys.argv[2:]; pt = None
+    if args and args[0] == "--project-top": pt = args[1] or None; args = args[2:]
+    sys.exit(list_tops(args, pt))
 if len(sys.argv) >= 2 and sys.argv[1] == "--fix-ports":
     sys.exit(fix_source(sys.argv[2:]))
 if len(sys.argv) >= 2 and sys.argv[1] == "--scan":
-    # --scan [--top NAME] [--xdc name,name] [--cmd sim|bit|flash|clean] files...   (--cmd: the command the fix names)
-    args = sys.argv[2:]; want = None; xn = (); cmd = "bit"
+    # --scan [--top NAME] [--xdc name,name] [--cmd sim|bit|flash|clean] [--sim a.sv,b.sv] files...
+    # (--cmd: the command the fix names; --sim: the simulation set's files, simulation-only, never the top)
+    args = sys.argv[2:]; want = None; xn = (); cmd = "bit"; simf = ()
     if args and args[0] == "--top": want = args[1]; args = args[2:]
     if args and args[0] == "--xdc": xn = tuple(args[1].split(",")); args = args[2:]
     if args and args[0] == "--cmd": cmd = args[1]; args = args[2:]
-    sys.exit(scan(args, want, xn, cmd))
+    if args and args[0] == "--sim": simf = tuple(x for x in args[1].split("\n") if x); args = args[2:]
+    sys.exit(scan(args, want, xn, cmd, simf))
 if len(sys.argv) != 3:
     sys.exit("usage: check_xdc.py <json> <xdc>")
 

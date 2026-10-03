@@ -55,34 +55,30 @@ guide goes into that window: paste it, press Enter, wait until the line ending i
 comes back before you paste the next one. Some commands span several lines and end in
 `\`; copy the whole grey block at once.
 
-**Apple's command line tools.** They give your Mac `git`, `make` and the C compiler.
-
-```bash
-xcode-select --install
-```
-
-A window pops up; click Install and wait. If instead the terminal prints
-`xcode-select: note: Command line tools are already installed`, that is fine. Check:
-
-```bash
-xcode-select -p
-# /Library/Developer/CommandLineTools
-```
-
-**Homebrew.** It installs developer tools by name.
+**Homebrew.** It installs developer tools by name, and on a Mac that does not have them it
+first installs Apple's command line tools (`git`, `make`, the C compiler), which the chain
+is built with; that is the installer's own `should_install_command_line_tools` step. So
+this one line covers both:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
 It asks for your Mac password; the letters do not show while you type. At the end it
-prints a few lines under "Next steps". Paste those into the terminal too, or the next
-command answers `command not found`. Check:
+prints a few lines under "Next steps". Paste those into the terminal too: they put
+`/opt/homebrew/bin` on your PATH, and without them the next command answers
+`command not found`. Open a new terminal window and check:
 
 ```bash
 brew --version
 # Homebrew 4.x
 ```
+
+If `dewfpga install` later stops with `Xcode Command Line Tools missing` (a Homebrew
+copied over by Migration Assistant, or a tools download that failed), run
+`xcode-select --install`, click Install in the window, and run it again. If it stops with
+`Homebrew is installed (...) but not on your PATH`, the "Next steps" lines were the
+missing part; it prints the one line that fixes it.
 
 **VS Code.** Download it from code.visualstudio.com. Then in VS Code press Cmd Shift P,
 type `shell command`, choose "Install 'code' command in PATH". After that `code .` in the
@@ -145,9 +141,10 @@ all good.
 
 A red `✗` names the missing piece: run the curl line again (it is the same as
 `dewfpga install`), it skips what is done. `dewfpga: command not found` has two causes:
-the Homebrew "Next steps" lines from section 1 were not pasted (paste them, open a new
-terminal window), or the installer stopped before its last line; scroll up to the first
-`ERROR:` line and look it up on the errors page.
+the Homebrew "Next steps" lines from section 1 were not pasted (the installer says so,
+`Homebrew is installed (...) but not on your PATH`, and prints the line to paste), or the
+installer stopped before its last line; scroll up to the first `ERROR:` line and look it
+up on the errors page.
 
 Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power
 switch) and flip the power switch on. Make the example project and flash it:
@@ -206,16 +203,18 @@ The rules `dewfpga` follows in a folder:
 - Every `.sv` and `.v` in the folder that holds a module is synthesized, so submodules can live
   in their own files, and a file can be named anything: `lab5.sv` may hold `module top_design`.
   A file that holds no module (a package, an interface, or typedefs at file scope, alone in
-  their file) is left out, for now. A module without ports,
-  or one that calls `$finish` or `$stop`, is a testbench and stays out of the bitstream, so for
-  now a design module that calls either is taken for one too: keep them in the testbench.
-  One design per folder.
-- The top module is the design module that no other module instantiates, as Vivado picks
-  it. When two modules qualify, `dewfpga` names both and you choose: `dewfpga bit lab4`
-  (a module name, or a file name). For now there is one exception: when one of the two is named
-  like the `.xdc` or like its own file (`counter.sv` holding `module counter`), `dewfpga` takes
-  that one without asking, even when your Vivado project names the other, so name the top
-  whenever two qualify. With several files, `bit` prints the top it chose.
+  their file) is left out, for now. A testbench has no ports and instantiates the design.
+  `$finish` or `$stop` in a design module is an error; keep them in the testbench.
+- In a flat folder, hierarchy and a unique matching `.xdc` select the top. If several
+  modules qualify, name one: `dewfpga bit lab4` (module or source filename). A module's
+  own filename alone does not select it. `dewfpga tops` lists candidates without changing files.
+- Inside a Vivado project, the `.xpr` chooses the enabled design, constraint and simulation
+  sets and their top modules. A command inside its `.srcs` subfolders runs at the project root;
+  outputs go beside the `.xpr`. Without an `.xpr`, a `.srcs` tree with `sources_1`, `constrs_1`
+  and `sim_1` is supported. Missing design files stop the build; a problem confined to the
+  simulation set stops `sim`. Multiple projects or ambiguous active sets produce an error.
+  `.v` files retain Verilog-2005 keywords, and local include directories are passed to both readers.
+  IP Catalog and Block Design generation are not supported.
 - The pin file is `<top>.xdc`, or the only `.xdc` in the folder. Pins in it that the
   design does not use are ignored, so a fully uncommented `Basys3_Master.xdc` is fine.
 - `dewfpga sim` needs a testbench that instantiates the top; `<top>_tb.sv` is the usual name
@@ -230,8 +229,9 @@ The rules `dewfpga` follows in a folder:
   that does not fit, and some build a bitstream that does not do what the code says, with no
   error. Section 7 lists what the course's files and old student repos hit; section 8 links the
   full measurement.
-- `dewfpga bit` writes no bitstream when timing is not met, and a build that fails removes the
-  previous `.bit`, so `flash` can never load yesterday's design by mistake. Without a
+- `dewfpga bit` writes no bitstream when timing is not met, and synthesis failures remove the
+  previous `.bit`. A failure during XDC validation can still leave an old `.bit` on disk;
+  a file being present does not prove that the latest build succeeded. Without a
   `create_clock` in the XDC every clock is checked at 100 MHz, a divided one too, which Vivado
   does not time; a multiplier that Yosys puts in a DSP48E1 with a register inside is not timed
   at all (nextpnr-xilinx). When nothing changed,
@@ -244,7 +244,9 @@ The rules `dewfpga` follows in a folder:
 ```
 dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
-dewfpga sim|bit|flash|clean [top]   work on the .sv files in the current folder
+dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
+dewfpga tops                        list top candidates without writing files
+dewfpga vscode [--remove]           set up or remove the editor integration
 dewfpga new <dir>                   blink example with a VS Code task (Cmd Shift B = flash)
 dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link;
                                     your files in ~/fpga and the brew packages stay
@@ -549,20 +551,27 @@ CLI refuses for now. Section 7 says what was changed and why.
 
 ## 6. How do you set up VS Code?
 
-Syntax colors and error marks for SystemVerilog:
+Run `dewfpga vscode` to install the companion extension and user tasks in supported local
+VS Code profiles. Existing JSONC comments, unrelated tasks and shortcuts are preserved.
+`dewfpga vscode --remove` removes only unchanged entries recorded as dewfpga's; user edits stay.
+A missing editor or optional setup failure does not prevent terminal use.
 
-```bash
-code --install-extension mshr-h.veriloghdl
-```
+Open the Command Palette and use **dewfpga: choose the top module**. The chooser reads
+`dewfpga tops`, remembers the selection per project, and offers it again on the next build.
+The tasks use absolute file locations so compiler diagnostics can appear in Problems when
+the project lives under Vivado's `.srcs` tree. `dewfpga new` also includes project tasks;
+the Makefile-only download retains its `make` tasks.
 
-`dewfpga new` and `blink.zip` both put a `.vscode` folder in the project: `tasks.json`
-(Cmd Shift B builds and flashes the open design), `settings.json` (Icarus Verilog as the
-linter, so a syntax error gets a red underline when you save) and `extensions.json` (VS Code
-offers to install the extension above when you open the folder). For a folder you made
-yourself, copy the `.vscode` folder out of a `dewfpga new` project; its three tasks already
-say `dewfpga`. On the Makefile path, take the three files from
-[`templates/.vscode/`](https://nosey-dewdrop.github.io/dewfpga/templates/.vscode/tasks.json)
-instead; there the tasks say `make`.
+For linting, install `mshr-h.veriloghdl`, then explicitly run **dewfpga: use the dewfpga
+iverilog lint shim**. It changes Icarus's constant-select “sorry” diagnostic to a warning;
+syntax errors stay errors. **dewfpga: stop using the dewfpga iverilog lint shim** restores
+the previous setting if it has not been edited since setup. Workspace overrides take precedence.
+After a successful simulation, the companion can open a new or changed VCD in the project
+root. An unchanged old waveform is not opened. Nested and absolute dumpfile locations are
+not discovered automatically.
+
+The command and filesystem behavior is tested in isolated profiles. Real VS Code GUI
+acceptance remains a separate manual check.
 
 ---
 

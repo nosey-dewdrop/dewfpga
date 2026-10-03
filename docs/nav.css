@@ -1,0 +1,81 @@
+/* The nav strip, one source for site/s.css and sim/src/style.css.
+   docs/nav.py copies this file into both, between the "nav (generated)" markers;
+   edit here, then run `python3 docs/nav.py`. A change made in a copy is overwritten.
+
+   The artboard unit. The Canva sheet is 1366 units wide; one unit is one
+   pixel until the window is narrower than the sheet, then the sheet scales
+   with the window. 100% of the html box reaches the window's right edge;
+   100% of the root box does not. */
+:root{--u:1px}
+@media (max-width:1366px){:root{--u:calc(100% / 1366)}}
+html{width:100%}
+
+/* The strip is the artboard's own top 160 units. The hit boxes, measured
+   off the 2x export, in artboard units:
+     wordmark  x 48   .. 209.5
+     why       x 247.3, errors 356.8, github 466.3   w 92.5
+     cli       x 936.2, docs   1045.7, simulator 1155.2 (w 104.9)
+     all chips y 76.5 .. 129.5
+   Only the boxes are code; the chip art underneath is the export. */
+nav.top{position:relative;width:calc(1366*var(--u));max-width:100%;
+  margin:0 auto;aspect-ratio:1366/160;display:block;container-type:inline-size;
+  background:url(/dewfpga/art/nav.png) center/100% 100% no-repeat}
+/* Inside the strip the unit is a length (1/1366 of the strip's width), not
+   a percentage: a percentage in top/height resolves against the strip's
+   160-unit height, which put every box 6 units tall at y 9 on windows up to
+   1366 wide. cqw is Chrome 105, Safari 16, Firefox 110. */
+nav.top a{--u:calc(100cqw / 1366);
+  position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
+  border-radius:calc(11*var(--u));
+  /* the label is in the artwork underneath; this keeps it for readers */
+  font-size:0;color:transparent;-webkit-text-fill-color:transparent;
+  text-decoration:none;
+  transition:filter .12s ease,transform .12s ease}
+nav.top a.brand{top:calc(80*var(--u));left:calc(48*var(--u));
+  width:calc(161.5*var(--u));height:calc(45*var(--u));border-radius:calc(4*var(--u))}
+nav.top a.c-why{left:calc(247.3*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-err{left:calc(356.8*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-github{left:calc(466.3*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-cli{left:calc(936.2*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-docs{left:calc(1045.7*var(--u));width:calc(92.5*var(--u))}
+nav.top a.c-sim{left:calc(1155.2*var(--u));width:calc(104.9*var(--u))}
+/* The seventh chip is not in the export: it sits in the strip's empty centre
+   (x 558.8 .. 936.2; the box is 120 wide so the longer label fits) and is drawn here with the artboard's blue gradient,
+   its 11-unit radius and its bold black label; the six exported chips do not
+   move. If the export gains the chip, drop this block and its label rules. */
+nav.top a.c-notes{left:calc(687.5*var(--u));width:calc(120*var(--u));
+  display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
+  font:700 calc(16.5*var(--u))/1 var(--body);letter-spacing:-.01em;white-space:nowrap;
+  color:#000;-webkit-text-fill-color:#000}
+/* a chip lifts on hover; the artwork is what lifts, nothing is repainted */
+nav.top a:hover{filter:brightness(1.08);transform:translateY(calc(-2*var(--u)))}
+/* the artboard marks no active chip, so neither do we */
+nav.top a:focus-visible{outline:calc(2*var(--u)) solid var(--accent);
+  outline-offset:calc(2*var(--u))}
+
+/* A phone gets the strip's seven chips as text, in the shell's own faces and
+   chip gradients, 44 px tall: the artwork's labels would be too small to
+   read or tap. The gradients are the artboard's chips, sampled across each
+   one on the 2x export. Nothing in this block reaches a screen wider than
+   700 px; the desktop strip is untouched. */
+@media (max-width:700px){
+  nav.top{--nav-chip-blue:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
+    --nav-chip-lilac:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%);
+    --nav-chip-sim:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%);
+    --nav-brand:#f5e5e8}
+  /* the artboard's two groups of three, one group per row, then the simulator across the last row */
+  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
+    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
+  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
+  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
+    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
+    color:#000;-webkit-text-fill-color:#000;background:var(--nav-chip-blue)}
+  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
+    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
+    color:var(--nav-brand);-webkit-text-fill-color:var(--nav-brand)}
+  nav.top a.c-github,nav.top a.c-docs{background:var(--nav-chip-lilac)}
+  nav.top a.c-sim{background:var(--nav-chip-sim);grid-column:1/-1}
+  nav.top a.c-notes{letter-spacing:-.01em;white-space:nowrap}
+  nav.top a:hover{transform:none}
+}

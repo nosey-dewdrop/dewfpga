@@ -86,6 +86,15 @@ footer{padding-bottom:56px;color:var(--ink-dim);font-size:14px;margin-top:84px}
 .ftab-x{color:var(--ink-dim);font-size:12px}
 .ftab-input{font:inherit;color:var(--ink);background:var(--bg-line);border:none;padding:0 4px}
 .editors{flex:1;display:flex;flex-direction:column}
+.editors .cm-scroller{font-family:ui-monospace,Menlo,Consolas,'Liberation Mono',monospace}
+.roles-bar{display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;padding:6px 14px 0;font-size:13px;color:var(--ink-dim)}
+.roles{display:flex;gap:12px;flex-wrap:wrap;align-items:baseline;min-width:0}
+.role b{color:var(--ink);font-weight:500}.role.bad,.role-msg.bad,.savestate.bad{color:var(--err,#c33)}
+.role-pick{font:inherit;color:var(--ink);background:var(--bg-line);border:none;padding:0 4px;max-width:14em}
+.role-msg{flex-basis:100%;white-space:pre-wrap;overflow-wrap:anywhere}
+.savestate{margin-left:auto}
+.ftab{max-width:14em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.right.drop .pane:first-child{outline:2px dashed var(--accent);outline-offset:-2px}
 .editors .editor{flex:1}
 .editor{flex:1;min-height:360px;max-height:70vh;overflow:auto}
 .editor .cm-editor{height:100%}
@@ -96,8 +105,30 @@ footer{padding-bottom:56px;color:var(--ink-dim);font-size:14px;margin-top:84px}
 #status{font-size:14px;color:var(--ink-dim);min-height:1.75em}
 #console{font-size:14px;padding:8px 14px 14px;line-height:1.6;max-height:220px;overflow:auto;color:var(--ink-dim)}
 .c-line.c-err{color:var(--ink)}
+.c-line.c-warn{color:var(--ink)}
+.c-line.c-note{color:var(--ink-dim)}
 .c-link{cursor:pointer;text-decoration:underline dotted}
 .c-link:hover{color:var(--accent)}
+
+/* live diagnostics: problems panel under the editor, line marks in the editor */
+#problems{font-size:14px;padding:8px 14px 14px;line-height:1.6;max-height:180px;overflow:auto;color:var(--ink-dim)}
+#problems:empty{display:none}
+.problems-pane{min-height:0}
+.p-row{display:flex;gap:12px;align-items:flex-start}
+.p-row .c-line{flex:1 1 auto;min-width:0;overflow-wrap:anywhere}
+.p-row.p-err .c-line{color:var(--ink)}
+.p-row.p-warn .c-line{color:var(--ink-dim)}
+.p-tag{flex:0 0 auto;text-transform:uppercase;font-size:12px;letter-spacing:.04em;padding-top:.15em;min-width:5em}
+.p-err .p-tag{color:var(--err,#c33)}
+.p-warn .p-tag{color:var(--ink-dim)}
+.lint-state.bad{color:var(--err,#c33)}
+.hint{position:relative;flex:0 0 auto;cursor:default;pointer-events:auto}
+.hint:disabled{color:var(--ink-dim);cursor:default}
+.hint:hover{color:var(--ink-dim)}
+.hint .tip{position:absolute;right:0;bottom:100%;margin-bottom:4px;padding:2px 8px;white-space:nowrap;font-size:12px;color:var(--ink);background:var(--bg,#111);border:1px solid var(--ink-dim);opacity:0;pointer-events:none;transition:opacity .1s}
+.hint:hover .tip,.hint:focus-visible .tip{opacity:1}
+.cm-diag-error{background:color-mix(in srgb,var(--err,#c33) 18%,transparent);box-shadow:inset 3px 0 0 var(--err,#c33)}
+.cm-diag-warning{box-shadow:inset 3px 0 0 var(--ink-dim)}
 
 /* ---- board drawing (basys3 rev c: blue pcb, white silkscreen) ---- */
 .b-pcb{fill:#1c4f9a}
@@ -172,24 +203,48 @@ kbd{font:inherit;color:var(--accent)}
 .work .right .pane{min-height:0}
 .work .right .editors{min-height:320px}
 .work .console-pane{min-height:180px}
+.work .problems-pane{min-height:0}
 .work .board-wrap svg#board{width:100%;height:auto}
 .hero p.dim{max-width:760px}
 .small{font-size:.9rem}
 @media(max-width:1000px){.work .left{position:static}}
 
-/* ---------- the shell's nav ----------
-   The same artboard strip the rest of the site carries, at the same
-   measured coordinates, so the chips sit in one place on every page. */
+/* ---------- nav (generated) ----------
+   Copied from docs/nav.css by docs/nav.py. Edit docs/nav.css, run python3 docs/nav.py;
+   a change made here is overwritten. */
+/* The nav strip, one source for site/s.css and sim/src/style.css.
+   docs/nav.py copies this file into both, between the "nav (generated)" markers;
+   edit here, then run `python3 docs/nav.py`. A change made in a copy is overwritten.
+
+   The artboard unit. The Canva sheet is 1366 units wide; one unit is one
+   pixel until the window is narrower than the sheet, then the sheet scales
+   with the window. 100% of the html box reaches the window's right edge;
+   100% of the root box does not. */
 :root{--u:1px}
 @media (max-width:1366px){:root{--u:calc(100% / 1366)}}
 html{width:100%}
+
+/* The strip is the artboard's own top 160 units. The hit boxes, measured
+   off the 2x export, in artboard units:
+     wordmark  x 48   .. 209.5
+     why       x 247.3, errors 356.8, github 466.3   w 92.5
+     cli       x 936.2, docs   1045.7, simulator 1155.2 (w 104.9)
+     all chips y 76.5 .. 129.5
+   Only the boxes are code; the chip art underneath is the export. */
 nav.top{position:relative;width:calc(1366*var(--u));max-width:100%;
-  margin:0 auto;aspect-ratio:1366/160;display:block;
+  margin:0 auto;aspect-ratio:1366/160;display:block;container-type:inline-size;
   background:url(/dewfpga/art/nav.png) center/100% 100% no-repeat}
-nav.top a{position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
+/* Inside the strip the unit is a length (1/1366 of the strip's width), not
+   a percentage: a percentage in top/height resolves against the strip's
+   160-unit height, which put every box 6 units tall at y 9 on windows up to
+   1366 wide. cqw is Chrome 105, Safari 16, Firefox 110. */
+nav.top a{--u:calc(100cqw / 1366);
+  position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
   border-radius:calc(11*var(--u));
+  /* the label is in the artwork underneath; this keeps it for readers */
   font-size:0;color:transparent;-webkit-text-fill-color:transparent;
-  text-decoration:none;transition:filter .12s ease,transform .12s ease}
+  text-decoration:none;
+  transition:filter .12s ease,transform .12s ease}
 nav.top a.brand{top:calc(80*var(--u));left:calc(48*var(--u));
   width:calc(161.5*var(--u));height:calc(45*var(--u));border-radius:calc(4*var(--u))}
 nav.top a.c-why{left:calc(247.3*var(--u));width:calc(92.5*var(--u))}
@@ -198,9 +253,47 @@ nav.top a.c-github{left:calc(466.3*var(--u));width:calc(92.5*var(--u))}
 nav.top a.c-cli{left:calc(936.2*var(--u));width:calc(92.5*var(--u))}
 nav.top a.c-docs{left:calc(1045.7*var(--u));width:calc(92.5*var(--u))}
 nav.top a.c-sim{left:calc(1155.2*var(--u));width:calc(104.9*var(--u))}
+/* The seventh chip is not in the export: it sits in the strip's empty centre
+   (x 558.8 .. 936.2; the box is 120 wide so the longer label fits) and is drawn here with the artboard's blue gradient,
+   its 11-unit radius and its bold black label; the six exported chips do not
+   move. If the export gains the chip, drop this block and its label rules. */
+nav.top a.c-notes{left:calc(687.5*var(--u));width:calc(120*var(--u));
+  display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
+  font:700 calc(16.5*var(--u))/1 var(--body);letter-spacing:-.01em;white-space:nowrap;
+  color:#000;-webkit-text-fill-color:#000}
+/* a chip lifts on hover; the artwork is what lifts, nothing is repainted */
 nav.top a:hover{filter:brightness(1.08);transform:translateY(calc(-2*var(--u)))}
+/* the artboard marks no active chip, so neither do we */
 nav.top a:focus-visible{outline:calc(2*var(--u)) solid var(--accent);
   outline-offset:calc(2*var(--u))}
+
+/* A phone gets the strip's seven chips as text, in the shell's own faces and
+   chip gradients, 44 px tall: the artwork's labels would be too small to
+   read or tap. The gradients are the artboard's chips, sampled across each
+   one on the 2x export. Nothing in this block reaches a screen wider than
+   700 px; the desktop strip is untouched. */
+@media (max-width:700px){
+  nav.top{--nav-chip-blue:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
+    --nav-chip-lilac:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%);
+    --nav-chip-sim:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%);
+    --nav-brand:#f5e5e8}
+  /* the artboard's two groups of three, one group per row, then the simulator across the last row */
+  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
+    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
+  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
+  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
+    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
+    color:#000;-webkit-text-fill-color:#000;background:var(--nav-chip-blue)}
+  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
+    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
+    color:var(--nav-brand);-webkit-text-fill-color:var(--nav-brand)}
+  nav.top a.c-github,nav.top a.c-docs{background:var(--nav-chip-lilac)}
+  nav.top a.c-sim{background:var(--nav-chip-sim);grid-column:1/-1}
+  nav.top a.c-notes{letter-spacing:-.01em;white-space:nowrap}
+  nav.top a:hover{transform:none}
+}
+/* ---------- /nav (generated) ---------- */
 
 /* headings in the shell's display face */
 .hero{text-align:center;margin:46px 0 40px}
@@ -230,30 +323,41 @@ nav.tabs a:nth-child(4){animation-delay:.19s}
 }
 
 /* ---------- phones ----------
-   Same rule as site/s.css: under 700px the artboard strip is replaced by the
-   six chips as text, 44 px tall; the board fits the width instead of forcing
-   an 860 px horizontal scroll; the buttons grow to a thumb. Desktop untouched. */
+   The nav's phone layout is in the nav block above, from docs/nav.css, the
+   same as site/s.css. Below: the board fits the width instead of forcing an
+   860 px horizontal scroll; the buttons grow to a thumb. Desktop untouched. */
 @media (max-width:700px){
-  /* the artboard's two groups of three, one group per row, equal chips */
-  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
-    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
-  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
-  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
-    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
-    color:#000;-webkit-text-fill-color:#000;
-    background:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%)}
-  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
-    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
-    color:#f5e5e8;-webkit-text-fill-color:#f5e5e8}
-  nav.top a.c-github,nav.top a.c-docs{background:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%)}
-  nav.top a.c-sim{background:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%)}
-  nav.top a:hover{transform:none}
   main,footer{padding:0 16px}
   .hero{margin:22px 0 18px}
   .work{gap:20px}
-  .viewbar button,.pane-bar button,.pane-bar select,.controls button{min-height:44px;display:inline-flex;align-items:center}
+  .viewbar button,.pane-bar button,.pane-bar select,.controls button,.hint{min-height:44px;display:inline-flex;align-items:center}
   .pane-bar{gap:10px 14px}
   .controls input[type=range]{width:120px;height:44px}
   .editor{max-height:60vh}
   footer{margin-top:40px}
 }
+
+/* Project folders complement the editable tabs; large imports do not push the editor off-screen. */
+.ftabs{max-height:128px;overflow-y:auto;min-width:0}
+.filetree{margin:6px 14px 0;font-size:13px;color:var(--ink-dim)}
+.filetree summary{cursor:pointer;min-height:40px;line-height:40px;overflow-wrap:anywhere}
+.filetree-items{max-height:200px;overflow:auto;padding:0 4px 6px}
+.filetree-folder{margin-left:12px}
+.filetree-file{display:block;text-align:left;min-height:40px;max-width:100%;padding:4px 8px;overflow-wrap:anywhere}
+.filetree-file[aria-current=true]{color:var(--accent);text-decoration:underline}
+
+.timing-help{margin:10px 0;color:var(--ink-dim);font-size:13px;max-width:100%}
+.timing-help summary{cursor:pointer;min-height:40px;line-height:40px;color:var(--accent)}
+.timing-help pre{overflow-x:auto;font-size:12px;line-height:1.5;padding:10px;background:var(--bg-soft)}
+
+/* ---- board: hit targets, focus, hover, code links (board.js + board-links.js) ---- */
+.board-wrap{position:relative}
+.b-hit{fill:transparent;stroke:none;pointer-events:all}
+.b-ledg{cursor:default}
+#board [tabindex]:focus{outline:none}
+#board .b-sw:focus-visible .b-swbody,#board .b-btn:focus-visible .b-btnbase,#board .b-ledg:focus-visible .b-led{stroke:#5cff7a;stroke-width:2}
+#board .b-sw.hl .b-swbody,#board .b-btn.hl .b-btnbase,#board .b-led.hl{stroke:#5cff7a;stroke-width:2.5;filter:drop-shadow(0 0 4px #5cff7a)}
+.b-tip{position:absolute;transform:translate(-50%,calc(-100% - 6px));background:#0f1a12;color:#e9ffe9;border:1px solid #5cff7a;border-radius:4px;padding:3px 7px;font:12px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:nowrap;pointer-events:none;z-index:5}
+.b-tip[hidden]{display:none}
+.b-tip.below{transform:translate(-50%,6px)}
+.cm-board-hl{background:rgba(92,255,122,.28);outline:1px solid rgba(92,255,122,.6);border-radius:2px}

@@ -80,19 +80,30 @@ hr{border:0;border-top:1px solid var(--line);margin:2.6rem 0}
 
    --u is one artboard unit: 1px at 1366 and wider, shrinking with the
    viewport below that, so the whole shell scales as one piece. */
-/* 100vw includes the scrollbar, which would push the strip past the
-   right edge; 100% of the root box does not. */
-:root{--u:1px}
-@media (max-width:1366px){:root{--u:calc(100% / 1366)}}
-html{width:100%}
+/* --u itself is declared in the nav block below (docs/nav.css), which
+   the simulator's stylesheet shares. */
 
 .wrap{max-width:calc(1366*var(--u));margin:0 auto;padding:0 calc(64*var(--u));
   width:100%;box-sizing:border-box}
 @media (max-width:820px){.wrap{padding:0 22px}}
 /* the artboard strips ignore the gutter: they are the full sheet */
 
-/* ---------- nav ----------
-   The strip is the artboard's own top 160 units. The hit boxes, measured
+/* ---------- nav (generated) ----------
+   Copied from docs/nav.css by docs/nav.py. Edit docs/nav.css, run python3 docs/nav.py;
+   a change made here is overwritten. */
+/* The nav strip, one source for site/s.css and sim/src/style.css.
+   docs/nav.py copies this file into both, between the "nav (generated)" markers;
+   edit here, then run `python3 docs/nav.py`. A change made in a copy is overwritten.
+
+   The artboard unit. The Canva sheet is 1366 units wide; one unit is one
+   pixel until the window is narrower than the sheet, then the sheet scales
+   with the window. 100% of the html box reaches the window's right edge;
+   100% of the root box does not. */
+:root{--u:1px}
+@media (max-width:1366px){:root{--u:calc(100% / 1366)}}
+html{width:100%}
+
+/* The strip is the artboard's own top 160 units. The hit boxes, measured
    off the 2x export, in artboard units:
      wordmark  x 48   .. 209.5
      why       x 247.3, errors 356.8, github 466.3   w 92.5
@@ -100,9 +111,14 @@ html{width:100%}
      all chips y 76.5 .. 129.5
    Only the boxes are code; the chip art underneath is the export. */
 nav.top{position:relative;width:calc(1366*var(--u));max-width:100%;
-  margin:0 auto;aspect-ratio:1366/160;display:block;
+  margin:0 auto;aspect-ratio:1366/160;display:block;container-type:inline-size;
   background:url(/dewfpga/art/nav.png) center/100% 100% no-repeat}
-nav.top a{position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
+/* Inside the strip the unit is a length (1/1366 of the strip's width), not
+   a percentage: a percentage in top/height resolves against the strip's
+   160-unit height, which put every box 6 units tall at y 9 on windows up to
+   1366 wide. cqw is Chrome 105, Safari 16, Firefox 110. */
+nav.top a{--u:calc(100cqw / 1366);
+  position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
   border-radius:calc(11*var(--u));
   /* the label is in the artwork underneath; this keeps it for readers */
   font-size:0;color:transparent;-webkit-text-fill-color:transparent;
@@ -116,11 +132,47 @@ nav.top a.c-github{left:calc(466.3*var(--u));width:calc(92.5*var(--u))}
 nav.top a.c-cli{left:calc(936.2*var(--u));width:calc(92.5*var(--u))}
 nav.top a.c-docs{left:calc(1045.7*var(--u));width:calc(92.5*var(--u))}
 nav.top a.c-sim{left:calc(1155.2*var(--u));width:calc(104.9*var(--u))}
+/* The seventh chip is not in the export: it sits in the strip's empty centre
+   (x 558.8 .. 936.2; the box is 120 wide so the longer label fits) and is drawn here with the artboard's blue gradient,
+   its 11-unit radius and its bold black label; the six exported chips do not
+   move. If the export gains the chip, drop this block and its label rules. */
+nav.top a.c-notes{left:calc(687.5*var(--u));width:calc(120*var(--u));
+  display:inline-flex;align-items:center;justify-content:center;
+  background:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
+  font:700 calc(16.5*var(--u))/1 var(--body);letter-spacing:-.01em;white-space:nowrap;
+  color:#000;-webkit-text-fill-color:#000}
 /* a chip lifts on hover; the artwork is what lifts, nothing is repainted */
 nav.top a:hover{filter:brightness(1.08);transform:translateY(calc(-2*var(--u)))}
 /* the artboard marks no active chip, so neither do we */
 nav.top a:focus-visible{outline:calc(2*var(--u)) solid var(--accent);
   outline-offset:calc(2*var(--u))}
+
+/* A phone gets the strip's seven chips as text, in the shell's own faces and
+   chip gradients, 44 px tall: the artwork's labels would be too small to
+   read or tap. The gradients are the artboard's chips, sampled across each
+   one on the 2x export. Nothing in this block reaches a screen wider than
+   700 px; the desktop strip is untouched. */
+@media (max-width:700px){
+  nav.top{--nav-chip-blue:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
+    --nav-chip-lilac:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%);
+    --nav-chip-sim:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%);
+    --nav-brand:#f5e5e8}
+  /* the artboard's two groups of three, one group per row, then the simulator across the last row */
+  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
+    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
+  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
+  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
+    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
+    color:#000;-webkit-text-fill-color:#000;background:var(--nav-chip-blue)}
+  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
+    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
+    color:var(--nav-brand);-webkit-text-fill-color:var(--nav-brand)}
+  nav.top a.c-github,nav.top a.c-docs{background:var(--nav-chip-lilac)}
+  nav.top a.c-sim{background:var(--nav-chip-sim);grid-column:1/-1}
+  nav.top a.c-notes{letter-spacing:-.01em;white-space:nowrap}
+  nav.top a:hover{transform:none}
+}
+/* ---------- /nav (generated) ---------- */
 
 /* A phone gets the same artboard, not a re-drawing of it. The strip and
    the scene keep their 1366-unit geometry and scale down together, so the
@@ -198,6 +250,8 @@ pre .p{color:#afddbc}
    reads as two documents side by side. */
 .tablewrap{overflow-x:auto;margin:0 auto 1.15rem;max-width:calc(980*var(--u))}
 table{border-collapse:collapse;width:100%;font-size:.95rem}
+.cli-tools{margin-bottom:1rem}
+.cli-tools table{margin-bottom:0}
 td,th{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);
   vertical-align:top}
 th{font-weight:700;color:var(--mute);font-size:.8rem;letter-spacing:.02em}
@@ -261,24 +315,9 @@ footer a{color:inherit}
 }
 
 /* ---------- phones ----------
-   Under 700px the artboard strip would shrink its six chips to 26x15 px, too
-   small to read or tap. Down here the same six chips are set as text in the
-   shell's own faces and chip gradients, 44 px tall. Nothing in this block
-   reaches a screen wider than 700 px; the desktop strip is untouched. */
+   The nav's phone layout (the six chips as text) is in the nav block above,
+   from docs/nav.css. The rest of the page follows here. */
 @media (max-width:700px){
-  /* the artboard's two groups of three, one group per row, equal chips */
-  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
-    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
-  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
-  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
-    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
-    color:#000;-webkit-text-fill-color:#000;background:var(--chip-blue)}
-  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
-    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
-    color:var(--brand);-webkit-text-fill-color:var(--brand)}
-  nav.top a.c-github,nav.top a.c-docs{background:var(--chip-lilac)}
-  nav.top a.c-sim{background:var(--chip-sim)}
-  nav.top a:hover{transform:none}
   /* the 980-unit reading column is a desktop measure; on a phone it is the whole width */
   main.wrap>*,.docs>*,.tablewrap{max-width:none}
   code{overflow-wrap:anywhere}
