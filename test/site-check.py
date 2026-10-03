@@ -218,6 +218,12 @@ def main():
                 fail(rel, f'byte {m.start()}: root-relative /dewfpga/ left after the mirror rewrite')
         if rel.endswith(TEXT_EXT) and home in read(path): fail(rel, f'contains the personal path {home}')
 
+    # The simulator is built outside site/. In source mode validate its publication metadata;
+    # its generated script/asset links are checked in the assembled bundle.
+    if not bundle:
+        sim_source = os.path.join(repo, 'sim', 'index.html')
+        component = Page(); component.feed(read(sim_source)); pages['sim/index.html'] = component
+
     # 2. canonical, og:url, og:image, hreflang: absolute github.io urls that match the page's own path (both modes:
     #    the mirror keeps them pointing at the canonical host)
     indexable = {}
@@ -238,7 +244,9 @@ def main():
             for v in p.meta.get(key, []):
                 if not v.startswith(CANON_HOST + CANON_PREFIX): fail(rel, f'{key} {v} is not absolute on {CANON_HOST}{CANON_PREFIX}'); continue
                 img = v[len(CANON_HOST + CANON_PREFIX):]
-                if img not in files: fail(rel, f'{key} {v}: no such file')
+                component_asset = (not bundle and img.startswith('sim/') and
+                                   os.path.isfile(os.path.join(repo, 'sim', 'public', img[4:])))
+                if img not in files and not component_asset: fail(rel, f'{key} {v}: no such file')
         if p.hreflang:
             langs = dict(p.hreflang)
             if 'x-default' not in langs: fail(rel, 'hreflang set without x-default')

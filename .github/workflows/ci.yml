@@ -2,6 +2,10 @@ name: ci
 on: [push, pull_request, workflow_dispatch]
 jobs:
   web:
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -12,18 +16,18 @@ jobs:
         run: |
           python3 test/site-check-test.py
           python3 test/site-check.py
-      - name: install simulator dependencies and Chromium
+      - name: install simulator dependencies and browser
         working-directory: sim
         run: |
           npm ci --ignore-scripts
-          npx playwright install --with-deps chromium
-      - name: real browser simulator and testbench tests
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - name: real browser UI, board and WASM worker tests
         working-directory: sim
         run: npm test
-        env: { E2E_OUT: "${{ runner.temp }}/web-e2e" }
+        env: { BROWSER: "${{ matrix.browser }}", E2E_OUT: "${{ runner.temp }}/web-e2e" }
       - uses: actions/upload-artifact@v4
         if: always()
-        with: { name: web-e2e, path: "${{ runner.temp }}/web-e2e" }
+        with: { name: "web-e2e-${{ matrix.browser }}", path: "${{ runner.temp }}/web-e2e" }
 
   macos-arm64:
     runs-on: macos-15          # Apple Silicon runner
@@ -63,9 +67,13 @@ jobs:
           /tmp/cli/bin/dewfpga check
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: sim/package-lock.json }
-      - name: simulator and testbench (vite, yosys and iverilog as webassembly)
+      - name: build simulator and verify actual worker netlists against original testbenches
         run: |
-          cd sim && npm ci --ignore-scripts && npm run build
+          cd sim
+          npm ci --ignore-scripts
+          npx playwright install chromium
+          node test/probe-behavior.mjs
+          node test/engine-isolation.mjs
       - name: site bundle (page, installer, package, templates, docs pdf, sim)
         run: |
           mkdir -p out/templates/.vscode

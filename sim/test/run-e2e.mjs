@@ -1,4 +1,4 @@
-// npm test: build dist, serve it on a free 127.0.0.1 port, run test/e2e.mjs against it, stop the server.
+// npm test: build once, run UI, board and actual-worker checks against one local preview, then stop it.
 // exits with e2e's code; the only processes it starts and stops are its own preview server, the e2e child and
 // that child's descendants (the browser playwright launched), found by pid through `ps`, never by name.
 //   E2E_TIMEOUT=ms   kill e2e and fail after this long (default 15 min)
@@ -62,12 +62,18 @@ try {
   server = await preview({ root, logLevel: 'warn', preview: { host: '127.0.0.1', port, strictPort: true, open: false } });
   const base = `http://127.0.0.1:${port}/`;
   console.log(`preview ${base} (pid ${process.pid})`);
-  code = await new Promise((resolve) => {
-    child = spawn(process.execPath, [path.join(root, 'test', 'e2e.mjs')], { cwd: root, stdio: 'inherit', env: { ...process.env, BASE: base } });
-    timer = setTimeout(() => { timedOut = true; killTree(`no result after ${timeoutMs} ms`).then(() => resolve(124)); }, timeoutMs);
-    child.on('exit', (c, sig) => { exited = true; clearTimeout(timer); if (sig) console.error(`e2e exited by ${sig}`); if (!timedOut) resolve(c === null ? 128 : c); });
-    child.on('error', (e) => { clearTimeout(timer); console.error(`e2e: ${e.message}`); resolve(1); });
-  });
+  const deadline = Date.now() + timeoutMs;
+  for (const suite of ['e2e.mjs', 'sim17-evidence.mjs', 'board-e2e.mjs', 'hardware-validation.mjs']) {
+    exited = false; timedOut = false;
+    console.log(`suite ${suite}`);
+    code = await new Promise((resolve) => {
+      child = spawn(process.execPath, [path.join(root, 'test', suite)], { cwd: root, stdio: 'inherit', env: { ...process.env, BASE: base } });
+      timer = setTimeout(() => { timedOut = true; killTree(`${suite}: total browser suite exceeded ${timeoutMs} ms`).then(() => resolve(124)); }, Math.max(1, deadline - Date.now()));
+      child.on('exit', (c, sig) => { exited = true; clearTimeout(timer); if (sig) console.error(`${suite} exited by ${sig}`); if (!timedOut) resolve(c === null ? 128 : c); });
+      child.on('error', (e) => { clearTimeout(timer); console.error(`${suite}: ${e.message}`); resolve(1); });
+    });
+    if (code !== 0) break;
+  }
 } catch (e) {
   console.error(`run-e2e: ${e.stack || e.message}`);
   code = 1;

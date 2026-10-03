@@ -32,7 +32,7 @@ def main():
     old = ET.parse(path).getroot()
     previous = {u.findtext(f"{{{NS}}}loc"): u for u in old}
     urls = set()
-    tracked = subprocess.check_output(["git", "ls-files", "-z", "--", "site"], cwd=ROOT)
+    tracked = subprocess.check_output(["git", "ls-files", "-z", "--", "site", "sim/index.html"], cwd=ROOT)
     pages = sorted(ROOT / p.decode() for p in tracked.split(b"\0") if p.endswith(b".html"))
     for page in pages:
         meta = Metadata()

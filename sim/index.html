@@ -6,7 +6,6 @@
 <title>dewfpga: Basys3 simulator and testbench in the browser</title>
 <meta name="description" content="Write SystemVerilog, press run: a virtual Digilent Basys3 lights up, or your testbench runs and draws a waveform. Yosys and Icarus Verilog as WebAssembly. No Vivado, no board needed.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%235cff7a%27/%3E%3C/svg%3E">
-<meta name="robots" content="noindex,nofollow">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sim/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="dewfpga: Basys3 simulator and testbench in the browser">
@@ -43,7 +42,7 @@
   <section class="hero">
     <p class="hi">write systemverilog, press run</p>
     <h1><span data-typed="a basys3 and a testbench, in your browser."></span></h1>
-    <p class="dim">the same three files the command line works on: design.sv, tb.sv, basys3.xdc. <b>board</b> synthesizes with yosys and drives a virtual basys3. <b>testbench</b> compiles with icarus verilog and draws the waveform. nothing to install, nothing is uploaded.</p>
+    <p class="dim">the files the command line works on: your .sv and .v (names free), the testbench, the .xdc. open your lab folder or drop it here; download it back as a zip the command line builds. <b>board</b> synthesizes with yosys and drives a virtual basys3. <b>testbench</b> compiles with icarus verilog and draws the waveform. nothing to install, nothing is uploaded.</p>
   </section>
 
   <div class="work">
@@ -62,6 +61,12 @@
           <label>speed <input id="speed" type="range" min="0" max="5" value="1"></label>
           <span id="speed-label"></span>
         </div>
+        <details id="timing-help" class="timing-help" hidden>
+          <summary>large counter: simulation timing</summary>
+          <p id="timing-estimate"></p>
+          <p>For a divider, use a smaller limit under <code>`ifdef SIM</code>. Keep the hardware value in <code>`else</code>; hardware validation reads that branch too. This changes simulated timing, not the FPGA clock.</p>
+          <pre id="timing-example"></pre>
+        </details>
         <p class="dim small">click a switch to flip it, hold a button to press it. with the board focused, arrows and enter are the five buttons.</p>
       </section>
       <section id="tb-view" class="tb-view" aria-label="testbench" hidden>
@@ -78,11 +83,20 @@
         <div class="pane-bar">
           <span id="ftabs" class="ftabs"></span>
           <span class="grow"></span>
+          <button id="open-folder" title="open a folder of .sv .v .svh .vh .xdc .mem files, or drop one on the editor">open folder</button>
+          <input id="folder-input" type="file" webkitdirectory multiple hidden aria-label="open a folder">
+          <button id="download" title="a zip of the source files; unzip it and run dewfpga there">download zip</button>
           <select id="examples" aria-label="load an example"><option value="">examples</option></select>
           <button id="share">share</button>
           <button id="run" title="⌘↵ on mac, ctrl+enter on windows">run</button>
         </div>
+        <div class="roles-bar"><span id="roles" class="roles"></span><span id="savestate" class="savestate" aria-live="polite"></span></div>
+        <details id="filetree" class="filetree"><summary>files</summary><div class="filetree-items"></div></details>
         <div id="editors" class="editors"></div>
+      </div>
+      <div class="pane problems-pane">
+        <div class="pane-bar"><span id="problems-label" class="dim">problems</span><span class="grow"></span><span id="lint-state" class="dim lint-state" aria-live="polite"></span></div>
+        <div id="problems" class="problems" aria-live="polite"></div>
       </div>
       <div class="pane console-pane">
         <div class="pane-bar"><span id="console-label" class="dim">yosys</span></div>

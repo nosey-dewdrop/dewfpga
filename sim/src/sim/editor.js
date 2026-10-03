@@ -1,5 +1,5 @@
-import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection } from '@codemirror/view';
-import { EditorState, Compartment } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, drawSelection, Decoration } from '@codemirror/view';
+import { EditorState, Compartment, StateField, StateEffect, RangeSetBuilder } from '@codemirror/state';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle } from '@codemirror/language';
 import { verilog } from '@codemirror/legacy-modes/mode/verilog';
@@ -26,7 +26,33 @@ const theme = EditorView.theme({
   '.cm-cursor': { borderLeftColor: 'var(--accent)' },
 });
 
-export function makeEditor(parent, doc, { onRun, lang = 'verilog' } = {}) {
+// live diagnostics: whole-line marks, one class per severity. the list is replaced wholesale by
+// setDiagnostics(); marks ride along with edits (map) until the next list arrives, so a fixed line keeps
+// its mark only until the next lint reply clears it.
+const setMarks = StateEffect.define();
+const MARK = { error: Decoration.line({ class: 'cm-diag cm-diag-error' }), warning: Decoration.line({ class: 'cm-diag cm-diag-warning' }) };
+const marks = StateField.define({
+  create: () => Decoration.none,
+  update(value, tr) {
+    for (const e of tr.effects) if (e.is(setMarks)) return build(tr.state.doc, e.value);
+    return tr.docChanged ? value.map(tr.changes) : value;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+function build(doc, list) {
+  const bySeverity = new Map();
+  for (const d of list) {
+    const line = Number(d.line);
+    if (!Number.isInteger(line) || line < 1 || line > doc.lines) continue;
+    const kind = d.kind === 'error' ? 'error' : 'warning';
+    if (bySeverity.get(line) !== 'error') bySeverity.set(line, kind);
+  }
+  const b = new RangeSetBuilder();
+  for (const line of [...bySeverity.keys()].sort((a, c) => a - c)) { const l = doc.line(line); b.add(l.from, l.from, MARK[bySeverity.get(line)]); }
+  return b.finish();
+}
+
+export function makeEditor(parent, doc, { onRun, onEdit, lang = 'verilog' } = {}) {
   const runKey = keymap.of([{ key: 'Mod-Enter', run: () => { onRun && onRun(); return true; } }]);
   const langC = new Compartment();
   const state = EditorState.create({
@@ -35,7 +61,8 @@ export function makeEditor(parent, doc, { onRun, lang = 'verilog' } = {}) {
       lineNumbers(), history(), drawSelection(), highlightActiveLine(),
       runKey, keymap.of([indentWithTab, ...defaultKeymap, ...historyKeymap]),
       langC.of(lang === 'verilog' ? StreamLanguage.define(verilog) : []),
-      syntaxHighlighting(hl), theme, EditorView.lineWrapping,
+      syntaxHighlighting(hl), theme, EditorView.lineWrapping, marks,
+      EditorView.updateListener.of((u) => { if (u.docChanged && onEdit) onEdit(); }),
     ],
   });
   const view = new EditorView({ state, parent });
@@ -48,5 +75,7 @@ export function makeEditor(parent, doc, { onRun, lang = 'verilog' } = {}) {
       view.dispatch({ selection: { anchor: l.from }, scrollIntoView: true });
       view.focus();
     },
+    // list: [{ kind: 'error'|'warning', line }]; anything else is ignored. an empty list clears every mark.
+    setDiagnostics(list) { view.dispatch({ effects: setMarks.of(Array.isArray(list) ? list : []) }); },
   };
 }

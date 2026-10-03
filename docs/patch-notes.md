@@ -3540,4 +3540,144 @@ The combined local #15 correction and #16 product sources passed **273/0 with
 52 known gaps**. The only previously tested files changed afterward are the
 experiment README and manifest; product source hashes match that run. The
 experiment's 63 frozen harness files remained unchanged throughout the batch.
-Remote CI for this commit is pending; no physical board acceptance is claimed.
+Remote CI for a80556d passed: clean macOS installation, the full CLI suite, packaged
+commands, assembled site and Ubuntu browser tests. No physical board acceptance is claimed.
+
+
+### #17 · Browser compilation checks the design and clears failed runs · 3 October
+
+Yosys errors now open their source file at the reported line. Missing module errors
+point to the instance. Synthesizable `$display` calls are removed with an explanation;
+a failed compile clears old outputs and DONE while POWER stays on. Edits survive a
+reload even when Run was never pressed. All five original regressions passed in
+Chromium and WebKit (**5/0 each**).
+
+The worker checks the hierarchy, uses the Yosys reader with a Slang fallback and
+checks hardware without `SIM` before accepting the simulation netlist. Guards for
+undefined names, multiple drivers, non-constant asynchronous loads and unsupported
+source constructs remain active; latches produce a warning. Source file extensions
+retain Verilog-2005 versus SystemVerilog semantics. Package/interface dependencies,
+hierarchical references, temporary-name collisions and Xilinx library read state
+were corrected during review.
+
+Root found a wrong interface output (`00Zz`) that the earlier direct-Yosys test did
+not cover. Flattening the actual worker netlist without scope-info cells fixed the
+DigitalJS boundary. Three actual worker netlists now pass their original native
+testbenches and **576 DigitalJS output comparisons**. The additional engine-isolation
+suite passed **16 checks**, including file collisions, a unit-scope enum, a user
+module named INV and four guard controls.
+
+The last compilation-decision audit covers **133 cases: 124 matching decisions,
+7 native-accept/browser-reject cases, 2 reverse differences and 0 infrastructure
+errors**. The remaining rejects are unnamed instances, inherited procedural port
+direction, BUFG, MMCM, internal tristate, a netlist-form module and a bitstream cast.
+The two reverse differences are separate interface/package source files that the
+native CLI source selector omits; their browser behavior was tested above. These
+counts do not establish corpus-wide behavioral equivalence or hardware timing.
+
+### #18 · A workspace that keeps names, choices and edits · 3 October
+
+A directory tree and freely named sources, headers, memory data and multiple XDC
+files replace the fixed-name workspace. Top and testbench selection use source
+content; ambiguous choices are shown instead of guessed. Active XPR filesets
+exclude disabled/inactive files. A selected constraints file follows renames,
+including case-only renames, and a deleted selection does not transfer to a new
+file with the same name.
+
+Autosave preserves original BOM/CRLF bytes until a file is edited. Share links keep
+top/testbench/XDC choices, file roles, active file and bytes in a fresh browser
+profile; old links still load. A failed link offers ZIP export. Workspace unit
+checks passed **69/0**. Review found and fixed choice loss during rename and stale
+choice inheritance after deletion.
+
+### #19 · Bring a lab folder and take it back to the CLI · 3 October
+
+Open-folder and drop import retain relative source/header/memory paths and reject
+invalid imports atomically. ZIP export includes the selected project manifest;
+a real nested ROM project exported from the browser passed CLI sim and bit checks.
+Missing or external active XPR references are reported rather than silently omitted.
+
+WebKit exposed an unreadable FileSystemEntry for an otherwise readable in-memory
+File. Loose files now use the direct File; directories retain entry recursion.
+Root also found that stripping a shared `../` prefix could turn an unsafe path into
+a safe-looking name. Such roots remain invalid. Independent review proved that the
+old drop-rejection test could pass on a read error without reaching validation;
+it now requires the invalid path in the diagnostic.
+
+Physical directory-entry drag/drop remains unverified: browser automation did not
+expose usable directory entries. Recursion is covered by unit tests, and real
+browser folder-input and direct-file drop flows are covered separately.
+
+### #20 · Located diagnostics while typing · 3 October
+
+Live checks mark source lines and list problems. Actual errors disable Run; warnings
+remain runnable. Each diagnostic has a non-clickable hint showing `coming soon!`.
+Header paths, missing includes and repeated messages now produce useful locations.
+
+Independent review reproduced a valid design timing out behind **50 pending
+checks after 60 edits**. Checks are now coalesced: the same probe posted **7 checks
+with at most 1 pending**, and Run completed in **16 seconds**. A check timeout now
+says the sources are unchecked, replaces the worker and leaves Run available to
+compile again. The old board path blocked valid Run; the old testbench path falsely
+said there were no problems. Both behaviors were corrected.
+
+The reviewer's final source checks passed **24/0** and its UI suite **126/0**.
+Root tightened an older check that accepted `not running` as valid recovery.
+Remaining limits: queue wait counts against the request timeout; a check timeout
+can interrupt a concurrent run; two identical missing-include names can locate the
+first include site. No network cold-start timing is claimed.
+
+### #21 · Board controls retain the state the student is holding · 3 October
+
+Switches and momentary buttons support pointer and keyboard input. Releasing one
+input method no longer releases a button still held by the other; focus loss
+releases held controls. Source and board hover links use the bound port/pin, without
+mistaking a helper-module port for the top-level output. Mobile tooltips stay inside
+the viewport. Failed runs retain POWER and clear DONE and outputs.
+
+Independent browser checks passed **72/0**. The expanded WebKit gate initially
+failed because its touch-hold test called Chromium-only CDP. Chromium still tests a
+trusted touch hold; WebKit tests the same handlers with explicitly labelled
+synthetic touch pointer events. This is not physical Safari/phone acceptance.
+Board pitch still limits mobile target width; LED changes are not announced by a
+screen reader.
+
+### #22 · Explain slow counters and keep Max responsive · 3 October
+
+Detected divider bits and threshold comparisons explain why a 100 MHz design looks
+still at browser speed and suggest an explicit `SIM` divider. Closing the advice
+panel persists across reruns until the advice changes. Threshold comparisons,
+including strict versus inclusive bounds and mirrored operands, were corrected.
+Finite and Max clock modes both use a bounded per-frame work budget.
+
+The repeated two-counter experiment measured roughly **5.8–5.9 thousand UI-driven
+DigitalJS cycles/s**. Its isolated DigitalJS kernel reached **12–13 thousand/s**;
+a CXXRTL kernel compiled locally to WASM ran in Chromium at **198–206 million/s**,
+with **14 output comparisons**. This measures a precompiled browser kernel, not a
+dynamic browser C++ compiler or a general equivalence result. Divider advice was
+selected; down-counter hints
+remain absent and Max does not promise a physical 100 MHz rate.
+
+### #23 · Prepare simulator discovery and enforce its browser checks · 3 October
+
+The simulator's noindex directive is removed, its source metadata enters sitemap
+validation, and the home page distinguishes the available simulator/testbench/CLI
+from the future browser bitstream compiler. Existing source checks plus deliberately
+broken metadata catch a restored noindex, missing sitemap entry and bad canonical.
+
+CI now runs the UI, five original regressions, board and hardware worker suites on
+both Chromium and WebKit. macOS additionally checks actual worker netlists and engine
+isolation with native tools. The original expanded WebKit gate failed before the CDP
+fixture repair; that failure is retained. Final combined acceptance is recorded below.
+The main-only deployment guard remains; this development update does not publish a
+live site or establish physical-board or GUI acceptance.
+
+Combined #17–#23 root acceptance passed in both Chromium and WebKit: source **24/0**,
+workspace **69/0**, UI **129/0**, original regressions **5/0**, board **72/0** and worker
+**17/0**, with no page errors. The assembled Pages and mirror packages each passed
+**104 pages, 0 failures, 1909 links**. Their CLI archive is byte-identical to the #16
+archive already tested with real sim and bit commands. The required SDK-backed full
+CLI rerun passed **273/0 with 52 known gaps** in 20 minutes 26 seconds; all product
+and test hashes stayed unchanged (only these release notes and their HTML changed).
+A first local attempt omitted the SDK Python setting, failed the required MCP check
+and was stopped; that attempt is preserved separately. Remote CI is pending.

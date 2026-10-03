@@ -2,7 +2,7 @@
 
 one static page, built with vite. nothing runs on a server.
 
-- `index.html` one workspace, the same three files as the cli (design.sv + any other .sv, tb.sv, basys3.xdc), two views:
+- `index.html` one workspace with freely named source, header, memory and constraints files, two views:
   - **board**: yosys (webassembly, `@yowasp/yosys`) synthesizes the design in a worker, `yosys2digitaljs` + `digitaljs` simulate the netlist, `src/sim/board.js` draws the basys3 and maps ports through the xdc (`src/sim/xdc.js`, pin table generated from `Basys3_Master.xdc`).
   - **testbench**: icarus verilog compiled to webassembly (`src/tb/wasm/`; the build recipe and patches are in `src/tb/wasm/build/`) compiles everything including tb.sv. `$display` output plus a vcd waveform viewer (`src/tb/vcd.js`, `src/tb/wave.js`).
   - `?view=tb` opens the testbench view; switching views re-runs the active tool on the current files.
@@ -16,10 +16,28 @@ npm run build      # dist/  (66 mb yosys core is copied in, that is expected)
 npm run preview    # http://localhost:4173, then: node test/e2e.mjs   (BASE=http://localhost:4199/ for another port)
 ```
 
-tests drive a real chromium (playwright; the executable path in test/*.mjs points at the cached build).
-`test/e2e.mjs`, 31 checks: boot is the cli blink template, switch → led, blink toggles, the testbench view runs the
-same files (`PASS: 3 checks`, waveform), an edit reaches both tools, every example runs in both views, multi-file
-design, iverilog and yosys errors land in the console, watchdog for a testbench without `$finish`, old `tb.html` links.
+`npm test` builds once, then runs source/workspace checks and real browser UI, original
+engine regressions, board interaction and WASM worker checks. Chromium is the default;
+use `BROWSER=webkit npm test` for WebKit. Install the selected Playwright browser first
+(`npx playwright install chromium` or `npx playwright install webkit`). CI runs both.
+`E2E_OUT` selects the screenshot directory. `test/README.md` describes the test scope.
+
+`node test/probe-behavior.mjs` and `node test/engine-isolation.mjs` additionally require
+native Yosys and Icarus: they test actual browser worker netlists under their original
+testbenches and compare outputs in DigitalJS. macOS CI runs them. The 133-case
+`test/probe-decisions.mjs` audit compares compilation decisions only; it does not prove
+behavioral equivalence, timing closure or physical board behavior.
+
+Files can be opened as a folder or dropped into the workspace. A project tree keeps
+relative paths; active Vivado source sets are read from an imported XPR. Multiple tops,
+testbenches or constraints need an explicit choice when the resolver cannot select
+one. The workspace saves edits locally; share links carry selections, roles and file
+bytes, and ZIP export generates the CLI project manifest.
+
+Live diagnostics show source locations in the editor and problems panel. Errors close
+Run; a timed-out check is shown as unchecked and Run recompiles the source. The board
+supports pointer and keyboard controls, source hover links and timing advice for slow
+counters. The Max setting remains a browser simulation speed, not a 100 MHz promise.
 
 ## notes
 
