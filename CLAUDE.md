@@ -18,8 +18,11 @@ kontrol et. Gözlem zaman aşımını ölü süreç sanma; aynı handle veya PID
 Geliştirme dalı, testler ve taslak PR güncellemeleri yürütülebilir. Ana dala merge,
 canlı site/DB/Auth değişikliği veya gerçek mail/duyuru yapılmış sayılmasın; bunlar
 ayrı canlı kabul ve yetki gerektirir. Ana planın dış hesap ve fiziksel adımlarını
-sessizce kapsamdan çıkarma. Dev diaries TXT, yerelde şu başlıklarla güncellenir:
-`geliştirmeler/güncellemeler:`, `testler:`, `yeni özellikler:`.
+sessizce kapsamdan çıkarma. Dev diary: ana repo kökünde gün başına `DDMM-dev-diary.txt`
+(git'e girmez). Yalnız önemli değişiklik ya da gerçek test sonucu girer; başlıklar birebir
+`geliştirmeler/güncellemeler:`, `testler:`, `yeni özellikler:`. Her madde "Eskiden / Artık",
+düz cümle ve gerçek sayı; log yolu, SHA, jargon yok (kanıt state dosyasında). Damla bundan yazı
+yazıyor: kısaltma da, dolgu da yok. Yalnız ana oturum yazar.
 
 ## Doğrulanmış durum — 3 Ekim 2026
 
@@ -51,6 +54,16 @@ sessizce kapsamdan çıkarma. Dev diaries TXT, yerelde şu başlıklarla güncel
   completion'ı sınar. Dört küçük enjekte iş negatif kontroldür. Son testin
   bağımsız Opus incelemesi sonrası süre çıkarımları kaldırıldı; gerçek click
   capture ölçülür. Sonuç için her zaman PR#1'in güncel head CI'ını kontrol et.
+- 4 Ekim, aktivasyon öncesi (canlı değil): `mail/ops/preflight_readonly.sql` paylaşılan
+  projeyi tek read-only transaction'da raporlar; `mail/ops/rollback_dewfpga.sql` yalnız
+  dewfpga nesnelerini siler, yabancı kullanım varsa hiçbir şey silmez. Operatör scriptleri
+  `mail/sql` dışında: o klasörü glob'layan her şey (test_sender_idem, operatör döngüsü)
+  rollback'i migration sanıyordu. Resend/Supabase belgelerine karşı denetim düzeltmeleri:
+  sending-only anahtarda usage 401 restricted_api_key sebebi görünür (worker full_access
+  ister), 429 sonrası yeni anahtardan önce bekleme, ledger sequence'i anon/authenticated'a
+  kapalı, 002 yeniden uygulamada operatörün consumer satırını silmez. Yerel: activation142/0,
+  SQL187/0, mail60/0, sender tüm senaryolar, lifecycle112/0, usage13 OK, pages137/0,
+  browser158/0. Kanıt `.claude/recovery-20261003/fable-handoff-state.json`.
 - #27 kapanış belgeleri hazırlanıyor; canlı duyuru yapılmadı. Gerçek Basys3,
   VS Code GUI ve gerçek Safari/telefon kabulü açık. Kanonik site GitHub Pages,
   Vercel aynası `deploy.sh` akışı; bu koşuda canlı yayın yapılmadı.
