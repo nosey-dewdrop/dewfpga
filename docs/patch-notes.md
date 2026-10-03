@@ -3750,6 +3750,32 @@ no real mail was sent. An intermediate same-claim snapshot failed two root
 expectations; the final sender retains uncertainty and the integration regression
 passes. A worker mutation removing that rule made the mail test fail as intended.
 
+**Before activation (4 October).** A review against Resend's and Supabase's own
+documentation found gaps that local tests could not show. A sending-only Resend
+key is refused by the usage endpoint (401 `restricted_api_key`): the worker used
+to defer every run with "account usage unavailable" and no cause; it now names the
+status and error and says a full-access key is needed, without echoing the key or
+the response text. After a 429 rate-limit refusal the sender now waits before its
+next derived key (the provider's retry-after when sane, else 1 s then 3 s, at most
+60 s); before, all three keys were spent within milliseconds and that recipient
+missed the issue. The limit is per team and shared with dewsletter. Re-applying
+002 no longer deletes a consumer row the operator configured, and the ledger's id
+sequence is revoked from `anon` and `authenticated`, which existing Supabase
+projects grant on every new public sequence.
+
+Two operator scripts prepare the first live apply. `mail/ops/preflight_readonly.sql`
+reports the shared project in one read-only transaction: dewfpga objects and
+grants, other applications' tables tied to `auth.users`, triggers, default
+privileges, foreign callers and which migration parts already exist.
+`mail/ops/rollback_dewfpga.sql` removes only dewfpga's objects and drops nothing
+when another application uses them. Both live outside `mail/sql`: in the first
+draft a loop over that folder ran the rollback right after the migrations, which
+a sender test caught. Local gates on the integrated head: activation scripts
+**142/0**, SQL **187/0**, mail flow **60/0**, every sender scenario including the
+429 wait, lifecycle **112/0**, usage **13 tests OK**, pages **137/0**, Chromium and
+WebKit **158/0**. Provider and Auth replies are modeled; nothing was applied to
+the live project and no mail was sent.
+
 ### #26 · Optional accounts with local session handling and scoped deletion · 3 October
 
 The [account page](/dewfpga/account/) uses Supabase magic-link signup/sign-in and
