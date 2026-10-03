@@ -55,7 +55,7 @@ jobs:
         shell: bash
         run: |
           mkdir -p "$RUNNER_TEMP/mail-tests"
-          for suite in test_sql test_mail test_sender_idem test_lifecycle test_usage test_integration test_pages; do
+          for suite in test_sql test_activation_sql test_mail test_sender_idem test_lifecycle test_usage test_integration test_pages; do
             python3 -B "mail/tests/$suite.py" 2>&1 | tee "$RUNNER_TEMP/mail-tests/$suite.log"
           done
       - name: real browsers with private PostgreSQL and fake Auth

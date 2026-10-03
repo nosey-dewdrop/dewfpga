@@ -18,6 +18,23 @@ prove real JWT verification, SMTP delivery, inbox receipt or hosted redirects.
    objects. Do not delete or replace shared `auth.users` or other applications'
    objects. Normal Supabase signup still creates a sign-in identity; dewfpga
    enrolment and deletion operate on its own profile and linked subscriptions.
+   First look, without writing (one `begin transaction read only` ... `rollback`):
+   `psql "$DB_URL" -X -v ON_ERROR_STOP=1 -f mail/ops/preflight_readonly.sql`
+   prints server and role, pgcrypto, every `dewfpga_` object with grants and
+   row counts (all 0 on a fresh project), the other applications' tables and
+   their `auth.users` references, triggers on `auth.users`, default privileges,
+   other functions whose body names `dewfpga_`, and which parts of 001/002/003
+   already exist. It needs no superuser; tables it may not read get an estimate.
+   To undo dewfpga only, `mail/ops/rollback_dewfpga.sql` drops exactly the
+   `dewfpga_` tables, functions and policy of 001-003 in one transaction, never
+   with CASCADE. When something outside dewfpga uses them it drops nothing:
+   foreign keys and views are named up front, functions that call a `dewfpga_`
+   RPC are found by their body text (a name built at run time is missed, so
+   read the preflight first), and PostgreSQL refuses every other tracked
+   dependency. `auth.users`, pgcrypto and other applications are untouched. It DELETES all
+   subscriber, ledger and profile data: `pg_dump` the `dewfpga_` tables first
+   (command in its header). Verified by `tests/test_activation_sql.py`; run by hand
+   only. `mail/sql` holds only the numbered migrations; the operator scripts live in `mail/ops`.
 2. Publish the controller/contact, purposes and legal grounds, collection and
    transfer details, processing locations, retention arrangements and rights
    procedure in `site/privacy/index.html` and reconcile the signup/account copy.
