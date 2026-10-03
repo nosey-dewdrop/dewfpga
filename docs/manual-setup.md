@@ -55,34 +55,30 @@ guide goes into that window: paste it, press Enter, wait until the line ending i
 comes back before you paste the next one. Some commands span several lines and end in
 `\`; copy the whole grey block at once.
 
-**Apple's command line tools.** They give your Mac `git`, `make` and the C compiler.
-
-```bash
-xcode-select --install
-```
-
-A window pops up; click Install and wait. If instead the terminal prints
-`xcode-select: note: Command line tools are already installed`, that is fine. Check:
-
-```bash
-xcode-select -p
-# /Library/Developer/CommandLineTools
-```
-
-**Homebrew.** It installs developer tools by name.
+**Homebrew.** It installs developer tools by name, and on a Mac that does not have them it
+first installs Apple's command line tools (`git`, `make`, the C compiler), which the chain
+is built with; that is the installer's own `should_install_command_line_tools` step. So
+this one line covers both:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
 It asks for your Mac password; the letters do not show while you type. At the end it
-prints a few lines under "Next steps". Paste those into the terminal too, or the next
-command answers `command not found`. Check:
+prints a few lines under "Next steps". Paste those into the terminal too: they put
+`/opt/homebrew/bin` on your PATH, and without them the next command answers
+`command not found`. Open a new terminal window and check:
 
 ```bash
 brew --version
 # Homebrew 4.x
 ```
+
+If `dewfpga install` later stops with `Xcode Command Line Tools missing` (a Homebrew
+copied over by Migration Assistant, or a tools download that failed), run
+`xcode-select --install`, click Install in the window, and run it again. If it stops with
+`Homebrew is installed (...) but not on your PATH`, the "Next steps" lines were the
+missing part; it prints the one line that fixes it.
 
 **VS Code.** Download it from code.visualstudio.com. Then in VS Code press Cmd Shift P,
 type `shell command`, choose "Install 'code' command in PATH". After that `code .` in the
@@ -145,9 +141,10 @@ all good.
 
 A red `✗` names the missing piece: run the curl line again (it is the same as
 `dewfpga install`), it skips what is done. `dewfpga: command not found` has two causes:
-the Homebrew "Next steps" lines from section 1 were not pasted (paste them, open a new
-terminal window), or the installer stopped before its last line; scroll up to the first
-`ERROR:` line and look it up on the errors page.
+the Homebrew "Next steps" lines from section 1 were not pasted (the installer says so,
+`Homebrew is installed (...) but not on your PATH`, and prints the line to paste), or the
+installer stopped before its last line; scroll up to the first `ERROR:` line and look it
+up on the errors page.
 
 Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power
 switch) and flip the power switch on. Make the example project and flash it:

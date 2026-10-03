@@ -3340,3 +3340,32 @@ CI evidence now available for #8: clean macOS installation and suite **261 passe
 52 known gaps**; Ubuntu browser suite **31 passed, 0 failed**; assembled Pages artifact
 **88 clean pages, 0 failures**. Run: [37107944441](https://github.com/nosey-dewdrop/dewfpga/actions/runs/37107944441).
 These results apply to that commit and do not claim that the later Vivado or VS Code changes passed.
+
+
+### #11 · Five CLI steps and accurate Homebrew diagnosis · 3 October
+
+The CLI page now explains the path from Homebrew to a blinking Basys3 in five steps.
+The guide relies on Homebrew's normal Command Line Tools installation and retains the
+explicit `xcode-select` recovery command for a missing developer-tools check. Its top-module
+explanation now matches the CLI: hierarchy and a uniquely matching XDC can select a design;
+a file name alone does not silently select it. A design containing `$finish` is an error,
+not automatically a testbench. The existing standalone-package limitation is stated.
+
+Both the downloadable installer and `install.sh` distinguish a missing Homebrew installation,
+an Apple Silicon installation missing from PATH and an Intel Homebrew installation. They
+print the relevant next step before downloading the toolchain. An additional root check found
+that an Intel `brew` already on PATH bypassed the first implementation: that case now stops
+before executing it and explains the Apple Silicon path. Tests use executable sentinels to
+prove that none of those diagnostic branches invokes the discovered Homebrew binary.
+
+The final affected installer, security, static, privacy and documentation-count checks passed
+**24, failed 0**. `test/run.sh --list` now reports **321 available checks**; it is not a count of
+checks executed by that focused run. Independent review approved the original installer patch;
+the root's extra Intel-on-PATH cases passed for both entry points.
+
+At 320 pixels, the toolchain table previously widened the page to 384 pixels. It now scrolls
+inside its own wrapper, and the page stays 320 pixels wide. Chromium checks at 320, 390 and
+1366 pixels find all five steps with no page overflow. Wrapping the unchanged desktop table
+produces **0 pixel differences** and identical table geometry in a controlled before/after
+capture. These are browser measurements, not physical-phone or board tests. The final commit's
+full CI remains a separate acceptance check.

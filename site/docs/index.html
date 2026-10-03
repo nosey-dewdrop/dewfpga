@@ -92,16 +92,12 @@
 <h2 id="1-what-do-you-need-before-you-start">1. What do you need before you start?</h2>
 <p><strong>The board.</strong> A Digilent Basys3 and its micro-USB cable. Apple Silicon MacBooks have only USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is powered from the cable; leave the JP2 jumper on USB.</p>
 <p><strong>The terminal.</strong> Press Cmd Space, type <code>Terminal</code>, press Enter. Every command in this guide goes into that window: paste it, press Enter, wait until the line ending in <code>%</code> comes back before you paste the next one. Some commands span several lines and end in <code>\</code>; copy the whole grey block at once.</p>
-<p><strong>Apple's command line tools.</strong> They give your Mac <code>git</code>, <code>make</code> and the C compiler.</p>
-<pre class="bash"><code>xcode-select --install</code></pre>
-<p>A window pops up; click Install and wait. If instead the terminal prints <code>xcode-select: note: Command line tools are already installed</code>, that is fine. Check:</p>
-<pre class="bash"><code>xcode-select -p
-# /Library/Developer/CommandLineTools</code></pre>
-<p><strong>Homebrew.</strong> It installs developer tools by name.</p>
+<p><strong>Homebrew.</strong> It installs developer tools by name, and on a Mac that does not have them it first installs Apple's command line tools (<code>git</code>, <code>make</code>, the C compiler), which the chain is built with; that is the installer's own <code>should_install_command_line_tools</code> step. So this one line covers both:</p>
 <pre class="bash"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;</code></pre>
-<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those into the terminal too, or the next command answers <code>command not found</code>. Check:</p>
+<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those into the terminal too: they put <code>/opt/homebrew/bin</code> on your PATH, and without them the next command answers <code>command not found</code>. Open a new terminal window and check:</p>
 <pre class="bash"><code>brew --version
 # Homebrew 4.x</code></pre>
+<p>If <code>dewfpga install</code> later stops with <code>Xcode Command Line Tools missing</code> (a Homebrew copied over by Migration Assistant, or a tools download that failed), run <code>xcode-select --install</code>, click Install in the window, and run it again. If it stops with <code>Homebrew is installed (...) but not on your PATH</code>, the "Next steps" lines were the missing part; it prints the one line that fixes it.</p>
 <p><strong>VS Code.</strong> Download it from code.visualstudio.com. Then in VS Code press Cmd Shift P, type <code>shell command</code>, choose "Install 'code' command in PATH". After that <code>code .</code> in the terminal opens the current folder. Do not edit these files in TextEdit; it saves rich text, and the tools cannot read that.</p>
 <hr />
 <h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
@@ -129,7 +125,7 @@ bash install.sh</code></pre>
   ✓ venv             /Users/you/fpga/venv/bin/python
   ✓ python pkgs      fasm prjxray pyyaml textx simplejson intervaltree
 all good.</code></pre>
-<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> has two causes: the Homebrew "Next steps" lines from section 1 were not pasted (paste them, open a new terminal window), or the installer stopped before its last line; scroll up to the first <code>ERROR:</code> line and look it up on the errors page.</p>
+<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> has two causes: the Homebrew "Next steps" lines from section 1 were not pasted (the installer says so, <code>Homebrew is installed (...) but not on your PATH</code>, and prints the line to paste), or the installer stopped before its last line; scroll up to the first <code>ERROR:</code> line and look it up on the errors page.</p>
 <p>Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power switch) and flip the power switch on. Make the example project and flash it:</p>
 <pre class="bash"><code>dewfpga new blink    # prints: blink/ ready:  cd blink &amp;&amp; dewfpga flash    (VS Code: ⌘⇧B)
 cd blink

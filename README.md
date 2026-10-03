@@ -44,8 +44,10 @@ curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 It puts the CLI in `~/.dewfpga` (sha256 compared with `dewfpga.tgz.sha256`, an integrity check, not a signature), links `dewfpga` into
 Homebrew's bin and runs `dewfpga install`. Re-run the same line to update; `dewfpga uninstall`
 removes what the installer built in `~/fpga` (nextpnr-xilinx, prjxray, chipdb, venv, the log),
-`~/.dewfpga` and the link, and leaves anything else in `~/fpga`. Requirements: macOS on Apple Silicon,
-Xcode Command Line Tools, Homebrew. Switching to the npm package later: remove
+`~/.dewfpga` and the link, and leaves anything else in `~/fpga`. Requirements: macOS on Apple Silicon
+and Homebrew. The builds also need Apple's Command Line Tools (git, make, clang); the Homebrew installer
+puts them in when they are missing, and both installers check and print the one line to run if either
+is missing or Homebrew is off the PATH. Switching to the npm package later: remove
 `$(brew --prefix)/bin/dewfpga` first, npm wants that path.
 
 ## What it installs
@@ -111,7 +113,7 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (319 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (321 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
 probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names

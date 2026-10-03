@@ -266,6 +266,31 @@ wi_unread() {
     rm -rf "$T/wi"/.dewfpga-backup.*; [ "$r" = 0 ]
 }
 check "web installer: a folder it cannot read -> stops, the files in it stay where they are" wi_unread
+# the same three Macs as install_brew_diag, through the front door: a curl|bash student with brew in /opt/homebrew but
+# off the PATH must get the PATH line here too, not "Homebrew missing" (before #11 site/install only ran `command -v brew`).
+# PATH is cut to the system dirs, no scratch brew; the installer stops before any download, so no release is needed
+wi_brew_diag() {
+    local d="$T/wbd" out
+    rm -rf "$d"; mkdir -p "$d/as/opt/homebrew/bin" "$d/intel/usr/local/bin" "$d/home"
+    printf '#!/bin/sh\n: > "%s"\nexit 77\n' "$d/invoked" > "$d/as/opt/homebrew/bin/brew"; cp "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    chmod +x "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    run() { out=$( { PATH=/usr/bin:/bin HOME="$d/home" DEWFPGA_URL="file://$d/nosite" DEWFPGA_BREW_PATHS="$1" bash "$ROOT/site/install" || true; } 2>&1 ); }
+    run "$d/none/opt/homebrew/bin/brew $d/none/usr/local/bin/brew"
+    grep -q 'ERROR: Homebrew missing' <<< "$out" || { echo "no brew: $out"; return 1; }
+    run "$d/as/opt/homebrew/bin/brew $d/intel/usr/local/bin/brew"
+    grep -q "Homebrew is installed ($d/as/opt/homebrew/bin/brew) but not on your PATH" <<< "$out" || { echo "brew off PATH: $out"; return 1; }
+    grep -q 'Homebrew missing' <<< "$out" && { echo "brew off PATH still says missing: $out"; return 1; }
+    local line; line=$(grep "zprofile" <<< "$out")
+    (cd "$d/home" && HOME="$d/home" /bin/sh -c "$line") || { echo "echo line failed: $line"; return 1; }
+    [ "$(PATH=/usr/bin:/bin /bin/sh -c '. '"$d"'/home/.zprofile && command -v brew')" = "$d/as/opt/homebrew/bin/brew" ] || { echo "brew not resolvable after .zprofile: $(cat "$d/home/.zprofile")"; return 1; }
+    run "$d/intel/usr/local/bin/brew"
+    grep -q "Intel Homebrew was found at $d/intel/usr/local/bin/brew" <<< "$out" || { echo "intel brew: $out"; return 1; }
+    out=$( { PATH="$d/intel/usr/local/bin:/usr/bin:/bin" HOME="$d/home" FPGA_HOME="$T/e" DEWFPGA_URL="file://$d/nosite" DEWFPGA_BREW_PATHS="$d/as/opt/homebrew/bin/brew" bash "$ROOT/site/install" || true; } 2>&1 )
+    grep -q "brew command on your PATH is $d/intel/usr/local/bin/brew" <<< "$out" || { echo "Intel brew on PATH: $out"; return 1; }
+    [ ! -e "$d/invoked" ] || { echo "a brew candidate was executed during diagnosis"; return 1; }
+    [ ! -e "$d/home/.dewfpga" ] || { echo "the installer went on past the brew check"; return 1; }
+}
+check "web installer: brew absent, brew off the PATH and Intel brew get the three install.sh messages, and stop before any download" wi_brew_diag
 # the earlier install holds a folder rm cannot empty (mode 000 with a file inside): the new install is in place, so the
 # installer goes on and names where the old one is left, instead of ending on rm's line alone (set -e)
 wi_keep() {
@@ -369,6 +394,33 @@ check "corrupt .fasm -> error, no .frames" "cd '$T/w' && '$CLI' clean && '$CLI' 
 check "port missing in xdc"   "cd '$T/w' && sed '/led\[15\]/d' blink.xdc > bad.xdc && cp blink.sv b.sv && mkdir x && mv b.sv x/blink.sv && cp bad.xdc x/blink.xdc && cd x && { '$CLI' bit || true; } 2>&1 | grep -q 'led\[15\]'"
 check "install: refuses sudo" "mkdir -p '$T/fb' && printf '#!/bin/sh\n[ \"\$1\" = -u ] && echo 0 || /usr/bin/id \"\$@\"\n' > '$T/fb/id' && chmod +x '$T/fb/id' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'sudo'"
 check "install: refuses x86"  "rm -f '$T/fb/id'; printf '#!/bin/sh\n[ \"\$1\" = -m ] && echo x86_64 || /usr/bin/uname \"\$@\"\n' > '$T/fb/uname' && chmod +x '$T/fb/uname' && { PATH='$T/fb':\$PATH FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'arm64'"
+# install.sh step 0 looks for brew where brew.sh puts it before saying "Homebrew missing"; DEWFPGA_BREW_PATHS points it at
+# stubs here, PATH is cut to the system dirs so the Mac's real brew is not found. Three Macs: no Homebrew, Homebrew in
+# /opt/homebrew that was never put on the PATH (the message must name it and its echo line, pasted, must make brew
+# resolvable), an Intel Homebrew in /usr/local.
+install_brew_diag() {
+    local d="$T/bd" out
+    rm -rf "$d"; mkdir -p "$d/as/opt/homebrew/bin" "$d/intel/usr/local/bin" "$d/home"
+    printf '#!/bin/sh\n: > "%s"\nexit 77\n' "$d/invoked" > "$d/as/opt/homebrew/bin/brew"; cp "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    chmod +x "$d/as/opt/homebrew/bin/brew" "$d/intel/usr/local/bin/brew"
+    run() { out=$( { PATH=/usr/bin:/bin FPGA_HOME="$T/e" DEWFPGA_BREW_PATHS="$1" "$ROOT/install.sh" || true; } 2>&1 ); }
+    run "$d/none/opt/homebrew/bin/brew $d/none/usr/local/bin/brew"
+    grep -q 'ERROR: Homebrew missing' <<< "$out" || { echo "no brew: $out"; return 1; }
+    run "$d/as/opt/homebrew/bin/brew $d/intel/usr/local/bin/brew"
+    grep -q "Homebrew is installed ($d/as/opt/homebrew/bin/brew) but not on your PATH" <<< "$out" || { echo "brew off PATH: $out"; return 1; }
+    grep -q 'Homebrew missing' <<< "$out" && { echo "brew off PATH still says missing: $out"; return 1; }
+    # the echo line it prints, pasted as is, must leave a .zprofile that makes brew resolvable
+    local line; line=$(grep "zprofile" <<< "$out")
+    (cd "$d/home" && HOME="$d/home" /bin/sh -c "$line") || { echo "echo line failed: $line"; return 1; }
+    grep -qx "export PATH=\"$d/as/opt/homebrew/bin:\$PATH\"" "$d/home/.zprofile" || { echo ".zprofile got: $(cat "$d/home/.zprofile")"; return 1; }
+    [ "$(PATH=/usr/bin:/bin /bin/sh -c '. '"$d"'/home/.zprofile && command -v brew')" = "$d/as/opt/homebrew/bin/brew" ] || { echo "brew not resolvable after .zprofile"; return 1; }
+    run "$d/intel/usr/local/bin/brew"
+    grep -q "Intel Homebrew was found at $d/intel/usr/local/bin/brew" <<< "$out" || { echo "intel brew: $out"; return 1; }
+    out=$( { PATH="$d/intel/usr/local/bin:/usr/bin:/bin" HOME="$d/home" FPGA_HOME="$T/e" DEWFPGA_URL="file://$d/nosite" DEWFPGA_BREW_PATHS="$d/as/opt/homebrew/bin/brew" "$ROOT/install.sh" || true; } 2>&1 )
+    grep -q "brew command on your PATH is $d/intel/usr/local/bin/brew" <<< "$out" || { echo "Intel brew on PATH: $out"; return 1; }
+    [ ! -e "$d/invoked" ] || { echo "a brew candidate was executed during diagnosis"; return 1; }
+}
+check "install: brew absent, brew off the PATH and Intel brew get three different messages" install_brew_diag
 check "install: no network -> clear error" "rm -rf '$T/e'; { GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=http.proxy GIT_CONFIG_VALUE_0=http://127.0.0.1:9 FPGA_HOME='$T/e' '$ROOT/install.sh' || true; } 2>&1 | grep -q 'could not fetch'"
 check "install: idempotent (<10 s)" "s=\$(date +%s); '$ROOT/install.sh' >/dev/null 2>&1; [ \$(( \$(date +%s) - s )) -lt 10 ]"
 

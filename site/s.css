@@ -250,6 +250,8 @@ pre .p{color:#afddbc}
    reads as two documents side by side. */
 .tablewrap{overflow-x:auto;margin:0 auto 1.15rem;max-width:calc(980*var(--u))}
 table{border-collapse:collapse;width:100%;font-size:.95rem}
+.cli-tools{margin-bottom:1rem}
+.cli-tools table{margin-bottom:0}
 td,th{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);
   vertical-align:top}
 th{font-weight:700;color:var(--mute);font-size:.8rem;letter-spacing:.02em}

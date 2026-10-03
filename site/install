@@ -27,10 +27,38 @@ main() {
         local out="${top%/}$rest"; printf '%s' "${out:-/}"
     }
 
+    # Homebrew on the PATH, or the reason it is not. The same three cases as install.sh's need_brew: brew in
+    # /opt/homebrew that the "Next steps" lines never put on the PATH (the message prints the line to paste), an Intel
+    # brew in /usr/local, none. The candidates are only tested with -x, never run. DEWFPGA_BREW_PATHS (test only) is a
+    # space-separated list of candidate paths; the real two have no space, so it does not take one either.
+    need_brew() {
+        local found b line="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+        found=$(command -v brew || true)
+        if [ -n "$found" ]; then
+            case $found in
+                */usr/local/bin/brew)
+                    die "the brew command on your PATH is $found, the Intel Homebrew location. This installer needs the Apple Silicon Homebrew in /opt/homebrew. If /opt/homebrew/bin/brew exists, put /opt/homebrew/bin before /usr/local/bin on your PATH using Homebrew's Next steps; otherwise install it: $line (https://docs.brew.sh/Installation)" ;;
+                *) return 0 ;;
+            esac
+        fi
+        # shellcheck disable=SC2086  # the list is space-separated by design
+        for b in ${DEWFPGA_BREW_PATHS:-/opt/homebrew/bin/brew /usr/local/bin/brew}; do
+            [ -x "$b" ] || continue
+            case $b in
+                */opt/homebrew/bin/brew)
+                    die "Homebrew is installed ($b) but not on your PATH: the lines the Homebrew installer printed under \"Next steps\" were not pasted (they put ${b%/brew} on the PATH, see https://docs.brew.sh/Installation). Put it there, open a new terminal window and run the curl line again:
+    echo 'export PATH=\"${b%/brew}:\$PATH\"' >> ~/.zprofile" ;;
+                *)
+                    die "an Intel Homebrew was found at $b (not on your PATH; it runs under Rosetta and would build Intel tools). On Apple Silicon install the arm64 Homebrew, it goes to /opt/homebrew:  $line   (https://brew.sh)" ;;
+            esac
+        done
+        die "Homebrew missing. First:  $line   then paste the lines it prints under \"Next steps\", open a new terminal window and run the curl line again   (https://brew.sh)"
+    }
+
     [ "$(uname -s)" = Darwin ] || die "dewfpga is for macOS."
     [ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is supported for now."
     [ "$(id -u)" -ne 0 ]       || die "do not run with sudo."
-    command -v brew >/dev/null || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
+    need_brew
 
     # DEWFPGA_DIR is replaced below. Refuse anything that is not an empty folder or an earlier dewfpga install.
     [ -n "$DIR" ] || die "DEWFPGA_DIR is empty."

@@ -46,8 +46,10 @@ CLI'ı `~/.dewfpga`'ya koyar (sha256 `dewfpga.tgz.sha256` ile karşılaştırıl
 kontrolü, imza değil), `dewfpga`'yı Homebrew'un bin klasörüne bağlar ve `dewfpga install`'u
 çalıştırır. Güncellemek için aynı satırı tekrar çalıştır. `dewfpga uninstall` kurulumun
 `~/fpga`'da ürettiklerini (nextpnr-xilinx, prjxray, chipdb, venv, log), `~/.dewfpga`'yı ve
-linki siler; `~/fpga`'daki başka dosyalara dokunmaz. Gerekenler: Apple Silicon'da macOS,
-Xcode Command Line Tools, Homebrew. Sonradan npm paketine geçeceksen önce
+linki siler; `~/fpga`'daki başka dosyalara dokunmaz. Gerekenler: Apple Silicon'da macOS ve
+Homebrew. Derlemeler Apple'ın Command Line Tools'unu da ister (git, make, clang); Homebrew'un
+kurucusu eksikse onları kendi kurar, iki kurucu da kontrol eder ve biri eksikse ya da Homebrew
+PATH'te değilse çalıştırılacak tek satırı basar. Sonradan npm paketine geçeceksen önce
 `$(brew --prefix)/bin/dewfpga`'yı sil, npm aynı yolu istiyor.
 
 ## Ne kuruyor?
@@ -113,7 +115,7 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (319 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (321 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
 bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün

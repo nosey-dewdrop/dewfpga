@@ -44,6 +44,35 @@ ok()    { printf '    %s✓%s %s\n' "$G" "$N" "$*"; }
 skip()  { printf '    %s↷%s %s (already there, skipped)\n' "$Y" "$N" "$*"; }
 die()   { printf '\n%sERROR:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
 
+# brew.sh installs Homebrew into /opt/homebrew (Apple Silicon) or /usr/local (Intel). `command -v brew` fails on a
+# Mac that has it when the "Next steps" lines the Homebrew installer printed were never pasted: the shell does not
+# look in /opt/homebrew/bin. That is not "Homebrew missing", and the fix is one line, not a second install.
+# The candidates are only tested with -x, never run. DEWFPGA_BREW_PATHS (test only, test/run.sh points it at
+# stubs) is a space-separated list of candidate paths; the real two have no space, so it does not take one either.
+BREW_INSTALL_LINE="/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+need_brew() {
+    local found b
+    found=$(command -v brew || true)
+    if [ -n "$found" ]; then
+        case $found in
+            */usr/local/bin/brew)
+                die "the brew command on your PATH is $found, the Intel Homebrew location. This installer needs the Apple Silicon Homebrew in /opt/homebrew. If /opt/homebrew/bin/brew exists, put /opt/homebrew/bin before /usr/local/bin on your PATH using Homebrew's Next steps; otherwise install it: $BREW_INSTALL_LINE (https://docs.brew.sh/Installation)" ;;
+            *) return 0 ;;
+        esac
+    fi
+    for b in ${DEWFPGA_BREW_PATHS:-/opt/homebrew/bin/brew /usr/local/bin/brew}; do
+        [ -x "$b" ] || continue
+        case $b in
+            */opt/homebrew/bin/brew)
+                die "Homebrew is installed ($b) but not on your PATH: the lines the Homebrew installer printed under \"Next steps\" were not pasted (they put ${b%/brew} on the PATH, see https://docs.brew.sh/Installation). Put it there, open a new terminal window and run this again:
+    echo 'export PATH=\"${b%/brew}:\$PATH\"' >> ~/.zprofile" ;;
+            *)
+                die "an Intel Homebrew was found at $b (not on your PATH; it runs under Rosetta and would build Intel tools). On Apple Silicon install the arm64 Homebrew, it goes to /opt/homebrew:  $BREW_INSTALL_LINE   (https://brew.sh)" ;;
+        esac
+    done
+    die "Homebrew missing. First:  $BREW_INSTALL_LINE   then paste the lines it prints under \"Next steps\", open a new terminal window and run this again   (https://brew.sh)"
+}
+
 # Shallow-fetch one pinned commit. Same source even after the branch moves on.
 clone_pinned() {  # <url> <sha> <dir>
     local url=$1 sha=$2 dir=$3
@@ -69,8 +98,12 @@ step 0 "Environment"
 [ "$(uname -s)" = Darwin ] || die "this script is for macOS. Linux/Windows are not supported."
 [ "$(uname -m)" = arm64 ]  || die "only Apple Silicon (arm64) is tested. Intel Mac not yet."
 [[ $FPGA_HOME != *[[:space:]]* ]] || die "FPGA_HOME=$FPGA_HOME contains a space; the FPGA tools cannot handle that path."
-xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools missing. First:  xcode-select --install   (then run this again)"
-command -v brew >/dev/null   || die "Homebrew missing. First:  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\"   (https://brew.sh)"
+# Apple's command line tools (git, make, clang): the source builds in steps 2, 4 and 6 need them. The Homebrew
+# installer puts them in when they are missing (brew.sh install.sh: should_install_command_line_tools runs
+# softwareupdate), so a Mac that got Homebrew the usual way has them; this catches a Homebrew copied over by
+# Migration Assistant, or an install where the tools download failed.
+xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools missing (the builds need git, make and clang). First:  xcode-select --install   (click Install in the window, then run this again)"
+need_brew
 mkdir -p "$FPGA_HOME"
 FREE_GB=$(df -g "$FPGA_HOME" | awk 'NR==2{print $4}')
 [ "$FREE_GB" -ge 4 ] || die "only $FREE_GB GB free; the install needs 1.4 GB plus build scratch, at least 4 GB."
