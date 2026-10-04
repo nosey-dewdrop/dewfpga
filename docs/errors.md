@@ -1131,6 +1131,62 @@ Read iverilog's first line and fix that; run again. `sorry:` lines name construc
 dewfpga sim
 ```
 
+Since #28, when the line iverilog names is in a design file (not the testbench), `dewfpga sim` goes on: it builds the design the way `dewfpga bit` reads it and simulates that, with a [note [sim-from-build]](/dewfpga/errors/sim-from-build/). This error then comes only when the build refuses the design too (the build's own coded line is above it), or when the testbench is what iverilog cannot compile.
+
+## sim-from-build
+step: sim
+source: dewfpga sim, after iverilog refused a line of the design
+title: design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys' own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone.
+summary: Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.
+date: 2026-10-04
+
+`dewfpga sim` on a design with a `unique if`, which iverilog 13 does not parse:
+
+```
+iverilog -g2012 -o top_sim design.sv tb.sv
+design.sv:3: syntax error
+design.sv:3: Syntax in assignment statement l-value.
+design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys' own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/
+iverilog -g2012 -l /opt/homebrew/share/yosys/xilinx/cells_sim.v -o top_sim top_sim.elab tb.sv
+PASS
+tb.sv:12: $finish called at 8 (1s)
+```
+
+## Why does it happen?
+
+Icarus Verilog is the simulator, and it refuses SystemVerilog that Vivado and the build accept: `unique if` and `priority if`, a modport as a port type, an unpacked struct or union, streaming (`{<<{...}}`), an array compared, copied or sliced whole, a parameter of array type, `type()`, a static class member, a name used before its declaration, an assignment inside an expression, a `$realtobits` parameter. It also has no model of the Xilinx primitives (`BUFG`, and `LUT2` or `GND` in a module the course hands out as a netlist). Before #28 `dewfpga sim` stopped there with [iverilog-refused](/dewfpga/errors/iverilog-refused/), while `dewfpga bit` built the design.
+
+Now, when iverilog's first error is in a design file, `dewfpga sim` runs the build's front half, exactly as `dewfpga bit` does: the same scans ([isunknown-in-design](/dewfpga/errors/isunknown-in-design/), [package-file-not-given](/dewfpga/errors/package-file-not-given/), [ref-argument](/dewfpga/errors/ref-argument/)), yosys' own reader first and [yosys-slang](/dewfpga/errors/read-with-slang/) when it refuses, and the same checks on what they read ([undeclared-name](/dewfpga/errors/undeclared-name/), [two-always-drivers](/dewfpga/errors/two-always-drivers/), [async-reset-nonconst](/dewfpga/errors/async-reset-nonconst/) ...). The elaborated design the build leaves in `top.il` is written back as plain Verilog (`top_sim.elab`, next to your files; `dewfpga clean` removes it) and compiled with your testbench and yosys' simulation models of the Xilinx cells (`cells_sim.v`, as `-l`: a library, so only the cells your design uses are read). The note names the line iverilog refused and the reader that read the design.
+
+A design the build refuses is refused here too, with the build's coded line and then iverilog's:
+
+```
+iverilog -g2012 -o top_sim design.sv tb.sv
+design.sv:2: sorry: Reference ports not supported yet.
+design.sv:2: error: Function tb.dut.inc port x is not an input port.
+2 error(s) during elaboration.
+design.sv:2: ERROR [ref-argument]: function inc takes an argument by reference (ref logic [3:0] x): yosys does not read ref, and yosys-slang drops it, so the variable it is called with would never change on the board. Fix: pass the value in and return it (function automatic logic [3:0] inc(input logic [3:0] x); ... return x + 1;  and  v = inc(v);). https://nosey-dewdrop.github.io/dewfpga/errors/ref-argument/
+design.sv:2: ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above), and the build refuses the design too (its lines are above). Fix: fix the first line it names; the errors after the first often follow from it. https://nosey-dewdrop.github.io/dewfpga/errors/iverilog-refused/
+```
+
+An error in the testbench is iverilog's verdict alone, as before: the second path is for the design.
+
+## What differs from simulating your source?
+
+- A `#` delay inside the design is gone (synthesis has no delays); delays in the testbench stay.
+- The design is read with `SYNTHESIS` defined, as Vivado and the build read it: an `` `ifdef SYNTHESIS `` branch is taken, an `` `ifndef SYNTHESIS `` block is dropped.
+- Internal signals keep their names when they are declared (`cnt`, `state`), but a struct, an enum or an interface becomes plain vectors, and an expression's temporary gets a generated name (`_3_`): a hierarchical reference from the testbench (`dut.state`, `dut.bus.a`) may not find what it names. Check the ports instead, as the board does.
+- A Xilinx cell without a simulation model (`MMCME2_BASE`) stops this path too; the error then says so.
+- `$display` in the design still prints; `$readmemh` tables are built in.
+
+## What is the fix?
+
+Nothing: the note says what ran. To make iverilog read the source itself, rewrite the construct it names (`unique if` as a plain `if`, a struct as separate signals, a copy of an array as a loop).
+
+```copy
+dewfpga sim
+```
+
 ## sim-timeout
 step: sim
 source: dewfpga sim, vvp

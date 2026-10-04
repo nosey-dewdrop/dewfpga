@@ -1,6 +1,7 @@
 # Basys3 on macOS without Vivado (dewfpga)
 #
-#   make sim    -> simulate (iverilog); fails if the testbench prints $error/$fatal
+#   make sim    -> simulate (iverilog; a design iverilog refuses is simulated as the build reads it); fails if the
+#                  testbench prints $error/$fatal
 #   make bit    -> build the bitstream (~5 s); full place-and-route log in <top>.log
 #   make flash  -> program the board (SRAM: cleared on power cycle)
 #   make check  -> are the tools in place
@@ -108,13 +109,39 @@ endif
 # the .deps files are written above; a goal that skipped its check (make $(TOP)_sim) still has a rule for them
 $(TOP)_sim.deps $(TOP).deps $(TOP).pins.deps: ;
 
+# iverilog refuses SystemVerilog Vivado accepts (unique if, a modport port, an unpacked struct, streaming, an array
+# compared or copied whole, a parameter of array type, type(), a static class member, a name used before its
+# declaration ...) and every Xilinx primitive (BUFG; LUT2 in a module the course hands out as a netlist). When its
+# first error names a design file, not the testbench, the simulation runs on the design as the build reads it:
+# $(TOP).json is made through the same recipe dewfpga bit runs (the same scans, the two readers in the same order,
+# the same checks on what they read; a design the build refuses is refused here, with the build's coded line, and
+# iverilog's verdict after it), and the elaborated design the build left in $(TOP).il is written back as Verilog
+# ($(TOP)_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells (-l: a library, so only
+# the cells the design uses are elaborated). The note names iverilog's line and the reader (yosys-slang's .il carries
+# hdlname attributes, yosys' own reader's never does). An error in the testbench keeps iverilog's verdict as it was,
+# and so does an error without a file:line (iverilog's own abort); without yosys, or without the venv the build's
+# checker runs in, the verdict is iverilog's alone, as before. The first iverilog run, and so every design it
+# compiles, is unchanged. The build's lines are held and printed when it is done: on stdout when it went through
+# (its warnings and notes), on stderr when it refused, before iverilog's coded line, so the two coded lines reach a
+# --json reader in that order through one stream (two streams drain in no fixed order, and the first error is the
+# result's code). CELLS: the cell library, yosys' xilinx/cells_sim.v unless given.
+CELLS ?=
 $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	@[ -n "$(TB)" ] || { echo "ERROR [no-testbench]: $(TOP)_tb.sv not found: the simulation needs a testbench next to the design. Fix: write $(TOP)_tb.sv (a module that instantiates $(TOP), drives its inputs, checks its outputs with \$$error and ends with \$$finish); 'dewfpga new blink' gives an example (blink/blink_tb.sv). $(URL)no-testbench/" >&2; exit 1; }
 	@awk '$(PKG_AWK)' $(SRCS) $(TB) $(SIM_DEPS)
 	@awk '$(TYPEDEF_AWK)' $(TYPEDEF_FILES)
 	@$(call MKKW,$(SRCS) $(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; rm -rf "$$KW"; \
-	  [ $$rc -eq 0 ] || { at=$$(grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'); \
-	    echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above). Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; }; rm -f $(TOP)_sim.err; exit $$rc
+	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); rm -f $(TOP)_sim.err; \
+	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
+	  [ $$rc -ne 0 ] || exit 0; indesign=0; [ -z "$$at" ] || case " $(SRCS) " in *" $${at%:*} "*) indesign=1 ;; esac; \
+	  { [ $$indesign = 1 ] && command -v yosys >/dev/null && [ -x "$(PY)" ]; } || refused; \
+	  [ -s $(TOP).il ] || rm -f $(TOP).json; $(MAKE) -s -f $(firstword $(MAKEFILE_LIST)) $(TOP).json 2>&1 | sed -E '/^make(\[[0-9]+\])?: \*\*\* \[[^]]*\] Error [0-9]+$$/d' > $(TOP)_sim.bld; brc=$${PIPESTATUS[0]}; \
+	  if [ $$brc -ne 0 ]; then cat $(TOP)_sim.bld >&2; rm -f $(TOP)_sim.bld; refused "and the build refuses the design too (its lines are above)"; fi; cat $(TOP)_sim.bld; rm -f $(TOP)_sim.bld; \
+	  rd="yosys' own reader"; ! grep -q 'attribute \\hdlname ' $(TOP).il || rd="yosys-slang, the second reader (yosys' own reader refused this code)"; \
+	  yosys -q -p "read_rtlil $(TOP).il; write_verilog -noattr $(TOP)_sim.elab" || exit 1; \
+	  echo "$$at: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by $$rd, written back as Verilog ($(TOP)_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an \`ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. $(URL)sim-from-build/"; \
+	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib} -o $@ $(TOP)_sim.elab $(TB)"; iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; rm -rf "$$KW"; \
+	  at2=$$(firstat); rm -f $(TOP)_sim.err; [ $$rc -eq 0 ] || case $$at2 in "") refused "nor the design as the build reads it ($(TOP)_sim.elab)" ;; $(TOP)_sim.elab:*) refused "nor the design as the build reads it ($(TOP)_sim.elab, the lines above it: a Xilinx cell with no simulation model, usually)" ;; *) at=$$at2; refused ;; esac
 
 synth: $(TOP).json
 # yosys' messages that mean the design is wrong, or would be built wrong, become an ERROR with the file:line
@@ -480,5 +507,5 @@ flash: $(TOP).bit
 	    else echo "ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit $$rc (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on. $(URL)openfpgaloader-failed/" >&2; fi; exit 1; fi
 
 clean:
-	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.deps $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
+	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log

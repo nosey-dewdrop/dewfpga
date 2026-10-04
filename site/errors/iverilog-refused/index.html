@@ -42,6 +42,7 @@ design.sv:4: ERROR [iverilog-refused]: iverilog cannot compile this code (its me
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Read iverilog's first line and fix that; run again. <code>sorry:</code> lines name constructs iverilog lacks; the <a href="/dewfpga/docs/#8-what-can-it-not-do">guide's section 8</a> lists them.</p>
 <pre data-copy="1"><code>dewfpga sim</code></pre>
+<p>Since #28, when the line iverilog names is in a design file (not the testbench), <code>dewfpga sim</code> goes on: it builds the design the way <code>dewfpga bit</code> reads it and simulates that, with a <a href="/dewfpga/errors/sim-from-build/">note [sim-from-build]</a>. This error then comes only when the build refuses the design too (the build's own coded line is above it), or when the testbench is what iverilog cannot compile.</p>
 </main>
 
 <footer class="wrap">

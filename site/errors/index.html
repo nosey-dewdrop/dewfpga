@@ -197,6 +197,10 @@
     <p>dewfpga sim, iverilog. iverilog stopped with an error; its own lines are above, and this line names the first of them.</p>
   </div>
   <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-from-build/">design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys&#x27; own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys&#x27; models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone.</a>
+    <p>dewfpga sim, after iverilog refused a line of the design. Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.</p>
+  </div>
+  <div class="err">
     <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-timeout/">ERROR [sim-timeout]: the simulation did not finish in 120 s: the testbench never reached $finish (a free-running clock never stops on its own). Fix: end the testbench with $finish; SIM_TIMEOUT=600 dewfpga sim waits longer.</a>
     <p>dewfpga sim, vvp. The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</p>
   </div>

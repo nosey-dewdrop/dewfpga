@@ -128,7 +128,7 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (337 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (342 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
 probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names

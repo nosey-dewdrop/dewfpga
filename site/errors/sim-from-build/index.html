@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys&#x27; own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys&#x27; models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. (fix, macOS)</title>
+<meta name="description" content="Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys&#x27; own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys&#x27; models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. (fix, macOS)">
+<meta property="og:description" content="Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys' own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-04","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">sim</span>dewfpga sim, after iverilog refused a line of the design</p>
+  <h1 class="mono">design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys&#x27; own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys&#x27; models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone.</h1>
+<p><code>dewfpga sim</code> on a design with a <code>unique if</code>, which iverilog 13 does not parse:</p>
+<pre><code>iverilog -g2012 -o top_sim design.sv tb.sv
+design.sv:3: syntax error
+design.sv:3: Syntax in assignment statement l-value.
+design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys&#39; own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys&#39; models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/
+iverilog -g2012 -l /opt/homebrew/share/yosys/xilinx/cells_sim.v -o top_sim top_sim.elab tb.sv
+PASS
+tb.sv:12: $finish called at 8 (1s)</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>Icarus Verilog is the simulator, and it refuses SystemVerilog that Vivado and the build accept: <code>unique if</code> and <code>priority if</code>, a modport as a port type, an unpacked struct or union, streaming (<code>{&lt;&lt;{...}}</code>), an array compared, copied or sliced whole, a parameter of array type, <code>type()</code>, a static class member, a name used before its declaration, an assignment inside an expression, a <code>$realtobits</code> parameter. It also has no model of the Xilinx primitives (<code>BUFG</code>, and <code>LUT2</code> or <code>GND</code> in a module the course hands out as a netlist). Before #28 <code>dewfpga sim</code> stopped there with <a href="/dewfpga/errors/iverilog-refused/">iverilog-refused</a>, while <code>dewfpga bit</code> built the design.</p>
+<p>Now, when iverilog's first error is in a design file, <code>dewfpga sim</code> runs the build's front half, exactly as <code>dewfpga bit</code> does: the same scans (<a href="/dewfpga/errors/isunknown-in-design/">isunknown-in-design</a>, <a href="/dewfpga/errors/package-file-not-given/">package-file-not-given</a>, <a href="/dewfpga/errors/ref-argument/">ref-argument</a>), yosys' own reader first and <a href="/dewfpga/errors/read-with-slang/">yosys-slang</a> when it refuses, and the same checks on what they read (<a href="/dewfpga/errors/undeclared-name/">undeclared-name</a>, <a href="/dewfpga/errors/two-always-drivers/">two-always-drivers</a>, <a href="/dewfpga/errors/async-reset-nonconst/">async-reset-nonconst</a> ...). The elaborated design the build leaves in <code>top.il</code> is written back as plain Verilog (<code>top_sim.elab</code>, next to your files; <code>dewfpga clean</code> removes it) and compiled with your testbench and yosys' simulation models of the Xilinx cells (<code>cells_sim.v</code>, as <code>-l</code>: a library, so only the cells your design uses are read). The note names the line iverilog refused and the reader that read the design.</p>
+<p>A design the build refuses is refused here too, with the build's coded line and then iverilog's:</p>
+<pre><code>iverilog -g2012 -o top_sim design.sv tb.sv
+design.sv:2: sorry: Reference ports not supported yet.
+design.sv:2: error: Function tb.dut.inc port x is not an input port.
+2 error(s) during elaboration.
+design.sv:2: ERROR [ref-argument]: function inc takes an argument by reference (ref logic [3:0] x): yosys does not read ref, and yosys-slang drops it, so the variable it is called with would never change on the board. Fix: pass the value in and return it (function automatic logic [3:0] inc(input logic [3:0] x); ... return x + 1;  and  v = inc(v);). https://nosey-dewdrop.github.io/dewfpga/errors/ref-argument/
+design.sv:2: ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above), and the build refuses the design too (its lines are above). Fix: fix the first line it names; the errors after the first often follow from it. https://nosey-dewdrop.github.io/dewfpga/errors/iverilog-refused/</code></pre>
+<p>An error in the testbench is iverilog's verdict alone, as before: the second path is for the design.</p>
+<h2 id="what-differs-from-simulating-your-source">What differs from simulating your source?</h2>
+<ul>
+<li>A <code>#</code> delay inside the design is gone (synthesis has no delays); delays in the testbench stay.</li>
+<li>The design is read with <code>SYNTHESIS</code> defined, as Vivado and the build read it: an <code>`ifdef SYNTHESIS</code> branch is taken, an <code>`ifndef SYNTHESIS</code> block is dropped.</li>
+<li>Internal signals keep their names when they are declared (<code>cnt</code>, <code>state</code>), but a struct, an enum or an interface becomes plain vectors, and an expression's temporary gets a generated name (<code>_3_</code>): a hierarchical reference from the testbench (<code>dut.state</code>, <code>dut.bus.a</code>) may not find what it names. Check the ports instead, as the board does.</li>
+<li>A Xilinx cell without a simulation model (<code>MMCME2_BASE</code>) stops this path too; the error then says so.</li>
+<li><code>$display</code> in the design still prints; <code>$readmemh</code> tables are built in.</li>
+</ul>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Nothing: the note says what ran. To make iverilog read the source itself, rewrite the construct it names (<code>unique if</code> as a plain <code>if</code>, a struct as separate signals, a copy of an array as a loop).</p>
+<pre data-copy="1"><code>dewfpga sim</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

@@ -13,6 +13,7 @@
 *.vcd
 *_routed.json
 *_sim
+*_sim.elab
 .rabadon/
 blink.json
 dist/

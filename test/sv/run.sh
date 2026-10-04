@@ -6,6 +6,7 @@
 # goes through the product (bin/dewfpga and templates/Makefile), in a temp copy that holds only the probe's
 # sources, four stages:
 #   rtl      dewfpga sim                                        pass = exit 0 and the testbench printed PASS
+#            (iverilog; since #28 a design iverilog refuses is simulated as the build reads it, with a note)
 #   synth    dewfpga bit, with the whole Basys3_Master.xdc uncommented   pass = the product wrote top.json
 #            (or the probe's own XDC)
 #            (or <name>.json when the CLI took another module for the top: the stages check what it built,
