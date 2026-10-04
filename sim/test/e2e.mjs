@@ -79,10 +79,19 @@ console.log('== examples carry all three files');
 await page.selectOption('#examples', 'count on the display');
 await waitStatus(/simulated clock/, 60000);
 const btn = page.locator('#board .b-btn[data-btn=btnC]');
-for (let i = 0; i < 3; i++) { await btn.dispatchEvent('pointerdown'); await page.waitForTimeout(80); await btn.dispatchEvent('pointerup'); await page.waitForTimeout(80); }
-await page.waitForTimeout(300);
-const digits = await page.evaluate(() => [...document.querySelectorAll('#board g[transform^="translate(150 334)"] > g')].map((d) => [...d.querySelectorAll('.b-seg')].map((s) => s.classList.contains('on') ? 1 : 0).join('')));
-check('display shows 3 after three presses', digits.some((d) => d.startsWith('1111001')), digits.join(' '));
+// The example counts the button's rising edge on a clock tick. A fixed 80 ms press was missed whenever the
+// simulated clock did not tick inside it (a busy CI WebKit showed 0). Each press is held until the display
+// shows the new count (segments a..g: 1 = 0110000, 2 = 1101101, 3 = 1111001), then released; a press that
+// never shows its count, or a double count, still fails.
+const segs = () => page.evaluate(() => [...document.querySelectorAll('#board g[transform^="translate(150 334)"] > g')].map((d) => [...d.querySelectorAll('.b-seg')].map((s) => s.classList.contains('on') ? 1 : 0).join('')));
+const shows = async (p, ms) => { const t0 = Date.now(); let d; do { d = await segs(); if (d.some((x) => x.startsWith(p))) return [true, d]; await page.waitForTimeout(50); } while (Date.now() - t0 < ms); return [false, d]; };
+let steps = true;
+for (const p of ['0110000', '1101101', '1111001']) {
+  await btn.dispatchEvent('pointerdown'); const [seen] = await shows(p, 10000); steps &&= seen;
+  await btn.dispatchEvent('pointerup'); await page.waitForTimeout(300);
+}
+const [, digits] = await shows('1111001', 1000);
+check('display shows 3 after three presses', steps && digits.some((d) => d.startsWith('1111001')), digits.join(' '));
 await page.click('#view-tb');
 await waitStatus(/compile \d+ ms/, 60000);
 check('count tb: value after 3 presses = 3', (await page.locator('#out').innerText()).includes('value after 3 presses = 3'), (await page.locator('#out').innerText()).split('\n').slice(0, 3).join(' | '));
