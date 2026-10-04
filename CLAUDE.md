@@ -1,5 +1,45 @@
 # dewfpga
 
+## nerede kaldık — DEVRİ DAİM (4 Ekim 2026)
+
+**DÜŞÜLEN TUZAKLAR** (yeni Claude buna düşme)
+- Dev diary talimatı ilk mesajdaydı ve başlıklar netti, ama gece boyunca yazılmadı; Damla sormak zorunda kaldı.
+  Sonra iki kez yanlış okundu: "kalabalık yapma" kısa tut demek DEĞİL ("o zaman commit history döner"),
+  "her değişiklik" her commit demek DEĞİL ("yazmaya değer, büyük, önemli değişiklik"). Damla bu defterden
+  yazı yazıyor. Kural aşağıda, "Aktif iş ve yetki" bölümünde.
+- Ajanın "bitti"si kabul değil. T2 "öbür testler etkilenmez" dedi, test_sender_idem'i koşmamıştı. Ana
+  oturumun koşusu rollback'in migration diye yüklendiğini yakaladı. Her ajan sonucunda 9 mail paketi +
+  tarayıcı ana oturumda koşulur.
+- Girdi gelmeden aynı Supabase Unauthorized kontrolünü, aynı testleri, aynı CI'ı tekrar etme; hazır adayı
+  baştan geliştirme. Önce `.claude/recovery-20261003/fable-handoff-state.json` ve özel girdi dosyasının dolu
+  alanlarına bak (değerleri basma).
+- Alt ajanlar YALNIZ Fable (Damla, 3 Eki: "Codex veya Opus kullanma"). En çok 3 eşzamanlı Claude oturumu.
+- Push iki CI koşusu açar (push + pull_request). Kabul kaynağı PR koşusu; push kopyası iptal edilir (GitHub
+  dakika limiti). `gh run watch` GitHub 504'te düşer: koşu bitmeden düştüyse dayanıklı döngüyle izle.
+
+**GİZLİLİK**: repo public. Secret'lar yalnız `.claude/recovery-20261003/activation-inputs.private.json`
+(0600, git dışı); sohbete, loga, ajan çıktısına, commit'e girmez. Dev diary `DDMM-dev-diary.txt` ana repo
+kökünde, git dışı. Push öncesi diff'te `/Users/`, kişisel ad, JWT/`re_` anahtar taraması yapılır.
+
+**KOD DURUMU**: dal `worktree-dewfpga-night-20261003`, HEAD c2cf391, PR#1 taslak; CI 37156455217 başarılı
+(macOS CLI 271/0/52, iki web, offline-mail). Ana dala merge ve canlı yayın yok. Mail: `mail/sql` yalnız
+001–003 migration'ı; operatör scriptleri `mail/ops/` (read-only preflight, dewfpga-only rollback). Yerel 9
+paket: activation142/0, SQL187/0, mail60/0, sender tüm senaryolar, lifecycle112/0, usage13 OK,
+integration8 OK, pages137/0, browser158/0.
+
+**AÇIK İŞ** (hepsi dış girdi bekliyor; otonom açılmaz)
+1. Damla özel girdi dosyasına yazacak: `SUPABASE_DB_URL`, `SUPABASE_SERVICE_KEY`, Full access
+   `RESEND_API_KEY`, `DEWFPGA_OWNER_EMAIL`, privacy controller/contact/retention. Sonra: preflight read-only,
+   GET /usage + domain, kesin uygulama listesi, tek canlı onay (migration, Auth SMTP/redirect, merge/yayın,
+   owner-test).
+2. Fiziksel: Basys3 takılınca `ONLY='new \+ dewfpga bit|flash' test/run.sh`; VS Code GUI Damla'nın ekranında;
+   Safari/telefon kabulü yayından sonra.
+3. 52 bilinen derleyici açığı bu devrin kapsamı değil.
+
+**KALICI KARARLAR**: ledger yalnız dewfpga'nın kendi payını sınırlar; ölçüm yoksa gönderme. CI ve varsayılan
+CLI mail göndermez. Provider kabulü inbox teslimi değildir. Sahte attestation yok. Tasarım (Canva shell,
+nav, fontlar) korunur.
+
 ## Aktif iş ve yetki
 
 2409workflow, patch 1.2. Yerel plan `2409workflow.md`; ilerleme ve kanıtlar
@@ -8,8 +48,8 @@
 kanıtla ve düzelt. Önceki "bir koşu bitince dur, clear bekle" talimatı bu devam
 izniyle değişti. Bir ajan veya test başarılı döndü diye bütün hedefi tamamlandı sayma.
 
-Ajanlar terminalde mevcut Claude Code abonelik oturumuyla Fable 5.1 veya Opus 5.5
-kullanır. Gerçek model/oturum ve süreç durumunu doğrula. API hesabına, başka
+Alt ajanlar mevcut Claude Code abonelik oturumunda yalnız Fable 5.1 kullanır (3 Ekim devri;
+Opus ve Codex yok). Gerçek model/oturum ve süreç durumunu doğrula. API hesabına, başka
 sağlayıcıya veya ödeme yoluna sessizce geçme. Görevler küçük, dosya sahipliği açık,
 çalışma ağaçları ayrı olsun; kısa kanıt devri kullan, bütün geçmişi yeniden okuma.
 En fazla üç eşzamanlı Claude görevi; ağır sentez süreçlerinde makine kaynaklarını
