@@ -174,6 +174,17 @@ tb_dot_v() {
 check "testbench named _tb.v (Verilog-2005) -> sim finds and runs it" tb_dot_v
 check "missing IOSTANDARD -> error names the XDC line and the add line" "rm -rf '$T/io' && cp -Rp '$T/w' '$T/io' && cd '$T/io' && sed -i '' 's/PACKAGE_PIN U16  IOSTANDARD LVCMOS33/PACKAGE_PIN U16/' blink.xdc && ! '$CLI' bit >out 2>&1 && grep -q '^blink.xdc:27: ERROR \[no-iostandard-property\]: led\[0\] has a PACKAGE_PIN but no IOSTANDARD in the XDC.* Fix: add the line  set_property IOSTANDARD LVCMOS33 \[get_ports {led\[0\]}\]' out"
 check "failed build removes the old .bit" "rm -rf '$T/ob' && cp -Rp '$T/w' '$T/ob' && cd '$T/ob' && [ -s blink.bit ] && echo 'garbage;' >> blink.sv && ! '$CLI' bit >out 2>&1 && grep -q '^blink.sv:35: ERROR' out && [ ! -e blink.bit ] && [ ! -e blink.fasm ]"
+# #29: a build that fails after synthesis (a wrong pin name in the XDC: nextpnr alone stopped with "device does not
+# have a pin named 'ZZ99'", no file:line, and the old blink.bit stayed next to the sources, byte for byte) names
+# the XDC line and leaves none of the old outputs; flash after it builds again, stops at the same line and never
+# programs yesterday's design (no openFPGALoader line in its output)
+check "wrong pin name in the XDC -> no-such-pin names the line, old .bit/.fasm/.frames gone, flash does not program" "rm -rf '$T/np' && cp -Rp '$T/w' '$T/np' && cd '$T/np' && [ -s blink.bit ] && sed -i '' 's/PACKAGE_PIN W5 /PACKAGE_PIN ZZ99/' blink.xdc && ! '$CLI' bit >out 2>&1 && grep -q '^blink.xdc:5: ERROR \[no-such-pin\]: ZZ99 is not an I/O pin of the Basys3.*Basys3_Master.xdc puts clk on W5' out && [ ! -e blink.bit ] && [ ! -e blink.fasm ] && [ ! -e blink.frames ] && [ ! -e blink_routed.json ] && ! '$CLI' flash >out2 2>&1 && grep -q 'no-such-pin' out2 && ! grep -qiE 'ftdi|openFPGALoader' out2"
+check "pin in small letters (w5) -> no-such-pin says W5" "rm -rf '$T/lp' && cp -Rp '$T/w' '$T/lp' && cd '$T/lp' && sed -i '' 's/PACKAGE_PIN W5 /PACKAGE_PIN w5 /' blink.xdc && ! '$CLI' bit >out 2>&1 && grep -q '^blink.xdc:5: ERROR \[no-such-pin\]: w5 is written in small letters.* Fix: write  PACKAGE_PIN W5  on this line' out && [ ! -e blink.bit ]"
+check "two ports on one pin -> pin-used-twice names both lines" "rm -rf '$T/tp' && cp -Rp '$T/w' '$T/tp' && cd '$T/tp' && sed -i '' 's/PACKAGE_PIN W5 /PACKAGE_PIN U16/' blink.xdc && ! '$CLI' bit >out 2>&1 && grep -q '^blink.xdc:27: ERROR \[pin-used-twice\]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led\[0\] (blink.xdc:27).*clk is on W5, led\[0\] is on U16' out && [ ! -e blink.bit ]"
+# with the XDC check out of the way (a checker that does nothing) nextpnr's own lines stop the build, and each gets the code and the XDC line
+nopins() { printf 'pass\n' > "$T/noop.py" && make -s -f "$ROOT/templates/Makefile" TOP=blink SRCS=blink.sv XDC=blink.xdc CHECKER="$T/noop.py" bit; }
+check "nextpnr's own 'does not have a pin named' line gets the code and the XDC line" "cd '$T/lp' && ! nopins >out 2>&1 && grep -q \"^ERROR: Unable to constrain IO 'clk', device does not have a pin named 'w5'\" out && grep -q '^blink.xdc:5: ERROR \[no-such-pin\]: w5 is not an I/O pin of the Basys3' out && [ ! -e blink.bit ]"
+check "nextpnr's own 'already bound to cell' line gets the code pin-used-twice and the XDC line" "cd '$T/tp' && ! nopins >out 2>&1 && grep -q \"cannot be bound to bel 'IOB_X0Y3/IOB33/PAD' since it is already bound to cell\" out && grep -qE '^blink.xdc:(5|27): ERROR \[pin-used-twice\]: (clk and led\[0\]|led\[0\] and clk) are on the same pin' out && [ ! -e blink.bit ]"
 # uninstall, from a copy of the CLI: the real one may be what Homebrew's bin/dewfpga links to, and uninstall
 # removes that link when it points at the CLI that runs (a fake FPGA_HOME holds three of the six entries and a file of the student's)
 un_copy() { rm -rf "$T/un" && mkdir -p "$T/un" && cp -R "$ROOT/bin" "$ROOT/package.json" "$T/un/" && cp "$ROOT/.fpga_home" "$T/un/" 2>/dev/null || true; }
@@ -512,6 +523,34 @@ tb_rename() {
     && sleep 1.1 && mv blink_tb.sv bench.sv && "$CLI" sim > out3 2>&1 && grep -q '^iverilog -g2012 -o blink_sim blink.sv bench.sv$' out3 && grep -q '^PASS: 3 checks' out3
 }
 check "a renamed testbench recompiles (the second sim did not)" tb_rename
+# #29: Apple's make 3.81 compares whole seconds (an edit 0.4 s after the build: 0 of 5 rebuilt), so a testbench
+# saved within the second of the last compile (VS Code: save, ⌘⇧B) ran the old blink_sim and printed its old PASS.
+# The .deps files carry a checksum of the content now. touch puts the compiled file and the edit in the second the
+# rebuild starts in (make rewrites the .deps file then too, so it is not newer either): the worst case, and the one
+# the report reproduced with touch -r. For bit that second is one the build is still running in (the netlist is
+# written seconds before the .bit), so the netlist is dated the same way
+# shellcheck disable=SC2016   # $finish and $error are Verilog
+same_second_sim() {
+    mkdir -p "$T/ss" && cp "$ROOT"/templates/{blink.sv,blink_tb.sv} "$T/ss/" && cd "$T/ss" \
+    && "$CLI" sim > out 2>&1 && grep -q '^PASS: 3 checks' out \
+    && sed -i '' 's/\$finish;/$error("planted"); $finish;/' blink_tb.sv && touch blink_sim blink_tb.sv \
+    && ! "$CLI" sim > out2 2>&1 && grep -q '^iverilog' out2 && [ "$(grep -c planted blink_sim.out)" -eq 1 ] && grep -q 'ERROR \[testbench-error\]' out2
+}
+check "a testbench edited within the second of the last compile recompiles (make 3.81 compares whole seconds)" same_second_sim
+same_second_bit() {
+    mkdir -p "$T/sb" && cp "$ROOT"/templates/{blink.sv,blink.xdc} "$T/sb/" && cd "$T/sb" \
+    && "$CLI" bit > out 2>&1 && [ -s blink.bit ] && cp blink.frames a.frames && uptodate blink \
+    && sed -i '' 's/assign led = {sw\[0\],/assign led = {sw[1],/' blink.sv && touch blink.json blink.sv \
+    && "$CLI" bit > out2 2>&1 && grep -q '^pnr ok' out2 && ! cmp -s a.frames blink.frames
+}
+check "a design edited within the second of the last synthesis rebuilds, and the .frames differ" same_second_bit
+# led[0] and led[1] swap pads: the same two pads are used, so the IOB lines stay and the routing (the .frames) changes
+same_second_xdc() {
+    cd "$T/sb" && cp blink.frames b.frames && uptodate blink \
+    && sed -i '' 's/PACKAGE_PIN U16 /PACKAGE_PIN TMP /; s/PACKAGE_PIN E19 /PACKAGE_PIN U16 /; s/PACKAGE_PIN TMP /PACKAGE_PIN E19 /' blink.xdc && touch -r blink.fasm blink.xdc \
+    && "$CLI" bit > out3 2>&1 && grep -q '^pnr ok' out3 && ! cmp -s b.frames blink.frames
+}
+check "an XDC edited within the second of the last place-and-route re-places, and the .frames differ" same_second_xdc
 
 # ---------------------------------------------------------------------------------------------------- #6B
 # test/bit-check.sh reads a .bit back (the sync word, the type 1/2 packets, the FDRI data cut into 101-word

@@ -62,8 +62,9 @@ sim: $(TOP)_sim
 	    echo "$${at:+$$at: }ERROR [testbench-error]: the testbench reported $$n error$$s (its ERROR: lines above, from \$$error): the design does not do what the testbench expects. Fix: read the first ERROR: line, it names the check that failed; fix the design there, or the testbench if its expectation is wrong. $(URL)testbench-error/" >&2; exit 1; }
 
 # files the sources pull in without naming them to make: $readmemh/$readmemb tables and `include files. A
-# changed .mem or included .v rebuilds. $(TOP).deps and $(TOP)_sim.deps hold the whole file list, rewritten
-# only when it changes, so a file added, deleted or renamed (a dropped design file, a new testbench) rebuilds too.
+# changed .mem or included .v rebuilds. $(TOP).deps, $(TOP)_sim.deps and $(TOP).pins.deps hold the whole file
+# list and a checksum of every file's content, rewritten only when that changes, so a file added, deleted or
+# renamed (a dropped design file, a new testbench) rebuilds too (see "fresh" below).
 readmems = $(sort $(shell grep -ohE '\$$readmem[hb][[:space:]]*.[[:space:]]*"[^"]+"' $(1) 2>/dev/null | sed -E 's/.*"([^"]+)".*/\1/'))
 # INCDIRS (from the CLI): the folders that hold the sources (. in a flat folder; NEW.srcs/sources_1/new ... in a
 # Vivado project). The tools get them as -I, so `include "defs.svh" next to a design in a subfolder is found by
@@ -84,12 +85,28 @@ override SRCS := $(strip $(PKG_SRCS) $(filter-out $(PKG_SRCS),$(SRCS)))
 # so it is read first; a .mem is not code. A file that is both included and a source is read once.
 TYPEDEF_FILES = $(filter-out $(SRCS),$(filter %.svh %.vh %.sv %.v,$(SRC_DEPS))) $(SRCS)
 
-$(TOP)_sim.deps: FORCE
-	@l="$(SRCS) | $(TB) | $(SIM_DEPS)"; { [ -f $@ ] && [ "$$(cat $@)" = "$$l" ]; } || echo "$$l" > $@
-$(TOP).deps: FORCE
-	@l="$(SRCS) | $(SRC_DEPS)"; { [ -f $@ ] && [ "$$(cat $@)" = "$$l" ]; } || echo "$$l" > $@
-FORCE:
-.PHONY: FORCE
+# Apple's make 3.81 compares whole seconds: a file saved within the second of the last compile is not newer to it
+# (measured: an edit 0.4 s after the build, 0 of 5 rebuilt), so a save followed at once by the build (VS Code,
+# ⌘⇧B) ran the old simulation and printed its old PASS. And a target removed by a prerequisite's recipe is not
+# noticed either (make reads the target's time first). So the check runs here, while make reads this file,
+# before it looks at any target: when a stage's file list or content checksum differs from what its .deps file
+# holds, the .deps file is rewritten and the stage's output removed, and make builds it again. shasum is on
+# macOS and in Perl everywhere; cksum (POSIX) is the fallback. Only the goals' own stages are checked (sim: the
+# simulation; bit, flash, synth: the netlist and the pins), so a sim folder gets no bit files and clean/check
+# write nothing.
+SUM := $(if $(shell command -v shasum 2>/dev/null),shasum,cksum)
+GOALS := $(or $(MAKECMDGOALS),all)
+# $(call fresh,<deps file>,<file list and checksums>,<the stage's output>)
+fresh = $(shell l="$(2)"; { [ -f $(1) ] && [ "$$(cat $(1))" = "$$l" ]; } || { echo "$$l" > $(1); rm -f $(3); })
+ifneq (,$(filter sim,$(GOALS)))
+$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) 2>/dev/null),$(TOP)_sim)
+endif
+ifeq (,$(filter sim clean check,$(GOALS)))
+$(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DEPS) 2>/dev/null),$(TOP).json)
+$(call fresh,$(TOP).pins.deps,$(XDC) | $(shell $(SUM) $(XDC) 2>/dev/null),$(TOP).fasm)
+endif
+# the .deps files are written above; a goal that skipped its check (make $(TOP)_sim) still has a rule for them
+$(TOP)_sim.deps $(TOP).deps $(TOP).pins.deps: ;
 
 $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	@[ -n "$(TB)" ] || { echo "ERROR [no-testbench]: $(TOP)_tb.sv not found: the simulation needs a testbench next to the design. Fix: write $(TOP)_tb.sv (a module that instantiates $(TOP), drives its inputs, checks its outputs with \$$error and ends with \$$finish); 'dewfpga new blink' gives an example (blink/blink_tb.sv). $(URL)no-testbench/" >&2; exit 1; }
@@ -400,14 +417,26 @@ CLK_AWK = FILENAME ~ /\.json$$/ { if (/^    "[^"]+": \{$$/) { mod=$$0; sub(/^ *"
 	             if (t ~ /^(BUFG|BUFGCE|BUFH|BUFIO|BUFR|IBUF|IBUFG|\$$_BUF_)$$/) b=cin[cell]; else if (t=="INV" || t=="$$_NOT_" || (t=="LUT1" && (cell in inv))) { invd=!invd; b=cin[cell] } else break } \
 	           derived[c]=1; if (own) return c; s=(cell in csrc) ? csrc[cell] : ""; return "a clock derived inside the design" (s==""?"":" (" s ")") }
 # the tool binaries and the chipdb are prerequisites too: after `dewfpga install` (an update) the netlist is re-placed
+# a build that stops here (a wrong pin name, timing) must not leave the previous .bit behind either: the outputs
+# of this stage and the next two go first, so what is in the folder after a failed build is never yesterday's design
+# (the synthesis rule above does the same). The pin names are checked against the chip's package pins
+# ($(XRAYDB)/$(PART)/package_pins.csv, the prjxray database the bitstream is built from) before nextpnr runs.
 $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
-	@"$(PY)" "$(CHECKER)" $(TOP).json $(XDC)
+	@rm -f $(TOP).bit $(TOP).frames $(TOP)_routed.json $@
+	@"$(PY)" "$(CHECKER)" --pins "$(XRAYDB)/$(PART)/package_pins.csv" $(TOP).json $(XDC)
 	@if ! grep -q '^[^#]*create_clock' $(XDC); then echo "note [no-create-clock]: no create_clock in $(XDC); timing is checked against the Basys3's 100 MHz oscillator (--freq 100). $(URL)no-create-clock/"; fi
 	@set -o pipefail; "$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           $$(grep -q '^[^#]*create_clock' $(XDC) || echo --freq 100) \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log 2>&1 \
-	  | awk -v srcs="$(SRCS)" '$(FMT_AWK) function lines(pat,  cmd, l, out) { out=""; cmd="grep -nE \"" pat "\" " srcs " /dev/null | cut -d: -f1,2 | head -4"; while ((cmd | getline l) > 0) out = out (out==""?"":" and ") l; close(cmd); return out } \
+	  | awk -v srcs="$(SRCS)" -v xdc="$(XDC)" '$(FMT_AWK) function lines(pat,  cmd, l, out) { out=""; cmd="grep -nE \"" pat "\" " srcs " /dev/null | cut -d: -f1,2 | head -4"; while ((cmd | getline l) > 0) out = out (out==""?"":" and ") l; close(cmd); return out } \
 	         function first(ls) { sub(/ and .*/,"",ls); return ls } \
+	         function xline(pat,  cmd, l) { l=""; cmd="grep -nE \"" pat "\" " xdc " /dev/null | head -1 | cut -d: -f1,2"; cmd | getline l; close(cmd); return l } \
+	         function rx(s) { gsub(/[][]/, ".", s); return s } \
+	         /^ERROR: Unable to constrain IO .*, device does not have a pin named / { print; p=$$0; sub(/.*pin named \047/,"",p); sub(/\047.*/,"",p); io=$$0; sub(/.*constrain IO \047/,"",io); sub(/\047.*/,"",io); \
+	           print fmt("ERROR", "no-such-pin", xline("^[^#]*PACKAGE_PIN[[:space:]]+" p "([^A-Za-z0-9_]|$$)"), p " is not an I/O pin of the Basys3\047s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so nextpnr cannot put " io " on it.", "copy the pin for " io " from the course\047s Basys3_Master.xdc, or from the board\047s schematic."); next } \
+	         /^ERROR: Unable to constrain IO / { print; io=$$0; sub(/.*constrain IO \047/,"",io); sub(/\047.*/,"",io); print fmt("ERROR", "no-such-pin", xline("^[^#]*get_ports[[:space:]]*\\{?[[:space:]]*" rx(io) "[[:space:]]*\\}?[[:space:]]*\\]"), "nextpnr cannot put " io " on the pin its XDC line names (its line is above).", "copy the pin for " io " from the course\047s Basys3_Master.xdc, or from the board\047s schematic."); next } \
+	         /^ERROR: Cell \047.*\047 cannot be bound to bel \047.*\047 since it is already bound to cell / { print; a=$$0; sub(/.*Cell \047/,"",a); sub(/\047.*/,"",a); b=$$0; sub(/.*bound to cell \047/,"",b); sub(/\047.*/,"",b); \
+	           print fmt("ERROR", "pin-used-twice", xline("^[^#]*get_ports[[:space:]]*\\{?[[:space:]]*" rx(a) "[[:space:]]*\\}?[[:space:]]*\\]"), a " and " b " are on the same pin (the XDC gives both the same PACKAGE_PIN), and one pin takes one port.", "give each port its own pin (copy the lines from the course\047s Basys3_Master.xdc)."); next } \
 	         /^Warning: \[current_design\] isn.t supported, ignoring/ || /^[0-9]+ warnings?, [0-9]+ errors?$$/ {next} \
 	         { sub(/[0-9]+ warnings?, [0-9]+ errors?$$/, "") } \
 	         /no Bels remaining of type/ { print; t=$$0; sub(/.*of type \047/,"",t); sub(/\047.*/,"",t); c=$$0; sub(/.*place cell \047/,"",c); sub(/\047.*/,"",c); \
@@ -452,4 +481,4 @@ flash: $(TOP).bit
 
 clean:
 	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.deps $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
-	      $(TOP).deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log
+	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log

@@ -989,6 +989,73 @@ set_property -dict { PACKAGE_PIN L1    IOSTANDARD LVCMOS33 } [get_ports {led[15]
 
 For the two shapes the check does not read: declare the port as a scalar, or with a range from 0.
 
+## no-such-pin
+step: bit
+source: dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw line below, with no file:line)
+title: blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3's chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course's Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board's schematic.
+summary: A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5).
+date: 2026-10-04
+
+Two texts: a pin the chip does not have, and a pin written in small letters (nextpnr reads `W5`, not `w5`):
+
+```
+blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3's chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course's Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board's schematic. https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/
+blink.xdc:5: ERROR [no-such-pin]: w5 is written in small letters, and the chip's pin names are capitals (W5): nextpnr reads w5 as a pin the chip does not have, so clk would have no pin. Fix: write  PACKAGE_PIN W5  on this line. https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/
+```
+
+nextpnr alone stopped with this line, with no file and no line number, and the previous `blink.bit` stayed in the folder as if it were the result:
+
+```
+ERROR: Unable to constrain IO 'clk', device does not have a pin named 'ZZ99'
+```
+
+## Why does it happen?
+
+The chip on the Basys3 (XC7A35T in the CPG236 package) has 236 pins, 106 of them I/O, each named by a letter and a number (`W5`, `U16`, `V17`). The XDC gives each port one of them. A name that is not on the chip, a pin copied from another board's file, a power pin, or `w5` in small letters is a pin nextpnr cannot find. Before this check, nextpnr's line was all there was, and the build that stopped there left yesterday's bitstream next to the sources.
+
+The check reads the chip's pin list from the prjxray database the bitstream itself is built from (`package_pins.csv` of `xc7a35tcpg236-1`), so a pin it accepts is a pin the chain can place.
+
+## What is the fix?
+
+Copy the port's line from the course's `Basys3_Master.xdc`; its pins are the board's wiring:
+
+```copy
+set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
+```
+
+For a pin written in small letters, write it in capitals. A failed build leaves no `.bit`, `.fasm` or `.frames` behind, so `dewfpga flash` after it builds again and stops at the same line; it never programs the old design.
+
+## pin-used-twice
+step: bit
+source: dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw lines below)
+title: blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course's Basys3_Master.xdc (clk is on W5, led[0] is on U16).
+summary: Two ports of the design have the same PACKAGE_PIN in the XDC: a copied line whose pin was not changed.
+date: 2026-10-04
+
+```
+blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course's Basys3_Master.xdc (clk is on W5, led[0] is on U16). https://nosey-dewdrop.github.io/dewfpga/errors/pin-used-twice/
+```
+
+nextpnr alone prints a warning and then stops, naming a site instead of a line:
+
+```
+Warning: Conflicting outputs: IO 'led[0]' and IO 'clk' are both constrained to package pin 'U16' (site 'IOB_X0Y3/IOB33/PAD'); only one of them can drive the pad
+ERROR: Cell 'clk' cannot be bound to bel 'IOB_X0Y3/IOB33/PAD' since it is already bound to cell 'led[0]'
+```
+
+## Why does it happen?
+
+A line in the XDC was copied for a new port and its pin was not changed, so two ports ask for one pad. One pad has one driver.
+
+## What is the fix?
+
+Give each port its own pin, from the course's `Basys3_Master.xdc`:
+
+```copy
+set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
+set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]
+```
+
 ## xdc-get-ports-form
 step: bit
 source: dewfpga bit, the XDC check before place and route

@@ -153,6 +153,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/no-such-module/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/no-testbench/</loc>
   </url>
   <url>
@@ -179,6 +182,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/path-with-space/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/pin-used-twice/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/</loc>

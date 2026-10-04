@@ -177,6 +177,14 @@
     <p>dewfpga bit, the XDC check before place and route. A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs, or the port has a shape this check does not read yet ([0:0], [4:1]).</p>
   </div>
   <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-such-pin/">blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic.</a>
+    <p>dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw line below, with no file:line). A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5).</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/pin-used-twice/">blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course&#x27;s Basys3_Master.xdc (clk is on W5, led[0] is on U16).</a>
+    <p>dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw lines below). Two ports of the design have the same PACKAGE_PIN in the XDC: a copied line whose pin was not changed.</p>
+  </div>
+  <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/xdc-get-ports-form/">blink.xdc:43: warning [xdc-get-ports-form]: `get_ports {led[*]}` is a wildcard: Vivado expands it, and this check does not read that form yet, so the ports it names count as unpinned here. Fix: write one line per port with its full name, as the course&#x27;s Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}]</a>
     <p>dewfpga bit, the XDC check before place and route. A get_ports with a wildcard, a list of several ports or an option (-regexp, -filter): Vivado expands those, this check reads one full port name per line.</p>
   </div>

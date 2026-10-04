@@ -36,7 +36,8 @@ problem in one format: `file:line: ERROR [code]: message Fix: ... https://nosey-
 2. Open `diagnostics[].url` for that code when the fix line is not enough.
 3. `artifacts[]` lists `<top>.bit`, the `.vcd` and the log with `state` new, cached or stale.
    A `stale` or `cached` `.bit` is not the result of this run; a build that stops before
-   place-and-route leaves the previous `.bit` on disk.
+   make runs (no `.xdc`, two tops) leaves the previous `.bit` on disk, a failed synthesis or
+   place-and-route removes it.
 4. `log.tail` is the last lines of the text output; the full log is `log.path`.
 
 ## Rules
@@ -49,7 +50,7 @@ problem in one format: `file:line: ERROR [code]: message Fix: ... https://nosey-
   usually means a missing `else` or default.
 - Memories become distributed RAM; timing is nextpnr's estimate at the XDC clock (100 MHz on the
   board). `flash` writes SRAM, so the design is gone after a power cycle.
-- Edit with care after `sim`: make 3.81 has 1-second timestamps, so a `sim` right after an edit
-  within the same second can reuse the old build. Running it again does not help:
-  `dewfpga clean`, then the command again.
+- A rebuild follows the files' content (a checksum in `<top>_sim.deps`, `<top>.deps` and
+  `<top>.pins.deps`), not only their timestamps: an edit saved within the second of the last
+  build still rebuilds. `dewfpga clean` forces everything from scratch.
 - Run `dewfpga sim` and `dewfpga bit` after every change and stop when both exit 0.

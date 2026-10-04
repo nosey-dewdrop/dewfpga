@@ -129,7 +129,7 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (329 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (337 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
 bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün

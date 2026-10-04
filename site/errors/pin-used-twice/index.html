@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course&#x27;s Basys3_Master.xdc (clk is on W5, led[0] is on U16). (fix, macOS)</title>
+<meta name="description" content="Two ports of the design have the same PACKAGE_PIN in the XDC: a copied line whose pin was not changed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/pin-used-twice/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course&#x27;s Basys3_Master.xdc (clk is on W5, led[0] is on U16). (fix, macOS)">
+<meta property="og:description" content="Two ports of the design have the same PACKAGE_PIN in the XDC: a copied line whose pin was not changed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/pin-used-twice/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course's Basys3_Master.xdc (clk is on W5, led[0] is on U16).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/pin-used-twice/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-04","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw lines below)</p>
+  <h1 class="mono">blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course&#x27;s Basys3_Master.xdc (clk is on W5, led[0] is on U16).</h1>
+<pre><code>blink.xdc:27: ERROR [pin-used-twice]: pin U16 is given to 2 ports, clk (blink.xdc:5) and led[0] (blink.xdc:27): one pin takes one port, so nextpnr would stop here. Fix: give each port its own pin: copy their lines from the course&#39;s Basys3_Master.xdc (clk is on W5, led[0] is on U16). https://nosey-dewdrop.github.io/dewfpga/errors/pin-used-twice/</code></pre>
+<p>nextpnr alone prints a warning and then stops, naming a site instead of a line:</p>
+<pre><code>Warning: Conflicting outputs: IO &#39;led[0]&#39; and IO &#39;clk&#39; are both constrained to package pin &#39;U16&#39; (site &#39;IOB_X0Y3/IOB33/PAD&#39;); only one of them can drive the pad
+ERROR: Cell &#39;clk&#39; cannot be bound to bel &#39;IOB_X0Y3/IOB33/PAD&#39; since it is already bound to cell &#39;led[0]&#39;</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>A line in the XDC was copied for a new port and its pin was not changed, so two ports ask for one pad. One pad has one driver.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Give each port its own pin, from the course's <code>Basys3_Master.xdc</code>:</p>
+<pre data-copy="1"><code>set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
+set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

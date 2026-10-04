@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic. (fix, macOS)</title>
+<meta name="description" content="A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic. (fix, macOS)">
+<meta property="og:description" content="A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3's chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course's Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board's schematic.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-04","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw line below, with no file:line)</p>
+  <h1 class="mono">blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic.</h1>
+<p>Two texts: a pin the chip does not have, and a pin written in small letters (nextpnr reads <code>W5</code>, not <code>w5</code>):</p>
+<pre><code>blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#39;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#39;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#39;s schematic. https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/
+blink.xdc:5: ERROR [no-such-pin]: w5 is written in small letters, and the chip&#39;s pin names are capitals (W5): nextpnr reads w5 as a pin the chip does not have, so clk would have no pin. Fix: write  PACKAGE_PIN W5  on this line. https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/</code></pre>
+<p>nextpnr alone stopped with this line, with no file and no line number, and the previous <code>blink.bit</code> stayed in the folder as if it were the result:</p>
+<pre><code>ERROR: Unable to constrain IO &#39;clk&#39;, device does not have a pin named &#39;ZZ99&#39;</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>The chip on the Basys3 (XC7A35T in the CPG236 package) has 236 pins, 106 of them I/O, each named by a letter and a number (<code>W5</code>, <code>U16</code>, <code>V17</code>). The XDC gives each port one of them. A name that is not on the chip, a pin copied from another board's file, a power pin, or <code>w5</code> in small letters is a pin nextpnr cannot find. Before this check, nextpnr's line was all there was, and the build that stopped there left yesterday's bitstream next to the sources.</p>
+<p>The check reads the chip's pin list from the prjxray database the bitstream itself is built from (<code>package_pins.csv</code> of <code>xc7a35tcpg236-1</code>), so a pin it accepts is a pin the chain can place.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Copy the port's line from the course's <code>Basys3_Master.xdc</code>; its pins are the board's wiring:</p>
+<pre data-copy="1"><code>set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]</code></pre>
+<p>For a pin written in small letters, write it in capitals. A failed build leaves no <code>.bit</code>, <code>.fasm</code> or <code>.frames</code> behind, so <code>dewfpga flash</code> after it builds again and stops at the same line; it never programs the old design.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

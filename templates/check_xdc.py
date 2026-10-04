@@ -493,8 +493,14 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--scan":
     if args and args[0] == "--cmd": cmd = args[1]; args = args[2:]
     if args and args[0] == "--sim": simf = tuple(x for x in args[1].split("\n") if x); args = args[2:]
     sys.exit(scan(args, want, xn, cmd, simf))
+# --pins <package_pins.csv>: the chip's package pins (prjxray's artix7/xc7a35tcpg236-1/package_pins.csv, the
+# database the bitstream is built from, so it is there whenever a bitstream can be built at all); without it, or
+# when the file is not there, the pin names are not checked here and nextpnr's own line is what stops the build
+pins_csv = None
+if len(sys.argv) >= 4 and sys.argv[1] == "--pins":
+    pins_csv = sys.argv[2]; del sys.argv[1:3]
 if len(sys.argv) != 3:
-    sys.exit("usage: check_xdc.py <json> <xdc>")
+    sys.exit("usage: check_xdc.py [--pins package_pins.csv] <json> <xdc>")
 
 jf, xf = sys.argv[1], sys.argv[2]
 
@@ -540,14 +546,17 @@ xdc_ports = set()
 has_pin, has_iostd = set(), set()
 xline = {}                                  # port -> the XDC line that sets its PACKAGE_PIN (or names it)
 cline = {}                                  # port -> a commented-out XDC line that names it
+pin_of = {}                                 # port -> the PACKAGE_PIN name its line gives (W5)
 forms = []                                  # (line, the get_ports text) this check does not read
 for ln, raw in enumerate(open(xf, encoding="utf-8", errors="replace"), 1):
     code = raw.split("#")[0]
+    pm = re.search(r"\bPACKAGE_PIN\s+([A-Za-z0-9_]+)", code)
     for m in re.finditer(r"get_ports\s*(-\w+\s+)*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", code):
         p = m.group(2)
         xdc_ports.add(p)
         if p not in xline or re.search(r"\bPACKAGE_PIN\b", code): xline[p] = ln
         if re.search(r"\bPACKAGE_PIN\b", code): has_pin.add(p)
+        if pm: pin_of[p] = pm.group(1)
         if re.search(r"\bIOSTANDARD\b", code): has_iostd.add(p)
     for m in re.finditer(r"get_ports\s*(?:-\w+\s+)*(\{[^}]*\}|[^\s\]]+)", code):
         t = m.group(1).strip()
@@ -608,6 +617,51 @@ for p in no_iostd:
     print(msg("ERROR", "no-iostandard-property", f"{p} has a PACKAGE_PIN but no IOSTANDARD in the XDC: every pin needs both, and nextpnr stops without one.",
               f"add the line  set_property IOSTANDARD LVCMOS33 [get_ports {{{p}}}]", loc=f"{xf}:{xline[p]}"))
 if no_iostd: sys.exit(1)
+
+# 3) the pin names of the design's ports: a pin the chip does not have (a typo, a pin of another board, a power
+# pin, a name in small letters: nextpnr reads W5 and not w5), and one pin given to two ports. nextpnr stops on
+# both with a line that names no XDC line; here the line is named before it runs. The course's Basys3_Master.xdc
+# next to this script gives the fix: the pin it puts the port on. Unused pins in the XDC are not looked at, as
+# nextpnr does not look at them.
+def master_pins():
+    """port -> pin from templates/Basys3_Master.xdc (its lines are commented out), {} when it is not there"""
+    out = {}
+    try: lines = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Basys3_Master.xdc"), encoding="utf-8", errors="replace")
+    except OSError: return out
+    for raw in lines:
+        m = re.search(r"PACKAGE_PIN\s+([A-Za-z0-9]+).*get_ports\s*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", raw)
+        if m: out[m.group(2)] = m.group(1)
+    return out
+pinned = sorted((p for p in ports if p in has_pin and p in pin_of), key=by_index)
+bad_pins = 0
+if pins_csv and os.path.isfile(pins_csv):
+    chip = set()
+    for ln, raw in enumerate(open(pins_csv, encoding="utf-8", errors="replace")):
+        if ln and raw.strip(): chip.add(raw.split(",")[0].strip())
+    master = master_pins()
+    for p in pinned:
+        pin = pin_of[p]
+        if pin in chip: continue
+        bad_pins += 1
+        on = f" (the course's Basys3_Master.xdc puts {p} on {master[p]})" if p in master else ""
+        if pin.upper() in chip:
+            text = f"{pin} is written in small letters, and the chip's pin names are capitals ({pin.upper()}): nextpnr reads {pin} as a pin the chip does not have, so {p} would have no pin."
+            fix = f"write  PACKAGE_PIN {pin.upper()}  on this line."
+        else:
+            text = (f"{pin} is not an I/O pin of the Basys3's chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), "
+                    f"so {p} would have no pin and nextpnr would stop here.")
+            fix = f"write the pin {p} is wired to on this line{on}: copy its line from Basys3_Master.xdc, or take the pin from the board's schematic."
+        print(msg("ERROR", "no-such-pin", text, fix, loc=f"{xf}:{xline[p]}"))
+users = {}
+for p in pinned: users.setdefault(pin_of[p], []).append(p)
+for pin, ps in sorted(users.items(), key=lambda kv: xline[kv[1][0]]):
+    if len(ps) < 2: continue
+    bad_pins += 1
+    where_ = " and ".join(f"{q} ({xf}:{xline[q]})" for q in ps)
+    print(msg("ERROR", "pin-used-twice", f"pin {pin} is given to {len(ps)} ports, {where_}: one pin takes one port, so nextpnr would stop here.",
+              f"give each port its own pin: copy their lines from the course's Basys3_Master.xdc (" + ", ".join(f"{q} is on {master_pins().get(q, '?')}" for q in ps) + ").",
+              loc=f"{xf}:{xline[ps[-1]]}"))
+if bad_pins: sys.exit(1)
 # pins in the XDC that the design does not use are fine (nextpnr ignores them); a whole
 # uncommented Basys3_Master.xdc is the normal lab setup, and led[15] with a led[1:0] port is just
 # an unused pin. Only a case difference (LED vs led) looks like a typo, so only that gets a warning.
