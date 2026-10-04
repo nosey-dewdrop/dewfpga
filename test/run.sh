@@ -554,14 +554,14 @@ check "a renamed testbench recompiles (the second sim did not)" tb_rename
 # written seconds before the .bit), so the netlist is dated the same way
 # shellcheck disable=SC2016   # $finish and $error are Verilog
 same_second_sim() {
-    mkdir -p "$T/ss" && cp "$ROOT"/templates/{blink.sv,blink_tb.sv} "$T/ss/" && cd "$T/ss" \
+    mkdir -p "$T/same_second_sim" && cp "$ROOT"/templates/{blink.sv,blink_tb.sv} "$T/same_second_sim/" && cd "$T/same_second_sim" \
     && "$CLI" sim > out 2>&1 && grep -q '^PASS: 3 checks' out \
     && sed -i '' 's/\$finish;/$error("planted"); $finish;/' blink_tb.sv && touch blink_sim blink_tb.sv \
     && ! "$CLI" sim > out2 2>&1 && grep -q '^iverilog' out2 && [ "$(grep -c planted blink_sim.out)" -eq 1 ] && grep -q 'ERROR \[testbench-error\]' out2
 }
 check "a testbench edited within the second of the last compile recompiles (make 3.81 compares whole seconds)" same_second_sim
 same_second_bit() {
-    mkdir -p "$T/sb" && cp "$ROOT"/templates/{blink.sv,blink.xdc} "$T/sb/" && cd "$T/sb" \
+    mkdir -p "$T/same_second_bit" && cp "$ROOT"/templates/{blink.sv,blink.xdc} "$T/same_second_bit/" && cd "$T/same_second_bit" \
     && "$CLI" bit > out 2>&1 && [ -s blink.bit ] && cp blink.frames a.frames && uptodate blink \
     && sed -i '' 's/assign led = {sw\[0\],/assign led = {sw[1],/' blink.sv && touch blink.json blink.sv \
     && "$CLI" bit > out2 2>&1 && grep -q '^pnr ok' out2 && ! cmp -s a.frames blink.frames
@@ -569,7 +569,7 @@ same_second_bit() {
 check "a design edited within the second of the last synthesis rebuilds, and the .frames differ" same_second_bit
 # led[0] and led[1] swap pads: the same two pads are used, so the IOB lines stay and the routing (the .frames) changes
 same_second_xdc() {
-    cd "$T/sb" && cp blink.frames b.frames && uptodate blink \
+    cd "$T/same_second_bit" && cp blink.frames b.frames && uptodate blink \
     && sed -i '' 's/PACKAGE_PIN U16 /PACKAGE_PIN TMP /; s/PACKAGE_PIN E19 /PACKAGE_PIN U16 /; s/PACKAGE_PIN TMP /PACKAGE_PIN E19 /' blink.xdc && touch -r blink.fasm blink.xdc \
     && "$CLI" bit > out3 2>&1 && grep -q '^pnr ok' out3 && ! cmp -s b.frames blink.frames
 }
