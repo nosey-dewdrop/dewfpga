@@ -177,7 +177,7 @@
   }
   function offline(form, statusId) {
     keepOff(form);
-    say(statusId, 'Not configured yet: this page has no Supabase project set in config.js, so nothing is sent or stored.', 'warn');
+    say(statusId, 'Not open yet: the newsletter and accounts open later. Nothing is sent or stored.', 'warn');
   }
 
   /* ---------- newsletter: subscribe ---------- */

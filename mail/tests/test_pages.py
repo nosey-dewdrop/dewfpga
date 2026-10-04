@@ -110,8 +110,16 @@ for k, h in html.items():
     check(f'{k}: no external script or form action', not re.search(r'<script[^>]+src="https?://', h) and 'action=' not in h)
 for k in ('confirm', 'unsubscribe'):
     check(f'{k}: noindex (token pages never in the sitemap)', 'content="noindex"' in html[k])
+# The newsletter and accounts are closed until the operator activates them (4 October): their pages
+# are noindex, out of the sitemap, and no page of the site links to them. Activation reverts this.
 for k in ('newsletter', 'account'):
-    check(f'{k}: indexable with canonical', 'rel="canonical"' in html[k] and 'noindex' not in html[k])
+    check(f'{k}: noindex while closed, canonical kept', 'rel="canonical"' in html[k] and 'content="noindex"' in html[k])
+check('privacy: noindex while closed', 'content="noindex"' in read(MAIL_SITE / 'privacy' / 'index.html'))
+closed_links = []
+for f in sorted(list(MAIL_SITE.rglob('*.html')) + [REPO / 'sim' / 'index.html']):
+    for href in re.findall(r'<a\s[^>]*href="((?:https://nosey-dewdrop\.github\.io)?/dewfpga/(?:newsletter|account|privacy)/[^"]*)"', f.read_text(encoding='utf-8')):
+        closed_links.append(f'{f.relative_to(REPO)} -> {href}')
+check('no page links to the closed newsletter/account/privacy pages', not closed_links, '; '.join(closed_links[:5]))
 
 # element ids used by mail.js exist on the right page
 need = {
@@ -218,12 +226,12 @@ with tempfile.TemporaryDirectory() as td:
     shutil.copytree(REPO / 'site', staged, ignore=shutil.ignore_patterns('.rabadon', '.vercel', 'node_modules'))
     sm = staged / 'sitemap.xml'
     x = sm.read_text(encoding='utf-8')
-    x, count = re.subn(r'<url>\s*<loc>https://nosey-dewdrop.github.io/dewfpga/newsletter/</loc>.*?</url>', '', x, flags=re.S)
-    check('newsletter has exactly one sitemap entry', count == 1)
+    check('closed newsletter page is not in the sitemap', '/dewfpga/newsletter/</loc>' not in x)
+    x = x.replace('</urlset>', '  <url>\n    <loc>https://nosey-dewdrop.github.io/dewfpga/newsletter/</loc>\n  </url>\n</urlset>')
     sm.write_text(x, encoding='utf-8')
     r2 = subprocess.run([sys.executable, str(REPO / 'test' / 'site-check.py'), '--site', str(staged)],
                         capture_output=True, text=True, cwd=str(REPO))
-    check('missing actual newsletter sitemap entry fails site-check',
+    check('closed newsletter page put back into the sitemap fails site-check',
           r2.returncode != 0 and 'newsletter' in (r2.stdout + r2.stderr))
 
 print(f'\npassed {PASS}, failed {FAIL}')

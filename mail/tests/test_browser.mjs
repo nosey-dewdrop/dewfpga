@@ -49,7 +49,7 @@ async function eventually(fn, ms = 8000) {
 /* ---------- shim over private PostgreSQL ---------- */
 function startShim() {
   return new Promise((resolve, reject) => {
-    const child = spawn('python3', [path.join(here, 'browser_pgrest_shim.py')], { stdio: ['pipe', 'pipe', 'pipe'] });
+    const child = spawn('python3', ['-B', path.join(here, 'browser_pgrest_shim.py')], { stdio: ['pipe', 'pipe', 'pipe'] });
     let out = '', err = '';
     const timer = setTimeout(() => { child.kill(); reject(new Error('shim did not start within 90 s\n' + err.slice(-2000))); }, 90000);
     child.stdout.on('data', d => {
@@ -222,7 +222,7 @@ async function run(browserName) {
   { const w = makeWorld(browser, { configured: false }); const page = await w.open();
     for (const [p, st] of [['newsletter/', 'subscribe-status'], ['newsletter/confirm/#t=00000000-0000-4000-8000-000000000000', 'confirm-status'], ['newsletter/unsubscribe/#t=00000000-0000-4000-8000-000000000000', 'unsubscribe-status'], ['account/', 'signin-status']]) {
       await page.goto(`${SITE}/${p}`); await sleep(200);
-      check(N(`empty config ${p.split('#')[0]}: "Not configured yet" + disabled`), (await text(page, st)).startsWith('Not configured yet') && await disabledAll(page, 'main form button, main form input'));
+      check(N(`empty config ${p.split('#')[0]}: "Not open yet" + disabled`), (await text(page, st)).startsWith('Not open yet') && await disabledAll(page, 'main form button, main form input'));
     }
     check(N('empty config: zero Supabase requests'), w.requests.filter(r => r.url.includes('fake.supabase.test')).length === 0);
     await page.close2(); }

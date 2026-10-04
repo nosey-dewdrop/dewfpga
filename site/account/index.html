@@ -7,6 +7,7 @@
 <meta name="description" content="Sign in with a magic link, see what dewfpga stores for the account, export or delete it. Every free feature stays free without an account.">
 <meta name="referrer" content="no-referrer">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/account/">
+<meta name="robots" content="noindex">
 <meta property="og:type" content="website">
 <meta property="og:title" content="dewfpga account">
 <meta property="og:description" content="Sign in with a magic link, see what dewfpga stores for the account, export or delete it. Every free feature stays free without an account.">
@@ -95,14 +96,14 @@ main.wrap [hidden]{display:none}
 <table>
 <tr><th>where</th><th>what</th><th>deleted by</th></tr>
 <tr><td>dewfpga account record</td><td>the sign-in's user id, the time the record was created, a premium start time (empty, nothing is sold)</td><td>the Delete button above</td></tr>
-<tr><td>newsletter subscriptions linked to the account</td><td>the rows from the <a href="/dewfpga/newsletter/">newsletter</a> that were confirmed or linked while signed in</td><td>the Delete button above</td></tr>
+<tr><td>newsletter subscriptions linked to the account</td><td>the rows from the newsletter that were confirmed or linked while signed in</td><td>the Delete button above</td></tr>
 <tr><td>newsletter subscriptions made without signing in</td><td>not linked to the account, not shown in the export, not deleted here</td><td>the unsubscribe link in any mail (the row is removed by the operator's cleanup, at the earliest 30 days later)</td></tr>
 <tr><td>shared sign-in identity (Supabase Auth)</td><td>email address, sign-in times, the magic-link mail log; shared with other projects of the same operator</td><td>not this page; removing the identity is a separate operator process, ask the operator</td></tr>
 </table>
 <p class="mute small">The magic-link mail itself is sent by Supabase Auth through the mail provider configured in the operator's Supabase project. The shared stylesheet of this site loads fonts from Google Fonts, so opening the page requests them from Google; the hosting (GitHub Pages) and Supabase keep their own request logs under their own terms. The sign-in email shown above is read from the session and used only to display it; nothing is linked or deleted by matching an email address.</p>
 
 <h2>Who is responsible for this data?</h2>
-<p><a href="/dewfpga/privacy/">Data and privacy notice</a></p>
+<p>Data and privacy notice</p>
 <p class="mute small">Controller contact, hosting and processing region, and terms are <b>not yet published</b>. The data sits in the operator's Supabase project; newsletter mail goes through Resend, magic-link mail through the provider set in the Supabase project. Until the operator publishes these lines, treat them as missing rather than assumed; this page makes no compliance guarantee.</p>
 <!-- OPERATOR: replace the paragraph above with the controller name + contact, the Supabase project region, the Resend sending region and a link to the terms before the page goes live. mail/README.md lists these as blockers. -->
 </main>

@@ -3697,7 +3697,7 @@ and was stopped; that attempt is preserved separately. Remote CI run 37129232619
 
 ### #24 · Newsletter consent and working management links · 3 October
 
-The optional [newsletter page](/dewfpga/newsletter/) records a versioned consent
+The optional newsletter page (not open yet) records a versioned consent
 request and queues a confirmation message. No account is required. Patch notes
 become eligible only after confirmation. Confirmation and newsletter messages
 carry the actual unsubscribe token in their body and List-Unsubscribe header.
@@ -3712,7 +3712,7 @@ sent. Cleanup also preserves a newly mailed link's 48-hour validity instead of
 removing it when an older pending request reaches seven days. Removal requires
 an operated cleanup; these thresholds are not an automatic deletion promise.
 
-The [data and privacy draft](/dewfpga/privacy/) separates application records
+The data and privacy draft (not open yet) separates application records
 from provider logs and identifies the controller, contact, processing and
 retention details still missing. It does not claim KVKK/GDPR compliance.
 
@@ -3778,7 +3778,7 @@ the live project and no mail was sent.
 
 ### #26 · Optional accounts with local session handling and scoped deletion · 3 October
 
-The [account page](/dewfpga/account/) uses Supabase magic-link signup/sign-in and
+The account page (not open yet) uses Supabase magic-link signup/sign-in and
 explicit dewfpga enrolment. Premium is marked coming soon; existing free features
 remain available without membership. Export and deletion apply to the dewfpga
 profile and token-linked subscriptions. They preserve the shared Auth identity

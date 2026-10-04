@@ -58,6 +58,11 @@ prove real JWT verification, SMTP delivery, inbox receipt or hosted redirects.
    Never put the service key or Resend key in site files, git, browser storage
    or the CLI package. Keep worker credentials in the operator's protected
    environment. Blank public configuration leaves the forms disabled.
+   Until activation the site is closed too: the newsletter, account and privacy
+   pages are `noindex`, out of the sitemap, and no page links to them. Reopen them
+   by reverting the commit "site: close the newsletter, accounts and privacy pages
+   until activation" (it restores the links and the sitemap entries), then run
+   `python3 -B mail/tests/test_pages.py` with its closed-page checks updated.
 6. Choose the worker's own daily allocation and account-wide daily/monthly
    headroom after reviewing the existing account's actual use. Verify that
    `GET https://api.resend.com/usage` works with the worker's credential: it must be
