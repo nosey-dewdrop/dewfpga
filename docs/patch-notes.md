@@ -3812,3 +3812,79 @@ the conservative limitation that even a proven refusal is not automatically
 reissued for fresh consent; that policy and per-run log are now explicit, with
 all four prior outcomes covered. Exact-head remote CI remains a required PR gate.
 No live publication, main-branch merge or physical-board/GUI acceptance is implied.
+
+### #28 · `dewfpga sim` simulates what the build reads when iverilog refuses the design · 4 October
+
+**The simulation no longer stops where the bitstream goes through.** Of the 111 probes Vivado supports, 52
+did not pass all four stages, and 28 of those failed only in `dewfpga sim`: iverilog does not read unique
+if, interfaces and modports, unpacked structs and unions, streaming, whole-array compare/copy/slice, a
+class used for its static function, the type operator and more, while the build read the same file and
+made a working bitstream. A student got a `.bit` from `dewfpga bit` and
+`design.sv:7: ERROR [iverilog-refused]: iverilog cannot compile this code` from `dewfpga sim`.
+
+Now, when iverilog refuses a design file (not the testbench), `sim` runs the build's own front half, the
+same readers and the same checks as `dewfpga bit`, writes that design back as Verilog (`top_sim.elab`) and
+simulates it with the testbench and yosys' models of the Xilinx cells:
+`design.sv:7: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the
+simulation runs on the design as the build reads it ...`, then the testbench's own `PASS`.
+A design the build refuses is refused by `sim` too, with the build's line: a function with a `ref`
+argument, which yosys-slang silently drops, still stops instead of passing (measured: without that rule
+the second path printed the testbench's FAIL). A testbench iverilog cannot read gets the old error.
+What differs from simulating the source (delays inside the design are ignored, a testbench reference to an
+internal signal the build renamed can break) is on the new error page.
+
+An independent review found one case this path got wrong: a testbench that sets the top module's parameters
+(`top #(.W(2)) dut`). The build keeps the defaults, so the elaborated design had no parameter left and iverilog
+blamed the student's testbench. Vivado's simulator applies those values; this path cannot, so it now stops at
+the testbench's line with `[sim-from-build-parameters]` and says why, instead of testing another design.
+
+**Numbers.** Vivado-supported probes passing all four stages: 59/111 → 86/111; all four stages 64/133 →
+95/133; synthesis 108/133 → 108/133. Known gaps: 52 → 25. Silent wrongs (bitstream built, netlist check fails): 3 → 3, the same rows (`35`,
+`74`, `97`). Closed in simulation: 31 probes (27 of them Vivado-supported). Not closed: `35` (no simulation model of
+MMCME2_BASE in yosys' cell library), `51c` (the 2-D typedef scan stops before iverilog), `60` (a `ref`
+argument, refused on purpose). Blink's simulation is byte-identical and as fast as before; a design on the
+second path takes about 3 s instead of failing.
+
+**Tests.** 6 new checks; each turns red when its rule is removed: the second path passes an interface
+design; a `ref` design is refused, not passed; a testbench iverilog cannot read keeps the old error; a
+design both readers refuse prints both; a testbench that sets parameters gets the new error at its line;
+blink's output is unchanged.
+
+### #29 · A failed build leaves no old bitstream, wrong pins are named, a quick save rebuilds · 4 October
+
+**A wrong pin name stops at its own XDC line.** With `PACKAGE_PIN ZZ99` on the clock line, the pin check
+printed `xdc ok: 33 ports, all mapped.`, then nextpnr stopped with its raw
+`ERROR: Unable to constrain IO 'clk', device does not have a pin named 'ZZ99'`, no file, no line, no fix.
+Now the check reads the chip's own pin list (the prjxray database the bitstream is built from) and stops
+first: `blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3's chip ... Fix: ...`.
+A pin written in small letters (`w5`) and two ports on one pin (`[pin-used-twice]`, both lines named) are
+caught the same way. If nextpnr still refuses a pin, its line gets the same code and XDC line.
+
+**A failed build leaves no old bitstream.** After that failure the previous `blink.bit` was still in the
+folder, byte for byte the old design, with its `.fasm`, `.frames` and routed netlist. Anything that loads
+the file by name would load yesterday's design. The pin-and-route stage now removes its outputs before it
+starts, as synthesis already did; `dewfpga flash` after a failed build stops at the same error line.
+
+**A save in the same second rebuilds.** macOS's make (3.81) compares whole seconds. A testbench edited
+within the second of the last compile was not newer to it: `dewfpga sim` ran the old simulation and printed
+its old `PASS` (measured: an edit 0.4 s after the build, 0 of 5 rebuilt). VS Code's save and build in one
+keystroke hits exactly this. The stage records a checksum of every source next to its file list; when the
+content differs the stage builds again. With the planted `$error` and the same timestamp, `sim` now
+compiles, prints the error and exits 2. Blink's simulation time did not change (0.14-0.20 s).
+
+**On a real Basys3 (6 October).** The board test ran with a board for the first time: `dewfpga flash`
+programmed blink (openFPGALoader's `Done` line, no ERROR). With `PACKAGE_PIN ZZ99`, `dewfpga flash` stopped at
+`blink.xdc:5: ERROR [no-such-pin]`, never started the programmer, and left no `.bit`.
+
+**Tests.** 8 new checks (listed checks 329 → 337; with #28's six, 343), each with a mutation: removing the
+old-output cleanup, the pin list, the duplicate-pin check, nextpnr's coded lines or the checksum rebuild turns
+its check red. The same-second checks ran three times in a row and passed each time.
+Not verified: nextpnr's behaviour on the chip's 14 transceiver pads, which the pin list accepts.
+
+**Closing run (6 October, board unplugged).** `test/run.sh`: `passed 314, failed 0, known gaps 25` in 21 min 4 s, the board check
+skipped (`SKIP flash on the board: no board`), the probe table identical to the run before it. Two checks were red in the run before
+it, neither in the product: shellcheck read the Verilog `$error` in a new test function as a shell variable
+(the directive the sibling functions carry was missing), and the MCP check's SDK venv lived in `$TMPDIR`,
+which macOS empties after three days (the package files were gone, the venv was rebuilt with
+`templates/mcp_setup.py`). The mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187 with 154 privilege checks, mail flow 60,
+sender idempotency, lifecycle 112, usage 13, integration 8, pages 139, Chromium and WebKit 158; 0 failures). Site check: 112 pages, 2053 links, 0 failures.
