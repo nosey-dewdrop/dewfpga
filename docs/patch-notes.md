@@ -3881,10 +3881,12 @@ old-output cleanup, the pin list, the duplicate-pin check, nextpnr's coded lines
 its check red. The same-second checks ran three times in a row and passed each time.
 Not verified: nextpnr's behaviour on the chip's 14 transceiver pads, which the pin list accepts.
 
-**Closing run (6 October, board unplugged).** `test/run.sh`: `passed 314, failed 0, known gaps 25` in 21 min 4 s, the board check
-skipped (`SKIP flash on the board: no board`), the probe table identical to the run before it. Two checks were red in the run before
-it, neither in the product: shellcheck read the Verilog `$error` in a new test function as a shell variable
-(the directive the sibling functions carry was missing), and the MCP check's SDK venv lived in `$TMPDIR`,
-which macOS empties after three days (the package files were gone, the venv was rebuilt with
-`templates/mcp_setup.py`). The mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187 with 154 privilege checks, mail flow 60,
-sender idempotency, lifecycle 112, usage 13, integration 8, pages 139, Chromium and WebKit 158; 0 failures). Site check: 112 pages, 2053 links, 0 failures.
+**Closing run (6 October, board unplugged).** `test/run.sh`: `passed 314, failed 0, known gaps 25` in 21 min 7 s, the board check
+skipped (`SKIP flash on the board: no board`; no FTDI device on the USB bus at that hour), the probe table byte-identical to the two
+runs before it. Two checks were red in the run before it, neither in the product: shellcheck read the Verilog `$error` in a new test
+function as a shell variable (the directive the sibling functions carry was missing), and the MCP check's SDK venv lived in
+`$TMPDIR`, which macOS empties of files untouched for three days (the venv was built on 3 October; on the 6th it had 420
+directories and 0 `.py` files, so `dewfpga mcp` reported `mcp-not-installed`; `python3.14 -m venv` and `pip install -r
+templates/mcp-requirements.txt` rebuilt it and the check passed alone and in the full run). The mail suites: 9 suites, each exit 0
+(activation SQL 142, SQL 187 with 154 privilege checks, mail flow 60, sender idempotency, lifecycle 112, usage 13, integration 8,
+pages 139, Chromium and WebKit 158; 0 failures). Site check: 112 pages, 2053 links, 0 failures.
