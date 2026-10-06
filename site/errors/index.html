@@ -201,6 +201,10 @@
     <p>dewfpga sim, after iverilog refused a line of the design. Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.</p>
   </div>
   <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-from-build-parameters/">top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top&#x27;s parameters at their defaults, as the bitstream does, so the testbench&#x27;s values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench).</a>
+    <p>dewfpga sim, after iverilog refused a line of the design. iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design.</p>
+  </div>
+  <div class="err">
     <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-timeout/">ERROR [sim-timeout]: the simulation did not finish in 120 s: the testbench never reached $finish (a free-running clock never stops on its own). Fix: end the testbench with $finish; SIM_TIMEOUT=600 dewfpga sim waits longer.</a>
     <p>dewfpga sim, vvp. The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</p>
   </div>

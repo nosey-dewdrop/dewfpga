@@ -1177,11 +1177,40 @@ An error in the testbench is iverilog's verdict alone, as before: the second pat
 - The design is read with `SYNTHESIS` defined, as Vivado and the build read it: an `` `ifdef SYNTHESIS `` branch is taken, an `` `ifndef SYNTHESIS `` block is dropped.
 - Internal signals keep their names when they are declared (`cnt`, `state`), but a struct, an enum or an interface becomes plain vectors, and an expression's temporary gets a generated name (`_3_`): a hierarchical reference from the testbench (`dut.state`, `dut.bus.a`) may not find what it names. Check the ports instead, as the board does.
 - A Xilinx cell without a simulation model (`MMCME2_BASE`) stops this path too; the error then says so.
+- The top module's parameters are the defaults the build uses: a testbench that sets them (`top #(.W(2)) dut`) stops with [sim-from-build-parameters](/dewfpga/errors/sim-from-build-parameters/).
 - `$display` in the design still prints; `$readmemh` tables are built in.
 
 ## What is the fix?
 
 Nothing: the note says what ran. To make iverilog read the source itself, rewrite the construct it names (`unique if` as a plain `if`, a struct as separate signals, a copy of an array as a loop).
+
+```copy
+dewfpga sim
+```
+
+## sim-from-build-parameters
+step: sim
+source: dewfpga sim, after iverilog refused a line of the design
+title: top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top's parameters at their defaults, as the bitstream does, so the testbench's values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench).
+summary: iverilog refused the design and the testbench sets the top module's parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design.
+date: 2026-10-06
+
+`dewfpga sim` on a design with a `unique if` and a parameter `W`, tested by a testbench that sets `W` to 2:
+
+```
+iverilog -g2012 -o top_sim top.sv top_tb.sv
+top.sv:3: syntax error
+top.sv:3: Syntax in assignment statement l-value.
+top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top's parameters at their defaults, as the bitstream does, so the testbench's values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench). https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/
+```
+
+## Why does it happen?
+
+When iverilog refuses a construct in the design, `dewfpga sim` normally runs the testbench against the design as the build elaborates it ([sim-from-build](/dewfpga/errors/sim-from-build/)). The build fixes the top module's parameters at their defaults, because that is the design the bitstream holds. A testbench that writes `top #(.W(2)) dut(...)` expects a top with `W = 2`; the elaborated design has none left to set, so its checks would run against `W = 8`. Vivado's simulator applies the testbench's values to the source; this path cannot, so it stops and says why instead of reporting a result for another design.
+
+## What is the fix?
+
+Either rewrite the construct iverilog names on the first line (`unique if` as a plain `if`, a struct as separate signals, an array copy as a loop: [sim-from-build](/dewfpga/errors/sim-from-build/) lists the usual ones), so that iverilog simulates your source and applies `#(...)` itself; or test the top module with its default parameters (drop `#(...)` from the instance in the testbench).
 
 ```copy
 dewfpga sim

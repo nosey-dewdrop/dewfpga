@@ -212,6 +212,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-exit/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/</loc>
   </url>
   <url>

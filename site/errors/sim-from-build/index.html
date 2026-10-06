@@ -57,6 +57,7 @@ design.sv:2: ERROR [iverilog-refused]: iverilog cannot compile this code (its me
 <li>The design is read with <code>SYNTHESIS</code> defined, as Vivado and the build read it: an <code>`ifdef SYNTHESIS</code> branch is taken, an <code>`ifndef SYNTHESIS</code> block is dropped.</li>
 <li>Internal signals keep their names when they are declared (<code>cnt</code>, <code>state</code>), but a struct, an enum or an interface becomes plain vectors, and an expression's temporary gets a generated name (<code>_3_</code>): a hierarchical reference from the testbench (<code>dut.state</code>, <code>dut.bus.a</code>) may not find what it names. Check the ports instead, as the board does.</li>
 <li>A Xilinx cell without a simulation model (<code>MMCME2_BASE</code>) stops this path too; the error then says so.</li>
+<li>The top module's parameters are the defaults the build uses: a testbench that sets them (<code>top #(.W(2)) dut</code>) stops with <a href="/dewfpga/errors/sim-from-build-parameters/">sim-from-build-parameters</a>.</li>
 <li><code>$display</code> in the design still prints; <code>$readmemh</code> tables are built in.</li>
 </ul>
 <h2 id="what-is-the-fix">What is the fix?</h2>

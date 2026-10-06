@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top&#x27;s parameters at their defaults, as the bitstream does, so the testbench&#x27;s values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench). (fix, macOS)</title>
+<meta name="description" content="iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top&#x27;s parameters at their defaults, as the bitstream does, so the testbench&#x27;s values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench). (fix, macOS)">
+<meta property="og:description" content="iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top's parameters at their defaults, as the bitstream does, so the testbench's values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-06","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">sim</span>dewfpga sim, after iverilog refused a line of the design</p>
+  <h1 class="mono">top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top&#x27;s parameters at their defaults, as the bitstream does, so the testbench&#x27;s values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench).</h1>
+<p><code>dewfpga sim</code> on a design with a <code>unique if</code> and a parameter <code>W</code>, tested by a testbench that sets <code>W</code> to 2:</p>
+<pre><code>iverilog -g2012 -o top_sim top.sv top_tb.sv
+top.sv:3: syntax error
+top.sv:3: Syntax in assignment statement l-value.
+top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top&#39;s parameters at their defaults, as the bitstream does, so the testbench&#39;s values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench). https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>When iverilog refuses a construct in the design, <code>dewfpga sim</code> normally runs the testbench against the design as the build elaborates it (<a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>). The build fixes the top module's parameters at their defaults, because that is the design the bitstream holds. A testbench that writes <code>top #(.W(2)) dut(...)</code> expects a top with <code>W = 2</code>; the elaborated design has none left to set, so its checks would run against <code>W = 8</code>. Vivado's simulator applies the testbench's values to the source; this path cannot, so it stops and says why instead of reporting a result for another design.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Either rewrite the construct iverilog names on the first line (<code>unique if</code> as a plain <code>if</code>, a struct as separate signals, an array copy as a loop: <a href="/dewfpga/errors/sim-from-build/">sim-from-build</a> lists the usual ones), so that iverilog simulates your source and applies <code>#(...)</code> itself; or test the top module with its default parameters (drop <code>#(...)</code> from the instance in the testbench).</p>
+<pre data-copy="1"><code>dewfpga sim</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

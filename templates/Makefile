@@ -104,6 +104,9 @@ $(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(shell $(SUM) $(SR
 endif
 ifeq (,$(filter sim clean check,$(GOALS)))
 $(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DEPS) 2>/dev/null),$(TOP).json)
+endif
+# dewfpga sim's second path makes $(TOP).json alone (a sub-make): the pins are not its stage
+ifeq (,$(filter sim clean check $(TOP).json,$(GOALS)))
 $(call fresh,$(TOP).pins.deps,$(XDC) | $(shell $(SUM) $(XDC) 2>/dev/null),$(TOP).fasm)
 endif
 # the .deps files are written above; a goal that skipped its check (make $(TOP)_sim) still has a rule for them
@@ -135,6 +138,9 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
 	  [ $$rc -ne 0 ] || exit 0; indesign=0; [ -z "$$at" ] || case " $(SRCS) " in *" $${at%:*} "*) indesign=1 ;; esac; \
 	  { [ $$indesign = 1 ] && command -v yosys >/dev/null && [ -x "$(PY)" ]; } || refused; \
+	  if cat $(TB) | tr '\n' ' ' | grep -qE '(^|[^A-Za-z0-9_$$])$(TOP)[[:space:]]*#[[:space:]]*\('; then \
+	    pl=$$(grep -nE '(^|[^A-Za-z0-9_$$])$(TOP)[[:space:]]*(#|$$)' $(TB) /dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(module|//)' | head -1 | cut -d: -f1,2); \
+	    echo "$${pl:+$$pl: }ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of $(TOP) with #(...): the simulation of the design as the build reads it keeps $(TOP)'s parameters at their defaults, as the bitstream does, so the testbench's values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test $(TOP) with its defaults (no #(...) in the testbench). $(URL)sim-from-build-parameters/" >&2; exit $$rc; fi; \
 	  [ -s $(TOP).il ] || rm -f $(TOP).json; $(MAKE) -s -f $(firstword $(MAKEFILE_LIST)) $(TOP).json 2>&1 | sed -E '/^make(\[[0-9]+\])?: \*\*\* \[[^]]*\] Error [0-9]+$$/d' > $(TOP)_sim.bld; brc=$${PIPESTATUS[0]}; \
 	  if [ $$brc -ne 0 ]; then cat $(TOP)_sim.bld >&2; rm -f $(TOP)_sim.bld; refused "and the build refuses the design too (its lines are above)"; fi; cat $(TOP)_sim.bld; rm -f $(TOP)_sim.bld; \
 	  rd="yosys' own reader"; ! grep -q 'attribute \\hdlname ' $(TOP).il || rd="yosys-slang, the second reader (yosys' own reader refused this code)"; \
