@@ -21,6 +21,8 @@ import tempfile
 import time
 import unittest
 
+sys.dont_write_bytecode = True   # the rollback test imports templates/mcp_setup.py: no __pycache__ in the CLI's templates/
+
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
 SERVER = os.path.join(ROOT, "templates", "mcp_server.py")
 SETUP = os.path.join(ROOT, "templates", "mcp_setup.py")

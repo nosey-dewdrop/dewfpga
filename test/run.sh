@@ -8,7 +8,8 @@
 #   ONLY=regex test/run.sh only the checks whose name matches (the probes are skipped). The '== build' and
 #                          '== multi-file design' checks use the folder the section's first check built, so name that
 #                          one in the regex too ('bit|deterministic'); the bitstream and board checks build what they need
-#   FULL=1 test/run.sh     also a clean install into a temp FPGA_HOME (~4 min, 1.4 GB)
+#   FULL=1 test/run.sh     also a clean install into a temp FPGA_HOME (~4 min; about 0.3 GB kept, about 1 GB while it builds),
+#                          its size, a second run, the golden .fasm and its uninstall
 #   SV_OUT=file            keep the probes' result rows (test/sv/run.sh writes them)
 # A probe that does what test/sv/expect.tsv records but fails a stage Vivado passes, or builds a bitstream
 # whose netlist fails, is a known GAP: printed and counted on its own, not as a pass, and it does not fail the
@@ -964,8 +965,34 @@ fi
 
 if [ "$LIST" = 1 ] || [ "${FULL:-}" = 1 ]; then
     sec "== clean install into temp FPGA_HOME"
+    # the install's step 7 writes $T/fresh into $ROOT/.fpga_home; what the tree had is put back at the end (also on
+    # Ctrl-C), so a FULL run does not leave the CLI pointing at the folder the uninstall check deletes
+    if [ "$LIST" != 1 ]; then
+        if [ -e "$ROOT/.fpga_home" ]; then cp "$ROOT/.fpga_home" "$T/fpga_home.saved"; else rm -f "$T/fpga_home.saved"; fi
+        restore_fh() { if [ -e "$T/fpga_home.saved" ]; then cp "$T/fpga_home.saved" "$ROOT/.fpga_home"; else rm -f "$ROOT/.fpga_home"; fi; }
+        trap 'restore_fh; rm -rf "$T"' EXIT
+    fi
     check "clean install exit 0" "FPGA_HOME='$T/fresh' '$ROOT/install.sh'"
+    # what the install keeps: the chain that runs (about 0.3 GB), not the clones and build trees it was built from.
+    # the MB go into the check's output (shown under a FAIL) and into fresh_mb, printed under the PASS line too
+    fresh_mb=""
+    fresh_size() { fresh_mb=$(du -sm "$T/fresh" | cut -f1) || return 1; echo "$fresh_mb MB in $T/fresh"; [ "$fresh_mb" -lt 1024 ]; }
+    check "clean install under 1 GB" fresh_size
+    [ -z "$fresh_mb" ] || echo "       installed: $fresh_mb MB"
+    check "clean install leaves no clone" "g=\$(find '$T/fresh' -name .git) && echo \"\$g\" && [ -z \"\$g\" ]"
+    # a second run finds every step done: no ' built' line (the skip lines say '(built for yosys ...)'), under 10 s
+    second_install() {
+        local t0=$SECONDS t
+        FPGA_HOME="$T/fresh" "$ROOT/install.sh" > "$T/second.out" 2>&1 || { cat "$T/second.out"; return 1; }
+        t=$((SECONDS - t0)); echo "second run: $t s"; grep -E ' built(,|$)' "$T/second.out" || true
+        ! grep -qE ' built(,|$)' "$T/second.out" && [ "$t" -lt 10 ]
+    }
+    check "second install run skips everything in under 10 s" second_install
     check "fresh chain builds golden" "mkdir '$T/fw' && cp '$ROOT'/templates/{blink.sv,blink.xdc} '$T/fw/' && cd '$T/fw' && FPGA_HOME='$T/fresh' '$CLI' bit && diff <(strip blink.fasm) <(strip '$ROOT/test/golden/blink.fasm')"
+    # from a copy of the CLI (un_copy above): the install linked Homebrew's bin/dewfpga to $CLI, and uninstall removes
+    # that link when it points at the CLI that runs. The fresh folder held only what install.sh put there, so it goes too
+    check "uninstall removes the fresh install" "un_copy && FPGA_HOME='$T/fresh' say '$T/un/bin/dewfpga' uninstall && grep -q '^removed: .*(it was empty)' '$T/say' && [ ! -e '$T/fresh' ]"
+    [ "$LIST" = 1 ] || restore_fh
 fi
 
 if [ "$LIST" = 1 ]; then echo "$((listed + want)) checks"; exit 0; fi

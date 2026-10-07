@@ -37,7 +37,7 @@
   <p class="lead">The by-hand setup, done for you. One line installs the chain; after that, <code>dewfpga</code> builds whatever <code>.sv</code> files are in the folder.</p>
   <p class="mute">No Mac or no board with you? The <a href="/dewfpga/sim/">Basys3 simulator</a> and the <a href="/dewfpga/sim/?view=tb">testbench runner</a> do the same first two steps in a browser, with nothing installed.</p>
 
-<pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, 1.4 GB, once</span></code></pre>
+<pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, about 0.3 GB on disk, once</span></code></pre>
   <p class="mute small">Requirements: macOS on Apple Silicon and Homebrew (its installer brings Apple's Command Line Tools along; the CLI checks and says so if either is missing). It puts the CLI in <code>~/.dewfpga</code>, links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update. No Node needed.</p>
 
   <h2 id="cli-to-basys3">CLI to Basys3: how to use the CLI?</h2>
@@ -85,17 +85,17 @@ dewfpga --version</code></pre>
     <tr><td>programming</td><td>openFPGALoader</td><td>brew</td></tr>
   </table>
   </div>
-  <p>Everything goes into <code>~/fpga</code>. Re-running the script skips finished steps. Log: <code>~/fpga/install.log</code>.</p>
+  <p>Everything goes into <code>~/fpga</code>. Re-running the script skips finished steps. Log: <code>~/fpga/install.log</code>. An install made before 7 October 2026 keeps its clones (1.5 GB, 1543 MB measured on 7 October) and is left as it is; <code>dewfpga uninstall &amp;&amp; dewfpga install</code> gets the small one.</p>
 
   <h2>What was measured?</h2>
   <p>19 September 2026, M2 with 8 GB, macOS 15.</p>
   <dl class="kv">
-    <dt>clean install</dt><dd>3 min 37 s to 4 min 17 s over three runs, 1.4 GB</dd>
+    <dt>clean install</dt><dd>3 min 37 s to 4 min 17 s over three runs; about 0.3 GB on disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB); about 1 GB while it builds, the installer asks for 2 GB free</dd>
     <dt>second run</dt><dd>2.7 s, every step skipped as already done</dd>
     <dt><code>bit</code></dt><dd>4.6 s, peak 552 MB RAM</dd>
     <dt>chipdb generation</dt><dd>peak 859 MB RAM</dd>
     <dt>output</dt><dd>byte-identical <code>.frames</code> to the hand-built chain that lit the LED</dd>
-    <dt>tests</dt><dd>343 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 133 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
+    <dt>tests</dt><dd>347 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 133 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
   </dl>
 
   <h2>Scope</h2>

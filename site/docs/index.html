@@ -54,7 +54,7 @@
 </tr>
 <tr>
 <td>time after section 1</td>
-<td>one command; 3 min 37 s to 4 min 17 s on the tested machine plus about 4 minutes for yosys-slang, 1.4 GB downloaded</td>
+<td>one command; 3 min 37 s to 4 min 17 s on the tested machine plus about 4 minutes for yosys-slang, 1.4 GB downloaded, about 0.3 GB kept (237 MB measured on 7 October; the optional agent SDK adds 51 MB)</td>
 <td>6 steps; about 8 minutes of compiling plus 1.76 GB of full clones, call it 25 minutes</td>
 </tr>
 <tr>
@@ -102,7 +102,7 @@
 <hr />
 <h2 id="2-how-do-you-install-it-in-one-line">2. How do you install it in one line?</h2>
 <pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
-<p>3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of compiling), 1.4 GB downloaded; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx, prjxray and the yosys-slang plugin (section 3.6) into <code>~/fpga</code> at the three commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
+<p>3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of compiling), 1.4 GB downloaded, about 0.3 GB kept on disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB), about 1 GB while it builds, the installer asks for 2 GB free; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx, prjxray and the yosys-slang plugin (section 3.6) into <code>~/fpga</code> at the three commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
 <pre><code>all good.
 
 Total: 217 s. Log: /Users/you/fpga/install.log
@@ -183,7 +183,7 @@ dewfpga --version</code></pre>
   |-&gt; fasm2frames      -&gt; configuration frames
   |-&gt; xc7frames2bit    -&gt; your_design.bit
   `-&gt; openFPGALoader   -&gt; the board, over USB</code></pre>
-<p>Three come from Homebrew, three you compile (nextpnr-xilinx, prjxray, and the yosys-slang plugin that Yosys loads to read SystemVerilog), and fasm2frames is a Python script inside the prjxray checkout. nextpnr also needs a chip database, generated once by another Python script. Everything lands in <code>~/fpga</code>: 1.4 GB with the installer's shallow clones, 1.76 GB with the full clones below. The Makefile in section 4 expects exactly this layout: <code>~/fpga/venv</code>, <code>~/fpga/nextpnr-xilinx/build</code>, <code>~/fpga/chipdb/xc7a35t.bin</code>, <code>~/fpga/prjxray</code>, <code>~/fpga/yosys-slang/build/slang.so</code>.</p>
+<p>Three come from Homebrew, three you compile (nextpnr-xilinx, prjxray, and the yosys-slang plugin that Yosys loads to read SystemVerilog), and fasm2frames is a Python script inside the prjxray checkout. nextpnr also needs a chip database, generated once by another Python script. Everything lands in <code>~/fpga</code>: about 0.3 GB with the installer (237 MB measured on 7 October; it deletes the clones and build trees after each build; the optional agent SDK adds 51 MB), 1.76 GB with the full clones below until section 3.7 removes what the builds no longer need. The Makefile in section 4 expects exactly this layout: <code>~/fpga/venv</code>, <code>~/fpga/nextpnr-xilinx/build</code>, <code>~/fpga/chipdb/xc7a35t.bin</code>, <code>~/fpga/prjxray</code>, <code>~/fpga/yosys-slang/build/slang.so</code>.</p>
 <h3 id="31-homebrew-packages">3.1 Homebrew packages</h3>
 <pre class="bash"><code>brew install yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14</code></pre>
 <p>The first three are tools from the diagram; the rest are what the two builds below need. A few hundred MB. Check:</p>
@@ -258,6 +258,16 @@ make -C build -j2</code></pre>
 <pre class="bash"><code>yosys -m ~/fpga/yosys-slang/build/slang.so -p &#39;help read_slang&#39; | grep &#39;read_slang \[&#39;
 #     read_slang [options] [filename]</code></pre>
 <p>The plugin is tied to the Yosys it was built against: after <code>brew upgrade yosys</code>, build it again (<code>rm -rf build</code>, then the <code>cmake</code> and <code>make</code> lines). The installer does this by itself: it keeps the <code>yosys -V</code> line it built for in <code>build/.dewfpga-yosys</code>, compiles the new plugin into <code>build.new/</code> and replaces <code>build/</code> only once Yosys loads the new <code>slang.so</code>, so a build that fails (no disk, no network) leaves the plugin you have in place. A <code>slang.so</code> built by hand with the lines above has no stamp; the installer loads it with <code>yosys -m</code>, and if <code>read_slang</code> is there it writes the stamp instead of building again. <code>dewfpga check</code> loads the plugin the same way each time it runs: a plugin that is there but no longer loads prints <code>does not load in Yosys 0.69+post (built for another yosys? dewfpga install rebuilds it)</code>, a missing one prints <code>MISSING (the SystemVerilog reader: dewfpga install builds it, about 4 min)</code>, and either way the check ends with <code>something is missing -&gt; dewfpga install</code> and exit 1. Without the plugin <code>make bit</code> still runs, on Yosys' own reader alone.</p>
+<h3 id="37-what-can-go-after-the-builds">3.7 What can go after the builds?</h3>
+<p>The chain that runs is 237 MB (measured with <code>du</code> on 7 October 2026); the rest of the 1.76 GB is clones and build trees. The installer deletes them after each build. By hand, keep these and delete the rest of the four checkouts (every <code>.git</code>, the <code>build/</code> trees around the files below, the other devices under <code>prjxray-db</code>):</p>
+<ul>
+<li><code>nextpnr-xilinx/build/nextpnr-xilinx</code> (3 MB) and <code>chipdb/</code> (89 MB)</li>
+<li><code>nextpnr-xilinx/xilinx/external/prjxray-db/artix7/</code> without <code>xc7a100t</code>, <code>xc7a200t</code>, <code>gridinfo</code> and <code>harness</code> (83 MB): fasm2frames reads the xc7a35t part from it (<code>XRAYDB</code> in the Makefile)</li>
+<li><code>prjxray/utils/</code>, <code>prjxray/prjxray/</code> and <code>prjxray/build/tools/xc7frames2bit</code> (2 MB): fasm2frames, the package the venv imports, the bit writer</li>
+<li><code>yosys-slang/build/slang.so</code> (9 MB)</li>
+<li><code>venv/</code> (52 MB)</li>
+</ul>
+<p>The Makefile of section 4 points at nothing else, so the hand-built chain lands at the same size.</p>
 <hr />
 <h2 id="4-what-is-in-the-project-folder">4. What is in the project folder?</h2>
 <p>A project is one folder. Download the files, do not type them:</p>

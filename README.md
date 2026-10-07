@@ -6,7 +6,7 @@ no virtual machine, no Rosetta. `.sv` → `.bit` → board in under five seconds
 [Türkçe](README.tr.md)
 
 ```bash
-curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 min, 1.4 GB, once
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 min, about 0.3 GB on disk, once
 ```
 
 Then in any folder with `blink.sv` + `blink.xdc`:
@@ -50,7 +50,8 @@ removes what the installer built in `~/fpga` (nextpnr-xilinx, prjxray, chipdb, v
 and Homebrew. The builds also need Apple's Command Line Tools (git, make, clang); the Homebrew installer
 puts them in when they are missing, and both installers check and print the one line to run if either
 is missing or Homebrew is off the PATH. Switching to the npm package later: remove
-`$(brew --prefix)/bin/dewfpga` first, npm wants that path.
+`$(brew --prefix)/bin/dewfpga` first, npm wants that path. An install made before 7 October 2026 keeps its
+clones (1.5 GB, 1543 MB measured on 7 October) and is left as it is; `dewfpga uninstall && dewfpga install` gets the small one.
 
 ## What it installs
 
@@ -128,7 +129,7 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (343 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (347 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
 probe runner on a broken copy, and the 133 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names
@@ -137,7 +138,8 @@ adds a clean install into a temp directory. CI runs the clean install, the suite
 `macos-15` (Apple Silicon) GitHub runner on every push.
 
 Measured 2026-09-19 and 20 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
-1.4 GB; second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.
+about 0.3 GB on disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB; about 1 GB while it
+builds, the installer asks for 2 GB free); second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.
 On the board, 19 and 20 September, five designs: the blink template, switches to LEDs, the Lab 2
 adder/subtractor, the display counter and the traffic-light FSM, each built with `dewfpga flash`.
 With yosys 0.69 the chain built by the script produces byte-identical `.frames` to the hand-built

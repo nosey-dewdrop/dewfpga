@@ -6,7 +6,7 @@ makine yok, Rosetta yok. `.sv` → `.bit` → kart, beş saniyenin altında.
 [English](README.md)
 
 ```bash
-curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 dk, 1.4 GB, tek sefer
+curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 dk, diskte yaklaşık 0.3 GB, tek sefer
 ```
 
 Sonra `blink.sv` + `blink.xdc` olan herhangi bir klasörde:
@@ -51,7 +51,8 @@ linki siler; `~/fpga`'daki başka dosyalara dokunmaz. Gerekenler: Apple Silicon'
 Homebrew. Derlemeler Apple'ın Command Line Tools'unu da ister (git, make, clang); Homebrew'un
 kurucusu eksikse onları kendi kurar, iki kurucu da kontrol eder ve biri eksikse ya da Homebrew
 PATH'te değilse çalıştırılacak tek satırı basar. Sonradan npm paketine geçeceksen önce
-`$(brew --prefix)/bin/dewfpga`'yı sil, npm aynı yolu istiyor.
+`$(brew --prefix)/bin/dewfpga`'yı sil, npm aynı yolu istiyor. 7 Ekim 2026'dan önce yapılmış bir kurulum
+klonlarını (1.5 GB, 7 Ekim'de ölçülen 1543 MB) tutar ve olduğu gibi bırakılır; `dewfpga uninstall && dewfpga install` küçük olanı kurar.
 
 ## Ne kuruyor?
 
@@ -129,7 +130,7 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (343 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (347 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
 bozuk kopyada probe koşturucu ve `test/sv`'deki 133 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün
@@ -138,7 +139,8 @@ ekler. CI her push'ta temiz bir `macos-15` (Apple Silicon) GitHub makinesinde te
 test paketini ve npm paketini koşar.
 
 2026-09-19 ve 20'de 8 GB'lık bir M2'de ölçüldü: temiz kurulum 3 dk 37 sn ile 4 dk 17 sn
-arası (üç koşu), 1.4 GB; ikinci koşu 2.7 sn; `bit` 4.6 sn, tepe 552 MB RAM; chipdb üretimi
+arası (üç koşu), diskte yaklaşık 0.3 GB (7 Ekim'de ölçülen 237 MB; isteğe bağlı ajan SDK'sı 51 MB ekler;
+derlerken yaklaşık 1 GB, kurucu 2 GB boş yer ister); ikinci koşu 2.7 sn; `bit` 4.6 sn, tepe 552 MB RAM; chipdb üretimi
 tepe 859 MB RAM. Kartta, 19 ve 20 Eylül'de beş tasarım: blink şablonu, anahtardan LED'e,
 Lab 2 toplayıcı/çıkarıcı, ekran sayacı ve trafik ışığı FSM'i, her biri `dewfpga flash` ile.
 yosys 0.69 ile script'in kurduğu zincir, LED'i yakan elle kurulmuş zincirle bayt bayt aynı

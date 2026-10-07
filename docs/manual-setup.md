@@ -10,7 +10,7 @@ go in, or the installer refuses your machine.
 | | one line | by hand |
 |---|---|---|
 | do | section 1, then 2, then 5 to 8 | section 1, then 3, then 4 to 8 |
-| time after section 1 | one command; 3 min 37 s to 4 min 17 s on the tested machine plus about 4 minutes for yosys-slang, 1.4 GB downloaded | 6 steps; about 8 minutes of compiling plus 1.76 GB of full clones, call it 25 minutes |
+| time after section 1 | one command; 3 min 37 s to 4 min 17 s on the tested machine plus about 4 minutes for yosys-slang, 1.4 GB downloaded, about 0.3 GB kept (237 MB measured on 7 October; the optional agent SDK adds 51 MB) | 6 steps; about 8 minutes of compiling plus 1.76 GB of full clones, call it 25 minutes |
 | you get | the `dewfpga` command | the same tools plus a Makefile you own |
 | tool versions | three pinned commits, Homebrew versions in section 9 | the same three commits, typed by you |
 
@@ -95,7 +95,8 @@ curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash
 
 3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the
 yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of
-compiling), 1.4 GB downloaded; on slow
+compiling), 1.4 GB downloaded, about 0.3 GB kept on disk (237 MB measured on 7 October; the optional agent
+SDK adds 51 MB), about 1 GB while it builds, the installer asks for 2 GB free; on slow
 wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the
 `dewfpga` command into `~/.dewfpga` (its sha256 is compared with
 `nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256`, so a broken download stops here),
@@ -275,8 +276,9 @@ your_design.sv
 Three come from Homebrew, three you compile (nextpnr-xilinx, prjxray, and the yosys-slang
 plugin that Yosys loads to read SystemVerilog), and fasm2frames is a Python script inside the
 prjxray checkout. nextpnr also needs a chip database, generated once by another Python
-script. Everything lands in `~/fpga`: 1.4 GB with the installer's shallow clones, 1.76 GB
-with the full clones below. The Makefile in section 4 expects exactly this layout:
+script. Everything lands in `~/fpga`: about 0.3 GB with the installer (237 MB measured on 7 October; it deletes
+the clones and build trees after each build; the optional agent SDK adds 51 MB), 1.76 GB with the full
+clones below until section 3.7 removes what the builds no longer need. The Makefile in section 4 expects exactly this layout:
 `~/fpga/venv`, `~/fpga/nextpnr-xilinx/build`, `~/fpga/chipdb/xc7a35t.bin`, `~/fpga/prjxray`,
 `~/fpga/yosys-slang/build/slang.so`.
 
@@ -445,6 +447,23 @@ the plugin the same way each time it runs: a plugin that is there but no longer 
 a missing one prints `MISSING (the SystemVerilog reader: dewfpga install builds it, about 4 min)`,
 and either way the check ends with `something is missing -> dewfpga install` and exit 1.
 Without the plugin `make bit` still runs, on Yosys' own reader alone.
+
+### 3.7 What can go after the builds?
+
+The chain that runs is 237 MB (measured with `du` on 7 October 2026); the rest of the 1.76 GB is
+clones and build trees. The installer deletes them after each build. By hand, keep these and
+delete the rest of the four checkouts (every `.git`, the `build/` trees around the files below,
+the other devices under `prjxray-db`):
+
+- `nextpnr-xilinx/build/nextpnr-xilinx` (3 MB) and `chipdb/` (89 MB)
+- `nextpnr-xilinx/xilinx/external/prjxray-db/artix7/` without `xc7a100t`, `xc7a200t`, `gridinfo`
+  and `harness` (83 MB): fasm2frames reads the xc7a35t part from it (`XRAYDB` in the Makefile)
+- `prjxray/utils/`, `prjxray/prjxray/` and `prjxray/build/tools/xc7frames2bit` (2 MB): fasm2frames,
+  the package the venv imports, the bit writer
+- `yosys-slang/build/slang.so` (9 MB)
+- `venv/` (52 MB)
+
+The Makefile of section 4 points at nothing else, so the hand-built chain lands at the same size.
 
 ---
 

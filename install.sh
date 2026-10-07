@@ -3,8 +3,9 @@
 #
 #   SystemVerilog -> yosys (+ yosys-slang) -> nextpnr-xilinx -> prjxray -> openFPGALoader -> Basys3
 #
-# One command. Safe to re-run: finished steps are skipped.
-# Everything goes under $FPGA_HOME (default ~/fpga). System Python is never touched.
+# One command. Safe to re-run: finished steps are skipped (by their stamps and artefacts, no git needed).
+# Everything goes under $FPGA_HOME (default ~/fpga), and only the chain that runs stays there (~240 MB): the
+# sources, the build trees and the other FPGA families are removed after each build. System Python is never touched.
 # Steps: 0 environment, 1 Homebrew packages, 2 nextpnr-xilinx, 3 Python venv, 4 prjxray,
 #        5 chipdb, 6 yosys-slang (the SystemVerilog reader plugin for yosys), 7 verify.
 #
@@ -12,7 +13,7 @@
 #         FPGA_HOME=/elsewhere ./install.sh
 #         ./install.sh --help
 set -euo pipefail
-case "${1:-}" in -h|--help|help) sed -n '2,13s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;; esac
+case "${1:-}" in -h|--help|help) sed -n '2,14s/^# \{0,1\}//p' "${BASH_SOURCE[0]}"; exit 0 ;; esac
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 export FPGA_HOME="${FPGA_HOME:-$HOME/fpga}"
@@ -40,7 +41,9 @@ PIP_PKGS=(fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 interv
 # ---------------------------------------------------------------- helpers
 T0=$(date +%s)
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then B=$'\033[1m' G=$'\033[32m' Y=$'\033[33m' R=$'\033[31m' N=$'\033[0m'; else B='' G='' Y='' R='' N=''; fi
-step()  { printf '\n%s[%s] %s%s  (+%ds)\n' "$B" "$1" "$2" "$N" "$(( $(date +%s) - T0 ))"; }
+# the size of what install built under $FPGA_HOME (only its own entries: ~/fpga may hold the student's other folders)
+chain_mb() { local e n t=0; for e in nextpnr-xilinx prjxray yosys-slang chipdb venv mcp-venv install.log; do [ -e "$FPGA_HOME/$e" ] || continue; n=$(du -sm "$FPGA_HOME/$e" 2>/dev/null | cut -f1); t=$(( t + ${n:-0} )); done; echo "$t"; }
+step()  { printf '\n%s[%s] %s%s  (+%ds, %s MB)\n' "$B" "$1" "$2" "$N" "$(( $(date +%s) - T0 ))" "$(chain_mb)"; }
 ok()    { printf '    %s✓%s %s\n' "$G" "$N" "$*"; }
 skip()  { printf '    %s↷%s %s (already there, skipped)\n' "$Y" "$N" "$*"; }
 die()   { printf '\n%sERROR:%s %s\n' "$R" "$N" "$*" >&2; exit 1; }
@@ -74,10 +77,47 @@ need_brew() {
     die "Homebrew missing. First:  $BREW_INSTALL_LINE   then paste the lines it prints under \"Next steps\", open a new terminal window and run this again   (https://brew.sh)"
 }
 
+# keep_only <dir> <relative paths...>: removes every entry under <dir> that is not one of the named paths or on the
+# way to one. The tree is walked entry by entry (never rm -rf "$x"/* on a variable); an empty dir, / or an empty keep
+# list is refused. This is what keeps the install at ~240 MB: the sources and build trees go once the binaries exist.
+keep_only() {
+    local dir=$1; shift
+    # the refusal does not rely on die exiting: nothing below it runs for a refused dir, whatever die does
+    if [ -z "${dir:-}" ] || [ "$dir" = / ] || [ ! -d "$dir" ] || [ $# -eq 0 ]; then
+        die "keep_only: refusing to prune '${dir:-}' (needs an existing folder that is not /, and the paths to keep)"
+        # shellcheck disable=SC2317  # reached only if die were ever changed not to exit
+        return 1
+    fi
+    prune_walk "$dir" "" "$@"
+}
+# has_sources <dir>: true while a checkout or a build tree is still under <dir>, i.e. it was never pruned. The prunes
+# below test this, not "did this run clone": an install that died in a build (Ctrl-C, sleep, a compiler error) is
+# resumed by the next run with the checkout already there, and that run must prune it just like a first run does.
+has_sources() { [ -d "$1/.git" ] || [ -e "$1/build/CMakeCache.txt" ]; }
+prune_walk() {  # <dir> <folder under dir to walk, "" for dir itself> <keep...>
+    local dir=$1 rel=$2 e c k verdict entries=(); shift 2
+    while IFS= read -r -d '' e; do entries+=("$e"); done < <(find "$dir${rel:+/$rel}" -mindepth 1 -maxdepth 1 -print0)
+    for e in ${entries[@]+"${entries[@]}"}; do
+        c=${e#"$dir/"}; verdict=remove
+        for k in "$@"; do
+            if [ "$c" = "$k" ]; then verdict=keep; break; fi
+            case $k in "$c"/*) verdict=walk ;; esac
+        done
+        case $verdict in
+            keep) ;;
+            walk) if [ -d "$e" ] && [ ! -L "$e" ]; then prune_walk "$dir" "$c" "$@"; else rm -rf "$e"; fi ;;
+            *) rm -rf "$e" ;;
+        esac
+    done
+}
+
 # Shallow-fetch one pinned commit. Same source even after the branch moves on.
-clone_pinned() {  # <url> <sha> <dir>
-    local url=$1 sha=$2 dir=$3
-    # the stamp is written after the submodules, so a clone interrupted half-way is redone, not skipped
+# The arguments after the dir name the submodules to fetch (--depth 1, no recursion); "all" fetches every
+# submodule recursively as before; "<path>=sparse:<subdir>" fetches that submodule as a blob-less partial clone
+# with only <subdir> checked out (prjxray-db holds five FPGA families, 853 MB; the Basys3 needs artix7, 187 MB).
+clone_pinned() {  # <url> <sha> <dir> [all | submodule-path | submodule-path=sparse:<subdir> ...]
+    local url=$1 sha=$2 dir=$3 sub spath sdir surl ssha; shift 3
+    # a checkout already at the pinned commit (an install that died after the clone) is resumed, not fetched again
     if [ -d "$dir/.git" ] && [ "$(git -C "$dir" rev-parse HEAD 2>/dev/null)" = "$sha" ] && [ "$(cat "$dir/.dewfpga-sha" 2>/dev/null)" = "$sha" ]; then
         skip "$dir @ ${sha:0:7}"; return
     fi
@@ -87,10 +127,29 @@ clone_pinned() {  # <url> <sha> <dir>
     git -C "$dir" fetch -q --depth 1 origin "$sha" \
         || die "could not fetch $url (no network? can you reach GitHub?)"
     git -C "$dir" -c advice.detachedHead=false checkout -q FETCH_HEAD
-    # --recursive is REQUIRED: prjxray's yaml-cpp/googletest/abseil are submodules; cmake fails without them.
-    git -C "$dir" submodule update -q --init --recursive --depth 1
-    echo "$sha" > "$dir/.dewfpga-sha"
-    ok "$dir @ ${sha:0:7} (+submodule)"
+    for sub in "$@"; do
+        case $sub in
+            all)
+                git -C "$dir" submodule update -q --init --recursive --depth 1 \
+                    || die "could not fetch the submodules of $url (no network? can you reach GitHub?)" ;;
+            *=sparse:*)
+                spath=${sub%%=sparse:*}; sdir="$dir/$spath"
+                ssha=$(git -C "$dir" ls-tree HEAD "$spath" | awk '{print $3}')
+                surl=$(git config -f "$dir/.gitmodules" "submodule.$spath.url")
+                [ -n "$ssha" ] && [ -n "$surl" ] || die "$spath is not a submodule of $url at ${sha:0:7}"
+                git init -q "$sdir"
+                git -C "$sdir" remote add origin "$surl"
+                git -C "$sdir" sparse-checkout set --no-cone "${sub#*=sparse:}"
+                git -C "$sdir" fetch -q --depth 1 --filter=blob:none origin "$ssha" \
+                    || die "could not fetch $surl (no network? can you reach GitHub?)"
+                git -C "$sdir" -c advice.detachedHead=false checkout -q FETCH_HEAD ;;
+            *)
+                git -C "$dir" submodule update -q --init --depth 1 "$sub" \
+                    || die "could not fetch the $sub submodule of $url (no network? can you reach GitHub?)" ;;
+        esac
+    done
+    echo "$sha" > "$dir/.dewfpga-sha"      # written last: a clone interrupted half-way is redone, not skipped
+    ok "$dir @ ${sha:0:7}${1:+ (+$# submodule(s))}"
 }
 
 # ---------------------------------------------------------------- 0. environment
@@ -107,7 +166,9 @@ xcode-select -p >/dev/null 2>&1 || die "Xcode Command Line Tools missing (the bu
 need_brew
 mkdir -p "$FPGA_HOME"
 FREE_GB=$(df -g "$FPGA_HOME" | awk 'NR==2{print $4}')
-[ "$FREE_GB" -ge 4 ] || die "only $FREE_GB GB free; the install needs 1.4 GB plus build scratch, at least 4 GB."
+# measured on 2026-10-07, three clean installs: the build peaks at 811 to 834 MB (sources, build trees and the chipdb's .bba all present at once, step 5)
+# and the pruned install is 237 MB; the check is that peak rounded up to whole GB, plus 1
+[ "$FREE_GB" -ge 2 ] || die "only $FREE_GB GB free; the build peaks at about 850 MB (the install that stays is ~237 MB), so at least 2 GB are needed."
 LOG="$FPGA_HOME/install.log"
 exec > >(tee >(sed -u 's/\x1b\[[0-9;]*m//g' >> "$LOG")) 2>&1     # the log gets the text without colour codes
 echo "    FPGA_HOME=$FPGA_HOME   JOBS=$JOBS   log: $LOG"
@@ -134,16 +195,29 @@ PY3="$BREW_PREFIX/opt/python@3.14/bin/python3.14"
 # oss-cad-suite does NOT ship nextpnr-xilinx (497 MB wasted). Build from source.
 step 2 "nextpnr-xilinx (from source, ~1.5 min)"
 NEXTPNR_DIR="$FPGA_HOME/nextpnr-xilinx"
-clone_pinned "$NEXTPNR_URL" "$NEXTPNR_SHA" "$NEXTPNR_DIR"
-if [ -x "$NEXTPNR_DIR/build/nextpnr-xilinx" ] && [ -x "$NEXTPNR_DIR/build/bbasm" ]; then
-    skip "nextpnr-xilinx binary"
+XRAYDB="$NEXTPNR_DIR/xilinx/external/prjxray-db/artix7"
+# what the chain runs: the binary and the artix7 database (fasm2frames, the Makefile's F2B and check_xdc --pins read it).
+# The sources and the build tree are pruned at the end of step 5 (the chipdb needs them once); this test is what skips
+# the step afterwards, no git involved. A new pinned SHA or a missing artefact fetches and builds again.
+nextpnr_ready() { [ "$(cat "$NEXTPNR_DIR/.dewfpga-sha" 2>/dev/null)" = "$NEXTPNR_SHA" ] && [ -x "$NEXTPNR_DIR/build/nextpnr-xilinx" ] && [ -s "$XRAYDB/$DEVICE/package_pins.csv" ]; }
+nextpnr_fetch_build() {
+    # submodules: nextpnr-xilinx-meta (bbaexport reads it) and prjxray-db with artix7 only; tests (nextpnr-tests) is never used
+    clone_pinned "$NEXTPNR_URL" "$NEXTPNR_SHA" "$NEXTPNR_DIR" xilinx/external/nextpnr-xilinx-meta xilinx/external/prjxray-db=sparse:artix7
+    if [ -x "$NEXTPNR_DIR/build/nextpnr-xilinx" ] && [ -x "$NEXTPNR_DIR/build/bbasm" ]; then
+        skip "nextpnr-xilinx binary"
+    else
+        # USE_OPENMP=OFF is REQUIRED: Apple clang has no -fopenmp; cmake fails otherwise.
+        cmake -S "$NEXTPNR_DIR" -B "$NEXTPNR_DIR/build" -G Ninja \
+              -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release \
+              -DUSE_OPENMP=OFF -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
+        ninja -C "$NEXTPNR_DIR/build" -j"$JOBS" nextpnr-xilinx bbasm
+        ok "nextpnr-xilinx + bbasm built"
+    fi
+}
+if nextpnr_ready; then
+    skip "nextpnr-xilinx @ ${NEXTPNR_SHA:0:7} (binary + artix7 database)"
 else
-    # USE_OPENMP=OFF is REQUIRED: Apple clang has no -fopenmp; cmake fails otherwise.
-    cmake -S "$NEXTPNR_DIR" -B "$NEXTPNR_DIR/build" -G Ninja \
-          -DARCH=xilinx -DCMAKE_BUILD_TYPE=Release \
-          -DUSE_OPENMP=OFF -DBUILD_GUI=OFF -DBUILD_PYTHON=OFF -DBUILD_TESTS=OFF
-    ninja -C "$NEXTPNR_DIR/build" -j"$JOBS" nextpnr-xilinx bbasm
-    ok "nextpnr-xilinx + bbasm built"
+    nextpnr_fetch_build
 fi
 
 # ---------------------------------------------------------------- 3. venv
@@ -170,7 +244,16 @@ fi
 # ---------------------------------------------------------------- 4. prjxray
 step 4 "prjxray (fasm2frames + xc7frames2bit, ~2 min)"
 PRJXRAY_DIR="$FPGA_HOME/prjxray"
-clone_pinned "$PRJXRAY_URL" "$PRJXRAY_SHA" "$PRJXRAY_DIR"
+# what the chain runs: xc7frames2bit, utils/fasm2frames.py and the prjxray package (the venv's editable install points
+# at $PRJXRAY_DIR/prjxray). The rest of the checkout and the build tree are pruned at the end of this step.
+prjxray_ready() { [ "$(cat "$PRJXRAY_DIR/.dewfpga-sha" 2>/dev/null)" = "$PRJXRAY_SHA" ] && [ -x "$PRJXRAY_DIR/build/tools/xc7frames2bit" ] && [ -f "$PRJXRAY_DIR/utils/fasm2frames.py" ] && [ -f "$PRJXRAY_DIR/prjxray/__init__.py" ]; }
+if prjxray_ready; then
+    skip "prjxray @ ${PRJXRAY_SHA:0:7} (xc7frames2bit + fasm2frames)"
+else
+    # the six submodules CMakeLists.txt uses (add_subdirectory of the first five, sanitizers-cmake as CMAKE_MODULE_PATH);
+    # fasm, yosys, python-sdf-timing and display_port (100 MB) are never built
+    clone_pinned "$PRJXRAY_URL" "$PRJXRAY_SHA" "$PRJXRAY_DIR" third_party/abseil-cpp third_party/cctz third_party/googletest third_party/gflags third_party/yaml-cpp third_party/sanitizers-cmake
+fi
 if "$VPY" -c "import prjxray" 2>/dev/null; then
     skip "prjxray python package"
 else
@@ -188,6 +271,12 @@ else
     cmake --build "$PRJXRAY_DIR/build" --target xc7frames2bit -j"$JOBS"
     ok "xc7frames2bit built"
 fi
+# the checkout and the build tree go whether this run or an earlier, interrupted one fetched them
+if has_sources "$PRJXRAY_DIR"; then
+    # setup.py + README.md stay (3 KB): a venv rebuilt after a brew Python upgrade re-runs the pip install -e above
+    keep_only "$PRJXRAY_DIR" utils prjxray build/tools/xc7frames2bit setup.py README.md .dewfpga-sha
+    ok "prjxray pruned to xc7frames2bit, utils/ and the python package ($(du -sm "$PRJXRAY_DIR" | cut -f1) MB)"
+fi
 
 # ---------------------------------------------------------------- 5. chipdb
 # nextpnr-xilinx ships no prebuilt chipdb; it is generated per device.
@@ -198,6 +287,13 @@ CHIPDB_BIN="$CHIPDB_DIR/$CHIPDB_NAME.bin"
 if [ -s "$CHIPDB_BIN" ] && [ "$(cat "$CHIPDB_DIR/.sha" 2>/dev/null)" = "$NEXTPNR_SHA" ]; then
     skip "$CHIPDB_BIN"
 else
+    # the exporter needs the nextpnr-xilinx checkout (xilinx/python, constids.inc, the two submodules) and bbasm:
+    # pruned after the last install, so an install whose chipdb went missing fetches and builds them again
+    if ! { [ -x "$NEXTPNR_DIR/build/bbasm" ] && [ -f "$NEXTPNR_DIR/xilinx/python/bbaexport.py" ] && [ -d "$NEXTPNR_DIR/xilinx/external/nextpnr-xilinx-meta/artix7" ]; }; then
+        echo "    the chipdb is generated from the nextpnr-xilinx checkout, which was pruned after the last install: fetching it again"
+        rm -f "$NEXTPNR_DIR/.dewfpga-sha"
+        nextpnr_fetch_build
+    fi
     mkdir -p "$CHIPDB_DIR"
     BBA="$CHIPDB_DIR/$CHIPDB_NAME.bba"
     ( cd "$NEXTPNR_DIR" && "$VPY" xilinx/python/bbaexport.py \
@@ -205,48 +301,76 @@ else
         --metadata xilinx/external/nextpnr-xilinx-meta/artix7 \
         --device "$DEVICE" --constids xilinx/constids.inc --bba "$BBA" )
     "$NEXTPNR_DIR/build/bbasm" -l "$BBA" "$CHIPDB_BIN"
+    echo "    build peak: $(chain_mb) MB under $FPGA_HOME (the .bba, the sources and the build trees all present)"
     rm -f "$BBA"                         # 268 MB intermediate; .bin is all we need
     echo "$NEXTPNR_SHA" > "$CHIPDB_DIR/.sha"
     ok "$CHIPDB_BIN ($(du -h "$CHIPDB_BIN" | cut -f1))"
+fi
+# the checkout and the build tree go whether this run or an earlier, interrupted one fetched them
+if has_sources "$NEXTPNR_DIR"; then
+    # the chipdb is built; what stays is the binary and the artix7 database for the 35t: the parts fasm2frames opens
+    # (mapping/, xc7a50t/tilegrid.json is the 35t's fabric, xc7a35tcpg236-1/, the segbits/ppips .db files) without
+    # the 100t/200t parts, gridinfo and harness (104 MB the Basys3 never reads)
+    keep_only "$NEXTPNR_DIR" build/nextpnr-xilinx xilinx/external/prjxray-db/artix7 .dewfpga-sha
+    rm -rf "$XRAYDB/xc7a100t" "$XRAYDB/xc7a200t" "$XRAYDB/gridinfo" "$XRAYDB/harness"
+    ok "nextpnr-xilinx pruned to the binary and the artix7 database ($(du -sm "$NEXTPNR_DIR" | cut -f1) MB)"
 fi
 
 # ---------------------------------------------------------------- 6. yosys-slang
 # The plugin is compiled against the brew yosys's headers (yosys-config), so it is rebuilt when brew
 # moves yosys: the stamp next to slang.so holds the `yosys -V` line it was built for.
-# A rebuild never removes the slang.so that works today: it compiles into build.new/ and build/ is
-# replaced only once yosys loads the new .so. A build that fails (no disk, no network, a compiler error)
-# leaves the earlier plugin in place, and the next  dewfpga install  resumes in build.new/.
+# A rebuild never removes the slang.so that works today: the sources are fetched into src.new/ and built
+# there, and build/slang.so is replaced only once yosys loads the new .so. A build that fails (no disk, no
+# network, a compiler error) leaves the earlier plugin in place, and the next  dewfpga install  resumes in src.new/.
+# After a build only build/slang.so, its stamp and .dewfpga-sha stay (the checkout is 130 MB, the plugin 8.5 MB).
 step 6 "yosys-slang (SystemVerilog reader plugin, from source, ~3 min)"
 SLANG_DIR="$FPGA_HOME/yosys-slang"
 SLANG_SO="$SLANG_DIR/build/slang.so"
 SLANG_STAMP="$SLANG_DIR/build/.dewfpga-yosys"
-SLANG_NEW="$SLANG_DIR/build.new"
-clone_pinned "$SLANG_URL" "$SLANG_SHA" "$SLANG_DIR"
+SLANG_SRC="$SLANG_DIR/src.new"             # clone_pinned's rm -rf only ever hits this dir, never build/
 YOSYS_ID=$(yosys -V)
 YOSYS_SHORT=$(cut -d' ' -f1-2 <<< "$YOSYS_ID")
 # the one test a built plugin must pass. The help text is grepped: `yosys -p 'help read_slang'` exits 0 with no plugin loaded
 # (grep without -q: with pipefail, -q would close the pipe early and yosys' SIGPIPE would count as a failed load)
 slang_loads() { yosys -m "$1" -p 'help read_slang' 2>&1 | grep '^ *read_slang \[' >/dev/null; }
-if [ -s "$SLANG_SO" ] && [ "$(cat "$SLANG_STAMP" 2>/dev/null)" = "$YOSYS_ID" ]; then
-    skip "slang.so (built for $YOSYS_SHORT)"
-elif [ -s "$SLANG_SO" ] && [ ! -e "$SLANG_STAMP" ] && slang_loads "$SLANG_SO"; then
+slang_pinned() { [ "$(cat "$SLANG_DIR/.dewfpga-sha" 2>/dev/null)" = "$SLANG_SHA" ]; }
+# No .dewfpga-sha at all: the plugin was built by hand (section 3.6 of the manual, whose lines never write that
+# file) or by an installer from before the file existed. A hand checkout is a git clone, so its HEAD says which
+# commit the plugin is from: at the pin it is taken as the pinned plugin; at another commit it is built again.
+slang_unpinned_by_hand() {
+    [ ! -e "$SLANG_DIR/.dewfpga-sha" ] \
+    && { [ ! -d "$SLANG_DIR/.git" ] || [ "$(git -C "$SLANG_DIR" rev-parse HEAD 2>/dev/null)" = "$SLANG_SHA" ]; }
+}
+if [ -s "$SLANG_SO" ] && slang_pinned && [ "$(cat "$SLANG_STAMP" 2>/dev/null)" = "$YOSYS_ID" ]; then
+    skip "slang.so @ ${SLANG_SHA:0:7} (built for $YOSYS_SHORT)"
+elif [ -s "$SLANG_SO" ] && { slang_pinned || slang_unpinned_by_hand; } && [ ! -e "$SLANG_STAMP" ] && slang_loads "$SLANG_SO"; then
     # a slang.so from before the stamp existed, or built by hand (section 3.6 of the manual): it passes the
-    # same load test a fresh build must pass, so it is stamped for this yosys instead of built again
+    # same load test a fresh build must pass, so it is stamped for this yosys and pinned instead of built again
+    # (a hand checkout next to it stays: it is the student's, not the installer's)
     echo "$YOSYS_ID" > "$SLANG_STAMP"
-    ok "slang.so already loads in $YOSYS_SHORT (read_slang); stamped, not rebuilt"
+    echo "$SLANG_SHA" > "$SLANG_DIR/.dewfpga-sha"
+    ok "slang.so already loads in $YOSYS_SHORT (read_slang); stamped @ ${SLANG_SHA:0:7}, not rebuilt"
 else
-    # cmake runs INSIDE the checkout (cmake -B build.new .): slang's cmake asks `git remote get-url origin` in
+    mkdir -p "$SLANG_DIR"
+    if [ -d "$SLANG_DIR/.git" ] && [ "$(git -C "$SLANG_DIR" rev-parse HEAD 2>/dev/null)" != "$SLANG_SHA" ]; then
+        echo "    the checkout at $SLANG_DIR is at $(git -C "$SLANG_DIR" rev-parse --short HEAD 2>/dev/null || echo 'no commit'), not the pinned ${SLANG_SHA:0:7}: the pinned plugin is built in src.new/ and the checkout goes with it"
+    fi
+    clone_pinned "$SLANG_URL" "$SLANG_SHA" "$SLANG_SRC" all
+    # cmake runs INSIDE the checkout (cmake -B build .): slang's cmake asks `git remote get-url origin` in
     # the current directory for the GitHub prefix of its boost download; from any other directory the download
     # is the bare 'MikePopoloski/regex.git' and the configure stops.
     # Not fatal: the five steps above are complete without it; dewfpga check shows the row MISSING and
     # dewfpga install retries only this step (the clone is stamped, the build is not).
-    if ( cd "$SLANG_DIR" && cmake -B build.new . -DCMAKE_BUILD_TYPE=Release -DBUILD_AS_PLUGIN=ON \
+    if ( cd "$SLANG_SRC" && cmake -B build . -DCMAKE_BUILD_TYPE=Release -DBUILD_AS_PLUGIN=ON \
                                   -DYOSYS_CONFIG="$BREW_PREFIX/bin/yosys-config" \
-         && make -C build.new -j"$JOBS" ) \
-       && slang_loads "$SLANG_NEW/slang.so"; then
-        rm -rf "$SLANG_DIR/build" && mv "$SLANG_NEW" "$SLANG_DIR/build"
+         && make -C build -j"$JOBS" ) \
+       && slang_loads "$SLANG_SRC/build/slang.so"; then
+        mkdir -p "$SLANG_DIR/build"
+        mv -f "$SLANG_SRC/build/slang.so" "$SLANG_SO"
         echo "$YOSYS_ID" > "$SLANG_STAMP"
-        ok "slang.so built, loads in $YOSYS_SHORT (read_slang)"
+        echo "$SLANG_SHA" > "$SLANG_DIR/.dewfpga-sha"
+        keep_only "$SLANG_DIR" build/slang.so build/.dewfpga-yosys .dewfpga-sha      # src.new and an older checkout go
+        ok "slang.so built, loads in $YOSYS_SHORT (read_slang); sources removed ($(du -sm "$SLANG_DIR" | cut -f1) MB kept)"
     elif [ -s "$SLANG_SO" ] && slang_loads "$SLANG_SO"; then
         printf '    %s✗%s yosys-slang did not rebuild for %s (the compiler lines above; log: %s). The slang.so built for %s is kept\n      at %s and dewfpga uses it as before; run  dewfpga install  again to retry only this step.\n' \
             "$R" "$N" "$YOSYS_SHORT" "$LOG" "$(cut -d' ' -f1-2 "$SLANG_STAMP" 2>/dev/null || echo 'an earlier yosys')" "$SLANG_SO"
@@ -290,5 +414,5 @@ else
 "$CLI" vscode || echo "    (VS Code setup did not finish: the lines above; the toolchain is complete. Retry:  dewfpga vscode)"
 fi
 echo
-echo "Total: $(( $(date +%s) - T0 )) s. Log: $LOG"
+echo "Total: $(( $(date +%s) - T0 )) s, ${FPGA_HOME/#$HOME/\~}: $(chain_mb) MB. Log: $LOG"
 echo "Next:  dewfpga new blink && cd blink && dewfpga flash"

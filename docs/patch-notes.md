@@ -3890,3 +3890,88 @@ directories and 0 `.py` files, so `dewfpga mcp` reported `mcp-not-installed`; `p
 templates/mcp-requirements.txt` rebuilt it and the check passed alone and in the full run). The mail suites: 9 suites, each exit 0
 (activation SQL 142, SQL 187 with 154 privilege checks, mail flow 60, sender idempotency, lifecycle 112, usage 13, integration 8,
 pages 139, Chromium and WebKit 158; 0 failures). Site check: 112 pages, 2053 links, 0 failures.
+
+### #30 · The install keeps only the chain that runs: about 0.25 GB on disk instead of 1.5 · 7 October
+
+**What a clean install left behind.** The install line said `# ~4 min, 1.4 GB, once`, and a clean install into an
+empty folder measured on 7 October was 1543 MB with 25 `.git` folders in it: nextpnr-xilinx 1086 MB (its full
+prjxray-db submodule holds five FPGA families, 853 MB, the Basys3 reads one), prjxray 217 MB (ten submodules, four
+never built), yosys-slang 101 MB of sources around a 9 MB plugin, and every build tree. The chain that runs, the
+binary, the artix7 database, the chip database, the venv, `fasm2frames`, `xc7frames2bit` and `slang.so`, is 237 MB.
+The installer asked for 4 GB free: `the install needs 1.4 GB plus build scratch, at least 4 GB.`
+
+**Now the install fetches less and removes what it built from.** nextpnr-xilinx comes with the two submodules its
+chip-database exporter reads, prjxray-db as a partial clone of `artix7` alone; prjxray with the six submodules its
+cmake uses; the four it never builds (fasm, yosys, python-sdf-timing, display_port, 100 MB) are not fetched. After
+each build the sources and the build tree go, and the installer says what stays:
+`✓ prjxray pruned to xc7frames2bit, utils/ and the python package (2 MB)`,
+`✓ nextpnr-xilinx pruned to the binary and the artix7 database (86 MB)`,
+`✓ slang.so built, loads in Yosys 0.69+post (read_slang); sources removed (9 MB kept)`.
+Every step header carries the size so far (`[6] yosys-slang (SystemVerilog reader plugin, from source, ~3 min)
+(+218s, 246 MB)`), the last line is `Total: 415 s, ~/fpga: 255 MB.`, and the free-space check now asks for 2 GB:
+`the build peaks at about 850 MB (the install that stays is ~237 MB), so at least 2 GB are needed.` (the peak
+printed by the three clean installs of 7 October: 811, 833 and 834 MB, at the chip database step, when the sources,
+the build trees and the 268 MB `.bba` are all there at once).
+A second run skips every step by its stamp and the files it left, no git involved:
+`↷ nextpnr-xilinx @ 3fd7878 (binary + artix7 database) (already there, skipped)`, `↷ prjxray @ c9f02d8 (xc7frames2bit
++ fasm2frames) (already there, skipped)`, `↷ slang.so @ 9676786 (built for Yosys 0.69+post) (already there,
+skipped)`, `Total: 3 s`. A chip database that went missing with the sources already pruned fetches and builds
+nextpnr-xilinx again, and prunes it again. An install interrupted during a build (Ctrl-C, sleep, a compiler error)
+is resumed by the next run with the checkout still there, and that run prunes it like a first run would (found by
+the independent review: the first version only pruned what the same run had fetched, so an interrupted install kept
+637 MB and three `.git` for good). A `slang.so` built by hand with the manual's lines, which never write the
+installer's commit stamp, is load-tested, stamped and pinned instead of being cloned and compiled again (130 MB,
+3 minutes); a hand checkout at another commit is named (`the checkout at ~/fpga/yosys-slang is at <commit>, not the
+pinned 9676786`) and the pinned plugin is built next to it. A Yosys upgrade still rebuilds the plugin in a side
+folder and replaces `slang.so` only once Yosys loads the new one.
+The manual's new section 3.7 lists what a by-hand chain can delete to land at the same size. The pages say the
+measured number (`about 0.3 GB on disk`, `237 MB measured on 7 October`), and that an install made before 7 October
+keeps its 1.5 GB until `dewfpga uninstall && dewfpga install`.
+
+**Numbers.** Clean install into an empty folder: 1543 MB → 237 MB in the closing run's second full run (the suite's
+`du` right after the install, log included; the first full run's `du` said 253 MB, and the integrator's install of
+the same morning measures 237 MB), `.git` folders 25 → 0,
+415 s for the install, 3 s for the second run. The Homebrew side, which the pages' number never included, measured
+on this Mac: the eight packages the installer asks for are 237 MB (python@3.14 87, cmake 71, yosys 50, eigen 11,
+openFPGALoader 10, Icarus Verilog 7, ninja and pkg-config under 1), and the 16 packages they pull in another
+562 MB (boost 377, icu4c 84, tcl-tk 43, openssl 39). So a student's Mac gets about 0.25 GB in `~/fpga` and about
+0.8 GB under Homebrew, plus the 51 MB agent SDK if they ask for it. The compiler did not change: the probe table of
+the closing run is byte-identical to #28-#29's (synthesis 108/133, all four stages 95/133, Vivado-supported probes
+passing all four stages 86/111, known gaps 25), and the fresh chain's blink `.fasm` equals the golden one.
+
+**Tests.** Four new checks in the `FULL=1` section (listed checks 343 → 347): the clean install is under 1 GB (its
+MB printed under the PASS line), it leaves no `.git` at any depth, a second run skips every step in under 10 s
+with no ` built` line, and `uninstall` removes the fresh folder whole. The size checks were run by the update's builder against the
+installer from before this update and fail there (1543 MB, 25 clones); against the new one they pass. The suite
+now also puts the tree's `.fpga_home` back after the clean install, which the install's step 7 overwrites.
+`shellcheck -S style` and `bash -n` on the new `install.sh` are clean. Not exercised end to end: the rebuild after a
+Yosys upgrade (same code path as the clean build, with the pruning after it) and a venv rebuilt after a Homebrew
+Python upgrade (prjxray keeps `setup.py` and `README.md` for that `pip install -e`).
+
+**Closing run (7 October, board unplugged).** The first run: `passed 319, failed 1, known gaps 25`, and the one
+FAIL was not the product: `no personal paths` found `templates/__pycache__/mcp_setup.cpython-314.pyc`, left at
+04:41 by a run of the MCP test without `-B` (its rollback test imports `mcp_setup.py`), carrying this Mac's home
+path, the same class of leftover #7's closing run hit. The test now sets `sys.dont_write_bytecode` like its two
+sibling suites, so a run without `-B` leaves nothing. The second run: `passed 320, failed 0, known gaps 25`, one PASS more than the first (the fixed check), its probe
+table byte-identical to the first run's and to #28-#29's. The clean install took 415 s in the first run (peak 811 MB)
+and printed a peak of 810 MB in the second; its second run took 3 s both times, and `find -name .git` over the live
+fresh folder the moment its last build ended found nothing (89 MB chipdb, 86 nextpnr-xilinx, 52 venv, 9 yosys-slang,
+2 prjxray, 1 install.log: 237 MB). The clean install's `du` is
+the number above. The board check: `SKIP flash on the board: no board` (no FTDI device on the USB bus during either
+run). Mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187, mail flow 60, sender idempotency, lifecycle
+112, usage 13, integration 8, pages 139, Chromium and WebKit 158; 0 failures). Site check: 112 pages, 2055 links, 0 failures.
+
+**Open.**
+- An install from before 7 October keeps its clones (1.5 GB); the installer leaves it as it is, and the pages say
+  the two commands that get the small one.
+- The 51 MB for the optional agent SDK is the figure from before this update, not re-measured today (no `mcp-venv`
+  on this Mac's `~/fpga`).
+- The `.bit` of two installs differs by 2 bytes, the timestamp in its header; the frames are identical.
+- On the skip path the installer trusts the stamps and does not load `slang.so` into Yosys again (`dewfpga check`
+  does, every time it runs); a new pinned commit or a new `yosys -V` line still rebuilds.
+- The rebuild's sources go to `~/fpga/yosys-slang/src.new`, inside the folder `uninstall` removes, so a rebuild
+  that failed leaves nothing `uninstall` would miss.
+- Every `install.sh` run links Homebrew's `bin/dewfpga` to the CLI that ran it and writes that tree's `.fpga_home`;
+  the suite restores `.fpga_home`, the link is restored by hand after a run from a checkout.
+- The three pruned checkouts' `.git` sat at depth 2, 4 and 4; the no-clone check looked two levels deep when the
+  review read it and now looks at every depth (verified with `find` on both installs of 7 October: 0 and 25).
