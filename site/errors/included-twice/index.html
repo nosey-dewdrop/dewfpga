@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line (&#x27;syntax error&#x27;, &#x27;I give up&#x27;). Fix: delete the `include &quot;pkg.sv&quot; line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first. (fix, macOS)</title>
+<meta name="description" content="The testbench `includes a file the simulation reads with the design already (a package file of the folder, or one the design `includes), so the package is declared twice and iverilog stops. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line (&#x27;syntax error&#x27;, &#x27;I give up&#x27;). Fix: delete the `include &quot;pkg.sv&quot; line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first. (fix, macOS)">
+<meta property="og:description" content="The testbench `includes a file the simulation reads with the design already (a package file of the folder, or one the design `includes), so the package is declared twice and iverilog stops. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the `include \"pkg.sv\" line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-07","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">sim</span>dewfpga sim, the source scan before iverilog runs</p>
+  <h1 class="mono">tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line (&#x27;syntax error&#x27;, &#x27;I give up&#x27;). Fix: delete the `include &quot;pkg.sv&quot; line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first.</h1>
+<pre><code>tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line (&#39;syntax error&#39;, &#39;I give up&#39;). Fix: delete the `include &quot;pkg.sv&quot; line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first. https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>iverilog reads the files in one stream: the design's files first (every .sv and .v of the folder, a package file before the files that use it), then the testbench. A package file the testbench <code>includes is read a second time there, and a package declared twice is a syntax error to iverilog (measured: </code>./pkg.sv:1: syntax error<code>, </code>I give up.<code>). The same happens when the design </code>includes pkg.sv and the testbench <code>includes it too. The build never reads the testbench, so what it </code>includes does not change which files the build is given.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Delete the <code>include line from the testbench. The package is already in the simulation through the design, read before the testbench, so </code>cfg_pkg::MAGIC<code> in the testbench resolves without it. A header of macros (</code>defs.svh<code>with only</code>define lines) may stay included in both: it declares nothing twice, and this check names only a file the design's list holds, or a package file the design `includes.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

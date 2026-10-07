@@ -55,7 +55,7 @@
 dewfpga bit      <span class="c"># .sv -> .bit   (4.6 s)</span>
 dewfpga flash    <span class="c"># program the board: the LED blinks</span></code></pre>
   <p>For an existing lab, keep the design's <code>.sv</code>/<code>.v</code> files and pin file in one folder and run the commands there. Submodules can live in separate files. The top comes from the module hierarchy; a uniquely matching <code>.xdc</code> can select among candidates, and the CLI prints that choice. Otherwise it stops and asks you to name the module: <code>dewfpga flash &lt;top&gt;</code>. File names alone never silently choose the top.</p>
-  <p>A testbench is a module without ports that instantiates the design. A <code>$finish</code> or <code>$stop</code> in a design module is reported as an error, not used to reclassify it as a testbench. Files containing only packages, interfaces or typedefs are still a CLI limitation; see <a href="/dewfpga/docs/#8-what-can-it-not-do">the guide's limits</a>. The course's seven-segment source can be repaired automatically; a Vivado-generated simulation netlist is rejected with an explanation.</p>
+  <p>A testbench is a module without ports that instantiates the design. A <code>$finish</code> or <code>$stop</code> in a design module is reported as an error, not used to reclassify it as a testbench. Files containing only packages, interfaces or typedefs are read too, each after the files that declare a name it uses: a package before its users, a typedef file before the interface that uses the type (a file another one <code>`include</code>s is read through the include, not twice). The course's seven-segment source can be repaired automatically; a Vivado-generated simulation netlist is rejected with an explanation.</p>
 
   <p>Already using Vivado? Run inside the folder containing your <code>.xpr</code> or its <code>.srcs</code> subfolders. The active project sets and top are used; output files land at the project root. <code>dewfpga tops</code> lists candidates without writing files. For editor tasks and the top chooser, run <code>dewfpga vscode</code>; see <a href="/dewfpga/docs/#6-how-do-you-set-up-vs-code">VS Code setup</a>.</p>
 
@@ -95,7 +95,7 @@ dewfpga --version</code></pre>
     <dt><code>bit</code></dt><dd>4.6 s, peak 552 MB RAM</dd>
     <dt>chipdb generation</dt><dd>peak 859 MB RAM</dd>
     <dt>output</dt><dd>byte-identical <code>.frames</code> to the hand-built chain that lit the LED</dd>
-    <dt>tests</dt><dd>351 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 137 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
+    <dt>tests</dt><dd>357 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 143 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
   </dl>
 
   <h2>Scope</h2>

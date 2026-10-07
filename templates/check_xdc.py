@@ -102,15 +102,62 @@ def fix_source(files):
                 print(msg("note", code, f"{what}:  {b.strip()}   (the standard and Yosys need it; Vivado accepts both)", loc=f"{f}:{i}"))
     return 0
 
-def _blank(src):
+def _blank(src, strings=True):
     """Comments and the text of string literals blanked out (the quotes stay), every newline kept, so offsets
     and line numbers still map to the file: a `;` in a comment is not a statement's end, and a module name
-    inside a $display string is not an instance."""
+    inside a $display string is not an instance. strings=False keeps the strings (an `include "pkg.sv" line
+    is read by its string), and still blanks a comment that holds a quote."""
     def blank(m):
         t = m.group(0)
-        if t[0] == '"': return '"' + re.sub(r"[^\n]", " ", t[1:-1]) + '"'
+        if t[0] == '"': return t if not strings else '"' + re.sub(r"[^\n]", " ", t[1:-1]) + '"'
         return re.sub(r"[^\n]", " ", t)
     return re.sub(r'"(?:[^"\\\n]|\\.)*"|/\*.*?\*/|//[^\n]*', blank, src, flags=re.S)
+
+def _loose_files(cands, raws, tb_files=()):
+    """The files the tools are handed besides the ones that hold a module, in the order they are read: a .sv/.v
+    the CLI collected that holds no module (a package, an interface, or typedefs at file scope, alone in their
+    file: Vivado lists such files among a project's sources, UG901 Ch.10 'Compilation Units' and 'Packages'),
+    unless a design source `includes it (by its base name or its path; then it is read through the `include, and
+    handing it too declares the package twice: iverilog stops with a syntax error at its first line). What a
+    testbench `includes (tb_files: the files that hold only testbenches, and a project's simulation set) does
+    not take a file out of the design's list: the build never reads the testbench, so the package would be
+    missing there (probe 23c with the `include moved into tb.sv); the simulation, which reads both, refuses
+    the second copy with the line to delete (Makefile, included-twice). Each file comes after the files that
+    declare a name it uses: a package before any file that names it (`import x::` or `x::`), a typedef file
+    before the interface that uses the type (iverilog and yosys-slang read the files in the order given, so
+    types.sv must come before iface.sv when iface.sv writes nib_t; Vivado reads the files of one library as
+    one unit, UG901 Ch.10 Compilation Units, and does not say in which order). What a file declares: its
+    packages, its typedefs at file scope (with the members of a typedef enum), its interfaces. Among the files
+    that are ready, a package file comes first, then the order given (a cycle, two files naming each other,
+    falls back to that order). The module files follow (scan())."""
+    inc = set()
+    for f, raw in raws.items():
+        if f in tb_files: continue
+        for m in re.finditer(r'^[ \t]*`include\s+"([^"\n]+)"', _blank(raw, strings=False), re.M):
+            inc.add(os.path.normpath(m.group(1))); inc.add(os.path.basename(m.group(1)))
+    cands = [f for f in cands if os.path.normpath(f) not in inc and os.path.basename(f) not in inc]
+    decl, refs, is_pkg = {}, {}, {}
+    for f in cands:
+        src = _blank(raws[f])
+        pkgs = set(re.findall(r"^[ \t]*package\s+([A-Za-z_]\w*)", src, re.M))
+        names = pkgs | set(re.findall(r"^[ \t]*interface\s+([A-Za-z_]\w*)", src, re.M))
+        for a, b, n in _typedefs(src):
+            names.add(n)
+            t = src[a:b]
+            if re.match(r"typedef\s+enum\b", t) and "{" in t and "}" in t:
+                names |= set(re.findall(r"(?:^|[{,])\s*([A-Za-z_]\w*)", t[t.index("{"):t.rindex("}")]))
+        decl[f], is_pkg[f] = names, bool(pkgs)
+        refs[f] = set(re.findall(r"\b[A-Za-z_]\w*", src)) - names
+    by_name = {}
+    for f in cands:
+        for n in decl[f]: by_name.setdefault(n, f)
+    deps = {f: {by_name[n] for n in refs[f] if n in by_name and by_name[n] != f} for f in cands}
+    out, left = [], list(cands)
+    while left:
+        ready = [f for f in left if not deps[f] - set(out)] or left[:1]
+        pick = min(ready, key=lambda f: (not is_pkg[f], cands.index(f)))
+        out.append(pick); left.remove(pick)
+    return out
 
 def _synth_view(src):
     """The text as the synthesis preprocessor hands it on: yosys' read_verilog defines SYNTHESIS, as Vivado does
@@ -427,14 +474,18 @@ def _parse(files, sim=()):
     mods = {}                       # name -> dict(file, tb, body, line)
     order = []
     problems = []
+    raws = {}                       # file -> its text; the files that hold no module are read too (_loose_files)
+    holds_module = set()
     for f in files:
         try: raw = open(f, encoding="utf-8", errors="replace").read()
         except OSError: continue
+        raws[f] = raw
         src = _blank(raw)               # comments and string texts blanked, same offsets
         typedefs = [n for _, _, n in _typedefs(src)]
         synth = _synth_view(src)        # same length as src: a module's span is the same in both
-        for m in re.finditer(r"\bmodule\s+([A-Za-z_]\w*)(.*?)\bendmodule\b", src, re.S):
+        for m in _MODULE.finditer(src):
             name, body = m.group(1), m.group(2)
+            holds_module.add(f)
             line = src.count("\n", 0, m.start()) + 1
             if name in mods:            # a backup next to the file (lab4_old.sv): the last one read would win silently
                 d = mods[name]
@@ -483,7 +534,11 @@ def _parse(files, sim=()):
                     line = d["line"] + d["body"].count("\n", 0, m.start())
                     problems.append(msg("ERROR", "unnamed-instance", f"`{other}(` is an instance without a name: Vivado lets that pass; the standard and Yosys do not.",
                                         f"write  {other} u_{other}(", loc=f"{d['file']}:{line}"))
-    return mods, order, inst, problems
+    # a file that holds only testbenches (tb.sv), or sits in the project's simulation set: what it `includes is
+    # the simulation's business, not the build's
+    tb_files = sim | {f for f in holds_module if all(d["tb"] for d in mods.values() if d["file"] == f)}
+    loose = _loose_files([f for f in files if f in raws and f not in holds_module], raws, tb_files)
+    return mods, order, inst, problems, loose
 
 def _roots(mods, order, inst):
     design = [n for n in order if not mods[n]["tb"]]
@@ -494,7 +549,7 @@ def list_tops(files, project_top=None):
     """`dewfpga tops`: one candidate per line, `<module>\t<file>`: the design modules nothing instantiates
     (testbenches excluded), the Vivado project's top first when it is one of them. No lines when there is none;
     the problems scan() would stop on are not this command's business, so nothing is printed about them."""
-    mods, order, inst, _ = _parse(files)
+    mods, order, inst, _, _ = _parse(files)
     _, roots = _roots(mods, order, inst)
     if project_top in roots: roots = [project_top] + [n for n in roots if n != project_top]
     for n in roots: print(f"{n}\t{mods[n]['file']}")
@@ -506,8 +561,11 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
     when it calls $finish (that is a PROBLEM: Vivado ignores $finish, UG901 Table 21, and yosys stops on it).
     The top is the design module that no other design module instantiates. File names are free: lab5.sv may
     hold `module top_design`. When two modules could be the top and nothing names one, the scanner stops and
-    names both, unless exactly one is named like a .xdc in the folder: then WHY= says so, and the CLI prints it."""
-    mods, order, inst, problems = _parse(files, sim)
+    names both, unless exactly one is named like a .xdc in the folder: then WHY= says so, and the CLI prints it.
+    DESIGN= lists the files the tools read, in order: the files that hold no module first (a package file before
+    the files that name it, then the interfaces and typedef files; one that a source `includes is left to the
+    `include: _loose_files), then the files that hold a design module, in the order the CLI gave them."""
+    mods, order, inst, problems, loose = _parse(files, sim)
     for pr in problems: print("PROBLEM=" + pr)
     if problems: return 1
     design, roots = _roots(mods, order, inst)
@@ -549,7 +607,7 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
     print("TOP=" + top)
     print("WHY=" + why)
     print("TOPFILE=" + mods[top]["file"])
-    print("DESIGN=" + " ".join(dict.fromkeys(mods[n]["file"] for n in design)))
+    print("DESIGN=" + " ".join(dict.fromkeys(loose + [mods[n]["file"] for n in design])))
     print("TB=" + (mods[tb_for[0]]["file"] if tb_for else ""))
     print("AUTO=" + ("1" if not want else "0"))
     return 0

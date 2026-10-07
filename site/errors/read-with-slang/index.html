@@ -35,6 +35,7 @@
 <pre><code>note [read-with-slang]: top read with yosys-slang, the second reader (yosys&#39; own reader refused this code; the build is the same from here). https://nosey-dewdrop.github.io/dewfpga/errors/read-with-slang/</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>Interfaces, unpacked arrays, <code>foreach</code>, <code>break</code>, hierarchical names, string parameters: SystemVerilog Vivado accepts and yosys' own reader does not. The second reader takes over, and the netlist is checked the same way.</p>
+<p>Both readers read every file of the design as one compilation unit (yosys-slang with <code>--single-unit</code>, since 7 October 2026), the way Vivado reads the files of one library (UG901 Ch.10, Compilation Units): a typedef at file scope in <code>types.sv</code> is visible in <code>iface.sv</code> and <code>design.sv</code>, as it is in <code>dewfpga sim</code> (iverilog). Before that, yosys-slang read each file as its own unit and stopped with <code>use of undeclared identifier 'nib_t'</code> on a name another file declares.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Nothing. The note says which reader built the design, in case a later message names a construct.</p>
 </main>

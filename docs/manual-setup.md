@@ -201,11 +201,17 @@ goes through them in order.
 
 The rules `dewfpga` follows in a folder:
 
-- Every `.sv` and `.v` in the folder that holds a module is synthesized, so submodules can live
-  in their own files, and a file can be named anything: `lab5.sv` may hold `module top_design`.
-  A file that holds no module (a package, an interface, or typedefs at file scope, alone in
-  their file) is left out, for now. A testbench has no ports and instantiates the design.
-  `$finish` or `$stop` in a design module is an error; keep them in the testbench.
+- Every `.sv` and `.v` in the folder is handed to the tools, so submodules can live in their
+  own files, and a file can be named anything: `lab5.sv` may hold `module top_design`. A file
+  that holds no module (a package, an interface, or typedefs at file scope, alone in their
+  file) is read before the files that hold a module, each after the files that declare a name
+  it uses (a package before the files that name it, a typedef file before the interface that
+  uses the type; alphabetical order would hand `iface.sv` before `types.sv` and iverilog would
+  stop at the first `nib_t`), and the files are one compilation unit for both readers, as Vivado reads the files of one
+  library (UG901 Ch.10, Compilation Units). A file that another file `includes is read through
+  the `include only (handing it too would declare the package twice). A testbench has no ports
+  and instantiates the design. `$finish` or `$stop` in a design module is an error; keep them
+  in the testbench.
 - In a flat folder, hierarchy and a unique matching `.xdc` select the top. If several
   modules qualify, name one: `dewfpga bit lab4` (module or source filename). A module's
   own filename alone does not select it. `dewfpga tops` lists candidates without changing files.

@@ -32,7 +32,9 @@ bırakmadan top adaylarını listeler. Adını ayrıca vermediğinde projenin se
 kullanılır: `dewfpga bit <top>`. Düz klasörde hiyerarşi ve tek eşleşen `.xdc` seçim yapar;
 belirsiz durumda top adını vermen gerekir. Dosya adı tek başına seçim nedeni değildir.
 Testbench, portu olmayan ve tasarımı instantiate eden modüldür; tasarım modülündeki
-`$finish`/`$stop` hatadır. Yalnız package/interface/typedef içeren dosyalar hâlâ CLI sınırıdır.
+`$finish`/`$stop` hatadır. Yalnız package/interface/typedef içeren dosyalar da okunur, her biri
+kullandığı adı bildiren dosyalardan sonra: package kullanıcılarından önce, typedef dosyası o tipi
+kullanan interface'ten önce (başka bir dosyanın `include ettiği dosya o `include üzerinden okunur, iki kez değil).
 Örnek: `dewfpga new blink`.
 
 ## Kurulum
@@ -130,9 +132,9 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (351 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
+`test/run.sh` (357 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
 determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
-bozuk kopyada probe koşturucu ve `test/sv`'deki 137 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
+bozuk kopyada probe koşturucu ve `test/sv`'deki 143 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
 da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün
 adını basar; `ONLY=regex test/run.sh` adı eşleşenleri koşar. `FULL=1 test/run.sh` geçici bir klasöre temiz kurulumu da
 ekler. CI her push'ta temiz bir `macos-15` (Apple Silicon) GitHub makinesinde temiz kurulumu,

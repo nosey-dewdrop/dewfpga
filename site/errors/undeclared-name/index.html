@@ -36,9 +36,12 @@
 yosys-slang: design.sv:4:21: error: use of undeclared identifier &#39;summ&#39;; did you mean &#39;sum&#39;?</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
 <p>Verilog's implicit nets: an undeclared name on a port connection or the right of an assign becomes a 1-bit wire. yosys warns and goes on; the CLI turns the warning into a stop when nothing drives that wire. yosys-slang, the second reader, often suggests the intended name.</p>
+<p>A second cause: the name is a typedef at file scope (outside any module or package) in a file the readers have not read when they reach the use. Both readers read every <code>.sv</code> and <code>.v</code> of the folder as one compilation unit, the files that hold no module (a package, an interface, typedefs alone in their file) first, then the files that hold a module, as Vivado reads the files of one library (UG901 Ch.10, Compilation Units). A <code>.svh</code> or <code>.vh</code> reaches them only through an <code>`include</code>. The message then names the file that declares the typedef and whether it is read too late or not at all:</p>
+<pre><code>iface.sv:2: ERROR [undeclared-name]: nib_t is a typedef declared in types.svh at file scope (outside any module or package), and no file `includes types.svh, so the readers never see it (a .svh or .vh reaches them only through an `include); Vivado reads the files of one library as one compilation unit, in the order they are added (UG901 Ch.10 Compilation Units), and so do both readers here. Fix: add   `include &quot;types.svh&quot;   as the first line of iface.sv; or put the typedef in a package (package types_pkg; typedef ...; endpackage) and write  import types_pkg::*;  where it is used. https://nosey-dewdrop.github.io/dewfpga/errors/undeclared-name/</code></pre>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Fix the spelling, or declare the signal:</p>
 <pre data-copy="1"><code>assign led[3:0] = sum;</code></pre>
+<p>For a typedef in another file: <code>`include</code> that file as the first line of the file that uses the type, or put the typedef in a package and <code>import</code> it where it is used. A typedef in its own <code>types.sv</code> next to the design needs neither: that file is read first.</p>
 </main>
 
 <footer class="wrap">

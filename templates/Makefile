@@ -133,10 +133,19 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	@[ -n "$(TB)" ] || { echo "ERROR [no-testbench]: $(TOP)_tb.sv not found: the simulation needs a testbench next to the design. Fix: write $(TOP)_tb.sv (a module that instantiates $(TOP), drives its inputs, checks its outputs with \$$error and ends with \$$finish); 'dewfpga new blink' gives an example (blink/blink_tb.sv). $(URL)no-testbench/" >&2; exit 1; }
 	@awk '$(PKG_AWK)' $(SRCS) $(TB) $(SIM_DEPS)
 	@awk '$(TYPEDEF_AWK)' $(TYPEDEF_FILES)
+	@for i in $(call includes,$(TB)); do b=$${i##*/}; how=""; \
+	  for s in $(SRCS); do [ "$${s##*/}" != "$$b" ] || how="dewfpga hands every .sv and .v of the folder to the simulator, a package file first: $(SRCS)"; done; \
+	  [ -n "$$how" ] || for j in $(call includes,$(SRCS)); do [ "$${j##*/}" != "$$b" ] || how="the design \`includes it"; done; \
+	  [ -n "$$how" ] || continue; f=""; for d in $(INCDIRS); do [ -n "$$f" ] || [ ! -f "$$d/$$i" ] || f="$$d/$$i"; done; [ -n "$$f" ] || f=$$i; \
+	  pk=$$(grep -m1 -oE '^[[:space:]]*package[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$$f" 2>/dev/null | awk '{print $$2}'); case "$$how" in the\ design*) [ -n "$$pk" ] || continue ;; esac; \
+	  at=$$(grep -nE "^[[:space:]]*\`include[[:space:]]+\"$$i\"" $(TB) | head -1 | cut -d: -f1); wh="its declarations reach"; [ -z "$$pk" ] || wh="$$pk reaches"; \
+	  echo "$(TB)$${at:+:$$at}: ERROR [included-twice]: $(TB) \`includes $$i, and the simulator reads $$b with the design already ($$how): read a second time, $${pk:+package $$pk is declared twice and }iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the \`include \"$$i\" line from $(TB); $$wh the testbench through the design, which iverilog reads first. $(URL)included-twice/" >&2; exit 1; done
 	@$(call MKKW,$(SRCS) $(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; rm -rf "$$KW"; \
-	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); rm -f $(TOP)_sim.err; \
+	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); ipw=""; [ $$rc -ne 0 ] || ipw=$$(awk '$(IPW_SIM_AWK)' $(TOP)_sim.err); rm -f $(TOP)_sim.err; \
 	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
-	  [ $$rc -ne 0 ] || exit 0; indesign=0; [ -z "$$at" ] || case " $(SRCS) " in *" $${at%:*} "*) indesign=1 ;; esac; \
+	  if [ $$rc -eq 0 ]; then [ -n "$$ipw" ] || exit 0; rm -f $@; [ -s $(TOP).il ] || rm -f $(TOP).json; \
+	    $(MAKE) -s -f $(firstword $(MAKEFILE_LIST)) $(TOP).json 2>&1 | sed -E '/^make(\[[0-9]+\])?: \*\*\* \[[^]]*\] Error [0-9]+$$/d' > $(TOP)_sim.bld; \
+	    if grep -q '\[implicit-port-width\]' $(TOP)_sim.bld; then cat $(TOP)_sim.bld >&2; else echo "$$ipw" >&2; fi; rm -f $(TOP)_sim.bld; exit 1; fi; indesign=0; [ -z "$$at" ] || case " $(SRCS) " in *" $${at%:*} "*) indesign=1 ;; esac; \
 	  { [ $$indesign = 1 ] && command -v yosys >/dev/null && [ -x "$(PY)" ]; } || refused; \
 	  if cat $(TB) | tr '\n' ' ' | grep -qE '(^|[^A-Za-z0-9_$$])$(TOP)[[:space:]]*#[[:space:]]*\('; then \
 	    pl=$$(grep -nE '(^|[^A-Za-z0-9_$$])$(TOP)[[:space:]]*(#|$$)' $(TB) /dev/null | grep -vE '^[^:]+:[0-9]+:[[:space:]]*(module|//)' | head -1 | cut -d: -f1,2); \
@@ -196,18 +205,65 @@ synth: $(TOP).json
 # with parameters but is not parametric': that is the empty-module error with the module's line, and the second
 # reader is not tried for it (yosys-slang drops the empty module and builds the design with its outputs x).
 # The sensitivity list of a dual-edge block may span lines, so srcline() joins up to six lines from the block's.
+# [implicit-port-width] An implicit connection (.* or .name) whose port and signal widths differ: the LRM allows no
+# conversion there (IEEE 1800-2017 23.3.2.3, 23.3.2.4), and the three tools disagree: iverilog pads or cuts with a
+# warning and the simulation runs; yosys' own reader stops on .* ('ERROR: Width mismatch between wire (4 bits) and
+# port (8 bits) for implicit port connection `sub_out' of cell top.u ($paramod\sub\N=...)', no file:line) and
+# builds .name with 'Warning: Resizing cell port top.u.sub_in from 4 bits to 8 bits.'; yosys-slang refuses both
+# ('implicit named port 'sub_in' of type 'logic[7:0]' connects to value of inequivalent type 'logic[3:0]''). So
+# the product has one verdict of its own, the same at sim and at bit, with the student's line, the port, the two
+# widths and the fix, and the second reader is not tried for it. The cell path (top.u) gives the parent module and
+# the instance (the cell path's first component is the module, its last the instance: a generate scope between
+# them, top.gen[0].u, is skipped); ipwline() finds the instance line in the sources (comments cut: the line with
+# the instance name followed by ( inside the parent module, where the text from that line to the closing ; holds
+# .* or .<port>, so a .* or .name written on a line of its own is found too, and instspan() reads that same text
+# for the kind); a named connection .port(signal) there is
+# legal (both readers resize it, as iverilog does), so the Resizing warning passes through for it. One message per
+# instance line (yosys names one port; iverilog and slang name every port, the first is kept). The parameter in the
+# message is the instance line's own #(.N(8)) when it has that one simple form. dewfpga sim finds the same case in
+# iverilog's warnings ('Port 1 (sub_in) of module sub expects 8 bit(s), given 4.') and, since the build's verdict
+# is the one to print, runs the build and prints its line; its own line (from iverilog's numbers) is the fallback.
+# nocom() and srcline() are shared with YOSYS_AWK: a source line is read with // and /* */ comments blanked.
+IPW_AWK = function nocom(s, blk,  out, i, n, ch, q, p) { out=""; q=0; n=length(s); for (i=1; i<=n; i++) { ch=substr(s,i,1); if (q) { out=out ch; if (ch=="\\" && i<n) { i++; out=out substr(s,i,1) } else if (ch=="\042") q=0; continue } \
+	           if (ch=="\042") { q=1; out=out ch; continue } if (ch=="/" && substr(s,i+1,1)=="/") { if (!blk) break } else if (ch=="/" && substr(s,i+1,1)=="*") { p=index(substr(s,i+2), "*/"); if (p==0) break; i=i+2+p; out=out " "; continue } out=out ch } return out } \
+	         function srcline(at, k,  f, n, cmd, l, s) { f=at; sub(/:[0-9]+$$/,"",f); n=at; sub(/.*:/,"",n); l=""; if (k == "") k=1; if (n ~ /^[0-9]+$$/) { cmd="sed -n " n "," n+k-1 "p " f " 2>/dev/null"; while ((cmd | getline s) > 0) l = l (l==""?"":" ") nocom(s, 0); close(cmd) } return nocom(l, 1) } \
+	         function instspan(at,  f, n, cmd, l, s, t) { f=at; sub(/:[0-9]+$$/,"",f); n=at; sub(/.*:/,"",n); l=""; if (n ~ /^[0-9]+$$/) { cmd="sed -n " n "," n+39 "p " f " 2>/dev/null"; while ((cmd | getline s) > 0) { t=nocom(s, 0); l = l (l==""?"":" ") t; if (t ~ /;/) break } close(cmd) } return nocom(l, 1) } \
+	         function ipwpar(c,  t) { t=c; sub(/\..*$$/,"",t); sub(/^\$$paramod\\?/,"",t); sub(/^\\/,"",t); sub(/\\.*/,"",t); return t } \
+	         function ipwline(par, inst, port,  cmd, l) { l=""; sub(/.*\./,"",inst); sub(/\[.*/,"",inst); \
+	           cmd="awk \047FNR==1{m=0; c=0} {s=$$0; sub(/\\/\\/.*/,\"\",s)} s ~ \"^[[:space:]]*module[[:space:]]+" par "([^A-Za-z0-9_]|$$)\" {m=1} m && !c && s ~ \"(^|[^A-Za-z0-9_])" inst "[[:space:]]*(\\\\[[^]]*\\\\][[:space:]]*)?\\\\(\" {c=1; st=FNR; b=\"\"} c {b=b \" \" s; if (b ~ /\\.\\*/ || b ~ \"\\\\." port "([^A-Za-z0-9_]|$$)\") {print FILENAME \":\" st; exit} if (s ~ /;/) c=0} s ~ /^[[:space:]]*endmodule/ {m=0}\047 $(SRCS)"; \
+	           cmd | getline l; close(cmd); return l } \
+	         function ipwkind(s, port) { if (s ~ ("\\." port "[[:space:]]*\\(")) return "named"; if (s ~ ("\\." port "([^A-Za-z0-9_(]|$$)")) return "." port; if (s ~ /\.\*/) return ".*"; return "" } \
+	         function ipwmod(s,  t) { t=s; sub(/^[[:space:]]+/,"",t); if (match(t, /^[A-Za-z_][A-Za-z0-9_]*/)) return substr(t,RSTART,RLENGTH); return "?" } \
+	         function ipwmodat(at, inst,  s, f, n, st, p, i) { s=srcline(at); if (s ~ /^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(\#|[A-Za-z_])/ && s !~ ("^[[:space:]]*" inst "[^A-Za-z0-9_]")) return ipwmod(s); \
+	           f=at; sub(/:[0-9]+$$/,"",f); n=at; sub(/.*:/,"",n); n=n+0; if (n <= 1) return "?"; st=(n > 8 ? n-8 : 1); p=srcline(f ":" st, n-st); while ((i=index(p, ";")) > 0) p=substr(p, i+1); return ipwmod(p) } \
+	         function ipwinst(s,  t) { if (match(s, /[A-Za-z_][A-Za-z0-9_]*[[:space:]]*(\[[^]]*\][[:space:]]*)?\([[:space:]]*\./)) { t=substr(s,RSTART,RLENGTH); sub(/[^A-Za-z0-9_].*/,"",t); return t } return "an instance" } \
+	         function ipwtext(mod,  cmd, l, s) { l=""; cmd="awk \047FNR==1{m=0} {s=$$0; sub(/\\/\\/.*/,\"\",s)} s ~ \"^[[:space:]]*module[[:space:]]+" mod "([^A-Za-z0-9_]|$$)\" {m=1} m {printf \"%s \", s} m && s ~ /^[[:space:]]*endmodule/ {m=0; exit}\047 $(SRCS)"; while ((cmd | getline s) > 0) l = l s; close(cmd); return l } \
+	         function ipwdir(mod, port,  t, seg, d, j, r) { t=ipwtext(mod); while (match(t, "[^A-Za-z0-9_$$]" port "[^A-Za-z0-9_$$]")) { r=RSTART; seg=substr(t, 1, r); while ((j=index(seg, ";")) > 0) seg=substr(seg, j+1); while ((j=index(seg, "(")) > 0) seg=substr(seg, j+1); d=""; \
+	           while (match(seg, /(^|[^A-Za-z0-9_])(input|output|inout)([^A-Za-z0-9_]|$$)/)) { d=substr(seg, RSTART, RLENGTH); gsub(/[^a-z]/, "", d); seg=substr(seg, RSTART+RLENGTH) } if (d != "") return d; t=substr(t, r+1) } return "" } \
+	         function ipwenc(at,  f, n, cmd, l) { f=at; sub(/:[0-9]+$$/,"",f); n=at; sub(/.*:/,"",n); l=""; if (n ~ /^[0-9]+$$/) { cmd="awk \047NR>" n "{exit} /^[[:space:]]*module[[:space:]]+[A-Za-z_]/ {m=$$0; sub(/^[[:space:]]*module[[:space:]]+/,\"\",m); sub(/[^A-Za-z0-9_].*/,\"\",m)} END{print m}\047 " f; cmd | getline l; close(cmd) } return l } \
+	         function ipwmsg(kind, inst, mod, port, w, v, at,  s, pm, d, par, pd, n, did, fix) { s=srcline(at); pm=""; if (match(s, /\#[[:space:]]*\([[:space:]]*\.[A-Za-z_][A-Za-z0-9_]*[[:space:]]*\([[:space:]]*[0-9]+[[:space:]]*\)[[:space:]]*\)/)) { pm=substr(s,RSTART,RLENGTH); sub(/^\#[[:space:]]*\([[:space:]]*\./,"",pm); sub(/[[:space:]]*\)[[:space:]]*\)$$/,"",pm); sub(/[[:space:]]*\([[:space:]]*/," = ",pm); pm=" with " pm } \
+	           d=ipwdir(mod, port); par=ipwenc(at); pd=(par == "" ? "" : ipwdir(par, port)); n=(v+0 < w+0 ? w-v : v-w); \
+	           if (d == "output") did=(v+0 < w+0 ? "widened the signal to the port, so the port\047s " n " high bits reach nothing (its line: Padding " n " high bits of the port)" : "padded the signal\047s " n " high bits (its line: Padding " n " high bits of the expression)"); \
+	           else if (d == "input") did=(v+0 < w+0 ? "padded the " n " high bits" : "cut the " n " high bits of the signal"); else did="padded or cut " n " bits"; \
+	           if (pd != "") fix="connect it by name, ." port "(" port (v+0 > w+0 && d == "output" ? "[" w-1 ":0]" : "") "), which " (v+0 > w+0 && d == "output" ? "drives the low " w " bits (the others need their own driver)" : "pads or cuts to the port\047s width as the simulation did") ": " port " is " par "\047s own " pd " port, so its width stays as declared" (pd == "output" || pd == "inout" ? " (it is pinned in the XDC)" : "") "."; \
+	           else fix="declare " port " with the port\047s width (logic " (w+0 > 1 ? "[" w-1 ":0] " : "") port ";), or connect it by name, ." port "(" port "), which pads or cuts to the port\047s width as the simulation did."; \
+	           return fmt("ERROR", "implicit-port-width", at, "the " kind " connection of " inst " (module " mod ") joins the port " port ", " w " bits wide" pm ", to the signal " port " declared " v " bits wide: an implicit connection (.* or ." port ") takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) " did " and ran.", fix) }
+# dewfpga sim: the same case, found in iverilog's warnings (read before $(TOP)_sim.err is removed); one line per
+# instance line, from its first warning; a named connection with the same warning keeps passing.
+IPW_SIM_AWK = $(FMT_AWK) $(IPW_AWK) \
+	         /^[^ :]+:[0-9]+: warning: Port [0-9]+ \([A-Za-z_][A-Za-z0-9_]*\) of module [A-Za-z_][A-Za-z0-9_]* expects [0-9]+ bit\(s\), given [0-9]+\.$$/ { \
+	           at=$$1; sub(/:$$/,"",at); if (at in seen) next; f=at; sub(/:[0-9]+$$/,"",f); if (index(" $(SRCS) ", " " f " ") == 0) next; p=$$0; sub(/.*Port [0-9]+ \(/,"",p); sub(/\).*/,"",p); mod=$$0; sub(/.*of module /,"",mod); sub(/ expects.*/,"",mod); \
+	           w=$$0; sub(/.*expects /,"",w); sub(/ bit.*/,"",w); v=$$0; sub(/.*given /,"",v); sub(/\.$$/,"",v); s=instspan(at); k=ipwkind(s, p); if (k == "" || k == "named") next; \
+	           seen[at]=1; print ipwmsg(k, ipwinst(s), mod, p, w, v, at) }
 # The two yosys runs (elaborate and write $(TOP).il; synthesize from it) feed one awk, so a warning of the first
 # run (an implicit wire) and its consequence in the second (no driver) meet.
-YOSYS_AWK = $(FMT_AWK) function loc(s) { sub(/\|.*/,"",s); sub(/\.[0-9]+(-[0-9]+\.[0-9]+)?$$/,"",s); return s } \
+YOSYS_AWK = $(FMT_AWK) $(IPW_AWK) function loc(s) { sub(/\|.*/,"",s); sub(/\.[0-9]+(-[0-9]+\.[0-9]+)?$$/,"",s); return s } \
 	         function cellsrc(c,  t) { load(); if (c in src) return src[c]; t=c; if (t !~ /^\$$/) sub(/^[^.]*\./,"",t); if (t in src) return src[t]; \
 	           if (match(t, /\$$[^$$]+:[0-9]+\$$/)) return substr(t, RSTART+1, RLENGTH-2); return "(line unknown)" } \
 	         function before(x, y,  fx, fy, nx, ny) { fx=x; sub(/:[0-9]+$$/,"",fx); fy=y; sub(/:[0-9]+$$/,"",fy); if (fx != fy) return fx < fy; nx=x; sub(/.*:/,"",nx); ny=y; sub(/.*:/,"",ny); return nx+0 < ny+0 } \
 	         function addline(ls, l,  a, n, i, out, ins) { n=split(ls, a, " and "); out=""; ins=0; for (i=1; i<=n; i++) { if (!ins && before(l, a[i])) { out = out (out==""?"":" and ") l; ins=1 } out = out (out==""?"":" and ") a[i] } \
 	           if (!ins) out = out (out==""?"":" and ") l; return out } \
 	         function plog(pat,  cmd) { pl_line=""; pl_at=""; cmd="grep -E \"" pat "\" " ylog " 2>/dev/null | tail -1"; cmd | getline pl_line; close(cmd); if (match(pl_line, /\$$proc\$$[^$$]+\$$/)) pl_at=substr(pl_line, RSTART+6, RLENGTH-7) } \
-	         function nocom(s, blk,  out, i, n, ch, q, p) { out=""; q=0; n=length(s); for (i=1; i<=n; i++) { ch=substr(s,i,1); if (q) { out=out ch; if (ch=="\\" && i<n) { i++; out=out substr(s,i,1) } else if (ch=="\042") q=0; continue } \
-	           if (ch=="\042") { q=1; out=out ch; continue } if (ch=="/" && substr(s,i+1,1)=="/") { if (!blk) break } else if (ch=="/" && substr(s,i+1,1)=="*") { p=index(substr(s,i+2), "*/"); if (p==0) break; i=i+2+p; out=out " "; continue } out=out ch } return out } \
-	         function srcline(at, k,  f, n, cmd, l, s) { f=at; sub(/:[0-9]+$$/,"",f); n=at; sub(/.*:/,"",n); l=""; if (k == "") k=1; if (n ~ /^[0-9]+$$/) { cmd="sed -n " n "," n+k-1 "p " f " 2>/dev/null"; while ((cmd | getline s) > 0) l = l (l==""?"":" ") nocom(s, 0); close(cmd) } return nocom(l, 1) } \
 	         function lhs(s) { if (match(s, /(^|[^A-Za-z0-9_.])[A-Za-z_][A-Za-z0-9_]*(\[[^]]*\])*[[:space:]]*<?=[^=]/)) { s=substr(s,RSTART,RLENGTH); sub(/^[^A-Za-z_]/,"",s); sub(/[[\[<= \t].*/,"",s); return s } return "" } \
 	         function ifcond(t,  i, d, st, ch, s) { if (!match(t, /(^|[^A-Za-z0-9_])if[[:space:]]*\(/)) return ""; st=RSTART+RLENGTH; d=1; for (i=st; i<=length(t); i++) { ch=substr(t,i,1); if (ch=="(") d++; else if (ch==")") { d--; if (d==0) break } } if (d != 0) return ""; s=substr(t, st, i-st); gsub(/^ +| +$$/,"",s); \
 	           while (s ~ /^\(.*\)$$/) { d=0; for (i=1; i<=length(s); i++) { ch=substr(s,i,1); if (ch=="(") d++; else if (ch==")") { d--; if (d==0) break } } if (i != length(s)) break; s=substr(s, 2, length(s)-2); gsub(/^ +| +$$/,"",s) } return s } \
@@ -253,6 +309,13 @@ YOSYS_AWK = $(FMT_AWK) function loc(s) { sub(/\|.*/,"",s); sub(/\.[0-9]+(-[0-9]+
 	           else print fmt("ERROR", "async-reset-not-alone", pl_at, "this always block is sensitive to two edges (" ev "), so one of them is an asynchronous reset, but its first if does not test that reset alone (a reset ORed with a synchronous clear: if (rst || clear)), so neither reader can tell the reset from the clock.", "test the reset alone first and put the synchronous clear in the else:  if (" (b==""?"rst":b) ") " sig " <= 0; else if (clear) " sig " <= 0; else " sig " <= " sig " + 1;"); next } \
 	         /^ERROR: Failed to get a constant init value for / { print; plog("Found init rule in"); sig=$$0; sub(/.*init value for \\/,"",sig); sub(/:.*/,"",sig); from=$$0; sub(/.*: \\/,"",from); bad=1; \
 	           print fmt("ERROR", "initial-from-signal", pl_at, "`" sig " = " from "` here is a start value, not a wire: it reads " from " once, at time 0 (IEEE 1800-2017 6.8), and the chip has no power-up value that follows a signal, so yosys stops.", "for a wire write  assign " sig " = " from ";  for a register give " sig " a constant start value (logic [15:0] " sig " = \047" "0;) and load " from " with the clock (if (btnC) " sig " <= " from ";)."); next } \
+	         /^ERROR: Width mismatch between wire \([0-9]+ bits\) and port \([0-9]+ bits\) for implicit port connection `/ { print; s=$$0; v=s; sub(/.*wire \(/,"",v); sub(/ bits.*/,"",v); w=s; sub(/.*port \(/,"",w); sub(/ bits.*/,"",w); \
+	           p=s; sub(/.*implicit port connection `\\?/,"",p); sub(/\047.*/,"",p); c=s; sub(/.*\047 of cell /,"",c); sub(/ \(.*/,"",c); par=ipwpar(c); inst=c; sub(/.*\./,"",inst); \
+	           m=s; sub(/.*\047 of cell [^ ]+ \(/,"",m); sub(/\)\.?$$/,"",m); sub(/^\$$paramod\\?/,"",m); sub(/^\\/,"",m); sub(/\\.*/,"",m); if (m == "") m="?"; \
+	           at=ipwline(par, inst, p); k=ipwkind(instspan(at), p); if (k == "" || k == "named") k=".*"; bad=1; print ipwmsg(k, inst, m, p, w, v, at); next } \
+	         /^Warning: Resizing cell port [^ ]+ from [0-9]+ bits to [0-9]+ bits\.$$/ { c=$$0; sub(/.*cell port /,"",c); sub(/ from.*/,"",c); v=$$0; sub(/.*from /,"",v); sub(/ bits.*/,"",v); w=$$0; sub(/.*to /,"",w); sub(/ bits.*/,"",w); \
+	           p=c; sub(/.*\./,"",p); c2=c; sub(/\.[^.]*$$/,"",c2); inst=c2; sub(/.*\./,"",inst); par=ipwpar(c2); if (index(c2, ".") == 0 || p == "" || inst == "") { print; next } \
+	           at=ipwline(par, inst, p); k=ipwkind(instspan(at), p); if (at == "" || k != "." p) { print; next } print; if (at in ipwdone) next; ipwdone[at]=1; bad=1; print ipwmsg(k, inst, ipwmodat(at, inst), p, w, v, at); next } \
 	         /^ERROR: Module `\\[^\047]*\047 referenced in module `\\[^\047]*\047 .*is not part of the design/ { print; m=$$0; sub(/.*Module `\\/,"",m); sub(/\047.*/,"",m); at=""; cmd="grep -nE \"^[[:space:]]*" m "[[:space:]]*(\#|[A-Za-z_])\" $(SRCS) /dev/null | head -1"; cmd | getline at; close(cmd); if (match(at, /^[^:]+:[0-9]+/)) at=substr(at,RSTART,RLENGTH); else at=""; bad=1; \
 	           print fmt("ERROR", "module-not-found", at, "the module " m " is instantiated here, and no file the build was given declares it (dewfpga reads the files that hold a module: $(SRCS)).", "put the file that declares " m " in this folder, or check the spelling of the module name."); next } \
 	         /^ERROR: Module `\\?[^\047]*\047 is used with parameters but is not parametric!/ { print; m=$$0; sub(/.*Module `\\?/,"",m); sub(/\047.*/,"",m); at=""; cmd="grep -nE \"^[[:space:]]*module[[:space:]]+" m "([^A-Za-z0-9_]|$$)\" $(SRCS) /dev/null | head -1"; cmd | getline at; close(cmd); if (match(at, /^[^:]+:[0-9]+/)) at=substr(at,RSTART,RLENGTH); else at=""; \
@@ -352,17 +415,18 @@ REF_AWK = $(FMT_AWK) $(STRIP_AWK) \
 	           print fmt("ERROR", "ref-argument", FILENAME ":" FNR, fn " takes an argument by reference (ref " a "): yosys does not read ref, and yosys-slang drops it, so the variable it is called with would never change on the board.", "pass the value in and return it (function automatic logic [3:0] inc(input logic [3:0] x); ... return x + 1;  and  v = inc(v);).") > "/dev/stderr"; bad=1 } \
 	         END { exit bad+0 }
 # a package used through `import pkg::*;` or pkg::NAME must be in a file the tools are given: dewfpga hands
-# iverilog and yosys the files that hold a module (a package in its own file, pkg.sv, is left out; an `include
-# brings it in). iverilog stops at a syntax error on the import line; yosys drops the import with a warning,
-# declares every name from the package as an implicit 1-bit wire with no driver and would build the design
-# without it. The scan names the reference's line and the file that declares the package, before either
-# tool runs. A class scope (util::f) is not a package: a class declared in the sources is not reported.
+# iverilog and yosys every .sv and .v of the folder (or of the Vivado project), a package in its own file
+# (pkg.sv) first, since #33; a .svh or .vh is read only through an `include, and a file in another folder
+# is not collected. iverilog stops at a syntax error on the import line; yosys drops the import with a
+# warning, declares every name from the package as an implicit 1-bit wire with no driver and would build the
+# design without it. The scan names the reference's line and the file that declares the package, before
+# either tool runs. A class scope (util::f) is not a package: a class declared in the sources is not reported.
 PKG_AWK = $(FMT_AWK) $(STRIP_AWK) \
 	         /^[[:space:]]*(package|class)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*/ { d=$$0; sub(/^[[:space:]]*(package|class)[[:space:]]+/,"",d); sub(/[^A-Za-z0-9_].*/,"",d); decl[d]=1 } \
 	         { l=$$0; while (match(l, /[A-Za-z_$$][A-Za-z0-9_$$]*[[:space:]]*::/)) { n=substr(l,RSTART,RLENGTH); sub(/[[:space:]]*::$$/,"",n); l=substr(l,RSTART+RLENGTH); \
 	             if (n !~ /^\$$/ && !(n in ref)) { ref[n]=FILENAME ":" FNR; how[n]=(l ~ /^[[:space:]]*\*/ && $$0 ~ ("import[[:space:]]+" n "[[:space:]]*::")) ? "`import " n "::*`" : n "::" (match(l,/[A-Za-z_][A-Za-z0-9_]*/) ? substr(l,RSTART,RLENGTH) : "") } } } \
 	         END { for (n in ref) if (!(n in decl)) { bad=1; f=""; cmd="grep -lE \"^[[:space:]]*package[[:space:]]+" n "[[:space:];]\" *.sv *.v *.svh *.vh 2>/dev/null"; cmd | getline f; close(cmd); sf=ref[n]; sub(/:[0-9]+$$/,"",sf); \
-	             if (f != "") print fmt("ERROR", "package-file-not-given", ref[n], how[n] " names the package " n ", which is declared in " f ", and the tools are not given that file (dewfpga hands them the files that hold a module: $(SRCS)): iverilog stops at a syntax error there; yosys would drop the import and build every name of " n " as an undriven 1-bit wire: x on the board.", "add   `include \"" f "\"   as the first line of " sf "; or move the package into " sf ", above the module.") > "/dev/stderr"; \
+	             if (f != "") print fmt("ERROR", "package-file-not-given", ref[n], how[n] " names the package " n ", which is declared in " f ", and the tools are not given that file (they read what dewfpga collected, every .sv and .v of the folder or of the project: $(SRCS); a .svh or .vh reaches them only through an `include, a file outside the folder or the project not at all): iverilog stops at a syntax error there; yosys would drop the import and build every name of " n " as an undriven 1-bit wire: x on the board.", "add   `include \"" f "\"   as the first line of " sf "; or move the package into " sf ", above the module.") > "/dev/stderr"; \
 	             else print fmt("ERROR", "package-not-found", ref[n], how[n] " names the package " n ", and no file in this folder declares it (package " n "; ... endpackage).", "check the spelling, or add the file that declares it and `include it as the first line of " sf ".") > "/dev/stderr" } \
 	           exit bad+0 }
 # a failed build must not leave the previous .bit behind, so a student never flashes yesterday's design by mistake.
@@ -378,6 +442,16 @@ PKG_AWK = $(FMT_AWK) $(STRIP_AWK) \
 # or one of the three checks), a note names the missing reader and the install step, so the student knows the
 # build stopped short of the second reader. slang's own wording is kept, except the enum methods next()/prev()
 # ("unsupported system task 'next'": slang builds first()/last() only), which get the student's line and the fix.
+# yosys-slang reads the files as one compilation unit (--single-unit), as yosys' own reader does (one read_verilog of
+# every file) and as Vivado reads the files of one library (UG901 v2023.2 Ch.10 Compilation Units, p.269-271: "a
+# compilation unit is a collection of one or more SV source files compiled together"; -sfcu is Vivado's switch to
+# one unit per file): a typedef at file scope in types.sv is visible in iface.sv. Without it slang stopped with
+# 'use of undeclared identifier' on every such name. Under --single-unit a $unit typedef declared in a file read
+# later is reported as "identifier 'x' used before its declaration" (measured: iface.sv before types.sv); both
+# wordings are one case here. When slang still reports such a name that some file declares as a typedef (the CLI
+# orders a typedef file before its users, check_xdc.py _loose_files, so this is left for a cycle), the
+# undeclared-name line names that file and whether it is read after the user or never (a .svh no file `includes),
+# with the `include fix; a name declared later that is not a typedef gets the file order and the move fix.
 # A .v file is Verilog-2005 (in Vivado too, UG901 Ch.10: *.v is compiled as Verilog 2005, *.sv as SystemVerilog):
 # yosys' reader reads it without -sv. yosys-slang reads a copy of each .v, written into a private folder, wrapped in
 # `begin_keywords "1364-2005" ... `end_keywords (IEEE 1800-2017 22.14), with a `line directive so its messages
@@ -423,9 +497,9 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	    if [ -n "$$crash" ] || grep -qE '^[^ ]+:[0-9]+: ERROR: |\[hierarchical-name\]|\[interface-member\]|\[packed-typedef-2d\]' $(TOP).rv.out; then \
 	      echo "note [second-reader-missing]: yosys' own reader refused this code, and yosys-slang, the second reader (it reads the SystemVerilog Vivado accepts: interfaces, unpacked arrays, foreach, break, enum methods first/last ...), is not installed: $(SLANG) not found. Fix: run  dewfpga install  (it builds that reader, ~3 min), then build again. $(URL)second-reader-missing/"; fi; \
 	    rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
-	  if grep -qE '\[(empty-module|always-and-assign|two-always-drivers|two-assign-drivers|multiple-drivers)\]' $(TOP).rv.out; then cat $(TOP).rv.out; rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
+	  if grep -qE '\[(empty-module|always-and-assign|two-always-drivers|two-assign-drivers|multiple-drivers|implicit-port-width)\]' $(TOP).rv.out; then cat $(TOP).rv.out; rm -f $@ $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
 	  rm -f $@ $(TOP).il; rc=0; $(call MKKW,$(SRCS)); \
-	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang $(INC)$$KWSRCS; hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
+	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang --single-unit $(INC)$$KWSRCS; hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
 	  | awk -v rd=slang -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il '$(YOSYS_AWK)' > $(TOP).sl.out || rc=$$?; \
@@ -437,12 +511,20 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	    elif grep -q 'ERROR \[' $(TOP).rv.out; then grep 'ERROR' $(TOP).rv.out; coded=1; \
 	    else echo "yosys' reader:"; { grep 'ERROR' $(TOP).rv.out || tail -1 $(TOP).rv.out; } | sed 's/^/  /'; fi; \
 	    if echo " $(SRCS) " | grep -q '\.v '; then echo "note [v-is-verilog-2005]: a .v file is read as Verilog-2005 by both readers, as Vivado reads it (UG901 Ch.10): SystemVerilog (logic, always_ff, always_comb, enum ...) belongs in a .sv file. Fix: if your .v file holds SystemVerilog, rename it to .sv. $(URL)v-is-verilog-2005/"; fi; \
-	    awk -v coded=$$coded '$(FMT_AWK) \
+	    awk -v coded=$$coded '$(FMT_AWK) $(IPW_AWK) \
+	         function ipwbits(t,  a, b) { if (match(t, /\[[0-9]+:[0-9]+\]/)) { t=substr(t,RSTART+1,RLENGTH-2); a=t; sub(/:.*/,"",a); b=t; sub(/.*:/,"",b); return (a+0 > b+0 ? a-b : b-a) + 1 } if (t ~ /^(int|integer)$$/) return 32; if (t == "shortint") return 16; if (t == "longint") return 64; if (t == "byte") return 8; if (t ~ /^(bit|logic|reg)$$/) return 1; return "" } \
 	         coded { if (/^ERROR: Design elaboration failed/) next; if (/^[^ ]+:[0-9]+:[0-9]+: (error|fatal error): / || /^ERROR: /) { sub(/ at \/[^ ]*\//," at "); print "yosys-slang: " $$0; n=2 } else if (n > 0) { print "    " $$0; n-- } next } \
 	         /^[^ ]+:[0-9]+:[0-9]+: error: unsupported system task \047(next|prev)\047$$/ { at=$$0; sub(/:[0-9]+: error: .*/,"",at); em=$$0; sub(/.*system task \047/,"",em); sub(/\047.*/,"",em); n=2; next } \
 	         em != "" { v=$$0; if (match(v, "[A-Za-z_][A-Za-z0-9_]*[[:space:]]*[.]" em "[[:space:]]*[(]")) { v=substr(v,RSTART,RLENGTH); sub(/[[:space:]]*[.].*/,"",v) } else v="s"; \
 	           print fmt("ERROR", "enum-method-next-prev", at, v "." em "() is an enum method that steps through the values (next/prev): yosys does not build enum methods, and yosys-slang builds first()/last() only; Vivado builds next/prev (UG901 Ch.10 Table 27).", "write the step out as a case on " v ", in the order the enum lists its values (with IDLE, RUN, DONE: case (" v ") IDLE: " v " <= RUN; RUN: " v " <= DONE; DONE: " v " <= IDLE; endcase)."); em=""; print "    " $$0; n--; next } \
-	         /^[^ ]+:[0-9]+:[0-9]+: error: use of undeclared identifier \047/ { at=$$0; sub(/:[0-9]+: error: .*/,"",at); nm=$$0; sub(/.*undeclared identifier \047/,"",nm); sub(/\047.*/,"",nm); print fmt("ERROR", "undeclared-name", at, nm " is not declared anywhere: yosys-slang, the second reader, stops here, and yosys\047 own reader refused this code too (its line is above; dewfpga sim refuses it as well).", "declare it, or check the spelling (a typo of a declared name)."); n=2; next } \
+	         /^[^ ]+:[0-9]+:[0-9]+: error: (use of undeclared identifier \047|identifier \047[^\047]+\047 used before its declaration)/ { at=$$0; sub(/:[0-9]+: error: .*/,"",at); later=($$0 ~ /used before its declaration/); nm=$$0; sub(/.*(undeclared|: error:) identifier \047/,"",nm); sub(/\047.*/,"",nm); sf=at; sub(/:[0-9]+$$/,"",sf); \
+	           tf=""; cmd="grep -lE \"^[[:space:]]*(typedef[^;]*[^A-Za-z0-9_]|\\\\}[[:space:]]*)" nm "[[:space:]]*;\" $(SRCS) $(foreach d,$(INCDIRS),$(d)/*.svh $(d)/*.vh $(d)/*.sv $(d)/*.v) 2>/dev/null | sed \"s,^\\\\./,,\" | grep -v \"^" sf "$$\" | head -1"; cmd | getline tf; close(cmd); \
+	           if (tf != "") print fmt("ERROR", "undeclared-name", at, nm " is a typedef declared in " tf " at file scope (outside any module or package), and " (index(" $(SRCS) ", " " tf " ") ? "the readers reach " sf " before it (they read the files in this order: $(SRCS))" : "no file `includes " tf ", so the readers never see it (a .svh or .vh reaches them only through an `include)") "; Vivado reads the files of one library as one compilation unit, in the order they are added (UG901 Ch.10 Compilation Units), and so do both readers here.", "add   `include \"" tf "\"   as the first line of " sf "; or put the typedef in a package (package types_pkg; typedef ...; endpackage) and write  import types_pkg::*;  where it is used."); \
+	           else if (later) print fmt("ERROR", "undeclared-name", at, nm " is declared after the line that uses it: yosys-slang, the second reader, reads the files as one unit in this order, $(SRCS), and a name at file scope is visible only below its declaration (Vivado reads a library the same way, UG901 Ch.10 Compilation Units); yosys\047 own reader refused this code too (its line is above; dewfpga sim refuses it as well).", "move the declaration of " nm " above its first use (into the file read first, or above the line named here), or put it in a package (package types_pkg; ...; endpackage) and write  import types_pkg::*;  where it is used."); \
+	           else print fmt("ERROR", "undeclared-name", at, nm " is not declared anywhere: yosys-slang, the second reader, stops here, and yosys\047 own reader refused this code too (its line is above; dewfpga sim refuses it as well).", "declare it, or check the spelling (a typo of a declared name)."); n=2; next } \
+	         /^[^ ]+:[0-9]+:[0-9]+: error: implicit named port \047[^\047]+\047 of type \047[^\047]+\047 connects to value of inequivalent type \047[^\047]+\047/ { at=$$0; sub(/:[0-9]+: error: .*/,"",at); n=2; if (at in ipwdone) next; ipwdone[at]=1; \
+	           p=$$0; sub(/.*implicit named port \047/,"",p); sub(/\047.*/,"",p); w=$$0; sub(/.*of type \047/,"",w); sub(/\047.*/,"",w); v=$$0; sub(/.*inequivalent type \047/,"",v); sub(/\047.*/,"",v); s=instspan(at); k=ipwkind(s, p); if (k == "" || k == "named") k=".*"; bw=ipwbits(w); bv=ipwbits(v); \
+	           if (bw != "" && bv != "" && bw+0 != bv+0) { print ipwmsg(k, ipwinst(s), ipwmod(s), p, bw, bv, at); next } } \
 	         /^[^ ]+:[0-9]+:[0-9]+: (error|fatal error): / { at=$$0; sub(/:[0-9]+: (error|fatal error): .*/,"",at); s=$$0; sub(/^[^ ]+: (error|fatal error): /,"",s); print fmt("ERROR", "slang-refused", at, s " (yosys-slang, the second reader; yosys\047 own reader refused this code too, its line is above).", "the caret below marks the construct; the page lists the usual ones and what to write instead."); n=2; next } \
 	         /^ERROR: Feature unimplemented/ { print fmt("ERROR", "slang-unimplemented", "", "yosys-slang cannot build a construct of this design yet (" $$0 "), and yosys\047 own reader refused the code too (its line is above).", "take the design apart until the build goes through, and report that construct (github.com/nosey-dewdrop/dewfpga/issues)."); next } \
 	         n > 0 { print "    " $$0; n-- }' $(TOP).slang.log; \

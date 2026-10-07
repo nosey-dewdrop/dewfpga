@@ -90,6 +90,12 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/hierarchical-name/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/initial-from-signal/</loc>
   </url>
   <url>

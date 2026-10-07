@@ -4172,3 +4172,139 @@ pages 139, Chromium and WebKit 158; 0 failures). Site check: 114 pages, 2092 lin
   word: an overlap written with them is not caught.
 - The two unexplained silent-wrong families of #31 (netlist `x` before the first edge; known bits differing
   after the start, seeds 121 and 214) are untouched; #34 owns the first.
+
+### #33 · The chain reads every design file, not only the ones that hold a module, and a .* connection whose port and signal widths differ is named with the fix before either reader refuses it · 7 October
+
+Two families #31's generator left to this update. The first is the oldest gap in the probe table, `23c_package_own_file`
+(since #4): a lab folder with `pkg.sv` (`package cfg_pkg; localparam logic [3:0] MAGIC = 4'hA; ...`) next to a
+`design.sv` that writes `cfg_pkg::MAGIC`. Before, the CLI handed the tools only the files that hold a module, so
+`pkg.sv` was never read, and `dewfpga sim` and `dewfpga bit` both stopped before the tools with
+```
+design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.sv, and the tools are not given that file (dewfpga hands them the files that hold a module: design.sv): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include "pkg.sv"   as the first line of design.sv; or move the package into design.sv, above the module. https://nosey-dewdrop.github.io/dewfpga/errors/package-file-not-given/
+```
+and the README said "Standalone package/interface/typedef-only files remain a CLI limitation". Now the same folder
+simulates and builds without a line added to it:
+```
+top module: top
+iverilog -g2012 -o top_sim pkg.sv design.sv tb.sv
+PASS
+tb.sv:11: $finish called at 256 (1s)
+```
+```
+xdc ok: 32 ports, all mapped, 73 unused pins in the XDC ignored.
+pnr ok: 2 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)
+top.bit  2.2 MB
+```
+The rule: every `.sv` and `.v` the CLI collected goes to the tools, the files that hold no module first (a package,
+an interface, typedefs at file scope: Vivado lists such files among a project's sources, UG901 Ch.10 Compilation
+Units and Packages), each after the files that declare a name it uses: a package before the files that name it
+(`z_pkg.sv` before `a_pkg.sv` when `a_pkg` imports `z_pkg`, whatever the alphabet says), a typedef file before the
+interface that uses the type; among the ready files a package file comes first, then the order given; the module
+files follow. A file a design source `includes is left to the `include (handing it too declares the package twice,
+and iverilog stops at its first line). A file the testbench `includes is not taken out of the build's list, since
+the build never reads the testbench; the simulation, which reads both, refuses the second copy with the line to
+delete:
+```
+tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the `include "pkg.sv" line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first. https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/
+```
+yosys-slang, the second reader, now reads the files as one compilation unit (`--single-unit`), as yosys' own
+reader and Vivado (UG901 Ch.10 Compilation Units, p.269-271) do: a typedef at file scope in `types.sv` is visible
+in `iface.sv`. When slang still reports a name that some file declares as a typedef, `[undeclared-name]` names that
+file and whether it is read after the user or never (a `.svh` no file `includes), with the `include fix. The
+`[package-file-not-given]` line stays for the case that remains: a package in a `.svh` or `.vh` no design file
+`includes, or in a file outside the folder or the project; it now says which files the tools are read
+("every .sv and .v of the folder or of the project: design.sv; a .svh or .vh reaches them only through an
+`include"). With this, `22b_interface_own_file` (an interface in `sum_if.sv`) and `23c` build and run on the
+board's netlist, and `56b_unit_typedef_file` (a typedef-only `types.sv`) simulates and builds (see Open for its
+netlist half).
+
+The second family: a `.*` connection whose port and signal widths differ (six seeds of #31, probe
+`102_dotstar_param_width`: `sub #(.N(8)) u (.*);` with `logic [3:0] sub_in, sub_out;`). Before, `dewfpga sim`
+printed iverilog's two warnings (`design.sv:7: warning: Port 1 (sub_in) of module sub expects 8 bit(s), given 4.`,
+`Padding 4 high bits of the port.`) and `PASS`, and `dewfpga bit` stopped with yosys' own line and two
+`[slang-refused]` lines with a caret under `.*`, the message of a reader, not a verdict. Now both commands print
+one line of the product's, the same at `sim` and at `bit`, with the instance, the port, the two widths, what the
+simulation did with the difference, and the fix:
+```
+design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port's 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port's width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port's width as the simulation did. https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/
+```
+The simulation finds the case in iverilog's own padding warning and refuses with the build's line, so a student
+never sees a simulation pass that no bitstream can be built from. What the simulation did is said per port
+direction, the way iverilog's second line says it (an input port cuts a wider signal or pads a narrower one; an
+output port wider than the signal widens the signal, so the port's high bits reach nothing). When the mismatched
+signal is a port of the parent module itself (`.*` to an 8-bit `led` on `sub` inside `top(... output logic [15:0]
+led)`), redeclaring it is no fix (its width is the board's wiring), and the message gives the named form instead,
+`.led(led[7:0])`. The check reads the design's files only: the same mismatch on the testbench's own `top dut (.*)`
+is not this error (no reader builds the testbench, the simulation runs). A named connection with the same widths
+(`102c_named_conn_width`) is an assignment, padded or cut by all three tools, and builds; the same `.*` with the
+signals declared the port's width (`102b_dotstar_param_equal`) builds in yosys' own reader. A port whose type is
+not a plain vector (`input int a` to a `logic [31:0] a`) is still `[slang-refused]`, with slang's own words.
+
+**Numbers.** From the closing run of this tree: Vivado-supported probes passing all four stages 88/113 → 95/118,
+all four stages 97/137 → 104/143, synthesis 111/137 → 119/143, known gaps 26 → 24. Against #32's closing table
+the 137 old rows are byte-identical but three: `22b_interface_own_file` and `23c_package_own_file` go from
+`fail fail - fail` to `pass pass pass pass` (the two gaps closed), `56b_unit_typedef_file` from `fail fail - fail` to
+`pass pass fail pass` (still a gap, its netlist half below); the six new rows are the six probes under Tests.
+`102_dotstar_param_width` is not a gap: its row expects the refusal. `test/run.sh`: `passed 325, failed 0, known
+gaps 24` in 30 min 41 s (the board check was skipped, `SKIP flash on the board: no board`: no FTDI device on
+the USB bus). The listed count goes 351 → 357 (the six probes).
+`test/fuzz/run.sh 1 500`, the same 500 seeds, before this update (#32's closing run of the released tree):
+```
+fuzz: refused-coded by code: unique-case-overlap 24; slang-refused 20; package-file-not-given 14
+fuzz: ok 416 of 500; silent-wrong 19; warned 7; refused-coded 58; refused-uncoded 0; crash 0; sim-refused 0
+```
+After, in this close (`JOBS=3`, 19 min 27 s):
+```
+fuzz: refused-coded by code: unique-case-overlap 24; implicit-port-width 22
+fuzz: ok 428 of 500; silent-wrong 19; warned 7; refused-coded 46; refused-uncoded 0; crash 0; sim-refused 0
+```
+Seed by seed: 466 seeds keep their result; 12 go `package-file-not-given` → `ok` (9, 72, 78, 168, 185, 186, 279,
+307, 316, 329, 374, 472: a package in its own file, now read); 2 go `package-file-not-given` →
+`implicit-port-width` (192, 200: once the package file was read, the `.*` width mismatch behind it showed); 20 go
+`slang-refused` → `implicit-port-width` (16, 35, 79, 87, 106, 129, 163, 179, 189, 196, 304, 315, 323, 349, 355, 365,
+433, 434, 444, 454: the same refusal, now the product's line with the fix). No `ok` went anywhere, no seed went
+to `silent-wrong`, the 19 silent wrongs and the 7 warned are the same seeds as before. The update's claim text
+said `ok 430` and `implicit-port-width 20`; the measured numbers are 428 and 22, the integrator's two full runs
+before its last commit said the same 428 and 22.
+
+**Tests.** Six probes with their `expect.tsv` rows, each quoted message checked against the run's output by the
+probe runner: `102_dotstar_param_width` (rtl fail, synth fail, bit fail: the `[implicit-port-width]` line from
+`sim` and from `bit`, no `top.bit`), `102b_dotstar_param_equal`, `102c_named_conn_width` (both build, 8 LUT and a
+named connection the readers resize), `103_package_file_two_users` (a package file imported by two module files,
+no `include anywhere: `EQV PASS: 1048576 output bits compared, all equal`), `103b_two_packages_order` (`a_pkg`
+imports `z_pkg`: the product reads `z_pkg.sv a_pkg.sv design.sv`), `103c_package_file_included` (23c's old fix,
+`include on line 1: the file is left to the `include). Three rows rewritten: `22b`, `23c` (both now pass all four
+stages) and `56b` (rtl, synth and bit pass; its netlist half is the harness's, see Open). The integrator ran the
+97 probes it listed as the blast radius of the file-order change through `test/sv/run.sh` after the change:
+`matches expect.tsv: 97/97`, 0 changed rows. The judge's own angles passed: a parent's own narrower port via `.*`,
+a wide signal cut, an interface file that imports a package file, a file holding both a package and a module.
+The judge's one medium finding in the repro (a package file `included only by the testbench was dropped from the
+design list, and the fix led to iverilog's "I give up") is closed by `[included-twice]`, measured in this close on
+`23c` with the `include moved into `tb.sv`. No new check went into `test/run.sh` beyond the probes. Mail suites: 9
+suites, each exit 0 (activation SQL 142, SQL 187, mail flow 60, sender idempotency, lifecycle 112, usage, integration,
+pages 139, Chromium and WebKit 158; 0 failures). Site check: 116 pages, 2128 links, 0 failures.
+
+**Open.**
+- `56b_unit_typedef_file` stays a known gap in the table: the product reads `types.sv` first and builds (`pnr ok: 2
+  LUT, 2 FF`), but the netlist comparison in `test/sv/eqv.sh` puts only package and interface files first and
+  reads `design.sv` before `types.sv`, so its RTL half stops at a syntax error (`EQV FAIL: yosys could not list the
+  RTL's registers`). The same harness reads package files in alphabetical order (`103b`: `EQV SKIP`, the testbench
+  half alone checked the netlist) and hands a `included package file twice (`103c`: `EQV SKIP`). The harness, not
+  the product, was out of this update's files.
+- `dewfpga bit` prints yosys' raw line, `ERROR: Width mismatch between wire (4 bits) and port (8 bits) for
+  implicit port connection `sub_out' of cell top.u ($paramod\sub\N=...)`, before the coded `[implicit-port-width]`
+  line; in the `.name` case yosys prints two `Resizing cell port` lines, one per port, and the second still passes
+  through after the coded line.
+- A typedef `.svh` that no file `includes: the first `[undeclared-name]` line names the file and the `include fix;
+  the two lines after it, for the enum's members, still say "not declared anywhere ... check the spelling" (the
+  judge's repro).
+- Vivado's own behaviour on a `.*` or `.name` width mismatch is unverified: UG901 v2023.2 Ch.10 p.281-282 lists
+  both forms as supported and does not say what Vivado does when the widths differ, and no Vivado ran; the `102`
+  row's vivado column is `unverified`, the message does not claim what Vivado does. In which order Vivado
+  compiles a file that holds only declarations is not in the guide either.
+- The `Resizing cell port` rule refuses only an instance line that connects the port as `.port` without `(`: a
+  named or positional connection with a width difference passes through with yosys' and iverilog's warnings, as
+  the standard says it should (an assignment), but without a line of the product's.
+- Two module-less files that name each other (a cycle) fall back to the order given, without a word.
+- The two unexplained silent-wrong families of #31 (netlist `x` before the first edge; known bits differing after
+  the start) are untouched; #34 owns the first.

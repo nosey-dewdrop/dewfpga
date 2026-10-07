@@ -32,7 +32,9 @@ top candidates without writing files. The project's selected top wins unless you
 one: `dewfpga bit <top>`. In a flat folder, hierarchy and a unique matching `.xdc`
 select the top; ambiguous candidates require a choice. A filename alone does not select it.
 A testbench has no ports and instantiates the design; `$finish`/`$stop` in a design module
-is an error. Standalone package/interface/typedef-only files remain a CLI limitation.
+is an error. A file that holds only a package, an interface or typedefs is read too, each after
+the files that declare a name it uses: a package before its users, a typedef file before the
+interface that uses the type (one that another file `includes is read through the `include, not twice).
 Example: `dewfpga new blink`.
 
 ## Install
@@ -129,9 +131,9 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (351 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
+`test/run.sh` (357 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
 determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
-probe runner on a broken copy, and the 137 SystemVerilog probes of `test/sv`; the board test and the clean
+probe runner on a broken copy, and the 143 SystemVerilog probes of `test/sv`; the board test and the clean
 install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names
 every check; `ONLY=regex test/run.sh` runs the ones whose name matches. `FULL=1 test/run.sh`
 adds a clean install into a temp directory. CI runs the clean install, the suite and the npm package on a fresh

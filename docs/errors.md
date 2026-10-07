@@ -1345,17 +1345,17 @@ and `v = inc(v);` at the call.
 ## package-file-not-given
 step: bit
 source: dewfpga sim / bit, the source scan before the tools run (or yosys)
-title: design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.sv, and the tools are not given that file (dewfpga hands them the files that hold a module: design.sv): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include "pkg.sv"   as the first line of design.sv; or move the package into design.sv, above the module.
-summary: The package lives in its own file, and the CLI hands the tools only the files that hold a module, so the package is not read.
+title: design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.svh, and the tools are not given that file (they read what dewfpga collected, every .sv and .v of the folder or of the project: design.sv; a .svh or .vh reaches them only through an `include, a file outside the folder or the project not at all): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include "pkg.svh"   as the first line of design.sv; or move the package into design.sv, above the module.
+summary: The package lives in a file the tools are not given: a .svh or .vh that no design file `includes, or a file outside the folder or the project.
 date: 2026-09-27
 
 ```
-design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.sv, and the tools are not given that file (dewfpga hands them the files that hold a module: design.sv): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include "pkg.sv"   as the first line of design.sv; or move the package into design.sv, above the module. https://nosey-dewdrop.github.io/dewfpga/errors/package-file-not-given/
+design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.svh, and the tools are not given that file (they read what dewfpga collected, every .sv and .v of the folder or of the project: design.sv; a .svh or .vh reaches them only through an `include, a file outside the folder or the project not at all): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include "pkg.svh"   as the first line of design.sv; or move the package into design.sv, above the module. https://nosey-dewdrop.github.io/dewfpga/errors/package-file-not-given/
 ```
 
 ## Why does it happen?
 
-Vivado projects list the package file among the sources, in order. The CLI has no project file: it gives the tools the files that declare a module, so a file holding only a package is left out, and yosys would silently drop the import.
+Vivado projects list the package file among the sources, in order. dewfpga hands the tools every .sv and .v of the folder (or of the Vivado project), a package in its own file first, so `package cfg_pkg` in pkg.sv is read before design.sv names it (a file that holds only an interface or typedefs is handed before the files that use its names, too). A .svh or .vh is a header: the tools see it only where a file `includes it, and a file in another folder is not collected at all. Named from such a file, the package is missing when the design is read: iverilog stops, and yosys would silently drop the import.
 
 ## What is the fix?
 
@@ -1364,6 +1364,25 @@ Vivado projects list the package file among the sources, in order. The CLI has n
 ```
 
 as the first line of the file that uses the package, or move the package into that file above the module.
+
+## included-twice
+step: sim
+source: dewfpga sim, the source scan before iverilog runs
+title: tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the `include "pkg.sv" line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first.
+summary: The testbench `includes a file the simulation reads with the design already (a package file of the folder, or one the design `includes), so the package is declared twice and iverilog stops.
+date: 2026-10-07
+
+```
+tb.sv:1: ERROR [included-twice]: tb.sv `includes pkg.sv, and the simulator reads pkg.sv with the design already (dewfpga hands every .sv and .v of the folder to the simulator, a package file first: pkg.sv design.sv): read a second time, package cfg_pkg is declared twice and iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the `include "pkg.sv" line from tb.sv; cfg_pkg reaches the testbench through the design, which iverilog reads first. https://nosey-dewdrop.github.io/dewfpga/errors/included-twice/
+```
+
+## Why does it happen?
+
+iverilog reads the files in one stream: the design's files first (every .sv and .v of the folder, a package file before the files that use it), then the testbench. A package file the testbench `includes is read a second time there, and a package declared twice is a syntax error to iverilog (measured: `./pkg.sv:1: syntax error`, `I give up.`). The same happens when the design `includes pkg.sv and the testbench `includes it too. The build never reads the testbench, so what it `includes does not change which files the build is given.
+
+## What is the fix?
+
+Delete the `include line from the testbench. The package is already in the simulation through the design, read before the testbench, so `cfg_pkg::MAGIC` in the testbench resolves without it. A header of macros (`defs.svh` with only `define lines) may stay included in both: it declares nothing twice, and this check names only a file the design's list holds, or a package file the design `includes.
 
 ## package-not-found
 step: bit
@@ -1550,6 +1569,64 @@ always_ff @(posedge clk)
 ```
 
 Keep `always_latch` only when the gate is held steady while the data changes (a bus-hold or an address latch with a setup time its driver respects): then the warning tells you what the design counts on.
+
+## implicit-port-width
+step: sim, bit
+source: dewfpga sim and dewfpga bit, yosys (or yosys-slang)
+title: design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port's 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port's width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port's width as the simulation did.
+summary: A .* or .name port connection whose port and signal widths differ: the simulator pads or cuts and runs, neither synthesis reader builds it; the same line at sim and at bit names the port, the two widths and the fix.
+date: 2026-10-07
+
+`dewfpga sim` and `dewfpga bit` print the same line. The simulation first, where iverilog's own warning comes before it:
+
+```
+design.sv:7: warning: Port 1 (sub_in) of module sub expects 8 bit(s), given 4.
+design.sv:7:        : Padding 4 high bits of the port.
+design.sv:7: warning: Port 2 (sub_out) of module sub expects 8 bit(s), given 4.
+design.sv:7:        : Padding 4 high bits of the port.
+ERROR: Width mismatch between wire (4 bits) and port (8 bits) for implicit port connection `sub_out' of cell top.u ($paramod\sub\N=s32'00000000000000000000000000001000).
+design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port's 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port's width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port's width as the simulation did. https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/
+```
+
+The design that printed it (test/sv/102_dotstar_param_width): a submodule whose ports are `N` bits wide, instantiated with `N = 8` and connected with `.*` to signals declared 4 bits wide.
+
+```
+module sub #(parameter N = 4) (input logic [N-1:0] sub_in, output logic [N-1:0] sub_out);
+  assign sub_out = ~sub_in;
+endmodule
+module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [3:0] sub_in, sub_out;
+  assign sub_in = sw[3:0];
+  sub #(.N(8)) u (.*);
+  assign led = {12'b0, sub_out};
+endmodule
+```
+
+## Why does it happen?
+
+A named connection, `.sub_in(sub_in)`, is an assignment: the signal is padded or cut to the port's width, as any assignment is (IEEE 1800-2017 23.3.2.2). The implicit forms, `.sub_in` and `.*`, are not: the standard says the port and the signal must be of equivalent type (23.3.2.3 for `.name`, 23.3.2.4 for `.*`), and a 4-bit `logic` is not equivalent to an 8-bit one. The three tools read that differently. iverilog warns and pads (or cuts, 'Pruning 2 high bits of the expression' when the signal is wider), and the simulation runs; yosys' own reader stops on a `.*` with 'Width mismatch between wire (4 bits) and port (8 bits)', with no file:line, and builds a `.name` with 'Warning: Resizing cell port top.u.sub_in from 4 bits to 8 bits.'; yosys-slang, the second reader, refuses both with 'implicit named port 'sub_in' of type 'logic[7:0]' connects to value of inequivalent type 'logic[3:0]''. Before this check the student got a PASS from the simulation and two [slang-refused](/dewfpga/errors/slang-refused/) lines with a caret under `.*` from the build, and 20 of the 500 generated designs of test/fuzz ended that way. With the check, `test/fuzz/run.sh 1 500` refuses 22 designs with this code: those 20, and 2 (seeds 192 and 200) whose `.*` mismatch sat behind a [package-file-not-given](/dewfpga/errors/package-file-not-given/) refusal until #33 handed the tools the package file; the other 12 of the 14 package seeds build equal to their simulation, and no design that built before is refused now (`fuzz: ok 428 of 500; silent-wrong 19; warned 7; refused-coded 46`, from 416 before #33). Vivado's behaviour here is not documented: UG901 lists `lower my_inst (.*);` and the `.name` form as supported (Ch.10, p.281-282) and does not say what it does when the widths differ.
+
+Now the product has one verdict of its own, the same at `dewfpga sim` and at `dewfpga bit`: the instance line, the port, the two widths, what the simulation did with the difference, and the fix. The simulation finds the case in iverilog's warning, refuses, and prints the build's line, so the student never sees a simulation pass that the board cannot be built from.
+
+What the simulation did depends on the port's direction, and the message says it the way iverilog's own second line does: an input port cuts a wider signal ('Pruning 2 high bits of the expression') or pads a narrower one ('Padding 2 high bits of the expression'); an output port narrower than the signal pads the signal's high bits ('Padding 8 high bits of the expression'), and an output port wider than the signal widens the signal to the port, so the port's high bits reach nothing ('Padding 4 high bits of the port', the case above).
+
+When the mismatched signal is a port of the parent module itself (`sub u (.*)` inside `top(input logic [15:0] sw, output logic [15:0] led)` with an 8-bit `led` on `sub`), redeclaring it is not a fix: its width is the board's wiring, pinned in the XDC. The message then says so and gives the named form instead: `.led(led[7:0])` for an output port narrower than the parent's (the other bits need their own driver), `.sw(sw)` for an input port, which cuts or pads as the simulation did.
+
+The check reads the design's files only. The same mismatch on the testbench's own instance line (`top dut (.*)` with an 8-bit `led` in the testbench) is not this error: no reader ever builds the testbench, iverilog pads it with its warning and the simulation runs, and `dewfpga bit` is unaffected. And a port whose type is not a plain vector (`input int a` joined by `.*` to a `logic [31:0] a`: 32 bits on both sides, slang's objection is the 2-state type against the 4-state one, IEEE 1800-2017 6.22.2) is not this error either: the build prints yosys-slang's own line as [slang-refused](/dewfpga/errors/slang-refused/). A `.name` connection with the same mismatch is refused the same way (yosys' own reader would have resized it silently, slang refuses it); a named connection `.sub_in(sub_in)` with the same widths builds in all three tools, with iverilog's 'Padding' and yosys' 'Resizing' warnings passed through, and is not this error.
+
+## What is the fix?
+
+Declare the signal with the port's width, so the implicit connection joins two signals of the same type:
+
+```copy
+logic [7:0] sub_in, sub_out;
+```
+
+Or connect the port by name, which pads or cuts the signal to the port's width, as the simulation did:
+
+```copy
+sub #(.N(8)) u (.sub_in(sub_in), .sub_out(sub_out));
+```
 
 ## async-reset-nonconst
 step: bit
@@ -1788,6 +1865,12 @@ yosys-slang: design.sv:4:21: error: use of undeclared identifier 'summ'; did you
 
 Verilog's implicit nets: an undeclared name on a port connection or the right of an assign becomes a 1-bit wire. yosys warns and goes on; the CLI turns the warning into a stop when nothing drives that wire. yosys-slang, the second reader, often suggests the intended name.
 
+A second cause: the name is a typedef at file scope (outside any module or package) in a file the readers have not read when they reach the use. Both readers read every `.sv` and `.v` of the folder as one compilation unit, the files that hold no module (a package, an interface, typedefs alone in their file) first, then the files that hold a module, as Vivado reads the files of one library (UG901 Ch.10, Compilation Units). A `.svh` or `.vh` reaches them only through an `` `include ``. The message then names the file that declares the typedef and whether it is read too late or not at all:
+
+```
+iface.sv:2: ERROR [undeclared-name]: nib_t is a typedef declared in types.svh at file scope (outside any module or package), and no file `includes types.svh, so the readers never see it (a .svh or .vh reaches them only through an `include); Vivado reads the files of one library as one compilation unit, in the order they are added (UG901 Ch.10 Compilation Units), and so do both readers here. Fix: add   `include "types.svh"   as the first line of iface.sv; or put the typedef in a package (package types_pkg; typedef ...; endpackage) and write  import types_pkg::*;  where it is used. https://nosey-dewdrop.github.io/dewfpga/errors/undeclared-name/
+```
+
 ## What is the fix?
 
 Fix the spelling, or declare the signal:
@@ -1795,6 +1878,8 @@ Fix the spelling, or declare the signal:
 ```copy
 assign led[3:0] = sum;
 ```
+
+For a typedef in another file: `` `include `` that file as the first line of the file that uses the type, or put the typedef in a package and `import` it where it is used. A typedef in its own `types.sv` next to the design needs neither: that file is read first.
 
 ## hierarchical-name
 step: bit
@@ -1994,6 +2079,8 @@ note [read-with-slang]: top read with yosys-slang, the second reader (yosys' own
 ## Why does it happen?
 
 Interfaces, unpacked arrays, `foreach`, `break`, hierarchical names, string parameters: SystemVerilog Vivado accepts and yosys' own reader does not. The second reader takes over, and the netlist is checked the same way.
+
+Both readers read every file of the design as one compilation unit (yosys-slang with `--single-unit`, since 7 October 2026), the way Vivado reads the files of one library (UG901 Ch.10, Compilation Units): a typedef at file scope in `types.sv` is visible in `iface.sv` and `design.sv`, as it is in `dewfpga sim` (iverilog). Before that, yosys-slang read each file as its own unit and stopped with `use of undeclared identifier 'nib_t'` on a name another file declares.
 
 ## What is the fix?
 

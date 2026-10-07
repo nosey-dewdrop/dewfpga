@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port&#x27;s 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port&#x27;s width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port&#x27;s width as the simulation did. (fix, macOS)</title>
+<meta name="description" content="A .* or .name port connection whose port and signal widths differ: the simulator pads or cuts and runs, neither synthesis reader builds it; the same line at sim and at bit names the port, the two widths and the fix. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port&#x27;s 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port&#x27;s width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port&#x27;s width as the simulation did. (fix, macOS)">
+<meta property="og:description" content="A .* or .name port connection whose port and signal widths differ: the simulator pads or cuts and runs, neither synthesis reader builds it; the same line at sim and at bit names the port, the two widths and the fix. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port's 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port's width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port's width as the simulation did.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-07","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">sim, bit</span>dewfpga sim and dewfpga bit, yosys (or yosys-slang)</p>
+  <h1 class="mono">design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port&#x27;s 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port&#x27;s width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port&#x27;s width as the simulation did.</h1>
+<p><code>dewfpga sim</code> and <code>dewfpga bit</code> print the same line. The simulation first, where iverilog's own warning comes before it:</p>
+<pre><code>design.sv:7: warning: Port 1 (sub_in) of module sub expects 8 bit(s), given 4.
+design.sv:7:        : Padding 4 high bits of the port.
+design.sv:7: warning: Port 2 (sub_out) of module sub expects 8 bit(s), given 4.
+design.sv:7:        : Padding 4 high bits of the port.
+ERROR: Width mismatch between wire (4 bits) and port (8 bits) for implicit port connection `sub_out&#39; of cell top.u ($paramod\sub\N=s32&#39;00000000000000000000000000001000).
+design.sv:7: ERROR [implicit-port-width]: the .* connection of u (module sub) joins the port sub_out, 8 bits wide with N = 8, to the signal sub_out declared 4 bits wide: an implicit connection (.* or .sub_out) takes the port and the signal exactly as declared, with no padding or cutting (IEEE 1800-2017 23.3.2.3), so neither reader builds it, where dewfpga sim (iverilog) widened the signal to the port, so the port&#39;s 4 high bits reach nothing (its line: Padding 4 high bits of the port) and ran. Fix: declare sub_out with the port&#39;s width (logic [7:0] sub_out;), or connect it by name, .sub_out(sub_out), which pads or cuts to the port&#39;s width as the simulation did. https://nosey-dewdrop.github.io/dewfpga/errors/implicit-port-width/</code></pre>
+<p>The design that printed it (test/sv/102_dotstar_param_width): a submodule whose ports are <code>N</code> bits wide, instantiated with <code>N = 8</code> and connected with <code>.*</code> to signals declared 4 bits wide.</p>
+<pre><code>module sub #(parameter N = 4) (input logic [N-1:0] sub_in, output logic [N-1:0] sub_out);
+  assign sub_out = ~sub_in;
+endmodule
+module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [3:0] sub_in, sub_out;
+  assign sub_in = sw[3:0];
+  sub #(.N(8)) u (.*);
+  assign led = {12&#39;b0, sub_out};
+endmodule</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>A named connection, <code>.sub_in(sub_in)</code>, is an assignment: the signal is padded or cut to the port's width, as any assignment is (IEEE 1800-2017 23.3.2.2). The implicit forms, <code>.sub_in</code> and <code>.*</code>, are not: the standard says the port and the signal must be of equivalent type (23.3.2.3 for <code>.name</code>, 23.3.2.4 for <code>.*</code>), and a 4-bit <code>logic</code> is not equivalent to an 8-bit one. The three tools read that differently. iverilog warns and pads (or cuts, 'Pruning 2 high bits of the expression' when the signal is wider), and the simulation runs; yosys' own reader stops on a <code>.*</code> with 'Width mismatch between wire (4 bits) and port (8 bits)', with no file:line, and builds a <code>.name</code> with 'Warning: Resizing cell port top.u.sub_in from 4 bits to 8 bits.'; yosys-slang, the second reader, refuses both with 'implicit named port 'sub_in' of type 'logic[7:0]' connects to value of inequivalent type 'logic[3:0]''. Before this check the student got a PASS from the simulation and two <a href="/dewfpga/errors/slang-refused/">slang-refused</a> lines with a caret under <code>.*</code> from the build, and 20 of the 500 generated designs of test/fuzz ended that way. With the check, <code>test/fuzz/run.sh 1 500</code> refuses 22 designs with this code: those 20, and 2 (seeds 192 and 200) whose <code>.*</code> mismatch sat behind a <a href="/dewfpga/errors/package-file-not-given/">package-file-not-given</a> refusal until #33 handed the tools the package file; the other 12 of the 14 package seeds build equal to their simulation, and no design that built before is refused now (<code>fuzz: ok 428 of 500; silent-wrong 19; warned 7; refused-coded 46</code>, from 416 before #33). Vivado's behaviour here is not documented: UG901 lists <code>lower my_inst (.*);</code> and the <code>.name</code> form as supported (Ch.10, p.281-282) and does not say what it does when the widths differ.</p>
+<p>Now the product has one verdict of its own, the same at <code>dewfpga sim</code> and at <code>dewfpga bit</code>: the instance line, the port, the two widths, what the simulation did with the difference, and the fix. The simulation finds the case in iverilog's warning, refuses, and prints the build's line, so the student never sees a simulation pass that the board cannot be built from.</p>
+<p>What the simulation did depends on the port's direction, and the message says it the way iverilog's own second line does: an input port cuts a wider signal ('Pruning 2 high bits of the expression') or pads a narrower one ('Padding 2 high bits of the expression'); an output port narrower than the signal pads the signal's high bits ('Padding 8 high bits of the expression'), and an output port wider than the signal widens the signal to the port, so the port's high bits reach nothing ('Padding 4 high bits of the port', the case above).</p>
+<p>When the mismatched signal is a port of the parent module itself (<code>sub u (.*)</code> inside <code>top(input logic [15:0] sw, output logic [15:0] led)</code> with an 8-bit <code>led</code> on <code>sub</code>), redeclaring it is not a fix: its width is the board's wiring, pinned in the XDC. The message then says so and gives the named form instead: <code>.led(led[7:0])</code> for an output port narrower than the parent's (the other bits need their own driver), <code>.sw(sw)</code> for an input port, which cuts or pads as the simulation did.</p>
+<p>The check reads the design's files only. The same mismatch on the testbench's own instance line (<code>top dut (.*)</code> with an 8-bit <code>led</code> in the testbench) is not this error: no reader ever builds the testbench, iverilog pads it with its warning and the simulation runs, and <code>dewfpga bit</code> is unaffected. And a port whose type is not a plain vector (<code>input int a</code> joined by <code>.*</code> to a <code>logic [31:0] a</code>: 32 bits on both sides, slang's objection is the 2-state type against the 4-state one, IEEE 1800-2017 6.22.2) is not this error either: the build prints yosys-slang's own line as <a href="/dewfpga/errors/slang-refused/">slang-refused</a>. A <code>.name</code> connection with the same mismatch is refused the same way (yosys' own reader would have resized it silently, slang refuses it); a named connection <code>.sub_in(sub_in)</code> with the same widths builds in all three tools, with iverilog's 'Padding' and yosys' 'Resizing' warnings passed through, and is not this error.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Declare the signal with the port's width, so the implicit connection joins two signals of the same type:</p>
+<pre data-copy="1"><code>logic [7:0] sub_in, sub_out;</code></pre>
+<p>Or connect the port by name, which pads or cuts the signal to the port's width, as the simulation did:</p>
+<pre data-copy="1"><code>sub #(.N(8)) u (.sub_in(sub_in), .sub_out(sub_out));</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>
