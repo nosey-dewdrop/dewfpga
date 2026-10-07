@@ -4308,3 +4308,118 @@ pages 139, Chromium and WebKit 158; 0 failures). Site check: 116 pages, 2128 lin
 - Two module-less files that name each other (a cycle) fall back to the order given, without a word.
 - The two unexplained silent-wrong families of #31 (netlist `x` before the first edge; known bits differing after
   the start) are untouched; #34 owns the first.
+
+### #34 · The netlist the build writes starts every register as the bitstream does: a register without a start value at 0, a set or preset register at 1 · 7 October
+
+The first of the two unexplained silent-wrong families #31's generator left: the netlist prints `x` before the
+first clock edge where the simulation knows a 0 or a 1. A lab design declares its state register without a
+start value and reads it before the reset button is ever pressed:
+```
+typedef enum logic [1:0] {IDLE, RUN, DONE} state_t;
+state_t state, next;
+always_ff @(posedge clk) if (btnC) state <= IDLE; else state <= next;
+always_comb if (state == DONE) led = 16'hFFFF; else led = '0;
+```
+`dewfpga bit` prints the same lines before and after this update (`pnr ok: 3 LUT, 3 FF, clk 830.56 MHz (PASS at
+100.00 MHz)`, `top.bit  2.2 MB`); what changes is a file it writes into the lab folder, `top.json`, the netlist
+nextpnr-xilinx places and routes into `top.bit`, and the one the probe runner and the generator simulate against
+the student's own testbench as their third stage. Before, yosys left every flip-flop whose register had no start value at `INIT = 1'hx` (in the netlist
+written as Verilog: `INIT(1'hx)` on each of the three flip-flops of this state register), and the netlist
+simulation started them at `x`, so the `case` and the `if` on `state` drove every LED to `x`. The probe's
+testbench on that netlist:
+```
+FAIL: before the first edge led=xxxxxxxxxxxxxxxx, expected all off
+```
+The board never shows an `x`: nextpnr-xilinx programs a flip-flop without a start value at 0 when it is an
+FDRE, FDCE, LDCE or LDPE and at 1 when it is an FDSE or FDPE (a register with a synchronous set or an
+asynchronous preset), and the same for their falling-edge `_1` forms; that is its `def_init` in
+`xilinx/fasm.cc`, and it was checked on the product's own FASM (a design with 4 FDRE, 1 FDSE and 1 FDPE: the
+`ZINI` bit on exactly the 4 FDRE). So the generator's third stage reported a difference that was the netlist
+simulation's, not the board's, and could not see past it to what the board does. Now the build runs yosys'
+`setundef` on the INIT parameters before `write_json`: `-zero` on FDRE, FDCE, LDCE, LDPE and their `_1` forms
+and on every LUT, RAM and SRL cell, `-one` on FDSE, FDPE and their `_1` forms. The same netlist now carries
+`INIT(1'h0)` on the three flip-flops, and the same testbench prints
+```
+PASS
+```
+Only `x` bits are replaced: a start value the student declared (`logic [3:0] cnt = 5;`) stays as written on an
+FDRE and on an FDSE alike (the judge checked a declared 0 on an FDSE survives `-one`), and every LUT, RAM and
+SRL INIT is already known and stays. The student's own fix for a design that must not depend on this is still
+a start value in the declaration (UG901 v2022.2 Ch.4 p.79: "To initialize the content of a Register at
+circuit power-up, specify a default value for the signal during declaration"; p.244: the value is "carried as
+an INIT attribute"). What Vivado programs for a register with no start value is not in the guide; the values
+above are nextpnr-xilinx's, measured, not Vivado's.
+
+For the generator, seed 53 is the picture. Before:
+```
+  s53	silent-wrong	MISMATCH: cycle 0  rtl: 00000000xxxxxxxx xxxxxxx 0011 0  net: 00000000xxxxxxxx 00xxxx1 00x1 0
+```
+After:
+```
+  s53	ok
+```
+
+**Numbers.** From the closing run of this tree: Vivado-supported probes passing all four stages 95/118 → 97/120,
+all four stages 104/143 → 106/145, synthesis 119/143 → 121/145, known gaps 24 → 24. Against #33's closing
+table the 143 old rows are byte-identical; the two new rows are the two probes under Tests. `test/run.sh`:
+`passed 327, failed 0, known gaps 24` in 26 min 6 s, the second of two runs (the first ended `passed 326,
+failed 1`: the three pages still quoted 357 checks and 143 probes where `--list` prints 359 and 145, the two
+new probes uncounted, fixed in this close; the probe table of both runs is identical). The board check was
+skipped, `SKIP flash on the board: no board`: no FTDI device on the USB bus. The listed count goes 357 → 359 (the two
+probes). `test/fuzz/run.sh 1 500`, the same 500 seeds, before this update (#33's closing run of the released tree):
+```
+fuzz: refused-coded by code: unique-case-overlap 24; implicit-port-width 22
+fuzz: ok 428 of 500; silent-wrong 19; warned 7; refused-coded 46; refused-uncoded 0; crash 0; sim-refused 0
+```
+After, the integrator's run at the final tree (`JOBS=3`, finished after its report; this close did not run the
+500 again, the product files of the tree are the same, this close changed documentation and counts only):
+```
+fuzz: refused-coded by code: unique-case-overlap 24; implicit-port-width 22
+fuzz: ok 436 of 500; silent-wrong 11; warned 7; refused-coded 46; refused-uncoded 0; crash 0; sim-refused 0
+```
+Seed by seed: 8 seeds go `silent-wrong` → `ok` (53, 151, 157, 195, 281, 393, 479, 487), the 11 that stay
+silent-wrong (21, 62, 65, 121, 134, 161, 162, 214, 263, 302, 494) were silent-wrong before, no seed moved the
+other way, the 7 warned and the 46 refused are the same seeds. The judge's own partial run of the same command
+(205 seeds, stopped at its budget) agreed seed for seed up to 205. The update's claim text said 436 and 11; the
+measured line says the same.
+
+**Tests.** Two probes with their `expect.tsv` rows: `104_fsm_before_first_reset` (the 3-state enum FSM above,
+`case` and `if` on a register with no start value, led checked before any clock edge, then through a reset,
+IDLE → RUN → DONE → IDLE) and `104b_sync_set_start_one` (a 1-bit `armed` register set by the reset button and
+cleared by a switch, an FDSE, beside a 16-bit counter on FDRE; led must be all on before the first edge: the
+FDSE starts at 1, the FDRE at 0). Both were `pass pass fail pass` on the released tree (a silent wrong: the
+simulation, the synthesis and the bitstream pass, the netlist stage fails) and are `pass pass pass pass` now,
+with `EQV PASS: 262144 output bits compared, all equal` on 104. The integrator's guard after the change: the
+`blink` template's FASM equals `test/golden/blink.fasm` (the bitstream itself does not change: nextpnr already
+read an `x` INIT as its default, the netlist now says so too), and the eight probes with a register, RAM or
+SRL of every kind (`37_var_init`, `31_reset_styles`, `31b_negedge_set`, `29_shift_reg_srl`, `28_dist_ram`,
+`27_readmemh_rom`, `10_enum_fsm`, `101c_always_latch_race`) `matches expect.tsv: 8/8`; then the 104 probes
+that passed all four stages, `matches expect.tsv: 104/104`, 0 changed rows. The whole table ran once more in
+this close, see Numbers. A probe draft written as `next = sw[0] ? RUN : IDLE` hit iverilog's "This assignment requires an
+explicit cast" (#31's note), so 104 writes the transitions as `if`/`else` inside the `case`. No new check went
+into `test/run.sh` beyond the probes. Mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187, mail
+flow 60, sender idempotency, lifecycle 112, usage, integration, pages 139, Chromium and WebKit 158; 0
+failures). Site check: 116 pages, 2130 links, 0 failures.
+
+**Open.**
+- The claim holds before the first clock edge. yosys recodes the 2-bit enum of probe 104 as three one-hot
+  flip-flops, and their all-zero start is none of the three states: with no reset pressed and `sw[0]` on, the
+  netlist (and so the board) keeps `led=0000` on every clock until the button is pressed, while the student's
+  simulation, whose `x` state takes the `default` branch to IDLE, runs IDLE → RUN → DONE and shows `ffff` after
+  the first edge (the judge's repro, measured in this close). The product says nothing about a register read
+  before its first reset; the netlist now shows what the board does, which is what makes this measurable.
+- The 11 seeds that stay silent-wrong are now of one kind: a known bit that differs at the first cycle (s134:
+  `rtl: 0000000000000000  net: 0000000000001111`, the RTL's `x` took a `case` default or an `else`, the board
+  runs from 0), the same difference as the point above, not an `x` any more. Seed 302 also differs on `seg` at
+  193 of 300 later cycles, a combinational difference no start value explains; seeds 121 and 214 (known bits
+  differing after the start) stay #31's second, unexplained family. None of the 11 was touched.
+- `top.json` still carries `x` parameters: two `$specrule` cells with `T_LIMIT_MIN`, `T_LIMIT_TYP` and
+  `T_LIMIT_MAX` of 32 `x` bits each in every design (timing checks, no INIT, not read by the netlist simulation).
+- What Vivado programs for a register declared without a start value is not in UG901 (v2022.2 p.79 and p.244
+  describe a declared value only), so the start values the new rows state are nextpnr-xilinx's, checked on the
+  product's FASM; the rows' `vivado` column says the construct is supported, not what Vivado would show.
+- 104's `expect.tsv` text and the probe's comment first said the state register starts at "INIT = 0 (IDLE)";
+  in the netlist 0 is the one-hot no-state (the judge's finding). Both reworded in this close; the probe runs
+  as before, `matches expect.tsv: 1/1`.
+- The board was not plugged in during this close (no FTDI device on the USB bus): no flash, no board claim for
+  the two probes; the netlist's start values were checked against the FASM, not against a lit LED.

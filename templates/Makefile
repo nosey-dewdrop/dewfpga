@@ -472,7 +472,15 @@ READ_VERILOG = $(if $(filter %.sv,$(SRCS)),read_verilog $(INC) -sv $(filter %.sv
 # $(call MKKW,<files>) is a shell fragment: afterwards $$KWSRCS is the list the reader gets, in the original order,
 # .sv files as they are, each .v as its copy; $$KW is the folder.
 MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]: cannot create a work folder in $$(pwd). Fix: check that this folder is writable and the disk is not full. $(URL)cannot-write-here/" >&2; exit 1; }; : > "$$KW/.dewfpga-kw"; trap 'rm -rf "$$KW"' EXIT; trap 'rm -rf "$$KW"; exit 130' INT TERM HUP; n=0; KWSRCS=""; for f in $(1); do case $$f in *.v) n=$$((n+1)); { printf '`begin_keywords "1364-2005"\n`line 1 "%s" 0\n' "$$f"; cat "$$f"; printf '\n`end_keywords\n'; } > "$$KW/$$n.v" || exit 1; KWSRCS="$$KWSRCS $$KW/$$n.v" ;; *) KWSRCS="$$KWSRCS $$f" ;; esac; done
-SYNTH        = read_rtlil $(TOP).il; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; write_json $(TOP).json
+# The netlist starts every register as the bitstream does: synth_xilinx leaves INIT = 1'hx on a flip-flop whose register has
+# no start value, and nextpnr-xilinx programs it at 0 (FDRE/FDCE/LDCE/LDPE) or 1 (FDSE/FDPE, and their negedge _1 forms):
+# xilinx/fasm.cc `int def_init = (type == "FDSE" || type == "FDSE_1" || type == "FDPE" || type == "FDPE_1") ? 1 : 0;`,
+# measured on the product's FASM (4 FDRE + 1 FDSE + 1 FDPE: ZINI on exactly the 4 FDRE). setundef -params replaces only the
+# x bits, so a declared start value (logic [3:0] cnt = 5;) and every LUT/RAM/SRL INIT stay; before, the netlist simulation
+# (cells_sim.v: initial Q <= INIT) put x on every LED a case or an if on that register drove, where the board shows them off. The student's own fix is a start value in the declaration (UG901 v2022.2
+# p.79 'specify a default value for the signal during declaration', p.244 'sets this value on the output of the register at
+# global reset or power up ... carried as an INIT attribute'); what Vivado does for a register without one is not in the guide.
+SYNTH        = read_rtlil $(TOP).il; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
 $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json $(TOP).il $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log
 	@"$(PY)" "$(CHECKER)" --fix-ports $(SRCS)
