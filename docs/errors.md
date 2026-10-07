@@ -1460,6 +1460,97 @@ Assign the signal on every path, or say latch when you mean it:
 always_latch if (en) q <= d;
 ```
 
+## unique-case-overlap
+step: sim, bit
+source: dewfpga sim and dewfpga bit, the source scan before the tools
+title: design.sv:5: ERROR [unique-case-overlap]: the items 4'b10?? (design.sv:4) and 4'b??11 (design.sv:5) of this unique casez both match 4'b1011, and unique promises that only one item can match: the simulation takes the first item (iverilog ignores unique), and the hardware, built as parallel logic the way Vivado builds a unique case (UG901 Ch.10, parallel_case), ORs the two items' values, so the board would not do what the simulation showed. Fix: make the items disjoint (4'b10?? and 4'b0?11), write priority casez when the first match should win, or drop unique.
+summary: Two items of a unique casez (or casex) can match the same value; the simulator takes the first, the hardware ORs both, so the board would not do what the simulation showed.
+date: 2026-10-07
+
+`dewfpga sim` or `dewfpga bit` on a design whose `unique casez` has two items that overlap:
+
+```
+design.sv:5: ERROR [unique-case-overlap]: the items 4'b10?? (design.sv:4) and 4'b??11 (design.sv:5) of this unique casez both match 4'b1011, and unique promises that only one item can match: the simulation takes the first item (iverilog ignores unique), and the hardware, built as parallel logic the way Vivado builds a unique case (UG901 Ch.10, parallel_case), ORs the two items' values, so the board would not do what the simulation showed. Fix: make the items disjoint (4'b10?? and 4'b0?11), write priority casez when the first match should win, or drop unique. https://nosey-dewdrop.github.io/dewfpga/errors/unique-case-overlap/
+```
+
+The design that printed it:
+
+```
+module top(input logic [15:0] sw, output logic [15:0] led);
+  always_comb begin
+    led = '0;
+    unique casez (sw[3:0])
+      4'b10??: led[1:0] = 2'd1;
+      4'b??11: led[1:0] = 2'd2;
+      default: led[1:0] = 2'd0;
+    endcase
+  end
+endmodule
+```
+
+## Why does it happen?
+
+`unique` is a promise, not a priority: it asserts that no two items match at once (IEEE 1800-2017 12.5.3), and every tool is free to build on that promise. The tools disagree on what to do when it is broken. iverilog ignores `unique` and takes the first matching item, so `dewfpga sim` shows `led = 1` for `sw[3:0] = 4'b1011`. yosys, yosys-slang and Vivado (UG901 v2023.2 Ch.10 p.279: a unique case is treated as parallel_case and full_case) build the items as parallel logic with no priority chain, and when two match, their values are ORed: the board shows `led = 3`. Measured on seed 6 of test/fuzz: rtl `0000000000000001`, netlist `0000000000000011`. The same `unique case` with disjoint items, as the course's `18_unique_priority` probe writes it (`unique case (sw[1:0])` with the four constants `2'd0` to `2'd3`), builds the same on every tool.
+
+Because this is a disagreement between the simulator and the hardware that no simulation can show, the source scan stops both commands before the tools run.
+
+The scan reads the patterns, not the values they assign, so it also stops a design whose overlapping items happen to agree: seed 27 of test/fuzz has `4'b??11: s2 = {4{2'd1}}` over `4'b?0?1: s2 = (&btnL)`, whose OR is the first item's value, and its netlist matched its RTL for all 300 cycles before the scan existed. In test/fuzz/run.sh 1 500, 24 of the 500 random designs carry such an overlap; 22 of them built equal, 1 (seed 6) built wrong, 1 (seed 345) was refused by yosys-slang before it could build. The 22 are refused the same way, because the agreement is an accident of the values on that line, not something the design promised.
+
+## What is the fix?
+
+Make the items disjoint, so that only one can ever match:
+
+```copy
+    unique casez (sw[3:0])
+      4'b10??: led[1:0] = 2'd1;
+      4'b0?11: led[1:0] = 2'd2;
+      default: led[1:0] = 2'd0;
+    endcase
+```
+
+If the first match should win, say so: `priority casez` builds the if/else chain the simulation shows. If neither matters, drop `unique`: a plain `casez` is a priority chain in every tool.
+
+## latch-hazard
+step: bit
+source: dewfpga bit, yosys
+title: design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s < sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s < sw) led <= ...;  keep always_latch only when the gate is held steady while the data changes.
+summary: An always_latch whose gate and data come from the same inputs: when both change at once the board races, where the simulation keeps the old value; the build goes on with the warning.
+date: 2026-10-07
+
+A warning: the build goes on, with the latch (an LDCE cell) as Vivado would build it. `dewfpga bit` on a design whose `always_latch` gate and data both depend on `sw`:
+
+```
+design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s < sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s < sw) led <= ...;  keep always_latch only when the gate is held steady while the data changes. https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/
+```
+
+The design that printed it, seed 7 of test/fuzz cut down to six lines:
+
+```
+module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [1:0] s;
+  assign s = {sw[1] ^ sw[0], sw[0] ^ sw[1]};
+  always_latch
+    if (s < sw) led = {15'b0, (sw < 16'd1791)};
+endmodule
+```
+
+## Why does it happen?
+
+A latch is transparent while its gate is open and holds while it is closed; it has no clock edge to order its inputs. Here the gate `s < sw` and the data `sw < 16'd1791` are both functions of `sw`, so one change of `sw` moves both. The testbench drives `sw` from `16'h2bdc` to `16'h0000`: the gate goes from open to closed and the data from 0 to 1 in the same instant. The RTL simulation evaluates the `if` once, with the new gate value, sees it closed and keeps `led = 0`. The netlist's LDCE gets its G and D through LUTs with different delays: D arrives first, G closes a moment later, and the latch takes `led = 1`. The board does the same, and which one wins depends on the routing, not on the code. 7 of the 27 silent-wrong seeds in 1..500 of test/fuzz were this shape; each becomes equal to its simulation when the latch is made transparent.
+
+The [latch](/dewfpga/errors/latch/) warning names a latch nobody asked for (an `always_comb` that leaves a path unassigned); this one names a latch that was asked for, built right, and still cannot match the simulation. `dewfpga sim` cannot show the race, because iverilog has no delays on the netlist's wires either.
+
+## What is the fix?
+
+Almost always a register was meant. Give it the clock, and the gate as its enable:
+
+```copy
+always_ff @(posedge clk)
+  if (s < sw) led <= {15'b0, (sw < 16'd1791)};
+```
+
+Keep `always_latch` only when the gate is held steady while the data changes (a bus-hold or an address latch with a setup time its driver respects): then the warning tells you what the design counts on.
+
 ## async-reset-nonconst
 step: bit
 source: dewfpga bit, yosys

@@ -6,11 +6,15 @@
 # cells_sim.v and the same testbench) and the two output traces compared line by line: a bit the RTL knows
 # (0 or 1) must be the same in the netlist; an x in the RTL matches anything (a register nobody started).
 # Outcomes: ok (built, RTL == netlist) / silent-wrong (built, RTL != netlist: the board would not do what the
-# simulation showed) / refused-coded (dewfpga bit failed with an ERROR [code]) / refused-uncoded (failed
-# without one) / crash (a tool aborted, a timeout, or the netlist cannot be simulated) / sim-refused (dewfpga
-# sim failed, or iverilog could not compile the RTL and the sim ran on the build's view: there is no
-# independent reference then). Outcome and the first message per seed in results.tsv; a failed seed's folder
-# stays. The last line is the metric the later updates read.
+# simulation showed, and the build said nothing) / warned (built, RTL != netlist as a known bit that differs,
+# and the build printed a 'warning [latch-hazard]' line: it named, with the line, the construct whose board
+# behaviour differs from the simulation; a netlist x where the RTL knows the bit is never warned, a latch
+# warning does not explain an x, that seed is silent-wrong) / refused-coded (dewfpga sim or dewfpga bit failed with an ERROR [code]: the source scan before
+# the tools stops both the same way, so a coded refusal at the sim step is the product's refusal, not a
+# missing reference) / refused-uncoded (dewfpga bit failed without one) / crash (a tool aborted, a timeout, or
+# the netlist cannot be simulated) / sim-refused (dewfpga sim failed without an ERROR [code], or iverilog could
+# not compile the RTL and the sim ran on the build's view: there is no independent reference then). Outcome and the first message per seed in results.tsv; a failed seed's folder
+# stays. The last line is the metric the later updates read; the line before it splits refused-coded by code.
 set -uo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
@@ -28,11 +32,24 @@ run_one() {
     rm -rf "$d"; mkdir -p "$d"
     tmo() { perl -e '$SIG{ALRM}=sub{kill TERM=>$p; select(undef,undef,undef,0.3); kill KILL=>$p; exit 142}; alarm shift; $p=fork; exec @ARGV if !$p; waitpid $p,0; exit($?>>8)' "$@"; }
     firstmsg() { grep -m1 -E 'ERROR|error|sorry|Assertion|Segmentation|abort|TIMEOUT|MISMATCH' "$1" | cut -c1-300 || true; }
+    # The kind of the first difference: true when a bit the RTL knows is a different known bit in the netlist
+    # (a latch race: the simulation kept the old value, the netlist took the new one). False when the netlist
+    # has x or z where the RTL knows the bit (a register nobody started: no latch warning explains an x) or
+    # when the line is not a cycle line (a shape or a length difference).
+    known_bit_differs() { python3 -c '
+import re, sys
+m = re.match(r"MISMATCH: cycle \S+  rtl: (.*)  net: (.*)$", sys.argv[1])
+if not m: sys.exit(1)
+rc = "".join(m.group(1).split()); nc = "".join(m.group(2).split())
+if len(rc) != len(nc): sys.exit(1)
+d = [(a, b) for a, b in zip(rc, nc) if a in "01" and a != b]
+sys.exit(0 if d and all(b in "01" for a, b in d) else 1)' "$1"; }
     python3 "$GEN" "$seed" "$d" || { echo "$seed	gen-fail	generator failed" >> "$W/results.tsv"; return; }
     # 1 the RTL
     rc=0; (cd "$d" && SIM_TIMEOUT=$TIMEOUT "$CLI" sim) > "$d/sim.log" 2>&1 || rc=$?
     if [ $rc -ne 0 ] || grep -q 'note \[sim-from-build\]' "$d/sim.log"; then
-        out=sim-refused; msg=$(grep -m1 -E 'ERROR|error|sorry|internal' "$d/sim.log" | cut -c1-300)
+        if [ $rc -ne 0 ] && grep -qE 'ERROR \[[a-z0-9-]+\]' "$d/sim.log"; then out=refused-coded; msg=$(grep -m1 -oE '([A-Za-z0-9_.]+:[0-9]+: )?ERROR \[[a-z0-9-]+\]: .{0,200}' "$d/sim.log")
+        else out=sim-refused; msg=$(grep -m1 -E 'ERROR|error|sorry|internal' "$d/sim.log" | cut -c1-300); fi
     else
         grep -E '^[0-9]+ ' "$d/top_sim.out" > "$d/rtl.trace"
         # 2 the bitstream
@@ -49,7 +66,10 @@ run_one() {
             else
                 grep -E '^[0-9]+ ' "$d/net.out" > "$d/net.trace"
                 if python3 "$HERE/compare.py" "$d/rtl.trace" "$d/net.trace" > "$d/compare.log" 2>&1; then out=ok
-                else out=silent-wrong; msg=$(head -1 "$d/compare.log"); fi
+                else
+                    msg=$(head -1 "$d/compare.log")
+                    if grep -q 'warning \[latch-hazard\]' "$d/bit.log" && known_bit_differs "$msg"; then out=warned; else out=silent-wrong; fi
+                fi
             fi
         fi
     fi
@@ -62,4 +82,9 @@ export -f run_one
 seq "$first" $((first + count - 1)) | xargs -P "${JOBS:-1}" -n1 bash -c 'run_one "$1"' _
 n=$(wc -l < "$W/results.tsv" | tr -d ' ')
 c() { awk -F'\t' -v o="$1" '$2==o' "$W/results.tsv" | wc -l | tr -d ' '; }
-echo "fuzz: ok $(c ok) of $n; silent-wrong $(c silent-wrong); refused-coded $(c refused-coded); refused-uncoded $(c refused-uncoded); crash $(c crash); sim-refused $(c sim-refused)"
+# refused-coded by code, before the metric line (which stays last), so that a refusal that moves designs out
+# of ok is weighed by name, not hidden in a sum:
+#   fuzz: refused-coded by code: unique-case-overlap 24; slang-refused 20; package-file-not-given 14
+codes=$(awk -F'\t' '$2=="refused-coded" && match($3,/ERROR \[[a-z0-9-]+\]/){print substr($3,RSTART+7,RLENGTH-8)}' "$W/results.tsv" | sort | uniq -c | sort -k1,1nr -k2,2 | awk '{printf "%s%s %s", (NR>1?"; ":""), $2, $1}')
+if [ -n "$codes" ]; then echo "fuzz: refused-coded by code: $codes"; fi
+echo "fuzz: ok $(c ok) of $n; silent-wrong $(c silent-wrong); warned $(c warned); refused-coded $(c refused-coded); refused-uncoded $(c refused-uncoded); crash $(c crash); sim-refused $(c sim-refused)"

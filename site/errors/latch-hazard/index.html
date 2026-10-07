@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s &lt; sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s &lt; sw) led &lt;= ...;  keep always_latch only when the gate is held steady while the data changes. (fix, macOS)</title>
+<meta name="description" content="An always_latch whose gate and data come from the same inputs: when both change at once the board races, where the simulation keeps the old value; the build goes on with the warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s &lt; sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s &lt; sw) led &lt;= ...;  keep always_latch only when the gate is held steady while the data changes. (fix, macOS)">
+<meta property="og:description" content="An always_latch whose gate and data come from the same inputs: when both change at once the board races, where the simulation keeps the old value; the build goes on with the warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s < sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s < sw) led <= ...;  keep always_latch only when the gate is held steady while the data changes.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-07","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, yosys</p>
+  <h1 class="mono">design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s &lt; sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s &lt; sw) led &lt;= ...;  keep always_latch only when the gate is held steady while the data changes.</h1>
+<p>A warning: the build goes on, with the latch (an LDCE cell) as Vivado would build it. <code>dewfpga bit</code> on a design whose <code>always_latch</code> gate and data both depend on <code>sw</code>:</p>
+<pre><code>design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s &lt; sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s &lt; sw) led &lt;= ...;  keep always_latch only when the gate is held steady while the data changes. https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/</code></pre>
+<p>The design that printed it, seed 7 of test/fuzz cut down to six lines:</p>
+<pre><code>module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [1:0] s;
+  assign s = {sw[1] ^ sw[0], sw[0] ^ sw[1]};
+  always_latch
+    if (s &lt; sw) led = {15&#39;b0, (sw &lt; 16&#39;d1791)};
+endmodule</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>A latch is transparent while its gate is open and holds while it is closed; it has no clock edge to order its inputs. Here the gate <code>s &lt; sw</code> and the data <code>sw &lt; 16'd1791</code> are both functions of <code>sw</code>, so one change of <code>sw</code> moves both. The testbench drives <code>sw</code> from <code>16'h2bdc</code> to <code>16'h0000</code>: the gate goes from open to closed and the data from 0 to 1 in the same instant. The RTL simulation evaluates the <code>if</code> once, with the new gate value, sees it closed and keeps <code>led = 0</code>. The netlist's LDCE gets its G and D through LUTs with different delays: D arrives first, G closes a moment later, and the latch takes <code>led = 1</code>. The board does the same, and which one wins depends on the routing, not on the code. 7 of the 27 silent-wrong seeds in 1..500 of test/fuzz were this shape; each becomes equal to its simulation when the latch is made transparent.</p>
+<p>The <a href="/dewfpga/errors/latch/">latch</a> warning names a latch nobody asked for (an <code>always_comb</code> that leaves a path unassigned); this one names a latch that was asked for, built right, and still cannot match the simulation. <code>dewfpga sim</code> cannot show the race, because iverilog has no delays on the netlist's wires either.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Almost always a register was meant. Give it the clock, and the gate as its enable:</p>
+<pre data-copy="1"><code>always_ff @(posedge clk)
+  if (s &lt; sw) led &lt;= {15&#39;b0, (sw &lt; 16&#39;d1791)};</code></pre>
+<p>Keep <code>always_latch</code> only when the gate is held steady while the data changes (a bus-hold or an address latch with a setup time its driver respects): then the warning tells you what the design counts on.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

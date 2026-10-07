@@ -245,6 +245,14 @@
     <p>dewfpga bit, yosys. A latch the reader turned into a combinational loop instead of a latch cell; the loop does not behave like the simulation, so the build stops.</p>
   </div>
   <div class="err">
+    <span class="step">sim, bit</span><a class="title" href="/dewfpga/errors/unique-case-overlap/">design.sv:5: ERROR [unique-case-overlap]: the items 4&#x27;b10?? (design.sv:4) and 4&#x27;b??11 (design.sv:5) of this unique casez both match 4&#x27;b1011, and unique promises that only one item can match: the simulation takes the first item (iverilog ignores unique), and the hardware, built as parallel logic the way Vivado builds a unique case (UG901 Ch.10, parallel_case), ORs the two items&#x27; values, so the board would not do what the simulation showed. Fix: make the items disjoint (4&#x27;b10?? and 4&#x27;b0?11), write priority casez when the first match should win, or drop unique.</a>
+    <p>dewfpga sim and dewfpga bit, the source scan before the tools. Two items of a unique casez (or casex) can match the same value; the simulator takes the first, the hardware ORs both, so the board would not do what the simulation showed.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/latch-hazard/">design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s &lt; sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s &lt; sw) led &lt;= ...;  keep always_latch only when the gate is held steady while the data changes.</a>
+    <p>dewfpga bit, yosys. An always_latch whose gate and data come from the same inputs: when both change at once the board races, where the simulation keeps the old value; the build goes on with the warning.</p>
+  </div>
+  <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/async-reset-nonconst/">design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#x27;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1;</a>
     <p>dewfpga bit, yosys. In an always_ff with an asynchronous reset, the reset branch loads a register from a signal, or a signal is written outside the reset if/else; a flip-flop can only reset to a constant.</p>
   </div>

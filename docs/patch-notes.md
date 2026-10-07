@@ -4056,3 +4056,119 @@ Site check: 112 pages, 2056 links, 0 failures.
   for it), `$readmemh` memories, interfaces, and nothing produced a timing failure.
 - The two silent wrongs that are understood (`unique casez`, `always_latch`) are reported here and not fixed: the
   product's warnings for them are a later update's work.
+
+### #32 · A latch whose gate and data change together, and a unique casez whose items overlap: the chain names both before the board differs from the simulation · 7 October
+
+The two silent wrongs #31's generator found and left open are now named by the product. Before, a student with
+an eight-line `unique casez` whose items `4'b10??` and `4'b??11` both match `1011` typed `dewfpga sim` and saw
+`led = 1` for that input, then `dewfpga bit` and saw the build go through as if nothing were wrong:
+```
+xdc ok: 32 ports, all mapped, 73 unused pins in the XDC ignored.
+pnr ok: 2 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)
+top.bit  2.2 MB
+```
+and the board showed `led = 3`: iverilog ignores `unique` and takes the first item; yosys, yosys-slang and
+Vivado (UG901 v2023.2 Ch.10 p.279: a unique case is parallel_case and full_case) build the items as parallel
+logic and OR their values when two match. Now the source scan that runs before the tools stops both `dewfpga sim`
+and `dewfpga bit` the same way, with the two items, the value they share and the fix on the line:
+```
+design.sv:5: ERROR [unique-case-overlap]: the items 4'b10?? (design.sv:4) and 4'b??11 (design.sv:5) of this unique casez both match 4'b1011, and unique promises that only one item can match: the simulation takes the first item (iverilog ignores unique), and the hardware, built as parallel logic the way Vivado builds a unique case (UG901 Ch.10, parallel_case), ORs the two items' values, so the board would not do what the simulation showed. Fix: make the items disjoint (4'b10?? and 4'b0?11), write priority casez when the first match should win, or drop unique. https://nosey-dewdrop.github.io/dewfpga/errors/unique-case-overlap/
+```
+The rule: a `unique` or `unique0` `case`, `casez` or `casex` whose every label is an integer literal, or a
+`localparam` of the module whose value is one, is checked pairwise for a value two items both match (a `?` or
+`z`, and `x` in a casex, is a wildcard); a statement with an enum name, a `parameter` (an instance may override
+it), an expression, a range or `inside` among its labels is skipped, no guess. Two labels of one item
+(`4'b10??, 4'b??11: led = 1;`) are one item with one value and may overlap. A localparam item is named with its
+value (`HI = 4'b10zz`) so the overlapping bits are on the line. The same `unique case` with disjoint items, as
+the course's `18_unique_priority` writes it, builds as before.
+
+The second one, an `always_latch` whose gate and data come from the same switches (seed 7 of #31, cut to six
+lines: `always_latch if (s < sw) led = {15'b0, (sw < 16'd1791)};` with `s` a function of `sw`), built before
+with `pnr ok: 22 LUT, 1 FF, no clocked paths, timing not applicable` and not a word, and the simulation kept
+`led = 0` where the netlist, and the board, take `led = 1`: a latch has no clock edge to order its inputs, the
+gate and the data arrive through LUTs of different delay. The latch is what the student asked for and both
+readers build it right (one LDCE, as Vivado does, UG901 Ch.5), so the build goes on, and now warns once per
+`always_latch`, with its gate:
+```
+design.sv:4: warning [latch-hazard]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s < sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s < sw) led <= ...;  keep always_latch only when the gate is held steady while the data changes. https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/
+```
+The warning reads the `$dlatch` cells after `proc` (yosys' own `Latch inferred` line is hidden for an
+`always_latch`, yosys-slang prints none) and names the first `if (` of the block; comments are blanked before
+any rule reads a source line, so `always_latch // if (reset) was here once` names the `if` on the next line, and
+an `always_comb` whose comment says `always_latch` still gets [latch], not [latch-hazard]. Both messages have
+their page in the catalog (`errors/unique-case-overlap/`, `errors/latch-hazard/`), with the design that printed
+them and why.
+
+`test/fuzz/run.sh` learns the difference: a seed whose netlist differs from its RTL in a known bit (0 or 1 on
+both sides, not an `x`) while the build printed `warning [latch-hazard]` is `warned`, not `silent-wrong`: the
+product named, with the line, the construct whose board behaviour differs from the simulation. A netlist `x`
+where the RTL knows the bit is never excused by a latch warning. A coded refusal at the `sim` step is now
+`refused-coded`, not `sim-refused`: the scan stops `sim` and `bit` the same way, so it is the product's refusal,
+not a missing reference. And the line before the metric splits the refusals by code
+(the line quoted under Numbers), so a check
+that moves designs out of `ok` is weighed by name.
+
+**Numbers.** From the closing run of this tree: Vivado-supported probes passing all four stages 86/111 → 88/113,
+all four stages 95/133 → 97/137, synthesis 108/133 → 111/137, known gaps 25 → 26; the 133 rows of #31's table
+are byte-identical, the four new rows are the four probes below. The new gap is `101c_always_latch_race`, a
+documented silent wrong: the bitstream builds with the warning, the netlist's LDCE takes the new data as the
+gate closes (`FAIL: step 1: sw=0000 led=0001, expected 0000`) where the RTL keeps the old. `test/run.sh`:
+`passed 317, failed 0, known gaps 26` in 18 min 46 s (the second run; its probe table equals the first run's byte for byte). The listed count goes 347 → 351 (the four probes); the first closing run was `passed 316, failed 1`,
+the one failure the count lock (README, README.tr and site/cli still quoted 347 checks and 133 probes), fixed
+in the close. The board check was skipped (`SKIP flash on the board: no board`; no FTDI device on the USB bus).
+
+`test/fuzz/run.sh 1 500`, the same 500 seeds as #31's second measurement, before this update:
+`fuzz: ok 438 of 500; silent-wrong 27; refused-coded 21; refused-uncoded 0; crash 0; sim-refused 14`. After, in
+the close:
+```
+fuzz: refused-coded by code: unique-case-overlap 24; slang-refused 20; package-file-not-given 14
+fuzz: ok 416 of 500; silent-wrong 19; warned 7; refused-coded 58; refused-uncoded 0; crash 0; sim-refused 0
+```
+(`JOBS=3`, 17 min 53 s.) Seed by seed against the before run: 416 stay `ok`; 22 go `ok` → `refused-coded` (27,
+83, 128, 170, 174, 182, 197, 275, 289, 290, 297, 305, 322, 336, 360, 362, 363, 406, 443, 485, 493, 497: a
+`unique casez` with overlapping items whose netlist nonetheless equalled the RTL, see Open); 1 silent-wrong →
+refused (seed 6, the overlap that built wrong); 7 silent-wrong → `warned` (7, 88, 125, 159, 327, 384, 412: each
+has an `always_latch`, the build printed [latch-hazard], the first difference is a known bit); 19 silent-wrong
+stay silent-wrong (the netlist-`x`-at-cycle-0 family and the unexplained one, 121 and 214 among them); 14
+`sim-refused` → `refused-coded` by the counting rule alone (the `package-file-not-given` family, the same
+refusal now counted as the product's); the 21 refused stay refused. No seed went from `ok` to `silent-wrong`, no
+crash. Read plainly: the two families this update names are 8 of the 27 silent wrongs (7 warned, 1 refused), 19
+remain unnamed, and `ok` drops by 22 designs that were right by accident.
+
+**Tests.** Four probes with their `expect.tsv` rows, each quoted message checked against the run's output by the
+probe runner (a probe that stops matching `expect.tsv` fails the suite): `100_unique_casez_overlap` (rtl fail,
+synth fail, bit fail: no `top.json`, no `top.bit`, the error from `sim` and from `bit`), `101_always_latch` (a
+latch on purpose, read by yosys' own reader: builds, one warning at the `always_latch` line, `0 LUT, 1 FF`),
+`101b_always_latch_slang` (the same latch next to a `foreach`, so yosys-slang reads it: the same warning,
+`note [read-with-slang]`), `101c_always_latch_race` (the gap above). The eleven neighbours of the two rules
+(`01_latch_comb`, `18_unique_priority`, `18b`, `18c`, `19_casez_casex`, `10_enum_fsm`, `43_foreach_loop` and the
+four) `matches expect.tsv: 11/11`; 16 of the 95 probes the integrator listed as the rules' blast radius ran through
+`test/sv/run.sh` after the change, and the old and the new scanner were run with `--scan` on all 134 probe
+folders for `bit` and for `sim` (268 scans): byte-identical output everywhere but `100_unique_casez_overlap`.
+The judge's own run of `100`, `101` and `101c`: `matches expect.tsv: 3/3`. No new check went into `test/run.sh`
+beyond the probes: the fuzz runner's `warned` rule and its by-code line have no unit test. Mail suites: 9 suites,
+each exit 0 (activation SQL 142, SQL 187, mail flow 60, sender idempotency, lifecycle 112, usage, integration,
+pages 139, Chromium and WebKit 158; 0 failures). Site check: 114 pages, 2092 links, 0 failures.
+
+**Open.**
+- The overlap scan reads the patterns, not the values the items assign, so a `unique casez` whose overlapping
+  items happen to agree (seed 27: the OR of the two values is the first item's value) is refused with the same
+  words, "the board would not do what the simulation showed", though for that design it would: in the 500 seeds
+  22 of the 24 refused overlaps built equal to their RTL before the scan existed, 1 (seed 6) built wrong, 1 (seed
+  345) was refused by yosys-slang first. The design is still wrong by IEEE 1800-2017 12.5.3; the message's claim
+  is wider than what was measured for those 22.
+- `warned` excuses a known-bit mismatch of any design that has an `always_latch` and printed the warning, not
+  only a mismatch at the latch: a design with a latch and an unrelated difference counts as warned. Round 3
+  narrowed it to known bits (seed 157, a netlist `x` on a register at cycle 0 in a design that also has a latch,
+  went back to `silent-wrong`); the attribution to the latch's own signals is not checked.
+- An `always_latch` gated by a `case`, with no `if`, warns "when its gate closes" without naming the gate, and
+  its Fix reads `if (gate) q <= ...`.
+- The browser mirror of the source scan (`sim/src/sim/source-scan.js`, which carries `decl-init-reads-signal`)
+  does not carry `unique-case-overlap`: the browser build of an overlapping `unique casez` goes through.
+- No Vivado ran: the `100` row's vivado column is `unverified` (UG901 says unique case is parallel_case and does
+  not say what Vivado does when two items match), and the `101c` row's board behaviour (which wire is faster) is
+  argued from the LDCE, not seen on a board. The Basys3 was not on the bus during this close.
+- Labels the scan does not read (enum names, `parameter`s, expressions, ranges, `inside`) are skipped without a
+  word: an overlap written with them is not caught.
+- The two unexplained silent-wrong families of #31 (netlist `x` before the first edge; known bits differing
+  after the start, seeds 121 and 214) are untouched; #34 owns the first.

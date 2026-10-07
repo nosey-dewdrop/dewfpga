@@ -217,6 +217,207 @@ def _decl_init_problems(f, body, bline, typedefs):
                                 fix, loc=f"{f}:{line}"))
     return problems
 
+_WORD = re.compile(r"[A-Za-z_]\w*")
+_CASE_LIT = re.compile(r"^(?:(\d[\d_]*)\s*)?'\s*[sS]?([bBoOdDhH])\s*([0-9a-fA-F_xXzZ?]+)$|^(\d[\d_]*)$")
+
+def _skip_ws(t, i):
+    while i < len(t) and t[i].isspace(): i += 1
+    return i
+
+def _skip_to(t, i, stop):
+    """Index after the first `stop` character at bracket depth 0 from t[i] (len(t) when there is none)."""
+    depth = 0
+    while i < len(t):
+        c = t[i]
+        if c in "([{": depth += 1
+        elif c in ")]}": depth -= 1
+        if c == stop and depth <= 0: return i + 1
+        i += 1
+    return i
+
+def _skip_endcase(t, i):
+    """t[i:] starts at a case/casez/casex keyword (after its unique/priority): index after its endcase."""
+    depth = 0
+    for m in re.finditer(r"\b(case[zx]?|endcase)\b", t[i:]):
+        depth += -1 if m.group(1) == "endcase" else 1
+        if depth == 0: return i + m.end()
+    return len(t)
+
+def _skip_stmt(t, i):
+    """Index after the statement at t[i] (a case item's body): `begin ... end [: name]`, if/else, a loop, a
+    nested case, else up to the `;` at bracket depth 0."""
+    i = _skip_ws(t, i)
+    w = _WORD.match(t, i)
+    kw = w.group(0) if w else ""
+    if kw in ("unique", "unique0", "priority"):
+        j = _skip_ws(t, w.end()); w = _WORD.match(t, j); kw = w.group(0) if w else ""; i = j
+    if kw == "begin":
+        depth = 0
+        for m in re.finditer(r"\b(begin|end)\b", t[i:]):
+            depth += 1 if m.group(1) == "begin" else -1
+            if depth == 0:
+                j = _skip_ws(t, i + m.end())
+                if t.startswith(":", j):              # end : name
+                    w2 = _WORD.match(t, _skip_ws(t, j + 1))
+                    return w2.end() if w2 else j + 1
+                return i + m.end()
+        return len(t)
+    if kw in ("case", "casez", "casex"): return _skip_endcase(t, i)
+    if kw in ("if", "for", "while", "repeat", "foreach"):
+        j = _skip_ws(t, w.end())
+        j = _skip_to(t, j, ")") if t.startswith("(", j) else j
+        j = _skip_stmt(t, j)
+        if kw == "if":
+            k = _skip_ws(t, j)
+            if re.match(r"else\b", t[k:]): j = _skip_stmt(t, k + 4)
+        return j
+    if kw == "forever": return _skip_stmt(t, w.end())
+    if kw == "do": return _skip_to(t, _skip_stmt(t, w.end()), ";")
+    return _skip_to(t, i, ";")
+
+def _case_items(t, i):
+    """The labels of the case statement at t[i] (its unique/priority already read; t[i:] starts at case,
+    casez or casex), as [(text as written, offset, item index)]: the labels of one item (`4'b10??, 4'b??11:
+    led = 1;` is one case_item with one statement, IEEE 1800-2017 12.5) share an index. None when the
+    statement is not one this scanner follows (a `case (x) inside`, `matches`, or text it cannot split)."""
+    w = _WORD.match(t, i)
+    j = _skip_ws(t, w.end())
+    if not t.startswith("(", j): return None
+    j = _skip_to(t, j, ")")
+    k = _skip_ws(t, j)
+    if re.match(r"(inside|matches)\b", t[k:]): return None
+    end = _skip_endcase(t, i) - len("endcase")
+    labels, pos, item = [], j, 0
+    while True:
+        pos = _skip_ws(t, pos)
+        if pos >= end: break
+        if re.match(r"default\b", t[pos:]):
+            pos = _skip_ws(t, pos + len("default"))
+            if t.startswith(":", pos): pos += 1
+        else:
+            q = pos; depth = 0
+            while q < end:
+                c = t[q]
+                if c in "([{": depth += 1
+                elif c in ")]}": depth -= 1
+                elif c == ":" and depth == 0 and t[q + 1:q + 2] != ":" and t[q - 1] != ":": break
+                q += 1
+            if q >= end: return None
+            at = pos
+            for piece in t[pos:q].split(","):
+                s = piece.strip()
+                labels.append((s, at + piece.index(s) if s else at, item))
+                at += len(piece) + 1
+            item += 1
+            pos = q + 1
+        nxt = _skip_stmt(t, pos)
+        if nxt <= pos or nxt > end: return None
+        pos = nxt
+    return labels
+
+def _case_literal(label, kind):
+    """A case item label that is an integer literal, as (fixed bit mask, value, width), else None. For casez
+    a ? or z digit is a wildcard, for casex x, z and ? are; a wildcard digit elsewhere (an x in casez, any
+    in a plain case) is a value no synthesized input takes, so it is not a literal here (None: no guess).
+    An unsized literal is 32 bits; a shorter literal is extended with its leftmost digit when that is a
+    wildcard, else with 0 (IEEE 1800-2017 5.7.1)."""
+    m = _CASE_LIT.match(label)
+    if not m: return None
+    if m.group(4): width, base, digits = 32, "d", m.group(4).replace("_", "")
+    else:
+        width = int(m.group(1).replace("_", "")) if m.group(1) else 32
+        base, digits = m.group(2).lower(), m.group(3).replace("_", "")
+    if width == 0 or not digits: return None
+    if base == "d":
+        if not digits.isdigit(): return None
+        return (1 << width) - 1, int(digits) & ((1 << width) - 1), width
+    wild = {"casez": "z?", "casex": "xz?", "case": ""}[kind]
+    per = {"b": 1, "o": 3, "h": 4}[base]
+    bits = []                                       # msb first: (fixed, value)
+    for ch in digits:
+        c = ch.lower()
+        if c in "xz?":
+            if c not in wild: return None
+            bits += [(0, 0)] * per
+        else:
+            d = int(c, 16)
+            if d >= 1 << per: return None
+            bits += [(1, (d >> k) & 1) for k in range(per - 1, -1, -1)]
+    if len(bits) < width: bits = [bits[0] if bits[0][0] == 0 else (1, 0)] * (width - len(bits)) + bits
+    fixed = value = 0
+    for fx, v in bits[-width:]: fixed, value = fixed << 1 | fx, value << 1 | v
+    return fixed, value, width
+
+def _localparam_literals(body):
+    """name -> the integer literal text of every `localparam ... NAME = <literal>` of the module body, with
+    `localparam logic [3:0] HI = 4'b10zz, LO = 4'bzz11;` giving both. A localparam cannot be overridden at
+    an instance (IEEE 1800-2017 6.20.4), so its value is the text on its line; a `parameter` can be
+    (#(.W(8)) or defparam), so it is not followed. One whose value is an expression (HI | 4'b0011, W-1,
+    $clog2(N)) is not followed either: no guess."""
+    out = {}
+    for m in re.finditer(r"\blocalparam\b", body):
+        decl = body[m.end():_skip_to(body, m.end(), ";")]
+        for a in re.finditer(r"\b([A-Za-z_]\w*)\s*=\s*([^,;=]+)", decl):
+            v = a.group(2).strip()
+            if _CASE_LIT.match(v): out[a.group(1)] = v
+    return out
+
+def _unique_case_problems(f, body, bline):
+    """A unique case / casez / casex two of whose items can match at once (`4'b10??` and `4'b??11` both match
+    1011): IEEE 1800-2017 12.5.3 says unique asserts that no two items match, so the design is wrong, and the
+    two tools disagree silently: iverilog ignores unique and takes the first item, yosys (and Vivado, UG901
+    Ch.10: unique case is parallel_case) build the items in parallel and OR their values, so the board does
+    not do what the simulation showed. Only statements whose every label is an integer literal, or a
+    localparam of this module whose value is one (_localparam_literals), are checked; one with an enum
+    name, a `parameter` (an instance may override it), an expression, a range or `inside` is skipped: no
+    guess. Two labels of one item (`4'b10??, 4'b??11: led = 1;`) are one item with one statement (IEEE
+    1800-2017 12.5), so they may overlap: there is no second value to OR, and the netlist equals the RTL.
+    The first overlapping pair of a statement is reported once, at the second item's line; a localparam
+    item is named with its value (`HI = 4'b10zz`) so the overlapping bits are on the line."""
+    problems = []
+    consts = _localparam_literals(body)
+    for m in re.finditer(r"\b(unique0?)\s+(case[zx]?)\b", body):
+        q, kind = m.group(1), m.group(2)
+        labels = _case_items(body, m.start(2))
+        if not labels: continue
+        lits = [(_case_literal(consts.get(s, s), kind), s if s not in consts else f"{s} = {consts[s]}", off, item)
+                for s, off, item in labels]
+        if any(l[0] is None for l in lits): continue
+        found = None
+        for j in range(1, len(lits)):
+            for i in range(j):
+                if lits[i][3] == lits[j][3]: continue           # two labels of the same item
+                (fa, va, wa), (fb, vb, wb) = lits[i][0], lits[j][0]
+                w = max(wa, wb); full = (1 << w) - 1
+                fa |= full & ~((1 << wa) - 1); fb |= full & ~((1 << wb) - 1)      # the shorter one: 0 above its width
+                if (fa & fb) & (va ^ vb): continue
+                found = (i, j, w, va | vb, fa, va, fb, vb); break
+            if found: break
+        if not found: continue
+        i, j, w, both, fa, va, fb, vb = found
+        (_, sa, oa, _), (_, sb, ob, _) = lits[i], lits[j]
+        la, lb = (bline + body.count("\n", 0, o) for o in (oa, ob))
+        # the second item with its wildcard at the first item's highest fixed bit set to the other value
+        # (4'b??11 next to 4'b10??: 4'b0?11), or the first item's when only it has such a bit
+        def respell(fx, v, other_fx, other_v):
+            for k in range(w - 1, -1, -1):
+                if other_fx >> k & 1 and not fx >> k & 1:
+                    return f"{w}'b" + "".join(str(1 - (other_v >> b & 1)) if b == k else (str(v >> b & 1) if fx >> b & 1 else "?") for b in range(w - 1, -1, -1))
+            return None
+        # a localparam item is respelled under its name (LO = 4'b0?11): the student edits the localparam's line
+        na, nb = (s.split(" = ")[0] + " = " if " = " in s else "" for s in (sa, sb))
+        disjoint = respell(fb, vb, fa, va)
+        how = (f"make the items disjoint ({sa} and {nb}{disjoint})" if disjoint else
+               (f"make the items disjoint ({na}{respell(fa, va, fb, vb)} and {sb})" if respell(fa, va, fb, vb) else
+                "remove one of the two items (they are the same value)"))
+        problems.append(msg("ERROR", "unique-case-overlap",
+                            f"the items {sa} ({f}:{la}) and {sb} ({f}:{lb}) of this {q} {kind} both match {w}'b{both:0{w}b}, and {q} promises "
+                            f"that only one item can match: the simulation takes the first item (iverilog ignores {q}), and the hardware, "
+                            f"built as parallel logic the way Vivado builds a {q} case (UG901 Ch.10, parallel_case), ORs the two items' "
+                            f"values, so the board would not do what the simulation showed.",
+                            f"{how}, write priority {kind} when the first match should win, or drop {q}.", loc=f"{f}:{lb}"))
+    return problems
+
 def _parse(files, sim=()):
     """Every module in the files: mods (name -> dict(file, tb, body, line)), their order, what each instantiates
     (inst: module -> set of modules), and the problems seen on the way. scan() and list_tops() share this; there
@@ -255,6 +456,7 @@ def _parse(files, sim=()):
                     problems.append(msg("ERROR", "finish-in-design", f"${fm.group(1)} in a design module ({name}): Vivado ignores it (UG901 Table 21: $finish Ignored) and yosys stops on it.",
                                         "remove it, move the check to the testbench, or wrap it in `ifndef SYNTHESIS ... `endif.", loc=f"{f}:{fl}"))
                 problems += _decl_init_problems(f, sbody, bline, typedefs)
+                problems += _unique_case_problems(f, sbody, bline)
     names = set(mods)
     inst = {}                       # module -> set of modules it instantiates
     for f in files:

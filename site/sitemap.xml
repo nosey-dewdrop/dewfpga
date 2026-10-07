@@ -108,6 +108,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/iverilog-refused/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/latch-hazard/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/latch-loop/</loc>
   </url>
   <url>
@@ -258,6 +261,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/undeclared-name/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/unique-case-overlap/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/unknown-command/</loc>
