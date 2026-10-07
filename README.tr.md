@@ -138,6 +138,11 @@ adını basar; `ONLY=regex test/run.sh` adı eşleşenleri koşar. `FULL=1 test/
 ekler. CI her push'ta temiz bir `macos-15` (Apple Silicon) GitHub makinesinde temiz kurulumu,
 test paketini ve npm paketini koşar.
 
+`test/fuzz/run.sh <ilk tohum> <adet>` paketten ayrıdır: `gen.py` her tohum için DDCA'nın öğrettiği
+SystemVerilog'da rastgele bir tasarım yazar (her dil özelliği bir anahtar, `--list` adlarını basar), üzerinde
+`dewfpga sim` ve `dewfpga bit` koşar, netlist aynı testbench ile simüle edilir ve iki iz bit bit karşılaştırılır.
+Son satırı sonuçları sayar (`ok`, `silent-wrong`, `refused-coded`, `refused-uncoded`, `crash`, `sim-refused`).
+
 2026-09-19 ve 20'de 8 GB'lık bir M2'de ölçüldü: temiz kurulum 3 dk 37 sn ile 4 dk 17 sn
 arası (üç koşu), diskte yaklaşık 0.3 GB (7 Ekim'de ölçülen 237 MB; isteğe bağlı ajan SDK'sı 51 MB ekler;
 derlerken yaklaşık 1 GB, kurucu 2 GB boş yer ister); ikinci koşu 2.7 sn; `bit` 4.6 sn, tepe 552 MB RAM; chipdb üretimi

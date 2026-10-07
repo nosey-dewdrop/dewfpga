@@ -137,6 +137,11 @@ every check; `ONLY=regex test/run.sh` runs the ones whose name matches. `FULL=1 
 adds a clean install into a temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.
 
+`test/fuzz/run.sh <first seed> <count>` is separate from the suite: `gen.py` writes a random design per seed
+in the SystemVerilog DDCA teaches (every feature a switch, `--list` names them), `dewfpga sim` and `dewfpga bit`
+run on it, the netlist is simulated with the same testbench, and the two traces are compared bit by bit. Its
+last line counts the outcomes (`ok`, `silent-wrong`, `refused-coded`, `refused-uncoded`, `crash`, `sim-refused`).
+
 Measured 2026-09-19 and 20 on an M2 with 8 GB: clean install 3 min 37 s to 4 min 17 s (three runs),
 about 0.3 GB on disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB; about 1 GB while it
 builds, the installer asks for 2 GB free); second run 2.7 s; `bit` 4.6 s, peak 552 MB RAM; chipdb generation peak 859 MB RAM.

@@ -3975,3 +3975,84 @@ run). Mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187, mail flow
   the suite restores `.fpga_home`, the link is restored by hand after a run from a checkout.
 - The three pruned checkouts' `.git` sat at depth 2, 4 and 4; the no-clone check looked two levels deep when the
   review read it and now looks at every depth (verified with `find` on both installs of 7 October: 0 and 25).
+
+### #31 · A random-design generator checks the SystemVerilog DDCA teaches against its own simulation · 7 October
+
+**The product did not change in this update.** It adds a test tool, `test/fuzz`, separate from `test/run.sh`:
+`gen.py <seed> <folder>` writes a random design in the SystemVerilog the course book (DDCA, chapters 4, 5 and 7)
+and CS223 teach, on the Basys3's own ports, with its XDC and a testbench of 300 cycles of random switches and
+buttons that prints every output every cycle and expects nothing. Forty language features are switches
+(`always_comb`, `case` without default, `casez`, `unique case`, async reset, a start value in the declaration,
+`always_latch`, an enum state machine, parameters and `#(.N(..))` overrides, generate for/if, packed and unpacked
+arrays, a memory, packed structs, typedefs, functions with `break`, a for loop in `always_comb`, named, positional
+and `.*` connections, a package in its own file, submodules in their own files, signed arithmetic, shifts,
+reductions, concatenation, `$clog2`, mixed widths, the seven-segment ports, three or four levels of modules, the
+same submodule twice); a seed draws them, `--on`/`--off` force them, so a failing design narrows to the feature
+that causes it. `run.sh <first seed> <count>` runs each design through `dewfpga sim` (the RTL in iverilog) and
+`dewfpga bit`, then simulates the netlist the build made (`read_json`, `write_verilog`, iverilog with yosys' Xilinx
+cell models, the same testbench, the way `test/sv` does) and compares the two traces bit by bit: a bit the RTL
+knows (0 or 1) must be the same in the netlist, an `x` in the RTL matches anything. Six outcomes per seed: `ok`,
+`silent-wrong` (the bitstream built, the netlist does not do what the simulation showed), `refused-coded`,
+`refused-uncoded`, `crash`, `sim-refused` (no independent reference: `dewfpga sim` failed or ran on the build's
+view). The last line is the metric, `fuzz: ok 123 of 144; silent-wrong 10; refused-coded 6; refused-uncoded 0;
+crash 0; sim-refused 5`, and a failed seed's folder stays.
+
+**What 194 designs found.** Seeds 1-12, 100-243 and 500-537 (two batches stopped at the 90-minute mark; a seed
+costs about 8 s, of which `dewfpga bit` about 4.5 s): 168 ok, 14 silent-wrong, 6 refused with a code, 0 refused
+without one, 0 crashes, 6 sim-refused. The failures fall into six families, each with the update that owns it:
+- *Silent wrong, new:* `unique casez` with overlapping items (`4'b10??` and `4'b??11`, switches `1011`): the
+  simulation takes the first item, the netlist ORs both. Shrunk to eight lines; `rtl: 0000000000000001  net:
+  0000000000000011`. Seed 6.
+- *Silent wrong, new:* `always_latch` whose enable and data come from the same switches: the netlist's latch
+  captures a transient value, the RTL does not (a hazard of the latch; the board would glitch the same way).
+  Shrunk to six lines. The product warns about a latch inferred from `always_comb` and says nothing about
+  `always_latch`. Seed 7.
+- *Refused with a code, #33 (readers):* a `.*` connection to a submodule whose parameter override changes a
+  port's width. yosys' own reader refuses it first, then yosys-slang: `top.sv:224: ERROR [slang-refused]:
+  implicit named port 'u_m0_in0' of type 'logic[11:0]' connects to value of inequivalent type 'logic[4:0]'`.
+  Six seeds (106, 129, 163, 179, 189, 196). Whether this is the student's error or the reader's needs a Vivado
+  check.
+- *Sim refused, #33 (readers), the known gap `23c`:* a package in its own file imported without `` `include ``:
+  `top.sv:7: ERROR [package-file-not-given]: `import fuzz_pkg::*` names the package fuzz_pkg, which is declared
+  in fuzz_pkg.sv, and the tools are not given that file`, from `sim` and from `bit`. Six seeds (9, 168, 185,
+  186, 192, 200). The generator follows the product's convention (`` `include `` in 9 designs of 10); the plain
+  Vivado way, the package file just in the folder, is the gap.
+- *Silent wrong, #34 (models and timing), not shrunk:* the netlist prints `x` before the first clock edge where
+  the RTL prints 0 or 1 (a state register at the cycle-0 line): `rtl: 0000000000000000  net: 000000000000xxxx`.
+  Six seeds (134, 151, 157, 161, 162, 195). Not verified whether the board or yosys' `cells_sim.v` is what
+  differs.
+- *Silent wrong, new, not shrunk:* known bits differ after the start (cycles 1 to 131) and the cause is not
+  found. Six seeds (121, 125, 159, 214, 512, 526); each regenerates from its seed.
+Two more came up while shrinking and while bringing the generator up, both for #33 (iverilog is the RTL reader):
+iverilog 13 refuses an enum next state written as a ternary (`next = sw[0] ? S1 : S0`: `top.sv:7: error: This
+assignment requires an explicit cast.`), so `dewfpga sim` runs on the build's view and the check has no
+independent reference; and `break` inside a for loop in `always_comb` makes iverilog 13 abort with an internal
+error (the product falls back to sim-from-build).
+
+**Numbers.** From the closing run of this tree: Vivado-supported probes passing all four stages 86/111 → 86/111,
+all four stages 95/133 → 95/133, synthesis 108/133 → 108/133, known gaps 25 → 25, the probe table byte-identical
+to #30's closing run (the compiler did not change). `test/run.sh`: `passed 314, failed 0, known gaps 25` in 20 min 52 s, the board check skipped (`SKIP flash on the board: no board`; no FTDI device on the USB bus at that hour), no check changed since #30 (the 320 of #30's run included its `FULL=1` clean install, not run here). The listed count stays 347:
+`test/fuzz` is not in the suite and is not in CI.
+
+**Tests.** The tool is the test; what it checks on the product is the comparison above. The four shrunk
+reproductions were run through `run.sh`'s steps by hand: the `unique casez` and the `always_latch` ones
+`MISMATCH`, the enum state machine and an 8x8 multiplier `EQUAL: 4 cycles`. `compare.py` on the kept folders
+gives the lines quoted above. Mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187, mail flow 60,
+sender idempotency, lifecycle 112, usage, integration, pages 139, Chromium and WebKit 158; 0 failures).
+Site check: 112 pages, 2056 links, 0 failures.
+
+**Open.**
+- 194 designs ran, not the 300 asked: the two background batches were stopped at the 90-minute mark (seed 243 of
+  100-499, seed 537 of 500-699). `JOBS=3 test/fuzz/run.sh 100 300` covers 300 seeds in about 15 minutes on its own.
+- The two unshrunk families (netlist `x` before the first edge; known bits differing after the start) are counted,
+  not explained. Their seeds regenerate the designs.
+- No Vivado ran anywhere: the `.*` family's blame (student or reader) and the `always_latch` family's board
+  behaviour are not checked against it.
+- The comparison is x-tolerant on the RTL side, so a difference hidden under an uninitialised memory read in the
+  RTL is not seen; a netlist `x` where the RTL knows the bit is counted.
+- iverilog prints `sorry: constant selects in always_* processes are not fully supported` on most designs (17 of
+  the 24 kept folders of the second batch); the simulations ran, and the warning's effect on them is not checked.
+- Not generated: a module declared inside another (hierarchy depth, 1 to 4 levels over several files, stands in
+  for it), `$readmemh` memories, interfaces, and nothing produced a timing failure.
+- The two silent wrongs that are understood (`unique casez`, `always_latch`) are reported here and not fixed: the
+  product's warnings for them are a later update's work.
