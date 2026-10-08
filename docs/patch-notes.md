@@ -4423,3 +4423,168 @@ failures). Site check: 116 pages, 2130 links, 0 failures.
   as before, `matches expect.tsv: 1/1`.
 - The board was not plugged in during this close (no FTDI device on the USB bus): no flash, no board claim for
   the two probes; the netlist's start values were checked against the FASM, not against a lit LED.
+
+### #35 · A register read before its first reset: `dewfpga sim` starts it where the board starts it, and the netlist keeps the state codes the student wrote · 8 October
+
+The open item #34 left, closed from both sides. The lab design is the same state machine, declared without a
+start value and read before the reset button is ever pressed:
+```
+typedef enum logic [1:0] {IDLE, RUN, DONE} state_t;
+state_t state, next;
+always_ff @(posedge clk) if (btnC) state <= IDLE; else state <= next;
+always_comb begin next = state; case (state) IDLE: next = RUN; RUN: next = DONE; DONE: if (sw[0]) next = IDLE; default: next = IDLE; endcase end
+assign led = (state == RUN) ? 16'hFFFF : '0;
+```
+Before, `dewfpga sim` started `state` at `x`, as iverilog starts every variable, and a testbench that looks before
+the first clock edge saw it (measured on the released tree in this close):
+```
+iverilog -g2012 -o top_sim design.sv tb.sv
+FAIL: before the first edge led=xxxxxxxxxxxxxxxx, expected all off (IDLE, the reset value the board starts in)
+```
+and `dewfpga bit` printed `pnr ok: 3 LUT, 3 FF, clk 645.58 MHz (PASS at 100.00 MHz)`: three flip-flops for a
+two-bit register, because yosys' `fsm` pass re-encoded it one-hot, and the three started at 0 (#34), which is
+none of the three states. The netlist under the same testbench, with no reset pressed: `FAIL: after the first
+edge, no reset pressed, led=0000000000000000, expected all on (RUN: the board starts in IDLE and moves on)`.
+Two different wrongs: the simulation did not know where the board starts, and the board did not start in a
+state at all. Now `dewfpga sim` prints
+```
+iverilog -g2012 -o top_sim design.sv tb.sv
+note [sim-starts-as-board]: 1 register without a start value starts as the board does, not at x: state at 0 (its reset value). Vivado's simulator shows x there until the first reset; a start value in the declaration (state_t state = IDLE;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/
+PASS
+```
+and `dewfpga bit` prints `pnr ok: 3 LUT, 2 FF, clk 624.22 MHz (PASS at 100.00 MHz)`: the register keeps the
+student's two-bit codes, `00` is IDLE, and the netlist under the same testbench prints `PASS`, moving to RUN
+at the first edge as the simulation does (`EQV PASS: 262144 output bits compared, all equal`).
+
+How the simulation knows: before iverilog runs, the design's registers and memories are listed with yosys
+(read, `proc`, `flatten`, `opt_clean`, `memory_collect`, `opt_dff`; yosys-slang when yosys' own reader refuses
+the code), and a new product file, `templates/sim_starts.py`, writes one more module that is compiled with the
+testbench and at time 0, after the design's own declaration values and the testbench's time-0 statements ran,
+sets every register bit that is still `x` to the board's value: its reset value when it has a reset (a sync
+reset to 5 starts at `4'b0101`, an async reset to `4'b1010` at `4'b1010`: the flip-flops yosys maps to FDSE or
+FDPE power up at 1, the FDRE and FDCE at 0, #34's values), 0 without a reset, 0 for every word of a LUT RAM
+nobody wrote. A declared start value is never `x` and stays. The module is removed once iverilog has compiled
+it (a file left behind would reach `dewfpga bit`). Nothing to start, as in `blink`, whose two registers have
+declared values: no note, no file; the design iverilog refuses (the [sim-from-build](/dewfpga/errors/sim-from-build/)
+path) gets the same module from the build's own view of the design. Measured on probe `105_reset_value_start`
+(four registers: sync reset to 5, async reset to `4'b1010`, no reset, declared 9): before, `FAIL: before the
+first edge a=xxxx b=xxxx c=xxxx d=1001, expected 0101 1010 0000 1001`; after, `note [sim-starts-as-board]: 3
+registers without a start value start as the board does, not at x: a at 4'b0101 and b at 4'b1010 (their reset
+values), c at 0 (no reset).` and `PASS`, with `pnr ok: 27 LUT, 16 FF` and `EQV PASS: 262144 output bits
+compared, all equal` on the netlist. On `105c_memory_before_write` (a 4-word LUT RAM read before any write):
+before `FAIL: before any write mem[0] reads xxxxxxxx, expected 0 (the board's LUT RAM starts at 0)`, after `note
+[sim-starts-as-board]: 1 memory without a start value starts as the board does, not at x: mem at 0 (a LUT RAM).`
+and `PASS`. A table that `$readmemh` fills only in part is not started: yosys folds its unloaded words as
+don't-care and the netlist reads some value there (measured by the integrator: `CC` where the simulation shows
+`x`), so those words stay `x` and the note says so, with the fix (load every word, or fill the table first).
+
+How the netlist keeps the codes: before `synth_xilinx` reads the design, every named wire gets
+`fsm_encoding = "none"`, which yosys' `fsm_detect` honours, so no register is re-encoded; the attribute is unset
+again after synthesis (as a net attribute it moved nextpnr's placement: `blink`'s FASM differed in 5 attribute
+lines and 254.78 MHz for 278.71, measured by the integrator), and `blink`'s FASM is byte for byte
+`test/golden/blink.fasm` (0 differing lines, measured in this close after the fix below). A student's own
+attribute is replaced too, with a note at its line, because left in place it kept the recoding. Measured on a
+`ctl` module with `(* fsm_encoding = "one_hot" *) logic [1:0] state;`: before, `pnr ok: 3 LUT, 3 FF`, 3 FDRE all
+`INIT(1'h0)`, the netlist's testbench `FAIL: after first edge no reset led=0000000000000000 expected all on
+(RUN)`; after,
+```
+design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = "one_hot" *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours. https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/
+pnr ok: 3 LUT, 2 FF, clk 624.22 MHz (PASS at 100.00 MHz)   (full log: top.log)
+```
+2 FDRE, and the netlist's testbench `PASS`. The note is for a register only: `state_t state, next;` puts the
+attribute on both, and `next`, written in `always_comb`, gets the `none` silently (the integrator's fix round 2,
+after the note fired twice). Until this close that link led nowhere: the note was the one code the Makefile
+prints with no page in the catalog, so the page was written from the measurement above and a check now reads
+every code the Makefile and the CLI print against `docs/errors.md`.
+
+What else the build does before `synth_xilinx` now, from the integrator's fix round 3 after the judge's
+repro: a register with no reset and no start value that never changes (its D is its own Q, fuzz seed 29) was
+folded by yosys to its init, `x`, and every LED behind it was an `OBUF` of `1'hx` with `pnr ok: 0 LUT, 0 FF`
+and no word about it, where `dewfpga sim` now showed 0011001100110011; such a register gets `init 0` first,
+where the simulation and a surviving FDRE start it. A memory with no start value gets `INIT 0` as yosys' memory
+cell, where the simulation starts its words; without it yosys folded a memory every write of which stored the
+same constant (seed 33) into that constant, and the netlist showed it at cycle 0 where the simulation showed 0.
+
+This close found two regressions of that round in the full run and fixed both: the new passes ran before
+yosys' `check`, whose warnings two refusals read. `39_undeclared_name` (a typo, `summ` for `sum`) built a
+bitstream, `pnr ok: 0 LUT, 0 FF`, with `Warning: Wire top.\led [0] is used but has no driver.`: `opt_clean` had
+removed the undriven implicit wire, so the warning named `led [0]` instead of `summ`, and the awk found no
+implicit wire of that name. `05_two_block_driver` (a register written from two always blocks) stopped on a raw
+`ERROR: Conflicting init values for signal 1'0 (\led [1] = 1'x != 1'0).` instead of the coded
+`two-always-drivers` line: `opt_dff` had folded the two conflicting flip-flops before any check saw them. Now
+`check` runs right after `proc`, where `synth_xilinx`'s own first check ran before (its prepare stage is
+`proc; check; ...; opt_clean; check`), and both probes refuse as the released tree did: `design.sv:4: ERROR
+[undeclared-name]: summ is not declared anywhere and nothing drives it ...`, exit 2, no bitstream, and
+`design.sv:3 and design.sv:4: ERROR [two-always-drivers]: cnt is written from two always blocks ...` with yosys'
+`multiple conflicting drivers for top.\cnt [3]` lines around it and the raw init line dropped once the coded
+one is out.
+
+**Numbers.** `test/run.sh` on this tree: the first full run `passed 328, failed 2, known gaps 24` (the two
+regressions above, 29 min; probe table `synthesis 125/148, all four stages 109/148, Vivado-supported probes
+passing all four stages 99/122, known gaps 24`, the 125 counting the typo that built); after the fix `passed 331, failed 0, known gaps 24` in 23 min 37 s,
+with the probe table `synthesis 124/148, all four stages 109/148, Vivado-supported probes passing all
+four stages 99/122, known gaps 24`; between the two runs only the `05` and `39` rows changed, from `bad` to `ok`. Against #34's closing table: Vivado-supported probes passing all four stages
+97/120 → 99/122, all four stages 106/145 → 109/148, synthesis 121/145 → 124/148, known gaps 24 → 24; the three
+new rows are the three probes under Tests (105c is `unverified`, so it adds to the stages and not to the
+Vivado-supported count), and the 145 old rows are byte for byte #34's closing table. The listed count goes 359 → 363
+(three probes, one check). The board check was skipped, `SKIP flash on the board: no board`. `test/fuzz/run.sh
+1 500`, the same 500 seeds, `JOBS=3`. Before, the line #34's note published for the released tree:
+```
+fuzz: ok 436 of 500; silent-wrong 11; warned 7; refused-coded 46; refused-uncoded 0; crash 0; sim-refused 0
+```
+After, this close's own run of the final tree (25 min):
+```
+fuzz: refused-coded by code: unique-case-overlap 24; implicit-port-width 22
+fuzz: ok 446 of 500; silent-wrong 2; warned 6; refused-coded 46; refused-uncoded 0; crash 0; sim-refused 0
+```
+Seed by seed against the released tree's 500 (the integrator's run of the base commit, the same results the
+#34 note published): 9 seeds go `silent-wrong` → `ok` (21, 62, 65, 121, 134, 161, 162, 263, 494), one goes
+`warned` → `ok` (327: the one-LED difference at cycle 29 that its latch warning forgave is gone; not analysed further), the 2 that stay silent-wrong (214, 302) were
+silent-wrong before, no seed moved the other way, the 46 refused are the same seeds with the same codes. The
+integrator's run of its tree, before this close's `check` fix, gave the same line.
+
+**Tests.** Three probes with their `expect.tsv` rows: `105_reset_value_start` (the four registers above),
+`105b_fsm_first_edge` (the state machine above, read at the first edge before any reset) and
+`105c_memory_before_write` (the LUT RAM above). On the released tree, measured in this close with the base
+CLI: 105 `FAIL ... a=xxxx b=xxxx c=xxxx d=1001` in the simulation while its netlist passed (a silent wrong),
+105b failed in the simulation (`x`) and on the netlist (dark after the first edge, 3 FDRE), 105c failed in the
+simulation while its netlist passed. On this tree all three are `pass pass pass pass`. `104_fsm_before_first_reset`'s
+row is reworded: the register is 2 FDRE now, its all-zero start is IDLE, and the netlist leaves it at the
+first edge as the RTL does. The six probes this close touched or doubted (`05`, `39`, `104`, `105`, `105b`,
+`105c`) through the probe runner after the fix: `matches expect.tsv: 6/6`; the whole table ran in the full
+run, see Numbers. New check in `test/run.sh`: `every code the Makefile and the CLI print has an entry in
+docs/errors.md` (57 codes read from the Makefile's `ERROR [..]`, `warning [..]`, `note [..]` strings and its
+`fmt("note", "..")` calls and from the CLI); its mutation, the catalog without the new entry, prints `no entry
+in docs/errors.md: fsm-encoding-kept` and fails. The integrator's own guards before this close: the 10
+student designs of its breaker (a submodule's register, a non-zero reset value, two machines, a generate loop,
+explicit codes, a packed struct, the one-hot attribute, a localparam machine, a testbench whose clock starts
+high) all `PASS` in the simulation and on the netlist with the note, and the 19 probes with a register, RAM,
+SRL or enum of every kind `matches expect.tsv: 19/19`. Mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187, mail flow 60, sender idempotency, lifecycle 112, usage, integration, pages 139, Chromium and WebKit 158; 0 failures). Site check: 118 pages, 2165
+links, 0 failures.
+
+**Open.**
+- The judge's headline against the integrator's first version stands as history, not as the result: that
+  version's own 500-seed run went `silent-wrong 11 → 14`, because starting the simulation where the board
+  starts exposed netlists that an `x` in the RTL had been hiding (seed 29's `OBUF` of `1'hx`, seed 33's
+  folded memory); fix round 3 above answers those, and the line this close measured is under Numbers.
+- Seeds 214 and 302 stay silent-wrong, #31's second family: a known bit that differs after the start (214 at
+  cycle 0 in one LED, 101 of 300 cycles, `209 LUT 36 FF`; 302 from cycle 2 on `seg`), no start value explains
+  them. Untouched.
+- A netlist whose output is driven by a constant `x` still prints `pnr ok` with no word about it (the judge's
+  repro on seed 29 before fix round 3; that seed is fixed, the general case is not detected).
+- A `$readmemh` table loaded in part: the simulation keeps `x` in the words nobody loaded and the note names
+  the gap; the netlist reads some value there (`CC` on the integrator's design), and `dewfpga bit` says nothing
+  about it. The fix is in the note's text only.
+- The note is printed on every `dewfpga sim` of a design with a register or memory that has no start value,
+  not once; a lab design with ten such registers gets a long line each run.
+- What Vivado's simulator shows for these registers is `x` until the first reset (as iverilog did); what Vivado
+  programs for a register without a start value is not in UG901, nor what its re-encoded state register holds
+  before the first reset, nor what a distributed RAM holds before its first write (105c's row is `unverified`
+  for that reason). The values here are the open chain's, measured on its own netlists and FASM.
+- The judge noted `no clocked paths, timing not applicable` printed beside a non-zero `FF` count on one of its
+  designs; not reproduced in this close (every `pnr ok` line measured here with flip-flops carried a clock
+  frequency).
+- The integrator's protect run of the 96 untouched probes was stopped after 3; the full run of all 148 in this
+  close is what stands for it.
+- The board was not plugged in during this close: no flash, no board claim; the netlist's start values were
+  checked against the FASM and the netlist simulation, not against a lit LED.

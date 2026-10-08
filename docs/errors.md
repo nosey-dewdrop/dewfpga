@@ -1216,6 +1216,59 @@ Either rewrite the construct iverilog names on the first line (`unique if` as a 
 dewfpga sim
 ```
 
+## sim-starts-as-board
+step: sim
+source: dewfpga sim, after iverilog compiled the design
+title: note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4'b0101 and b at 4'b1010 (their reset values), c at 0 (no reset). Vivado's simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79).
+summary: Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board.
+date: 2026-10-08
+
+`dewfpga sim` on a design with four registers read before the first clock edge: `a` with a synchronous reset to 5, `b` with an asynchronous reset to `4'b1010`, `c` with no reset, `d` declared as `logic [3:0] d = 4'd9;`:
+
+```
+iverilog -g2012 -o top_sim design.sv tb.sv
+note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4'b0101 and b at 4'b1010 (their reset values), c at 0 (no reset). Vivado's simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/
+PASS
+tb.sv:15: $finish called at 21 (1s)
+```
+
+Before #35 the same run printed `FAIL: before the first edge a=xxxx b=xxxx c=xxxx d=1001`: the three registers without a start value were `x` until their first reset, and `d` was 9 from its declaration.
+
+## Why does it happen?
+
+Icarus Verilog starts every 4-state variable at `x`, as IEEE 1800 says. A register with a synchronous reset and no start value stays `x` until the first clock edge with the reset high. Before that, `case (state)` on an `x` takes the `default` item, `if (state == RUN)` takes the else branch, `x + 1` stays `x`: the simulation shows a definite value, and the board contradicts it. On the board every flip-flop starts at a known value, and since #34 the netlist `dewfpga bit` writes does too. Measured on the netlist and the FASM of the design above (16 flip-flops, 10 `ZINI` bits): a register with a reset starts at its reset value bit by bit (yosys maps a reset-to-1 bit to `FDSE` or `FDPE` and nextpnr programs `INIT 1`; a reset-to-0 bit to `FDRE` or `FDCE` at 0), a register with no reset at 0, a LUT RAM word at 0, a declared start value as declared: `a=0101 b=1010 c=0000 d=1001` before the first edge. A state machine without a start value therefore starts in its reset state on the board and moves on at the first edge, while the simulation sat in `default` with every output off: 9 of the 11 random designs the fuzz test still found silent-wrong after #34 were this.
+
+So `dewfpga sim` now lists the design's registers and memories with yosys (read, `proc`, `flatten`, `memory_collect`, `opt_dff`; yosys-slang when yosys' own reader refuses the code) and compiles one more module with the testbench, `dewfpga_start`, that at time 0, after the design's own declaration values and the testbench's time-0 statements ran, sets every register bit that is still `x` to the board's value and every `x` bit of every memory word to 0, through the testbench's instance (`tb.dut.state`). A declared start value is never `x` and stays. The note names what was started and how; nothing to start (blink: both registers have declared values), no note. When both readers refuse the design, or iverilog cannot write a variable this way, the simulation runs exactly as before, without a note. The listing costs one yosys run: 0.04 s on this design, inside a `dewfpga sim` of 0.3 s.
+
+The listing runs `opt_clean` before `opt_dff`: yosys-slang leaves `$buf` cells between a reset mux and its flip-flop, and `opt_dff` does not see through them (measured: every register of a design read by yosys-slang listed as "no reset" without it, and the note said `m at 0 and p at 0 (no reset)` where the netlist starts them at 6 and `8'b10100101`). A bit that `opt_dff` folds to a constant (written one constant under the reset and held otherwise: `m2[1] <= 2` in the reset branch, nothing else) is no flip-flop any more; the netlist and the board hardwire it, so the simulation starts it at that constant too, and the note shows the whole register (`m2 at 8'b00100001`, not `8'b00000001`).
+
+When iverilog refuses the design and the simulation runs on the design as the build reads it ([note [sim-from-build]](/dewfpga/errors/sim-from-build/)), the same module is written for that elaborated design (listed from the build's own `.il`, every variable written whole, since an enum is a plain `reg` there) and the note prints after the sim-from-build note. Measured on a packed struct written with an assignment pattern, which iverilog refuses: before, `FAIL: before the first edge led=xx3x`; after, `p at 8'b10100101 and m at 4'b0110 (their reset values)` and `PASS`, the values the netlist shows.
+
+## What differs from Vivado's simulator?
+
+Vivado's simulator (xsim) shows `x` for a register without a start value until its first reset, as iverilog did: a testbench that checks an output before the first reset sees `x` there and a definite value here. What Vivado programs into the bitstream for such a register is not in UG901; the values here are what the open chain programs (nextpnr-xilinx's default `INIT` for each primitive yosys picked), measured on the design's own netlist and FASM. UG901 v2022.2 Ch.4 p.79 lists `FDRE`, `FDSE`, `FDCE`, `FDPE` and says: "To initialize the content of a Register at circuit power-up, specify a default value for the signal during declaration".
+
+## What is the fix?
+
+Nothing: the note says what ran. To make every tool, Vivado's simulator included, start the register the same way, give it a start value in its declaration; it is honoured by iverilog, xsim and the bitstream (UG901 v2022.2 Ch.4 p.79):
+
+```copy
+logic [3:0] c = 0;
+state_t state = IDLE;
+```
+
+A memory gets the same through an `initial` loop (`initial for (int i = 0; i < 4; i++) mem[i] = 0;`), which synthesis reads as the RAM's initial content.
+
+## What about a table only partly loaded?
+
+Only a memory with no value at all is started. A table that `$readmemh` fills in part (`$readmemh("rom.hex", rom, 0, 3)` on a 16-word `rom`, or a file shorter than the table) keeps `x` in the words it did not load, and the note says so after the started names:
+
+```
+note [sim-starts-as-board]: 1 register without a start value starts as the board does, not at x: q at 0 (no reset). Vivado's simulator shows x there until the first reset; a start value in the declaration (logic [7:0] q = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). rom: 12 of its 16 words were given no value and stay x; the build treats such a word as a free choice (the netlist and the board read some value there, not 0), so load every word, or fill the table first (initial begin for (int i = 0; i < 16; i++) rom[i] = 0; $readmemh(...); end). https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/
+```
+
+Measured on that design: yosys folds the 16-word table into one LUT with the 12 unloaded words as don't-care, and the netlist reads `CC` (the value of the loaded word 2) at `rom[10]`, not 0; the first version of #35 started those words at 0 and said the board does the same, which the netlist it built contradicted. Now `rom[10]` reads `x` in the simulation, as it did before #35 (nobody gave it a value), and the note names the gap and the fix. A design whose only memory is such a table and whose registers all have start values gets no note: the simulation is iverilog's alone.
+
 ## sim-timeout
 step: sim
 source: dewfpga sim, vvp
@@ -2109,6 +2162,45 @@ Vivado picks the language by the extension (UG901 Ch.10), and so does the CLI, s
 ```copy
 mv blink.v blink.sv
 ```
+
+## fsm-encoding-kept
+step: bit
+source: dewfpga bit, synthesis, before yosys reads the design
+title: design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = "one_hot" *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours.
+summary: Not an error: a state register carries an fsm_encoding attribute, and the build keeps the codes the declaration gives it instead of letting yosys re-encode the register, so it powers up in the state with code 0, where dewfpga sim starts it; the build goes on.
+date: 2026-10-08
+
+`dewfpga bit` on a three-state machine whose register carries the attribute (`(* fsm_encoding = "one_hot" *) logic [1:0] state;` on line 3, `IDLE = 0`, `RUN = 1`, `DONE = 2`, a synchronous reset to IDLE, no start value):
+
+```
+design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = "one_hot" *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours. https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/
+xdc ok: 34 ports, all mapped, 71 unused pins in the XDC ignored.
+note [no-create-clock]: no create_clock in Basys3_Master.xdc; timing is checked against the Basys3's 100 MHz oscillator (--freq 100). https://nosey-dewdrop.github.io/dewfpga/errors/no-create-clock/
+pnr ok: 3 LUT, 2 FF, clk 624.22 MHz (PASS at 100.00 MHz)   (full log: top.log)
+top.bit  2.2 MB
+```
+
+Before #35 the same design built without a note, as `pnr ok: 3 LUT, 3 FF, clk 645.58 MHz (PASS at 100.00 MHz)`: three flip-flops for a two-bit register.
+
+## Why does it happen?
+
+yosys' `fsm` pass, which runs inside `synth_xilinx`, finds a register that behaves as a state machine and re-encodes it: the two-bit `state` above became three one-hot flip-flops, with or without the attribute (the attribute asks for exactly that, and `auto` would have given the same). Every flip-flop without a start value powers up at 0 on the board, and since #34 in the netlist too, so the re-encoded register powered up as `000`, which is none of the three one-hot states: with no reset pressed the machine sat there on every clock, and `led` stayed dark where the student's simulation, starting in IDLE, showed RUN after the first edge. Measured on the design above with the testbench of its probe: the netlist of before #35 printed `FAIL: after first edge no reset led=0000000000000000 expected all on (RUN)`, and its three `FDRE` all carried `INIT(1'h0)`.
+
+So the build now sets `fsm_encoding = "none"` on every named wire of the design before `synth_xilinx` reads it, which `fsm_detect` honours (yosys: `help fsm_detect`), and the register keeps the codes its declaration gives it: two flip-flops, `00` is IDLE, and the netlist moves to RUN at the first edge as `dewfpga sim` does (`PASS` from the same testbench, `2 FDRE`, both `INIT(1'h0)`). A student's own attribute is replaced like every other wire's, and the note names its line: left in place it kept yosys' recoding, and an `init` attribute beside it does not give the recoded register a start (yosys: "Initialization value on FSM state register is ignored"), so the only netlist whose power-up is a state is the one with the student's codes. The note is printed for a register only (the Q of a flip-flop in the design as yosys reads it); a combinational variable that shares the declaration (`state_t state, next;`) gets the `none` silently. The `blink` template's FASM is byte for byte the one before this change: nothing in it is a state machine to yosys.
+
+## What differs from Vivado?
+
+Vivado applies `FSM_ENCODING` (UG901 Ch.2, "FSM_ENCODING": `one_hot`, `sequential`, `johnson`, `gray`, `auto`, `none`), and re-encodes by default (`auto`). What its re-encoded register holds before the first reset is not in the guide, so whether a Vivado bitstream of the same design sits in no state until the reset button is pressed is not stated here: the values on this page are the open chain's, measured on its own netlist.
+
+## What is the fix?
+
+None for this board: the note says what the build did, and the attribute may stay in the file for Vivado. To start the machine in a state other than the one with code 0, every tool honours a start value in the declaration (UG901 v2022.2 Ch.4 p.79):
+
+```copy
+(* fsm_encoding = "one_hot" *) logic [1:0] state = RUN;
+```
+
+A press of the reset button puts the register in its reset state in every tool alike.
 
 ## no-create-clock
 step: bit

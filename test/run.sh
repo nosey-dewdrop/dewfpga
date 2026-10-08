@@ -94,6 +94,16 @@ llms_txt() {
     grep -oE 'docs/#[a-z0-9-]+' "$f" | cut -d# -f2 | while read -r c; do grep -q "id=\"$c\"" "$ROOT/site/docs/index.html" || exit 1; done
 }
 check "site/llms.txt: generated, idempotent, every error code listed with an existing page, guide anchors exist" llms_txt
+# every code the Makefile and the CLI print ends in a link to its page: the code has an entry in docs/errors.md (#35's
+# fsm-encoding-kept note was printed for a day with no page behind its link; the catalog check above sees only the codes the
+# catalog already has)
+codes_have_pages() {
+    local c
+    { grep -ohE '(ERROR|WARNING|warning|note) \[[a-z0-9-]+\]' "$ROOT/templates/Makefile" "$CLI" | sed -E 's/.*\[([a-z0-9-]+)\]/\1/'; \
+      grep -oE 'fmt\("[A-Za-z]+", "[a-z0-9-]+"' "$ROOT/templates/Makefile" | sed -E 's/.*"([a-z0-9-]+)"$/\1/'; } | sort -u \
+    | while read -r c; do grep -qE "^## $c\$" "$ROOT/docs/errors.md" || { echo "no entry in docs/errors.md: $c"; exit 1; }; done
+}
+check "every code the Makefile and the CLI print has an entry in docs/errors.md" codes_have_pages
 check "--version"             "v=\$('$CLI' --version); [ -n \"\$v\" ] && [ \"\$v\" = \"\$(sed -n 's/.*\"version\": *\"\([^\"]*\)\".*/\1/p' '$ROOT/package.json')\" ]"
 
 sec "== editor and Vivado project integration"

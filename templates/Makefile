@@ -26,6 +26,8 @@ PY      := $(FPGA)/venv/bin/python
 F2F     := $(FPGA)/prjxray/utils/fasm2frames.py
 F2B     := $(FPGA)/prjxray/build/tools/xc7frames2bit
 CHECKER ?= $(dir $(lastword $(MAKEFILE_LIST)))check_xdc.py
+# dewfpga sim: writes $(TOP)_start.sv, the module that starts every register without a start value as the board does
+STARTS  ?= $(dir $(CHECKER))sim_starts.py
 # yosys-slang (optional): the second reader, tried when yosys' own read_verilog refuses the code. Without it the
 # build is yosys' verdict alone.
 SLANG   ?= $(FPGA)/yosys-slang/build/slang.so
@@ -128,6 +130,26 @@ $(TOP)_sim.deps $(TOP).deps $(TOP).pins.deps: ;
 # (its warnings and notes), on stderr when it refused, before iverilog's coded line, so the two coded lines reach a
 # --json reader in that order through one stream (two streams drain in no fixed order, and the first error is the
 # result's code). CELLS: the cell library, yosys' xilinx/cells_sim.v unless given.
+# Before the first iverilog run, the design's registers are listed with yosys (read, proc, flatten, opt_clean (yosys-slang
+# leaves $buf cells between a reset mux and its flip-flop, and opt_dff does not see through them: measured, every
+# register of a slang-read design listed as "no reset" without it), memory_collect,
+# opt_dff; yosys-slang when yosys' own reader refuses; both refusing, or a crash: no listing, the simulation runs as
+# it always did) and sim_starts.py writes $(TOP)_start.sv: a module that at #0 sets every register bit that is still x
+# to the board's start (its reset value; 0 without a reset; a LUT RAM word at 0; a declared value is never x and
+# stays), so a case or an if on a register read before its first reset takes the same branch as on the board. A
+# memory only partly loaded ($readmemh("rom.hex", rom, 0, 3) on 16 words) is not started: yosys folds its unloaded
+# words as don't-care and the netlist reads some value there (measured: CC where the simulation showed x), so they
+# stay x and the note says so with the fix (load every word, or fill the table before $readmemh). The
+# note [sim-starts-as-board] names what was started; nothing started (blink: both registers have declared values), no
+# note, no file. iverilog refusing the start module (a variable it cannot write this way): compiled again without it,
+# nothing new printed. The echoed iverilog line is the one the student would type, without the start module. The
+# module is removed once iverilog has compiled it: the CLI hands every .sv of the folder to the build, and a file
+# left behind would reach yosys (measured: dewfpga bit after sim stopped on top_start.sv's hierarchical names).
+# The sim-from-build path starts its registers the same way: the listing is made from $(TOP).il (the design as
+# the build read it, the same file $(TOP)_sim.elab is written from), and sim_starts.py --plain writes every
+# variable as a vector, since the elab has no enum left (an enum there is a plain reg; measured: a packed struct
+# written with an assignment pattern, which iverilog refuses, stayed x in the simulation where the netlist and
+# the board started it at its reset value).
 CELLS ?=
 $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	@[ -n "$(TB)" ] || { echo "ERROR [no-testbench]: $(TOP)_tb.sv not found: the simulation needs a testbench next to the design. Fix: write $(TOP)_tb.sv (a module that instantiates $(TOP), drives its inputs, checks its outputs with \$$error and ends with \$$finish); 'dewfpga new blink' gives an example (blink/blink_tb.sv). $(URL)no-testbench/" >&2; exit 1; }
@@ -140,7 +162,16 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  pk=$$(grep -m1 -oE '^[[:space:]]*package[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$$f" 2>/dev/null | awk '{print $$2}'); case "$$how" in the\ design*) [ -n "$$pk" ] || continue ;; esac; \
 	  at=$$(grep -nE "^[[:space:]]*\`include[[:space:]]+\"$$i\"" $(TB) | head -1 | cut -d: -f1); wh="its declarations reach"; [ -z "$$pk" ] || wh="$$pk reaches"; \
 	  echo "$(TB)$${at:+:$$at}: ERROR [included-twice]: $(TB) \`includes $$i, and the simulator reads $$b with the design already ($$how): read a second time, $${pk:+package $$pk is declared twice and }iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the \`include \"$$i\" line from $(TB); $$wh the testbench through the design, which iverilog reads first. $(URL)included-twice/" >&2; exit 1; done
-	@$(call MKKW,$(SRCS) $(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; rm -rf "$$KW"; \
+	@$(call MKKW,$(SRCS)); KWD="$$KWSRCS"; KWDIR="$$KW"; rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; \
+	  if command -v yosys >/dev/null; then py="$(PY)"; [ -x "$$py" ] || py=$$(command -v python3 || true); \
+	    ( yosys -q -p "$(READ_VERILOG) hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 \
+	      || { rm -f $(TOP)_regs.json; [ ! -f "$(SLANG)" ] || ( yosys -m "$(SLANG)" -q -p "read_slang --single-unit $(INC)$$KWD; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; }; \
+	    if [ -s $(TOP)_regs.json ] && [ -n "$$py" ]; then snote=$$("$$py" "$(STARTS)" $(TOP)_regs.json $(TB) $(TOP) $(SRCS) $(SIM_DEPS) 2>/dev/null || true); fi; rm -f $(TOP)_regs.json; fi; \
+	  rm -rf "$$KWDIR"; [ -n "$$snote" ] && [ -s $(TOP)_start.sv ] || { snote=""; rm -f $(TOP)_start.sv; }; \
+	  $(call MKKW,$(SRCS) $(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; rc=1; \
+	  if [ -n "$$snote" ]; then iverilog -g2012 $(INC) -o $@ $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
+	  if [ -z "$$snote" ]; then iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv; \
+	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
 	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); ipw=""; [ $$rc -ne 0 ] || ipw=$$(awk '$(IPW_SIM_AWK)' $(TOP)_sim.err); rm -f $(TOP)_sim.err; \
 	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
 	  if [ $$rc -eq 0 ]; then [ -n "$$ipw" ] || exit 0; rm -f $@; [ -s $(TOP).il ] || rm -f $(TOP).json; \
@@ -154,8 +185,13 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  if [ $$brc -ne 0 ]; then cat $(TOP)_sim.bld >&2; rm -f $(TOP)_sim.bld; refused "and the build refuses the design too (its lines are above)"; fi; cat $(TOP)_sim.bld; rm -f $(TOP)_sim.bld; \
 	  rd="yosys' own reader"; ! grep -q 'attribute \\hdlname ' $(TOP).il || rd="yosys-slang, the second reader (yosys' own reader refused this code)"; \
 	  yosys -q -p "read_rtlil $(TOP).il; write_verilog -noattr $(TOP)_sim.elab" || exit 1; \
+	  rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; ( yosys -q -p "read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; \
+	  if [ -s $(TOP)_regs.json ]; then snote=$$("$(PY)" "$(STARTS)" --plain $(TOP)_regs.json $(TB) $(TOP) $(TOP)_sim.elab 2>/dev/null || true); fi; rm -f $(TOP)_regs.json; [ -n "$$snote" ] && [ -s $(TOP)_start.sv ] || { snote=""; rm -f $(TOP)_start.sv; }; \
 	  echo "$$at: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by $$rd, written back as Verilog ($(TOP)_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an \`ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. $(URL)sim-from-build/"; \
-	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib} -o $@ $(TOP)_sim.elab $(TB)"; iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; rm -rf "$$KW"; \
+	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib} -o $@ $(TOP)_sim.elab $(TB)"; rc=1; \
+	  if [ -n "$$snote" ]; then iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
+	  if [ -z "$$snote" ]; then iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv; \
+	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
 	  at2=$$(firstat); rm -f $(TOP)_sim.err; [ $$rc -eq 0 ] || case $$at2 in "") refused "nor the design as the build reads it ($(TOP)_sim.elab)" ;; $(TOP)_sim.elab:*) refused "nor the design as the build reads it ($(TOP)_sim.elab, the lines above it: a Xilinx cell with no simulation model, usually)" ;; *) at=$$at2; refused ;; esac
 
 synth: $(TOP).json
@@ -344,6 +380,7 @@ YOSYS_AWK = $(FMT_AWK) $(IPW_AWK) function loc(s) { sub(/\|.*/,"",s); sub(/\.[0-
 	           l=cellsrc(c); if (l != "(line unknown)" && index(" " lines " ", " " l " ") == 0) lines = addline(lines, l); print; next } \
 	         /^ERROR: Cell .* already driven by / { print; if (lastz != "") { bad=1; print fmt("ERROR", "internal-tristate", lastz, "the tri-state drivers on " lastsig " (a z, at " lastz ") could not be built as logic: yosys stopped with the line above. The chip has tri-state buffers on its pins only, so a z belongs on an inout pin of the top module.", "select with a mux instead:  assign " lastsig " = sel ? b : a;  and keep z for an inout pin only.") } next } \
 	         /^Warning: Emulating async set \+ reset with several FFs and a mux for / { emu++; next } \
+	         /^ERROR: Conflicting init values for signal / { if (bad) next } \
 	         { print } \
 	         END { if (lp) lpend(); load(); for (c in type) if (type[c] ~ /^\$$aldffe?$$/ && ad[c] !~ /^([0-9]+\047[01]+|[0-9]+)$$/ && !(src[c] in adone)) { adone[src[c]]=1; bad=1; nald++; \
 	                 t=srcline(src[c], 6); gsub(/[[:space:]]+/," ",t); ev=""; if (match(t, /@[[:space:]]*\([^)]*\)/)) { ev=substr(t,RSTART,RLENGTH); t=substr(t,RSTART+RLENGTH) } cond=""; if (match(t, /(^|[^A-Za-z0-9_])if[[:space:]]*\([^()]*\)/)) { cond=substr(t,RSTART,RLENGTH); sub(/^.*\(/,"",cond); sub(/\)$$/,"",cond); gsub(/^ +| +$$/,"",cond) } \
@@ -406,6 +443,40 @@ INOUT_Z_AWK = /^module / { split("", io) } \
 	           if ($$1=="connect" && $$2=="\\Y" && ($$3 in io) && (NF==3 || (NF==4 && $$4 ~ /^\[/))) yio=1; \
 	           if ($$0 ~ /^  end$$/) { if (!(ax && yio)) print buf; buf="" } next } \
 	         { print }
+# the netlist keeps the state codes the student wrote: yosys' fsm pass (inside synth_xilinx) re-encodes a register
+# it detects as an FSM to one-hot (a 2-bit enum {IDLE, RUN, DONE} with a synchronous reset: 3 FDRE), and since #34
+# those flip-flops start at 0 as on the board, which is none of the one-hot states, so the board sits in no state
+# until the reset button is pressed, where the student's case says state 0 is IDLE. fsm_detect skips a wire whose
+# fsm_encoding attribute is "none" (yosys -h fsm_detect), so every named wire of the .il (\state, \u.cnt: a register
+# is always one) gets one here, before synth_xilinx reads it. A student's own (* fsm_encoding = "one_hot" *) is
+# replaced too, with a note that names its line: left in place it kept yosys' recoding (measured: 3 FDRE, all INIT 0,
+# the netlist's led dark after the first edge where dewfpga sim showed RUN), and an init attribute beside it does not
+# give the recoded register a start (yosys: 'Initialization value on FSM state register is ignored'), so the only
+# netlist whose power-up is a state is the one with the student's codes. Vivado applies FSM_ENCODING (UG901) and the
+# guide does not say what its re-encoded register holds before the first reset. Only named wires: an attribute on a $-named wire makes opt_clean keep it, the
+# netlist's net names change, and nextpnr places blink differently (its FASM left test/golden/blink.fasm); and SYNTH
+# unsets the attribute again after synth_xilinx, since even as a net attribute in $(TOP).json it moved nextpnr's
+# placement (measured: blink.json differing in 5 attribute lines only gave another FASM and 254.78 MHz for 278.71). The RTLIL
+# text puts a wire's attributes on the lines right before its '  wire ' line (two spaces: a cell's own attributes are
+# indented deeper). Not a yosys command: setattr -set fsm_encoding "none" through -p decodes the token as a number.
+# The note is for a register only: a declaration like 'state_t state, next;' puts the attribute on both, and next,
+# written in always_comb, has no flip-flop and no power-up (measured: the note fired twice at design.sv:5, the second
+# one proposing 'state_t next = RUN;'). The .il after proc tells them apart: a register is the Q of a $dff-family cell
+# ($dff, $adff, $sdff, $dffe, $sdffe, $sdffce, $adffe, $aldff, $dffsr ..., 'connect \Q \state', a slice or a concat
+# of names). The awk reads the .il twice (both reader branches pass it twice): the first pass collects those Q names
+# per module, the second rewrites the attributes and prints the note only for a wire in that set; a combinational
+# wire's attribute is replaced by "none" like every other named wire's, silently.
+FSM_KEEP_AWK = $(FMT_AWK) NR==FNR { if ($$1=="module") qm=$$2; else if ($$1=="cell") indff=($$2 ~ /^\$$(a?l?dff(e|sr|sre)?|sdff(e|ce)?|ff)$$/); else if ($$1=="end") indff=0; \
+	             else if (indff && $$1=="connect" && $$2=="\\Q") { for (i=3; i<=NF; i++) if ($$i ~ /^\\/) q[qm, $$i]=1 } next } \
+	         /^module / { qm=$$2 } \
+	         /^  attribute \\src "/ { s=$$0; sub(/^  attribute \\src "/,"",s); sub(/".*$$/,"",s); sub(/\|.*/,"",s); sub(/\.[0-9]+(-[0-9]+\.[0-9]+)?$$/,"",s); src=s } \
+	         /^  attribute \\fsm_encoding "/ { fel=$$0; fe=$$0; sub(/^  attribute \\fsm_encoding "/,"",fe); sub(/".*/,"",fe); next } \
+	         /^  attribute \\/ { at=at $$0 "\n"; next } \
+	         /^  wire / { if ($$NF ~ /^\\/) { at=at "  attribute \\fsm_encoding \"none\"\n"; \
+	             if (fe != "" && fe != "none" && ((qm, $$NF) in q)) { n=$$NF; sub(/^\\/,"",n); w=$$0; sub(/ \\.*/,"",w); w=(match(w, /width [0-9]+/) ? substr(w, RSTART+6, RLENGTH-6) : "1"); \
+	               print fmt("note", "fsm-encoding-kept", src, "(* fsm_encoding = \"" fe "\" *) on " n " is not applied: the netlist keeps the " w "-bit codes the declaration gives " n ", so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset.", "none needed for this board, and the attribute may stay for Vivado; to start " n " in a state other than the one with code 0, give it a start value in its declaration (state_t " n " = RUN;), which every tool honours.") > "/dev/stderr" } } \
+	           else if (fel != "") at=at fel "\n" } \
+	         { printf "%s", at; at=""; fe=""; fel=""; src=""; print }
 # a function or task argument passed by reference (ref logic [3:0] x): yosys' reader stops at a syntax error,
 # and yosys-slang builds the call as nothing (the caller's variable never changes, no warning), so it is refused
 # here with the line, before either reader runs. The scan reads the code without comments.
@@ -480,7 +551,37 @@ MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]:
 # (cells_sim.v: initial Q <= INIT) put x on every LED a case or an if on that register drove, where the board shows them off. The student's own fix is a start value in the declaration (UG901 v2022.2
 # p.79 'specify a default value for the signal during declaration', p.244 'sets this value on the output of the register at
 # global reset or power up ... carried as an INIT attribute'); what Vivado does for a register without one is not in the guide.
-SYNTH        = read_rtlil $(TOP).il; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
+# The netlist keeps the state codes the student wrote (yosys' fsm recoding is off: FSM_KEEP_AWK sets fsm_encoding none on
+# every named wire before this script reads the .il, a student's own one_hot/auto/... included, with a note at its line when
+# the wire is a register, the Q of a $dff-family cell; a combinational wire with the attribute gets none without a note), so
+# a state register powers up in the state with code 0, the one dewfpga sim starts it in; Vivado re-encodes by default (UG901
+# FSM_ENCODING, auto) and what its register holds before the first reset is not in the guide.
+# A register or latch with no reset and no start value that never changes (its D is its own Q, or its latch enable is a
+# constant 0: fuzz seed 29, u_m0_in1[5] of a 1-bit value) is folded by synth_xilinx's opt_dff to its init value, x, and
+# every LED behind it is an OBUF of 1'hx (measured: 'pnr ok: 0 LUT, 0 FF', the netlist simulation x on all 16 LEDs for
+# 300 cycles where dewfpga sim showed 0011001100110011); setundef -params comes too late, the cell is gone. So before
+# synth_xilinx, after proc; opt_clean; opt_dff (the listing dewfpga sim starts its registers from: after proc a synchronous
+# reset is still a mux in front of a plain $dff, and only opt_dff makes it a $sdff; measured, without opt_dff here probe
+# 104b's sync-set register got init 0 and its netlist started at 0 where the board and the sim start it at 1), every
+# $dff/$dffe/$dlatch (no reset) bit whose init is x gets init 0, where dewfpga sim starts it (sim_starts.py: no reset, 0)
+# and where the board starts a surviving FDRE/FDCE/LDCE (ZINI). That opt_dff runs with -keepdc, so it does not fold the
+# never-changing register to its x init before the init is set (synth_xilinx's own opt_dff folds it to 0 afterwards). A plain
+# 'setundef -zero' here instead, as fix round 3 first had it, also turned every 1'bz of a tristate pin into 0 (measured:
+# probes 33_tristate_pmod and 33b_inout_read_only, netlist 'FAIL: released pin, tb drives 1, led0=0'). A
+# register with a reset is left alone: its surviving cell is FDRE/FDCE at 0 or FDSE/FDPE at 1 (its reset value, the
+# sim's start), set below. A memory with no start value gets INIT 0 as a $mem_v2 cell (memory_collect first), where dewfpga
+# sim starts its words: without it yosys treats every word nobody wrote as a free choice and folds the memory (fuzz seed 33:
+# every write stores 8'd230, so the read became the constant 230, 'pnr ok: 11 LUT, 0 FF', and the netlist showed f(230) on seg
+# at cycle 0 where the simulation, starting the memory at 0, showed f(0)); with INIT 0 the words are 0 until written, as the
+# simulation and a surviving LUT RAM (setundef -zero -params t:RAM*, below) have them.
+# check runs right after proc, where synth_xilinx's own first check ran before these passes were put in front of it
+# (its prepare stage is proc; check; flatten; ...; opt_expr; opt_clean; check): the undeclared-name and
+# two-always-drivers lines below read that check's warnings ('Wire top.\summ is used but has no driver', 'multiple
+# conflicting drivers for top.\cnt [3]'), and after opt_clean the undriven implicit wire is gone (measured, probe 39:
+# check named 'led [0]' instead of summ, the awk found no implicit wire of that name, and the typo built a bitstream)
+# while opt_dff folded the two conflicting flip-flops before any check saw them (probe 05: yosys stopped on a raw
+# 'ERROR: Conflicting init values' line instead of the coded two-always-drivers line).
+SYNTH        = read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; check; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; memory_collect; setundef -zero -params t:\$$mem_v2; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); setattr -unset fsm_encoding; delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
 $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json $(TOP).il $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log
 	@"$(PY)" "$(CHECKER)" --fix-ports $(SRCS)
@@ -494,6 +595,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	  { awk '$(TYPEDEF_AWK)' $(TYPEDEF_FILES) \
 	    && yosys -q -l $(TOP).yosys.log -p "$(READ_VERILOG) hierarchy -top $(TOP); setattr -unset always_comb; proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
+	    && awk '$(FSM_KEEP_AWK)' $(TOP).il $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
 	  | awk -v rd=verilog -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il -v ylog=$(TOP).yosys.log '$(YOSYS_AWK)' > $(TOP).rv.out || rc=$$?; \
 	  if [ $$rc -eq 0 ]; then cat $(TOP).rv.out; rm -f $(TOP).rv.out $(TOP).yosys.log; exit 0; fi; \
@@ -509,6 +611,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	  rm -f $@ $(TOP).il; rc=0; $(call MKKW,$(SRCS)); \
 	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang --single-unit $(INC)$$KWSRCS; hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
+	    && awk '$(FSM_KEEP_AWK)' $(TOP).il $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
 	  | awk -v rd=slang -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il '$(YOSYS_AWK)' > $(TOP).sl.out || rc=$$?; \
 	  rm -rf "$$KW"; \
@@ -620,5 +723,5 @@ flash: $(TOP).bit
 	    else echo "ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit $$rc (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on. $(URL)openfpgaloader-failed/" >&2; fi; exit 1; fi
 
 clean:
-	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
+	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_regs.json $(TOP)_start.sv $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log

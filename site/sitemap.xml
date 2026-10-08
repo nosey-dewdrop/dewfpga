@@ -87,6 +87,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/fpga-home-unsafe/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/hierarchical-name/</loc>
   </url>
   <url>
@@ -225,6 +228,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-timeout/</loc>

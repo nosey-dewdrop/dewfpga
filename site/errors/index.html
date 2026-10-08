@@ -205,6 +205,10 @@
     <p>dewfpga sim, after iverilog refused a line of the design. iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design.</p>
   </div>
   <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-starts-as-board/">note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#x27;b0101 and b at 4&#x27;b1010 (their reset values), c at 0 (no reset). Vivado&#x27;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79).</a>
+    <p>dewfpga sim, after iverilog compiled the design. Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board.</p>
+  </div>
+  <div class="err">
     <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-timeout/">ERROR [sim-timeout]: the simulation did not finish in 120 s: the testbench never reached $finish (a free-running clock never stops on its own). Fix: end the testbench with $finish; SIM_TIMEOUT=600 dewfpga sim waits longer.</a>
     <p>dewfpga sim, vvp. The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</p>
   </div>
@@ -339,6 +343,10 @@
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/v-is-verilog-2005/">note [v-is-verilog-2005]: a .v file is read as Verilog-2005 by both readers, as Vivado reads it (UG901 Ch.10): SystemVerilog (logic, always_ff, always_comb, enum ...) belongs in a .sv file. Fix: if your .v file holds SystemVerilog, rename it to .sv.</a>
     <p>dewfpga bit, after both readers refused a .v file. A .v file that holds SystemVerilog; both readers, like Vivado, read .v as Verilog-2005, so logic and always_ff are syntax errors there.</p>
+  </div>
+  <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/fsm-encoding-kept/">design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = &quot;one_hot&quot; *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours.</a>
+    <p>dewfpga bit, synthesis, before yosys reads the design. Not an error: a state register carries an fsm_encoding attribute, and the build keeps the codes the declaration gives it instead of letting yosys re-encode the register, so it powers up in the state with code 0, where dewfpga sim starts it; the build goes on.</p>
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-create-clock/">note [no-create-clock]: no create_clock in Basys3_Master.xdc; timing is checked against the Basys3&#x27;s 100 MHz oscillator (--freq 100).</a>

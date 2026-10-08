@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = &quot;one_hot&quot; *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours. (fix, macOS)</title>
+<meta name="description" content="Not an error: a state register carries an fsm_encoding attribute, and the build keeps the codes the declaration gives it instead of letting yosys re-encode the register, so it powers up in the state with code 0, where dewfpga sim starts it; the build goes on. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = &quot;one_hot&quot; *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours. (fix, macOS)">
+<meta property="og:description" content="Not an error: a state register carries an fsm_encoding attribute, and the build keeps the codes the declaration gives it instead of letting yosys re-encode the register, so it powers up in the state with code 0, where dewfpga sim starts it; the build goes on. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = \"one_hot\" *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-08","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit, synthesis, before yosys reads the design</p>
+  <h1 class="mono">design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = &quot;one_hot&quot; *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours.</h1>
+<p><code>dewfpga bit</code> on a three-state machine whose register carries the attribute (<code>(* fsm_encoding = "one_hot" *) logic [1:0] state;</code> on line 3, <code>IDLE = 0</code>, <code>RUN = 1</code>, <code>DONE = 2</code>, a synchronous reset to IDLE, no start value):</p>
+<pre><code>design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = &quot;one_hot&quot; *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours. https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/
+xdc ok: 34 ports, all mapped, 71 unused pins in the XDC ignored.
+note [no-create-clock]: no create_clock in Basys3_Master.xdc; timing is checked against the Basys3&#39;s 100 MHz oscillator (--freq 100). https://nosey-dewdrop.github.io/dewfpga/errors/no-create-clock/
+pnr ok: 3 LUT, 2 FF, clk 624.22 MHz (PASS at 100.00 MHz)   (full log: top.log)
+top.bit  2.2 MB</code></pre>
+<p>Before #35 the same design built without a note, as <code>pnr ok: 3 LUT, 3 FF, clk 645.58 MHz (PASS at 100.00 MHz)</code>: three flip-flops for a two-bit register.</p>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>yosys' <code>fsm</code> pass, which runs inside <code>synth_xilinx</code>, finds a register that behaves as a state machine and re-encodes it: the two-bit <code>state</code> above became three one-hot flip-flops, with or without the attribute (the attribute asks for exactly that, and <code>auto</code> would have given the same). Every flip-flop without a start value powers up at 0 on the board, and since #34 in the netlist too, so the re-encoded register powered up as <code>000</code>, which is none of the three one-hot states: with no reset pressed the machine sat there on every clock, and <code>led</code> stayed dark where the student's simulation, starting in IDLE, showed RUN after the first edge. Measured on the design above with the testbench of its probe: the netlist of before #35 printed <code>FAIL: after first edge no reset led=0000000000000000 expected all on (RUN)</code>, and its three <code>FDRE</code> all carried <code>INIT(1'h0)</code>.</p>
+<p>So the build now sets <code>fsm_encoding = "none"</code> on every named wire of the design before <code>synth_xilinx</code> reads it, which <code>fsm_detect</code> honours (yosys: <code>help fsm_detect</code>), and the register keeps the codes its declaration gives it: two flip-flops, <code>00</code> is IDLE, and the netlist moves to RUN at the first edge as <code>dewfpga sim</code> does (<code>PASS</code> from the same testbench, <code>2 FDRE</code>, both <code>INIT(1'h0)</code>). A student's own attribute is replaced like every other wire's, and the note names its line: left in place it kept yosys' recoding, and an <code>init</code> attribute beside it does not give the recoded register a start (yosys: "Initialization value on FSM state register is ignored"), so the only netlist whose power-up is a state is the one with the student's codes. The note is printed for a register only (the Q of a flip-flop in the design as yosys reads it); a combinational variable that shares the declaration (<code>state_t state, next;</code>) gets the <code>none</code> silently. The <code>blink</code> template's FASM is byte for byte the one before this change: nothing in it is a state machine to yosys.</p>
+<h2 id="what-differs-from-vivado">What differs from Vivado?</h2>
+<p>Vivado applies <code>FSM_ENCODING</code> (UG901 Ch.2, "FSM_ENCODING": <code>one_hot</code>, <code>sequential</code>, <code>johnson</code>, <code>gray</code>, <code>auto</code>, <code>none</code>), and re-encodes by default (<code>auto</code>). What its re-encoded register holds before the first reset is not in the guide, so whether a Vivado bitstream of the same design sits in no state until the reset button is pressed is not stated here: the values on this page are the open chain's, measured on its own netlist.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>None for this board: the note says what the build did, and the attribute may stay in the file for Vivado. To start the machine in a state other than the one with code 0, every tool honours a start value in the declaration (UG901 v2022.2 Ch.4 p.79):</p>
+<pre data-copy="1"><code>(* fsm_encoding = &quot;one_hot&quot; *) logic [1:0] state = RUN;</code></pre>
+<p>A press of the reset button puts the register in its reset state in every tool alike.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

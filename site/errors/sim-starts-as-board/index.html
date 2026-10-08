@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#x27;b0101 and b at 4&#x27;b1010 (their reset values), c at 0 (no reset). Vivado&#x27;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). (fix, macOS)</title>
+<meta name="description" content="Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#x27;b0101 and b at 4&#x27;b1010 (their reset values), c at 0 (no reset). Vivado&#x27;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). (fix, macOS)">
+<meta property="og:description" content="Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4'b0101 and b at 4'b1010 (their reset values), c at 0 (no reset). Vivado's simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-08","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">sim</span>dewfpga sim, after iverilog compiled the design</p>
+  <h1 class="mono">note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#x27;b0101 and b at 4&#x27;b1010 (their reset values), c at 0 (no reset). Vivado&#x27;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79).</h1>
+<p><code>dewfpga sim</code> on a design with four registers read before the first clock edge: <code>a</code> with a synchronous reset to 5, <code>b</code> with an asynchronous reset to <code>4'b1010</code>, <code>c</code> with no reset, <code>d</code> declared as <code>logic [3:0] d = 4'd9;</code>:</p>
+<pre><code>iverilog -g2012 -o top_sim design.sv tb.sv
+note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#39;b0101 and b at 4&#39;b1010 (their reset values), c at 0 (no reset). Vivado&#39;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/
+PASS
+tb.sv:15: $finish called at 21 (1s)</code></pre>
+<p>Before #35 the same run printed <code>FAIL: before the first edge a=xxxx b=xxxx c=xxxx d=1001</code>: the three registers without a start value were <code>x</code> until their first reset, and <code>d</code> was 9 from its declaration.</p>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>Icarus Verilog starts every 4-state variable at <code>x</code>, as IEEE 1800 says. A register with a synchronous reset and no start value stays <code>x</code> until the first clock edge with the reset high. Before that, <code>case (state)</code> on an <code>x</code> takes the <code>default</code> item, <code>if (state == RUN)</code> takes the else branch, <code>x + 1</code> stays <code>x</code>: the simulation shows a definite value, and the board contradicts it. On the board every flip-flop starts at a known value, and since #34 the netlist <code>dewfpga bit</code> writes does too. Measured on the netlist and the FASM of the design above (16 flip-flops, 10 <code>ZINI</code> bits): a register with a reset starts at its reset value bit by bit (yosys maps a reset-to-1 bit to <code>FDSE</code> or <code>FDPE</code> and nextpnr programs <code>INIT 1</code>; a reset-to-0 bit to <code>FDRE</code> or <code>FDCE</code> at 0), a register with no reset at 0, a LUT RAM word at 0, a declared start value as declared: <code>a=0101 b=1010 c=0000 d=1001</code> before the first edge. A state machine without a start value therefore starts in its reset state on the board and moves on at the first edge, while the simulation sat in <code>default</code> with every output off: 9 of the 11 random designs the fuzz test still found silent-wrong after #34 were this.</p>
+<p>So <code>dewfpga sim</code> now lists the design's registers and memories with yosys (read, <code>proc</code>, <code>flatten</code>, <code>memory_collect</code>, <code>opt_dff</code>; yosys-slang when yosys' own reader refuses the code) and compiles one more module with the testbench, <code>dewfpga_start</code>, that at time 0, after the design's own declaration values and the testbench's time-0 statements ran, sets every register bit that is still <code>x</code> to the board's value and every <code>x</code> bit of every memory word to 0, through the testbench's instance (<code>tb.dut.state</code>). A declared start value is never <code>x</code> and stays. The note names what was started and how; nothing to start (blink: both registers have declared values), no note. When both readers refuse the design, or iverilog cannot write a variable this way, the simulation runs exactly as before, without a note. The listing costs one yosys run: 0.04 s on this design, inside a <code>dewfpga sim</code> of 0.3 s.</p>
+<p>The listing runs <code>opt_clean</code> before <code>opt_dff</code>: yosys-slang leaves <code>$buf</code> cells between a reset mux and its flip-flop, and <code>opt_dff</code> does not see through them (measured: every register of a design read by yosys-slang listed as "no reset" without it, and the note said <code>m at 0 and p at 0 (no reset)</code> where the netlist starts them at 6 and <code>8'b10100101</code>). A bit that <code>opt_dff</code> folds to a constant (written one constant under the reset and held otherwise: <code>m2[1] &lt;= 2</code> in the reset branch, nothing else) is no flip-flop any more; the netlist and the board hardwire it, so the simulation starts it at that constant too, and the note shows the whole register (<code>m2 at 8'b00100001</code>, not <code>8'b00000001</code>).</p>
+<p>When iverilog refuses the design and the simulation runs on the design as the build reads it (<a href="/dewfpga/errors/sim-from-build/">note [sim-from-build]</a>), the same module is written for that elaborated design (listed from the build's own <code>.il</code>, every variable written whole, since an enum is a plain <code>reg</code> there) and the note prints after the sim-from-build note. Measured on a packed struct written with an assignment pattern, which iverilog refuses: before, <code>FAIL: before the first edge led=xx3x</code>; after, <code>p at 8'b10100101 and m at 4'b0110 (their reset values)</code> and <code>PASS</code>, the values the netlist shows.</p>
+<h2 id="what-differs-from-vivados-simulator">What differs from Vivado's simulator?</h2>
+<p>Vivado's simulator (xsim) shows <code>x</code> for a register without a start value until its first reset, as iverilog did: a testbench that checks an output before the first reset sees <code>x</code> there and a definite value here. What Vivado programs into the bitstream for such a register is not in UG901; the values here are what the open chain programs (nextpnr-xilinx's default <code>INIT</code> for each primitive yosys picked), measured on the design's own netlist and FASM. UG901 v2022.2 Ch.4 p.79 lists <code>FDRE</code>, <code>FDSE</code>, <code>FDCE</code>, <code>FDPE</code> and says: "To initialize the content of a Register at circuit power-up, specify a default value for the signal during declaration".</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Nothing: the note says what ran. To make every tool, Vivado's simulator included, start the register the same way, give it a start value in its declaration; it is honoured by iverilog, xsim and the bitstream (UG901 v2022.2 Ch.4 p.79):</p>
+<pre data-copy="1"><code>logic [3:0] c = 0;
+state_t state = IDLE;</code></pre>
+<p>A memory gets the same through an <code>initial</code> loop (<code>initial for (int i = 0; i &lt; 4; i++) mem[i] = 0;</code>), which synthesis reads as the RAM's initial content.</p>
+<h2 id="what-about-a-table-only-partly-loaded">What about a table only partly loaded?</h2>
+<p>Only a memory with no value at all is started. A table that <code>$readmemh</code> fills in part (<code>$readmemh("rom.hex", rom, 0, 3)</code> on a 16-word <code>rom</code>, or a file shorter than the table) keeps <code>x</code> in the words it did not load, and the note says so after the started names:</p>
+<pre><code>note [sim-starts-as-board]: 1 register without a start value starts as the board does, not at x: q at 0 (no reset). Vivado&#39;s simulator shows x there until the first reset; a start value in the declaration (logic [7:0] q = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). rom: 12 of its 16 words were given no value and stay x; the build treats such a word as a free choice (the netlist and the board read some value there, not 0), so load every word, or fill the table first (initial begin for (int i = 0; i &lt; 16; i++) rom[i] = 0; $readmemh(...); end). https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/</code></pre>
+<p>Measured on that design: yosys folds the 16-word table into one LUT with the 12 unloaded words as don't-care, and the netlist reads <code>CC</code> (the value of the loaded word 2) at <code>rom[10]</code>, not 0; the first version of #35 started those words at 0 and said the board does the same, which the netlist it built contradicted. Now <code>rom[10]</code> reads <code>x</code> in the simulation, as it did before #35 (nobody gave it a value), and the note names the gap and the fix. A design whose only memory is such a table and whose registers all have start values gets no note: the simulation is iverilog's alone.</p>
+</main>
+
+<footer class="wrap">
+  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>
