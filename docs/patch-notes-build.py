@@ -46,6 +46,8 @@ page = f'''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>{TITLE}</title>
 <meta name="description" content="{DESC}">
 <link rel="canonical" href="{URL}">
@@ -70,7 +72,7 @@ page = f'''<!doctype html>
 <p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
 </main>
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/docs/">the guide</a> · <a href="/dewfpga/">home</a></span>
 </footer>
 <script>document.querySelectorAll("main pre").forEach(function(p){{p.setAttribute("data-copy","1")}})</script>

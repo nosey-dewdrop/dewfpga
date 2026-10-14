@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>dewfpga: Basys3 simulator and testbench in the browser</title>
 <meta name="description" content="Write SystemVerilog, press run: a virtual Digilent Basys3 lights up, or your testbench runs and draws a waveform. Yosys and Icarus Verilog as WebAssembly. No Vivado, no board needed.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Ccircle cx=%278%27 cy=%278%27 r=%275%27 fill=%27%235cff7a%27/%3E%3C/svg%3E">
@@ -106,7 +108,7 @@
   </div>
 </main>
 <footer>
-  <p>made by <a href="https://github.com/nosey-dewdrop">damla su bilge</a> for cs223 at bilkent. open source, runs entirely on your machine, nothing is uploaded anywhere. icarus verilog is gpl-2.0: this page runs it as webassembly built from upstream commit <a href="https://github.com/steveicarus/iverilog/commit/07dd50d37e36af1397f51bfeadaa5b5d0dc62fb5">07dd50d</a> plus <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/sim/src/tb/wasm/build">one patch and the build recipe</a>, both in the repository; the gpl text is <a href="./licenses/iverilog-COPYING.txt">here</a>, the other libraries (jointjs is mpl-2.0) are listed in <a href="./THIRD_PARTY_NOTICES.md">third-party notices</a>, and this page itself is <a href="./LICENSE.txt">mit</a>. the same files run on a real board with the <a href="/dewfpga/cli/">command line</a>.</p>
+  <p>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> for cs223 at bilkent. open source, runs entirely on your machine, nothing is uploaded anywhere. icarus verilog is gpl-2.0: this page runs it as webassembly built from upstream commit <a href="https://github.com/steveicarus/iverilog/commit/07dd50d37e36af1397f51bfeadaa5b5d0dc62fb5">07dd50d</a> plus <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/sim/src/tb/wasm/build">one patch and the build recipe</a>, both in the repository; the gpl text is <a href="./licenses/iverilog-COPYING.txt">here</a>, the other libraries (jointjs is mpl-2.0) are listed in <a href="./THIRD_PARTY_NOTICES.md">third-party notices</a>, and this page itself is <a href="./LICENSE.txt">mit</a>. the same files run on a real board with the <a href="/dewfpga/cli/">command line</a>.</p>
 </footer>
 <script type="module" src="/src/sim/main.js"></script>
 </body>

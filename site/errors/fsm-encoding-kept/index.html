@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:3: note [fsm-encoding-kept]: (* fsm_encoding = &quot;one_hot&quot; *) on state is not applied: the netlist keeps the 2-bit codes the declaration gives state, so its power-up (every flip-flop at 0, as the board starts a register without a start value) is the state with code 0, the one dewfpga sim starts in; re-encoded, the flip-flops would start in no state until the first reset (the netlist and the board would sit dark where the simulation moved on). Vivado applies the attribute (UG901 FSM_ENCODING), and the guide does not say what its re-encoded register holds before the first reset. Fix: none needed for this board, and the attribute may stay for Vivado; to start state in a state other than the one with code 0, give it a start value in its declaration (state_t state = RUN;), which every tool honours. (fix, macOS)</title>
 <meta name="description" content="Not an error: a state register carries an fsm_encoding attribute, and the build keeps the codes the declaration gives it instead of letting yosys re-encode the register, so it powers up in the state with code 0, where dewfpga sim starts it; the build goes on. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/fsm-encoding-kept/">
@@ -51,7 +53,7 @@ top.bit  2.2 MB</code></pre>
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

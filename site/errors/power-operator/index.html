@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:3: ERROR [power-operator]: ** with a base that is a signal (sw ** 2): yosys builds ** only for a constant base and exponent, or 2 ** n, and leaves this one as a $pow cell nextpnr has nothing to place on. Not a size problem. Fix: write the multiplication out (sw * sw), a table (case), or 1 &lt;&lt; n for a power of two. (fix, macOS)</title>
 <meta name="description" content="The ** operator with a variable base; yosys builds only constant powers and 2 ** n. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/power-operator/">
@@ -41,7 +43,7 @@ design.sv:3: ERROR [power-operator]: ** with a base that is a signal (sw ** 2): 
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

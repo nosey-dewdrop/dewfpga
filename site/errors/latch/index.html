@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:3: warning [latch]: latch inferred for q (an if without else in always_comb): q keeps its value when no branch assigns it; Vivado builds the latch too, with the same warning (UG901 Ch.5 Latches). Fix: if you meant a register, write always_ff with a clock; if a latch, always_latch; if neither, give q a value on every path (an else branch, or a default at the top of the block). (fix, macOS)</title>
 <meta name="description" content="A combinational block leaves a signal unassigned on some path, so it has to remember its value: a latch, built as Vivado builds it, with the same warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/latch/">
@@ -44,7 +46,7 @@ end</code></pre>
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:5: ERROR [enum-method-next-prev]: s.next() is an enum method that steps through the values (next/prev): yosys does not build enum methods, and yosys-slang builds first()/last() only; Vivado builds next/prev (UG901 Ch.10 Table 27). Fix: write the step out as a case on s, in the order the enum lists its values (with IDLE, RUN, DONE: case (s) IDLE: s &lt;= RUN; RUN: s &lt;= DONE; DONE: s &lt;= IDLE; endcase). (fix, macOS)</title>
 <meta name="description" content="The enum methods next() and prev(); neither reader builds them, Vivado does. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/enum-method-next-prev/">
@@ -42,7 +44,7 @@ design.sv:5: ERROR [enum-method-next-prev]: s.next() is an enum method that step
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

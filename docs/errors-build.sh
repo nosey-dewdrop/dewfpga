@@ -111,6 +111,8 @@ def head(title, desc, ogtitle, url, ld=None):
     esc = html.escape
     s = ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
          "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n"
+         "<meta name=\"author\" content=\"Damla Su Bilge\">\n"
+         "<link rel=\"author\" href=\"https://noseydewdrop.com\">\n"
          f"<title>{esc(title)}</title>\n"
          f"<meta name=\"description\" content=\"{esc(desc)}\">\n"
          f"<link rel=\"canonical\" href=\"{url}\">\n"
@@ -126,7 +128,7 @@ def head(title, desc, ogtitle, url, ld=None):
 
 FOOT = """
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="{back}">{label}</a></span>
 </footer>
 </body>

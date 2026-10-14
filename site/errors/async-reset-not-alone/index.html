@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:3: ERROR [async-reset-not-alone]: this always block is sensitive to two edges (@(posedge clk, posedge btnC)), so one of them is an asynchronous reset, but its first if does not test that reset alone (a reset ORed with a synchronous clear: if (rst || clear)), so neither reader can tell the reset from the clock. Fix: test the reset alone first and put the synchronous clear in the else:  if (btnC) q &lt;= 0; else if (clear) q &lt;= 0; else q &lt;= q + 1; (fix, macOS)</title>
 <meta name="description" content="The block has a clock and an asynchronous reset in its sensitivity list, but the first if tests the reset ORed with another signal. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-not-alone/">
@@ -44,7 +46,7 @@ else q &lt;= q + 1;</code></pre>
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

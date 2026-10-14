@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#x27;b0101 and b at 4&#x27;b1010 (their reset values), c at 0 (no reset). Vivado&#x27;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). (fix, macOS)</title>
 <meta name="description" content="Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/">
@@ -57,7 +59,7 @@ state_t state = IDLE;</code></pre>
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

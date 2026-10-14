@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous reset (posedge clk or posedge btnC), so on btnC&#x27;s edge every signal it writes must get a constant; here q is loaded from sw. yosys emulates that with FFs and a mux, so the board would not do what the simulation showed. Fix: reset to a constant, and load sw with the clock, behind an input of your own (load):  if (btnC) q &lt;= 0; else if (load) q &lt;= sw; else q &lt;= q + 1; (fix, macOS)</title>
 <meta name="description" content="In an always_ff with an asynchronous reset, the reset branch loads a register from a signal, or a signal is written outside the reset if/else; a flip-flop can only reset to a constant. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-nonconst/">
@@ -46,7 +48,7 @@ design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous re
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

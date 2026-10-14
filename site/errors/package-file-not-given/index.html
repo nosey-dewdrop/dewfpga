@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:2: ERROR [package-file-not-given]: cfg_pkg::MAGIC names the package cfg_pkg, which is declared in pkg.svh, and the tools are not given that file (they read what dewfpga collected, every .sv and .v of the folder or of the project: design.sv; a .svh or .vh reaches them only through an `include, a file outside the folder or the project not at all): iverilog stops at a syntax error there; yosys would drop the import and build every name of cfg_pkg as an undriven 1-bit wire: x on the board. Fix: add   `include &quot;pkg.svh&quot;   as the first line of design.sv; or move the package into design.sv, above the module. (fix, macOS)</title>
 <meta name="description" content="The package lives in a file the tools are not given: a .svh or .vh that no design file `includes, or a file outside the folder or the project. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/package-file-not-given/">
@@ -41,7 +43,7 @@
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

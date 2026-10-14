@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic. (fix, macOS)</title>
 <meta name="description" content="A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/">
@@ -47,7 +49,7 @@ blink.xdc:5: ERROR [no-such-pin]: w5 is written in small letters, and the chip&#
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>blink.sv:1: ERROR [utf8-bom]: blink.sv starts with a byte-order mark (saved as &#x27;UTF-8 with BOM&#x27;), and yosys stops at its first token. Fix: save it as plain UTF-8, or remove it:  LC_ALL=C sed -i &#x27;&#x27; $&#x27;1s/^\xEF\xBB\xBF//&#x27; blink.sv (fix, macOS)</title>
 <meta name="description" content="The file starts with the three invisible bytes EF BB BF that Notepad and some editors write; yosys reads them as a token it does not know. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/utf8-bom/">
@@ -41,7 +43,7 @@
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

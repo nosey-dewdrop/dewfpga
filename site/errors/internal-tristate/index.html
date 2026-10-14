@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:2: ERROR [internal-tristate]: a tri-state driver (a z, at design.sv:2) on a signal that is not an inout pin of the top module: the chip has tri-state buffers on its pins only. Vivado converts such a driver to logic (UG901 Ch.5 Tristates); yosys keeps it as a $_TBUF_ cell, and nextpnr has nothing to place it on. Not a size problem. Fix: select with a mux instead:  assign bus = sel ? b : a;  and keep z for an inout pin only. (fix, macOS)</title>
 <meta name="description" content="A z driven onto an internal signal or a submodule port; the chip&#x27;s tri-state buffers sit on pins only, and yosys keeps the buffer as a cell nextpnr cannot place. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/internal-tristate/">
@@ -42,7 +44,7 @@ design.sv:2: ERROR [internal-tristate]: a tri-state driver (a z, at design.sv:2)
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:3: ERROR [async-reset-polarity]: this always_ff is sensitive to posedge btnC, but its first if tests !btnC, so the reset branch runs while btnC is low and on btnC&#x27;s rising edge the block takes the else branch, which loads q from sw: no flip-flop on the chip loads a signal on its reset edge (yosys emulates it with FFs and a mux, so the board would not do what the simulation showed). Fix: test btnC at the level its edge leaves it:  if (btnC) q &lt;= 0; else ...;  or keep if (!btnC) and write negedge btnC in the sensitivity list. (fix, macOS)</title>
 <meta name="description" content="The sensitivity list names one edge of the reset and the first if tests the other level, so the reset edge lands in the else branch, which loads a signal. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-polarity/">
@@ -47,7 +49,7 @@ yosys-slang: design.sv:4:9: error: polarity of condition doesn&#39;t match edge 
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

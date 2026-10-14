@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>design.sv:5: ERROR [unique-case-overlap]: the items 4&#x27;b10?? (design.sv:4) and 4&#x27;b??11 (design.sv:5) of this unique casez both match 4&#x27;b1011, and unique promises that only one item can match: the simulation takes the first item (iverilog ignores unique), and the hardware, built as parallel logic the way Vivado builds a unique case (UG901 Ch.10, parallel_case), ORs the two items&#x27; values, so the board would not do what the simulation showed. Fix: make the items disjoint (4&#x27;b10?? and 4&#x27;b0?11), write priority casez when the first match should win, or drop unique. (fix, macOS)</title>
 <meta name="description" content="Two items of a unique casez (or casex) can match the same value; the simulator takes the first, the hardware ORs both, so the board would not do what the simulation showed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/unique-case-overlap/">
@@ -60,7 +62,7 @@ endmodule</code></pre>
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>

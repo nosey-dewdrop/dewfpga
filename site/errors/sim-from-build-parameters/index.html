@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
 <title>top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the design (its lines are above), and the testbench sets parameters of top with #(...): the simulation of the design as the build reads it keeps top&#x27;s parameters at their defaults, as the bitstream does, so the testbench&#x27;s values would not apply and its checks would test another design. Fix: rewrite the line iverilog names above so that iverilog compiles the design itself (the page lists what to write instead of each construct), or test top with its defaults (no #(...) in the testbench). (fix, macOS)</title>
 <meta name="description" content="iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build-parameters/">
@@ -45,7 +47,7 @@ top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the desi
 </main>
 
 <footer class="wrap">
-  <span>Damla Su Bilge · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span><a href="/dewfpga/errors/">all errors</a></span>
 </footer>
 </body>
