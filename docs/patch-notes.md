@@ -4812,3 +4812,33 @@ evidence, so the warning is now dropped only when the design has no clocked cell
 `expect.tsv` again (known gaps 19). The other was the personal-path check reading the `__pycache__` a
 direct test run leaves; that folder is never committed and is no longer scanned. The SystemVerilog probes
 are unchanged: 114 of 148 pass all four stages.
+
+### Local candidate · Run builds every lab folder the folder command builds · 15 October
+
+**Measured on the students' own folders.** 89 lab folders from 94 public CS223 repositories, each on a
+fresh copy: the folder command (`dewfpga bit`) against Run on the file a student opens (`dewfpga run
+<file> --build-only`, the play button). Before this update the folder command built 13 and Run 2, and
+every one of the 13 failed on Run. Now Run builds 17: all 13, and 4 the folder command refuses for a
+reason that is not that design's.
+
+**Run reads the folder's pin file.** Run used to take only `<file>.xdc` or the automatic pins, so a lab
+whose pins are in `constraints.xdc` or `Lab4Const.xdc`, for ports named `swIns`, `data` or `reset`,
+stopped at `No default Basys3 pin`. Now, as the folder command does, Run takes the one `.xdc` beside the
+top that pins the design's ports; one that pins none of them (another lab's) is passed over, and the
+automatic pins stay for a folder with no such file.
+
+**Run on a Vivado project's file builds the project.** A file under `<name>.srcs/sources_1/new` has its
+pins in `constrs_1` and its file list in the `.xpr`. Run now builds it as the folder command reads the
+project: its enabled files, its top, its `.xdc`, and the outputs next to the `.xpr`. The project command
+names files from the project folder; Run writes each `file:line` and the log path out in full, so the
+editor underlines the right file.
+
+Of the 4 folders only Run builds, 2 hold a file the design does not use that the folder command stops on
+(a module defined in both a `.sv` and a `.v`; an old file that does not compile), and 2 have no `.xdc`
+and only board port names.
+
+Tests: two new checks. A folder with `constraints.xdc` for ports `a b y c` builds with that file, also
+beside another lab's `.xdc`, and a design with board port names and only another lab's `.xdc` gets the
+automatic pins. A copy of the Vivado project fixture builds from its source file, the `.bit` lands next to
+the `.xpr`, and an error is named with the source's full path and line. The full suite passed 343 of 343 with 19 known gaps; the SystemVerilog probes are unchanged (114 of
+148 pass all four stages).
