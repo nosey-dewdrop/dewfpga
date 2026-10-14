@@ -132,7 +132,7 @@ def main():
             env = dict(os.environ, LC_ALL="C", LC_CTYPE="C", LANG="C")
             def mapped(text):
                 for local, original in sorted(mapping.items(), key=lambda pair: -len(pair[0])):
-                    text = re.sub(r"(?<![\w/])" + re.escape(local) + r"(?=[:\s'\"\)]|$)", lambda _: original, text)
+                    text = re.sub(r"(?<![\w/])" + re.escape(local) + r"(?=[:\s'\"\),;]|\.(?:\s|$)|$)", lambda _: original, text)
                 return text
             def execute(command):
                 with subprocess.Popen(command, cwd=work, env=env, stdout=subprocess.PIPE,
@@ -175,11 +175,15 @@ def main():
                 design = json.loads((work / f"{top}.json").read_text())
                 (work / "pins.xdc").write_text(auto_xdc(design["modules"][top]))
                 print("Pins: automatic Basys3 mapping", flush=True)
-            execute(make + ["bit"])
-            for filename, output in ((f"{top}.bit", "design.bit"), (f"{top}.json", "design.json"),
-                                     ("pins.xdc", "design.xdc"), (f"{top}.log", "design.log")):
-                if (work / filename).exists():
-                    shutil.copyfile(work / filename, cache / output)
+            # the work folder is deleted on the way out: messages name the log where it is kept, failed build too
+            mapping[f"{top}.log"] = str(cache / "design.log")
+            try:
+                execute(make + ["bit"])
+            finally:
+                for filename, output in ((f"{top}.bit", "design.bit"), (f"{top}.json", "design.json"),
+                                         ("pins.xdc", "design.xdc"), (f"{top}.log", "design.log")):
+                    if (work / filename).exists():
+                        shutil.copyfile(work / filename, cache / output)
             print(f"Build: {cache / 'design.bit'}", flush=True)
             if not args.build_only:
                 # Serialise USB programming between independent single-file runs.
