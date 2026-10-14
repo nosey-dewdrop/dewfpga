@@ -688,7 +688,7 @@ $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	@set -o pipefail; "$(NEXTPNR)" --chipdb "$(CHIPDB)" --xdc $(XDC) --json $(TOP).json --seed 1 \
 	           $$(grep -q '^[^#]*create_clock' $(XDC) || echo --freq 100) \
 	           --write $(TOP)_routed.json --fasm $@ --quiet --log $(TOP).log 2>&1 \
-	  | awk -v srcs="$(SRCS)" -v xdc="$(XDC)" '$(FMT_AWK) function lines(pat,  cmd, l, out) { out=""; cmd="grep -nE \"" pat "\" " srcs " /dev/null | cut -d: -f1,2 | head -4"; while ((cmd | getline l) > 0) out = out (out==""?"":" and ") l; close(cmd); return out } \
+	  | awk -v srcs="$(SRCS)" -v xdc="$(XDC)" -v clocked="$$(grep -qE '"type": "(FD|SRL|RAM|DSP|BUFG)' $(TOP).json && echo 1)" '$(FMT_AWK) function lines(pat,  cmd, l, out) { out=""; cmd="grep -nE \"" pat "\" " srcs " /dev/null | cut -d: -f1,2 | head -4"; while ((cmd | getline l) > 0) out = out (out==""?"":" and ") l; close(cmd); return out } \
 	         function first(ls) { sub(/ and .*/,"",ls); return ls } \
 	         function xline(pat,  cmd, l) { l=""; cmd="grep -nE \"" pat "\" " xdc " /dev/null | head -1 | cut -d: -f1,2"; cmd | getline l; close(cmd); return l } \
 	         function rx(s) { gsub(/[][]/, ".", s); return s } \
@@ -697,7 +697,7 @@ $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	         /^ERROR: Unable to constrain IO / { print; io=$$0; sub(/.*constrain IO \047/,"",io); sub(/\047.*/,"",io); print fmt("ERROR", "no-such-pin", xline("^[^#]*get_ports[[:space:]]*\\{?[[:space:]]*" rx(io) "[[:space:]]*\\}?[[:space:]]*\\]"), "nextpnr cannot put " io " on the pin its XDC line names (its line is above).", "copy the pin for " io " from the course\047s Basys3_Master.xdc, or from the board\047s schematic."); next } \
 	         /^ERROR: Cell \047.*\047 cannot be bound to bel \047.*\047 since it is already bound to cell / { print; a=$$0; sub(/.*Cell \047/,"",a); sub(/\047.*/,"",a); b=$$0; sub(/.*bound to cell \047/,"",b); sub(/\047.*/,"",b); \
 	           print fmt("ERROR", "pin-used-twice", xline("^[^#]*get_ports[[:space:]]*\\{?[[:space:]]*" rx(a) "[[:space:]]*\\}?[[:space:]]*\\]"), a " and " b " are on the same pin (the XDC gives both the same PACKAGE_PIN), and one pin takes one port.", "give each port its own pin (copy the lines from the course\047s Basys3_Master.xdc)."); next } \
-	         /^Warning: \[current_design\] isn.t supported, ignoring/ || /^Warning: No clocks found in design/ || /^[0-9]+ warnings?, [0-9]+ errors?$$/ {next} \
+	         /^Warning: \[current_design\] isn.t supported, ignoring/ || (/^Warning: No clocks found in design/ && clocked == "") || /^[0-9]+ warnings?, [0-9]+ errors?$$/ {next} \
 	         { sub(/[0-9]+ warnings?, [0-9]+ errors?$$/, "") } \
 	         /no Bels remaining of type/ { print; t=$$0; sub(/.*of type \047/,"",t); sub(/\047.*/,"",t); c=$$0; sub(/.*place cell \047/,"",c); sub(/\047.*/,"",c); \
 	           if (t == "$$_TBUF_") { ls=lines("\047[sS]?[bBoOhH]?[zZ]+([^A-Za-z0-9_]|$$)"); print fmt("ERROR", "internal-tristate", first(ls), "a tri-state driver (a z" (ls==""?"":", at " ls) ") on a signal that is not an inout pin of the top module: the chip has tri-state buffers on its pins only. Vivado converts such a driver to logic (UG901 Ch.5 Tristates); yosys keeps it as a $$_TBUF_ cell, and nextpnr has nothing to place it on. Not a size problem.", "select with a mux instead:  assign bus = sel ? b : a;  and keep z for an inout pin only."); next } \
@@ -713,8 +713,9 @@ $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	         /Failed to expand region|Unable to find legal placement/ { print; print fmt("ERROR", "design-too-big", "", "the design does not fit the XC7A35T (20800 LUTs, 41600 FFs; a memory is built from LUTs as distributed RAM, unless (* ram_style = \"block\" *) asks for a block RAM). The counts are in $(TOP).log.", "make it smaller: fewer bits, a smaller memory, one divider or multiplier shared over several cycles."); next } \
 	         !seen[$$0]++'
 	# the course's Basys3_Master.xdc ends in five [current_design] lines nextpnr does not know, and a design with
-	# no clock gets nextpnr's "No clocks found"; both are harmless and would print on every build, so they are
-	# dropped here (the full text is in $(TOP).log; the pnr ok line says "no clocked paths")
+	# no clocked cell gets nextpnr's "No clocks found"; both are harmless and would print on every build, so they
+	# are dropped here (the full text is in $(TOP).log). With a clocked cell (a block RAM, probe 97) the warning
+	# means something and stays
 	@awk -v top=$(TOP) '$(FMT_AWK) $(CLK_AWK) /^Info:[[:space:]]+SLICE_LUTX:/{l=$$3} /^Info:[[:space:]]+SLICE_FFX:/{f=$$3} \
 	      /Max frequency for clock/{ v=$$0; sub(/.*for clock[[:space:]]+\047/,"",v); c=v; sub(/\047: .*/,"",c); sub(/^.*\047: /,"",v); if (!(c in freq)) order[++nc]=c; freq[c]=v } \
 	      END{sub(/\/.*/,"",l); sub(/\/.*/,"",f); k=0; fmin=0; for (c in freq) { k++; if (freq[c] ~ /FAIL/) { bad=1; v=freq[c]; sub(/ .*/,"",v); split(v, dd, "."); v=dd[1]*100 + substr(dd[2] "00",1,2); if (v > 0 && (fmin == 0 || v < fmin)) fmin=v } } m=""; der=""; \
