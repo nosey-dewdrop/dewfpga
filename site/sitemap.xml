@@ -139,6 +139,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/module-not-found/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/module-without-endmodule/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/multiple-drivers/</loc>
   </url>
   <url>

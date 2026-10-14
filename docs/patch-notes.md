@@ -4736,3 +4736,43 @@ the own-project parity circuit after the suite's blink checks. Physical LED
 observation and an actual VS Code GUI run remain unverified; an isolated extension
 and task installation is not substituted for that GUI observation. Nothing here
 claims a published deployment or universal SystemVerilog support.
+
+### Local candidate · An empty folder in VS Code, and a misspelled endmodule · 14 October
+
+**An empty folder now writes its own design file.** A student opened an empty `lab1` folder in
+VS Code. Nothing in the window pointed at dewfpga, and the coding agent they asked did not know it,
+so the student wrote a 10-line `.xdc` and a 22-line Makefile by hand next to the design. The same
+design, alone in a folder, builds to a bitstream in 4.6 seconds with no `.xdc` and no Makefile.
+Now an empty folder asks one question, `Create top.sv`. The button writes `top.sv` (16 switches to
+16 LEDs, with the port names that need no pin file listed at the top), opens it under the Run button,
+and writes the agent notes beside it. A folder with files, a window with two folders, or a "Never"
+answer gets no question; an existing `top.sv` is never overwritten. The same action is the command
+`dewfpga: new Basys3 design in this folder (top.sv)`.
+
+**The agent notes start with the one-file path.** `AGENTS.md` used to describe only the folder
+commands. Its first section now says one `.sv` is enough, names the automatic ports, and tells the
+agent never to ask for a Makefile, an `.xdc` or a build script, and never to install other FPGA
+tools. The file stays within its 60-line limit.
+
+**A misspelled `endmodule` is named with its line.** `lab1_top.sv` ended in `endmodulek`. The
+source scan pairs each `module` with the next `endmodule`, so `lab1_top` dropped out, the two
+modules it instantiates looked unused, and the CLI said `two-tops` and suggested `full_adder` as the
+top. Now:
+
+```
+lab1_top.sv:27: ERROR [module-without-endmodule]: module lab1_top (lab1_top.sv:21) has no endmodule: line 27 reads endmodulek. Fix: write endmodule on line 27.
+```
+
+With no word like `endmodule` in the module, the message names the line where the next module
+starts. Single-file Run now prints the scan's message as it is, and its `two-tops` fix names
+`dewfpga run <file> --top NAME` instead of the folder command.
+
+Tests: three new single-file checks (misspelled, missing, a real two-top file) fail on the
+installed 1.2.0 and pass now. The scan raised no alarm on any of the 364 `.sv`/`.v` files in the
+repository. The VS Code extension suite passed 41/41; the new checks build the written `top.sv` with
+the real chain (32 ports, all pinned automatically). The full suite ran once: 340 passed, 3 failed, 19 known
+gaps unchanged. The three were closed and rerun: `AGENTS.md` had grown to 74 lines (limit 60),
+`site/llms.txt` lacked the new code, and the Python bytecode the tests left in `templates/__pycache__`
+held this machine's home path (the suite now writes no bytecode). The SystemVerilog probes are as
+on 8 October: 114 of 148 pass all four stages. Not tried: the button in a real
+VS Code window and programming the board with this change.
