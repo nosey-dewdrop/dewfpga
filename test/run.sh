@@ -53,7 +53,7 @@ check "shellcheck"            "shellcheck -S style --enable=check-unassigned-upp
 check "bash -n"               "bash -n '$ROOT/install.sh' && bash -n '$CLI'"
 # every file is scanned, this one too: a home folder is /Users/ and a name (/Users/you/ is the guide's placeholder).
 # This file writes the pattern with no name after /Users/, and its planted paths through printf's %s
-personal_paths() { grep -rnoE '/Users/[A-Za-z0-9._-]+/?' --exclude-dir=.git --exclude=.git --exclude-dir=.rabadon --exclude-dir=.claude --exclude-dir=node_modules --exclude=.fpga_home "$1" | grep -vE ':/Users/you/?$'; }
+personal_paths() { grep -rnoE '/Users/[A-Za-z0-9._-]+/?' --exclude-dir=__pycache__ --exclude-dir=.git --exclude=.git --exclude-dir=.rabadon --exclude-dir=.claude --exclude-dir=node_modules --exclude=.fpga_home "$1" | grep -vE ':/Users/you/?$'; }
 check "no personal paths"     "! personal_paths '$ROOT' | grep -q ."
 check "personal-path check sees test/sv/run.sh" "mkdir -p '$T/pp/test/sv' && printf '# /Users/%s/fpga\\n' someone > '$T/pp/test/sv/run.sh' && personal_paths '$T/pp' | grep -q 'test/sv/run.sh'"
 check "personal-path check sees test/run.sh" "printf '# built on /Users/%s/fpga\\n' someone > '$T/pp/test/run.sh' && personal_paths '$T/pp' | grep -q 'test/run.sh:1:'"
