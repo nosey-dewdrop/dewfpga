@@ -150,7 +150,12 @@ def main():
             for line in result.stdout.splitlines():
                 key, _, value = line.partition("=")
                 if key in ("ERROR", "PROBLEM"):
-                    fail(mapped(value) + (" For single-file Run, select with --top NAME." if "top" in value else ""))
+                    # already one finished message (file:line, code, fix); only the two-tops fix names this command
+                    text = mapped(value)
+                    if "[two-tops]" in text:
+                        text = re.sub(r"dewfpga bit (\w+)", lambda m: f"dewfpga run {source.name} --top {m.group(1)}", text)
+                    print(text, file=sys.stderr)
+                    sys.exit(1)
                 fields[key] = value
             top = fields.get("TOP", "")
             if result.returncode or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", top):

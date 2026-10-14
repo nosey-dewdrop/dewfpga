@@ -3,7 +3,7 @@
 Usage: check_xdc.py <top.json> <top.xdc>
        check_xdc.py --fix-ports <file.sv>...   (before the tools run: the two lines Vivado accepts and yosys refuses
                                                 are written into the student's file, and each changed line is printed)"""
-import json, os, re, sys
+import difflib, json, os, re, sys
 
 SITE = "https://nosey-dewdrop.github.io/dewfpga/errors/"
 
@@ -444,6 +444,31 @@ def _localparam_literals(body):
             if _CASE_LIT.match(v): out[a.group(1)] = v
     return out
 
+def _unclosed_modules(f, src):
+    """A module whose endmodule is missing or misspelled (`endmodulek`). _MODULE pairs a module with the next
+    endmodule, so such a module drops out of the scan and the scan names the wrong top (the modules it instantiates
+    become two-tops); this names the module and, when there is one, the misspelled line."""
+    out, opened = [], None
+    def report(name, start, end):
+        line = src.count("\n", 0, start) + 1
+        typo = next((w for w in re.finditer(r"\b\w+\b", src[start:end])
+                     if w.group(0) != "endmodule" and difflib.SequenceMatcher(None, w.group(0), "endmodule").ratio() >= 0.85), None)
+        if typo:
+            tl = src.count("\n", 0, start + typo.start()) + 1
+            out.append(msg("ERROR", "module-without-endmodule", f"module {name} ({f}:{line}) has no endmodule: line {tl} reads {typo.group(0)}.",
+                           f"write endmodule on line {tl}.", loc=f"{f}:{tl}"))
+        else:
+            out.append(msg("ERROR", "module-without-endmodule", f"module {name} has no endmodule before " + (f"the next module (line {src.count(chr(10), 0, end) + 1})." if end < len(src) else "the end of the file."),
+                           f"end module {name} with endmodule.", loc=f"{f}:{line}"))
+    for t in re.finditer(r"\b(?:(extern\s+)?module\s+([A-Za-z_]\w*)|endmodule)\b", src):
+        if t.group(0) == "endmodule": opened = None
+        elif t.group(1): continue           # an extern prototype has no body
+        else:
+            if opened: report(*opened, t.start())
+            opened = (t.group(2), t.start())
+    if opened: report(*opened, len(src))
+    return out
+
 def _unique_case_problems(f, body, bline):
     """A unique case / casez / casex two of whose items can match at once (`4'b10??` and `4'b??11` both match
     1011): IEEE 1800-2017 12.5.3 says unique asserts that no two items match, so the design is wrong, and the
@@ -521,6 +546,7 @@ def _parse(files, sim=()):
         src = _blank(raw)               # comments and string texts blanked, same offsets
         typedefs = [n for _, _, n in _typedefs(src)]
         synth = _synth_view(src)        # same length as src: a module's span is the same in both
+        problems += _unclosed_modules(f, src)
         for m in _MODULE.finditer(src):
             name, body = m.group(1), m.group(2)
             holds_module.add(f)

@@ -139,6 +139,10 @@
     <p>dewfpga uninstall. Not an error: uninstall found none of the six entries install.sh writes under FPGA_HOME.</p>
   </div>
   <div class="err">
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/module-without-endmodule/">lab1_top.sv:27: ERROR [module-without-endmodule]: module lab1_top (lab1_top.sv:21) has no endmodule: line 27 reads endmodulek. Fix: write endmodule on line 27.</a>
+    <p>dewfpga run / sim / bit, the source scan before the tools run. A module&#x27;s endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.</p>
+  </div>
+  <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/two-tops/">counter.sv:4: ERROR [two-tops]: 2 modules could be the top (nothing instantiates them): counter (counter.sv:4), top (counter.sv:8). Fix: name it:  dewfpga bit counter</a>
     <p>dewfpga sim / bit, the source scan before the tools run. Two or more design modules that nothing instantiates; the CLI does not pick one by file name (Lab 4 folders name the file after the wrong one).</p>
   </div>

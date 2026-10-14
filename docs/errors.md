@@ -750,6 +750,27 @@ Nothing, unless you installed elsewhere:
 FPGA_HOME=/path/you/used dewfpga uninstall
 ```
 
+## module-without-endmodule
+step: bit
+source: dewfpga run / sim / bit, the source scan before the tools run
+title: lab1_top.sv:27: ERROR [module-without-endmodule]: module lab1_top (lab1_top.sv:21) has no endmodule: line 27 reads endmodulek. Fix: write endmodule on line 27.
+summary: A module's endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.
+date: 2026-10-14
+
+Every command that reads the sources stops before the tools run.
+
+```
+lab1_top.sv:27: ERROR [module-without-endmodule]: module lab1_top (lab1_top.sv:21) has no endmodule: line 27 reads endmodulek. Fix: write endmodule on line 27. https://nosey-dewdrop.github.io/dewfpga/errors/module-without-endmodule/
+```
+
+## Why does it happen?
+
+A module runs from `module` to `endmodule`. With the last word misspelled (`endmodulek`) or missing, the module has no end, so the modules it instantiates look like nothing uses them. Before this check the CLI said `two-tops` and named the wrong modules.
+
+## What is the fix?
+
+Write `endmodule` on the line the message names. When no word there looks like it, end the module before the next `module` line.
+
 ## two-tops
 step: bit
 source: dewfpga sim / bit, the source scan before the tools run

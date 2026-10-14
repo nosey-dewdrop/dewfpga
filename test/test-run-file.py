@@ -113,4 +113,36 @@ $display("PASS sequential"); $finish; end endmodule
             self.assertEqual((cache/'design.xdc').read_text(),xdc.read_text())
             self.assertEqual(sorted(p.name for p in folder.iterdir()),sorted([source.name,xdc.name,'unrelated.sv']))
 
+class Scan(unittest.TestCase):
+    def run_cli(self, text):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-scan-test-') as temp:
+            source = Path(temp) / 'lab1_top.sv'
+            source.write_text(text)
+            return subprocess.run([CLI,'run',str(source),'--build-only'],env=ENV,capture_output=True,text=True,timeout=60)
+
+    def test_misspelled_endmodule_is_named_not_two_tops(self):
+        r = self.run_cli('module fa(input logic a, output logic s); assign s = a; endmodule\n'
+                         'module fs(input logic a, output logic d); assign d = ~a; endmodule\n'
+                         'module lab1_top(input logic [1:0] sw, output logic [1:0] led);\n'
+                         '  fa u0(.a(sw[0]), .s(led[0])); fs u1(.a(sw[1]), .d(led[1]));\n'
+                         'endmodulek\n')
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('lab1_top.sv:5: ERROR [module-without-endmodule]: module lab1_top', r.stderr)
+        self.assertIn('line 5 reads endmodulek', r.stderr)
+        self.assertNotIn('two-tops', r.stderr)
+
+    def test_missing_endmodule_before_next_module(self):
+        r = self.run_cli('module a(input logic x, output logic y);\n  assign y = x;\n\n'
+                         'module lab1_top(input logic sw, output logic led);\n  a u(.x(sw), .y(led));\nendmodule\n')
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('lab1_top.sv:1: ERROR [module-without-endmodule]: module a has no endmodule before the next module (line 4)', r.stderr)
+
+    def test_two_tops_fix_names_run(self):
+        r = self.run_cli('module a(input logic x, output logic y); assign y = x; endmodule\n'
+                         'module b(input logic x, output logic y); assign y = ~x; endmodule\n')
+        self.assertEqual(r.returncode, 1, r.stdout + r.stderr)
+        self.assertIn('[two-tops]', r.stderr)
+        self.assertIn('dewfpga run lab1_top.sv --top a', r.stderr)
+        self.assertNotIn('single-file-run', r.stderr)
+
 if __name__ == '__main__': unittest.main(verbosity=2)
