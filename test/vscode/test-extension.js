@@ -40,19 +40,21 @@ function quickPick(record, script) {
 function stub(opts) {
   const o = Object.assign({ picks: [], folders: [], active: undefined, verilog: {}, ws: {}, wsf: {}, config: {} }, opts);
   const s = {
-    calls: { errors: [], infos: [], warns: [], status: [], opened: [], quickPicks: [], updates: [] },
+    calls: { errors: [], infos: [], warns: [], status: [], opened: [], quickPicks: [], updates: [], shown: [] },
     ConfigurationTarget: { Global: 1 },
     Uri: { file: (p) => ({ scheme: 'file', fsPath: p }) },
     window: {
       activeTextEditor: o.active ? { document: { uri: { scheme: 'file', fsPath: o.active } } } : undefined,
       createQuickPick: () => { const rec = {}; s.calls.quickPicks.push(rec); return quickPick(rec, o.picks.shift()); },
       showErrorMessage: (m) => { s.calls.errors.push(m); },
-      showInformationMessage: async (m) => { s.calls.infos.push(m); return o.answer; },
+      showInformationMessage: async (m, ...buttons) => { s.calls.infos.push(m); s.calls.buttons = buttons; return o.answer; },
+      showTextDocument: async (doc) => { s.calls.shown.push(doc.uri.fsPath); },
       showWarningMessage: (m) => { s.calls.warns.push(m); },
       setStatusBarMessage: (m) => { s.calls.status.push(m); },
     },
     workspace: {
       workspaceFolders: o.folders.map((f) => ({ uri: { scheme: 'file', fsPath: f } })),
+      openTextDocument: async (uri) => ({ uri }),
       getConfiguration: (section) => ({
         get: (k, dflt) => (section === 'dewfpga' ? o.config[k] : o.verilog[k]) ?? dflt,
         inspect: (k) => ({ key: section + '.' + k, globalValue: o.verilog[k], workspaceValue: o.ws[k], workspaceFolderValue: o.wsf[k] }),
@@ -95,6 +97,39 @@ function run(opts, tops, c) {
     });
     assert.strictEqual(result.code, 0);
     assert.deepStrictEqual(options.env, L.toolEnvironment(process.env));
+  });
+  await t('empty folder: one offer; Create writes top.sv + the CLI agent notes, opens it, and the file builds', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dewfpga starter '));
+    fs.mkdirSync(path.join(dir, '.vscode')); fs.writeFileSync(path.join(dir, '.DS_Store'), '');
+    const cli = path.join(ROOT, 'bin', 'dewfpga');
+    const s = stub({ folders: [dir], answer: 'Create top.sv', config: { cliPath: cli } });
+    const file = await ext.createExtension(s, ctx()).maybeOfferStarter();
+    assert.strictEqual(s.calls.infos.length, 1); assert.deepStrictEqual(s.calls.buttons, ['Create top.sv', 'Never for empty folders']);
+    assert.strictEqual(file, path.join(dir, 'top.sv')); assert.deepStrictEqual(s.calls.shown, [file]);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), L.STARTER_SV);
+    for (const n of ['AGENTS.md', 'CLAUDE.md']) assert.strictEqual(fs.readFileSync(path.join(dir, n), 'utf8'), fs.readFileSync(path.join(ROOT, 'templates', n), 'utf8'));
+    assert.match(fs.readFileSync(path.join(dir, 'AGENTS.md'), 'utf8'), /dewfpga run top\.sv --build-only/);
+    assert.deepStrictEqual(fs.readdirSync(dir).sort(), ['.DS_Store', '.vscode', 'AGENTS.md', 'CLAUDE.md', 'top.sv']);
+    const r = spawnSync(cli, ['run', file, '--build-only'], { encoding: 'utf8', env: Object.assign({}, process.env, { LC_ALL: 'C', LC_CTYPE: 'C', LANG: 'C' }) });
+    assert.strictEqual(r.status, 0, r.stdout + r.stderr); assert.match(r.stdout, /Pins: automatic Basys3 mapping/); assert.match(r.stdout, /32 ports, all mapped/);
+    // the folder is no longer empty: no second offer
+    const s2 = stub({ folders: [dir], answer: 'Create top.sv' }); await ext.createExtension(s2, ctx()).maybeOfferStarter();
+    assert.strictEqual(s2.calls.infos.length, 0);
+  });
+  await t('starter: never overwrites, never asks in a folder with files, "Never" holds, command without a folder errors', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dewfpga starter '));
+    fs.writeFileSync(path.join(dir, 'top.sv'), 'mine\n');
+    const s = stub({ folders: [dir], answer: 'Create top.sv' }); const e = ext.createExtension(s, ctx());
+    await e.maybeOfferStarter(); assert.strictEqual(s.calls.infos.length, 0);
+    assert.strictEqual(await e.newDesign(dir), path.join(dir, 'top.sv')); assert.strictEqual(fs.readFileSync(path.join(dir, 'top.sv'), 'utf8'), 'mine\n');
+    assert.ok(!fs.existsSync(path.join(dir, 'AGENTS.md')));
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'dewfpga starter '));
+    const c = ctx(); const s3 = stub({ folders: [empty], answer: 'Never for empty folders' });
+    await ext.createExtension(s3, c).maybeOfferStarter(); assert.strictEqual(c._gs['dewfpga.starterDeclined'], true);
+    const s4 = stub({ folders: [empty], answer: 'Create top.sv' }); await ext.createExtension(s4, c).maybeOfferStarter();
+    assert.strictEqual(s4.calls.infos.length, 0); assert.deepStrictEqual(fs.readdirSync(empty), []);
+    const s5 = stub({ folders: [] }); assert.strictEqual(await ext.createExtension(s5, ctx()).newDesign(), undefined); assert.strictEqual(s5.calls.errors.length, 1);
+    const s6 = stub({ folders: [empty, dir], answer: 'Create top.sv' }); await ext.createExtension(s6, ctx()).maybeOfferStarter(); assert.strictEqual(s6.calls.infos.length, 0);
   });
   await t('Run uses the saved active file in a window with no workspace; arguments are literal', async () => {
     const file = "/tmp/anywhere/my 'design $(touch BAD).sv";
@@ -141,7 +176,7 @@ function run(opts, tops, c) {
     assert.strictEqual(pm.pattern.regexp, L.MATCHER_REGEXP);
     assert.strictEqual(pm.severity, 'info'); // lowercase per VS Code's schema; the fallback only
     assert.deepStrictEqual([pm.pattern.file, pm.pattern.line, pm.pattern.severity, pm.pattern.code, pm.pattern.message], [1, 2, 3, 4, 5]);
-    assert.deepStrictEqual(pkg.contributes.commands.map((c) => c.command), ['dewfpga.run', 'dewfpga.pickTop', 'dewfpga.forgetTop', 'dewfpga.setupLinter', 'dewfpga.removeLinter']);
+    assert.deepStrictEqual(pkg.contributes.commands.map((c) => c.command), ['dewfpga.run', 'dewfpga.newDesign', 'dewfpga.pickTop', 'dewfpga.forgetTop', 'dewfpga.setupLinter', 'dewfpga.removeLinter']);
   });
   await t('matcher: ERROR/warning/note, file with spaces and abs path', () => {
     assert.deepStrictEqual(L.parseDiagnostic('design.sv:3: ERROR [two-tops]: two modules could be the top. Fix: x https://e/'), { file: 'design.sv', line: 3, severity: 'error', code: 'two-tops', message: 'two modules could be the top. Fix: x https://e/' });
@@ -577,15 +612,15 @@ function run(opts, tops, c) {
   await t('vsix: two builds identical, required members, shim executable, manifest metadata', () => {
     const o1 = fs.mkdtempSync(path.join(os.tmpdir(), 'vsix1')), o2 = fs.mkdtempSync(path.join(os.tmpdir(), 'vsix2'));
     execFileSync('python3', [path.join(ROOT, 'vscode', 'build-vsix.py'), '--out', o1]); execFileSync('python3', [path.join(ROOT, 'vscode', 'build-vsix.py'), '--out', o2]);
-    const a = fs.readFileSync(path.join(o1, 'dewfpga-0.2.0.vsix')), b = fs.readFileSync(path.join(o2, 'dewfpga-0.2.0.vsix'));
+    const a = fs.readFileSync(path.join(o1, 'dewfpga-0.3.0.vsix')), b = fs.readFileSync(path.join(o2, 'dewfpga-0.3.0.vsix'));
     assert.ok(a.equals(b), 'identical bytes'); assert.ok(a.length > 5000);
-    const list = execFileSync('unzip', ['-Z1', path.join(o1, 'dewfpga-0.2.0.vsix')], { encoding: 'utf8' }).trim().split('\n');
+    const list = execFileSync('unzip', ['-Z1', path.join(o1, 'dewfpga-0.3.0.vsix')], { encoding: 'utf8' }).trim().split('\n');
     assert.deepStrictEqual(list, ['[Content_Types].xml', 'extension.vsixmanifest', 'extension/LICENSE', 'extension/README.md', 'extension/bin/iverilog', 'extension/extension.js', 'extension/package.json']);
-    const long = execFileSync('unzip', ['-Z', path.join(o1, 'dewfpga-0.2.0.vsix')], { encoding: 'utf8' });
+    const long = execFileSync('unzip', ['-Z', path.join(o1, 'dewfpga-0.3.0.vsix')], { encoding: 'utf8' });
     assert.match(long, /^-rwxr-xr-x .*extension\/bin\/iverilog$/m);
-    const man = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.2.0.vsix'), 'extension.vsixmanifest'], { encoding: 'utf8' });
-    assert.match(man, /Identity Language="en-US" Id="dewfpga" Version="0.2.0" Publisher="nosey-dewdrop"/); assert.match(man, /<License>extension\/LICENSE<\/License>/);
-    const lic = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.2.0.vsix'), 'extension/LICENSE'], { encoding: 'utf8' }); assert.match(lic, /^MIT License/);
+    const man = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.3.0.vsix'), 'extension.vsixmanifest'], { encoding: 'utf8' });
+    assert.match(man, /Identity Language="en-US" Id="dewfpga" Version="0.3.0" Publisher="nosey-dewdrop"/); assert.match(man, /<License>extension\/LICENSE<\/License>/);
+    const lic = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.3.0.vsix'), 'extension/LICENSE'], { encoding: 'utf8' }); assert.match(lic, /^MIT License/);
     assert.ok(!/\/Users\//.test(a.toString('latin1')), 'no personal path inside the vsix');
   });
   fs.rmSync(path.dirname(fakeCli), { recursive: true, force: true }); fs.rmSync(wdir, { recursive: true, force: true }); fs.rmSync(proj, { recursive: true, force: true });

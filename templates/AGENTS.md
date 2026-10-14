@@ -1,10 +1,16 @@
 # Working in this dewfpga project
 
-This folder is a Digilent Basys3 (XC7A35T) design built with `dewfpga` on an Apple Silicon Mac:
-SystemVerilog modules (`.sv`/`.v`), one testbench, one `.xdc` pin file. No Vivado. Guide and error
-pages: https://nosey-dewdrop.github.io/dewfpga/ (machine index: https://nosey-dewdrop.github.io/dewfpga/llms.txt).
+This folder is a Digilent Basys3 (XC7A35T) design built with `dewfpga` on an Apple Silicon Mac, no Vivado:
+SystemVerilog (`.sv`/`.v`); a testbench and an `.xdc` only when the user wants them. Guide and error pages:
+https://nosey-dewdrop.github.io/dewfpga/ (machine index: https://nosey-dewdrop.github.io/dewfpga/llms.txt).
 
-## Commands (run inside this folder)
+## One .sv is enough: never ask for a Makefile, an .xdc or a build script
+
+`dewfpga run top.sv --build-only` builds; `dewfpga run top.sv` also programs the board (ONLY when the user
+asks); `--top NAME` picks the top. `sw[15:0] led[15:0] btnC btnU btnD btnL btnR clk seg[6:0] dp an[3:0]` are
+pinned automatically (a `top.xdc` beside it wins). The tools are installed; never install other FPGA tools.
+
+## Folder commands (several files, a testbench, an `.xdc`; run inside this folder)
 
 ```
 dewfpga sim   --json     # iverilog runs the testbench; exit 1 when it prints $error/$fatal
@@ -34,10 +40,9 @@ problem in one format: `file:line: ERROR [code]: message Fix: ... https://nosey-
 1. Take `diagnostics[].code`, `file`, `line`, `message`, `fix`. Fix the first `ERROR`
    first: later ones often follow from it, but rerun before trusting the rest.
 2. Open `diagnostics[].url` for that code when the fix line is not enough.
-3. `artifacts[]` lists `<top>.bit`, the `.vcd` and the log with `state` new, cached or stale.
-   A `stale` or `cached` `.bit` is not the result of this run; a build that stops before
-   make runs (no `.xdc`, two tops) leaves the previous `.bit` on disk, a failed synthesis or
-   place-and-route removes it.
+3. `artifacts[]` lists `<top>.bit`, the `.vcd` and the log, each with `state` new, cached or stale. A `stale`
+   or `cached` `.bit` is not this run's: a build that stops before make (no `.xdc`, two tops) leaves the
+   previous `.bit`; a failed synthesis or place-and-route removes it.
 4. `log.tail` is the last lines of the text output; the full log is `log.path`.
 
 ## Rules
@@ -50,7 +55,6 @@ problem in one format: `file:line: ERROR [code]: message Fix: ... https://nosey-
   usually means a missing `else` or default.
 - Memories become distributed RAM; timing is nextpnr's estimate at the XDC clock (100 MHz on the
   board). `flash` writes SRAM, so the design is gone after a power cycle.
-- A rebuild follows the files' content (a checksum in `<top>_sim.deps`, `<top>.deps` and
-  `<top>.pins.deps`), not only their timestamps: an edit saved within the second of the last
-  build still rebuilds. `dewfpga clean` forces everything from scratch.
-- Run `dewfpga sim` and `dewfpga bit` after every change and stop when both exit 0.
+- A rebuild follows the files' content (checksums in `<top>*.deps`), not timestamps; `dewfpga clean` forces all.
+- After every change run `dewfpga run <file> --build-only`, or `dewfpga sim` and `dewfpga bit` in a
+  folder with a testbench; stop when they exit 0.

@@ -2,7 +2,7 @@
   "name": "dewfpga",
   "displayName": "dewfpga",
   "description": "Run a saved SystemVerilog file on Basys3, with automatic board pins and no project setup.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "nosey-dewdrop",
   "license": "MIT",
   "repository": {
@@ -29,6 +29,10 @@
         "command": "dewfpga.run",
         "title": "dewfpga: Run on Basys3",
         "icon": "$(play)"
+      },
+      {
+        "command": "dewfpga.newDesign",
+        "title": "dewfpga: new Basys3 design in this folder (top.sv)"
       },
       {
         "command": "dewfpga.pickTop",

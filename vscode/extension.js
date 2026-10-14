@@ -59,6 +59,22 @@ function resolveCliPath(configured, exists, home) {
   return { error: 'dewfpga was not found at /opt/homebrew/bin/dewfpga, /usr/local/bin/dewfpga, ~/.dewfpga/bin/dewfpga or ~/fpga/dewfpga/bin/dewfpga. Fix: run `dewfpga install` in a terminal, or set dewfpga.cliPath (absolute) in Settings.' };
 }
 
+// The one file a new design needs: Run on Basys3 pins these port names by itself (templates/run_file.py).
+const STARTER_SV = [
+  '// Write your circuit here, save, then Run on Basys3 (the play button above this file).',
+  '// No .xdc and no Makefile: these port names are pinned automatically:',
+  '//   sw[15:0] led[15:0] btnC btnU btnD btnL btnR clk (100 MHz) seg[6:0] dp an[3:0]',
+  'module top(',
+  '  input  logic [15:0] sw,',
+  '  output logic [15:0] led',
+  ');',
+  '  assign led = sw;',
+  'endmodule',
+  ''].join('\n');
+
+// A folder with nothing in it but dotfiles (.vscode, .git, .DS_Store): no design yet, so no Run button either.
+function isEmptyFolder(entries) { return entries.every((n) => n.startsWith('.')); }
+
 // Which folder a shell task ran in. Resolved when the task STARTS (the editor may change before it ends).
 // cwd with ${fileDirname} -> the active editor's folder at start; ${workspaceFolder} -> the task's folder;
 // absolute literal -> as is; anything else unresolved -> task folder, else the editor's folder.
@@ -231,6 +247,7 @@ function createExtension(vscode, context, deps) {
   const REMEMBER = 'dewfpga.topByFolder';
   const OWNED = 'dewfpga.lintingPathOwnership'; // {value, previous}; the 0.x key 'dewfpga.lintingPathOwned' is not read
   const DECLINED = 'dewfpga.lintingPromptDeclined';
+  const STARTER_DECLINED = 'dewfpga.starterDeclined';
   const shimDir = path.join(context.extensionPath, 'bin');
 
   function currentFolder() {
@@ -267,6 +284,42 @@ function createExtension(vscode, context, deps) {
     } catch (error) {
       vscode.window.showErrorMessage('dewfpga: could not start Run on Basys3: ' + error.message);
     }
+  }
+
+  // Writes top.sv, and the CLI's AGENTS.md + CLAUDE.md so a coding agent opened here runs dewfpga instead of
+  // asking for a Makefile and an .xdc. Never overwrites: an existing top.sv is opened as it is.
+  async function newDesign(folder) {
+    folder = typeof folder === 'string' ? folder : currentFolder();
+    if (!folder) { vscode.window.showErrorMessage('dewfpga: open a folder first (File > Open Folder).'); return; }
+    const file = path.join(folder, 'top.sv');
+    if (!exists(file)) {
+      try { d.fs.writeFileSync(file, STARTER_SV, { flag: 'wx' }); }
+      catch (error) { vscode.window.showErrorMessage('dewfpga: could not write ' + file + ': ' + error.message); return; }
+      const r = resolveCliPath(vscode.workspace.getConfiguration('dewfpga').get('cliPath', ''), exists, d.home);
+      if (!r.error) {
+        let templates;
+        try { templates = path.join(path.dirname(path.dirname(d.fs.realpathSync(r.cli))), 'templates'); } catch (e) { templates = undefined; }
+        for (const name of ['AGENTS.md', 'CLAUDE.md']) {
+          const src = templates && path.join(templates, name), dst = path.join(folder, name);
+          if (src && exists(src) && !exists(dst)) { try { d.fs.copyFileSync(src, dst); } catch (e) { /* the design runs without it */ } }
+        }
+      }
+    }
+    await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(vscode.Uri.file(file)));
+    return file;
+  }
+
+  // One question, only in a single empty folder; "Never" holds for every empty folder after.
+  async function maybeOfferStarter() {
+    if (context.globalState.get(STARTER_DECLINED)) return;
+    const wf = vscode.workspace.workspaceFolders;
+    if (!wf || wf.length !== 1 || wf[0].uri.scheme !== 'file') return;
+    let entries;
+    try { entries = d.fs.readdirSync(wf[0].uri.fsPath); } catch (e) { return; }
+    if (!isEmptyFolder(entries)) return;
+    const pick = await vscode.window.showInformationMessage('dewfpga: this folder is empty. Start a Basys3 design? It writes top.sv; the pins and the build need no other file.', 'Create top.sv', 'Never for empty folders');
+    if (pick === 'Create top.sv') return newDesign(wf[0].uri.fsPath);
+    if (pick === 'Never for empty folders') await context.globalState.update(STARTER_DECLINED, true);
   }
 
   // Command input for tasks: a string (top module or '' for auto) runs the task; undefined cancels it.
@@ -385,6 +438,7 @@ function createExtension(vscode, context, deps) {
 
   const subs = [
     vscode.commands.registerCommand('dewfpga.run', runFile),
+    vscode.commands.registerCommand('dewfpga.newDesign', newDesign),
     vscode.commands.registerCommand('dewfpga.pickTop', pickTop),
     vscode.commands.registerCommand('dewfpga.forgetTop', forgetTop),
     vscode.commands.registerCommand('dewfpga.setupLinter', setupLinter),
@@ -393,16 +447,17 @@ function createExtension(vscode, context, deps) {
     vscode.tasks.onDidEndTaskProcess(onTaskEnd),
   ];
   for (const s of subs) context.subscriptions.push(s);
-  return { runFile, pickTop, forgetTop, setupLinter, removeLinter, onTaskStart, onTaskEnd, maybeOfferLinter, shimDir };
+  return { runFile, newDesign, maybeOfferStarter, pickTop, forgetTop, setupLinter, removeLinter, onTaskStart, onTaskEnd, maybeOfferLinter, shimDir };
 }
 
 function activate(context) {
   // eslint-disable-next-line global-require
   const vscode = require('vscode');
   const ext = createExtension(vscode, context);
+  ext.maybeOfferStarter().catch(() => {});
   ext.maybeOfferLinter().catch(() => {});
   return ext;
 }
 function deactivate() {}
 
-module.exports = { activate, deactivate, createExtension, lib: { MATCHER_REGEXP, SEVERITY, parseDiagnostic, parseTops, chooseTop, resolveCliPath, resolveTaskFolder, simTaskKind, isSimTask, projectRoot, snapshotVcds, pickFreshVcd, planLinterSetup, planLinterRemoval, pickOne, runTops, toolEnvironment } };
+module.exports = { activate, deactivate, createExtension, lib: { MATCHER_REGEXP, SEVERITY, parseDiagnostic, parseTops, chooseTop, resolveCliPath, resolveTaskFolder, simTaskKind, isSimTask, projectRoot, snapshotVcds, pickFreshVcd, isEmptyFolder, STARTER_SV, planLinterSetup, planLinterRemoval, pickOne, runTops, toolEnvironment } };
