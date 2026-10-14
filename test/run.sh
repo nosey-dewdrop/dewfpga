@@ -18,6 +18,8 @@
 # Each probe's verdict is worked out here again from expect.tsv and its four stages, and has to agree with
 # test/sv/run.sh's, whose exit code has to agree with its rows.
 set -euo pipefail
+# The tests import templates/*.py; a __pycache__ there would hold this machine's path and fail "no personal paths".
+export PYTHONDONTWRITEBYTECODE=1
 # Installer/uninstaller coverage must not modify the developer's real editor profile.
 # The separate VS Code setup tests fence their own editor executable and scratch HOME.
 export DEWFPGA_SKIP_VSCODE=1
