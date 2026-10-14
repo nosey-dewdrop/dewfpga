@@ -145,4 +145,51 @@ class Scan(unittest.TestCase):
         self.assertIn('dewfpga run lab1_top.sv --top a', r.stderr)
         self.assertNotIn('single-file-run', r.stderr)
 
+class Folder(unittest.TestCase):
+    """A lab folder: the file the student runs uses modules (and a package) from the files beside it."""
+    def netlist_truth(self, temp, cache):
+        subprocess.run(['yosys','-Q','-q','-p',f'read_json {cache}/design.json; write_verilog -noattr net.v'],cwd=temp,env=ENV,check=True)
+        (Path(temp)/'tb.v').write_text('module tb; reg [2:0] sw; wire [1:0] led; integer i;\n'
+            'top dut(.sw(sw), .led(led)); initial begin\n'
+            'for(i=0;i<8;i=i+1) begin sw=i; #1; if(led !== {(i[0]&i[1])|(i[2]&(i[0]^i[1])), i[0]^i[1]^i[2]}) $fatal(1,"wrong adder %0d %b",i,led); end\n'
+            '$display("PASS adder"); $finish; end endmodule\n')
+        data = subprocess.check_output(['yosys-config','--datdir'],env=ENV,text=True).strip()
+        subprocess.run(['iverilog','-g2012','-s','tb','-o','sim','tb.v','net.v',str(Path(data)/'xilinx/cells_sim.v')],cwd=temp,env=ENV,check=True)
+        r = subprocess.run(['vvp','sim'],cwd=temp,env=ENV,capture_output=True,text=True)
+        self.assertIn('PASS adder', r.stdout, r.stdout + r.stderr)
+
+    def test_sibling_modules_package_and_either_file(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-folder-test-') as temp:
+            folder = Path(temp) / 'lab 2'; folder.mkdir()
+            (folder/'widths.sv').write_text('package widths; localparam int N = 3; endpackage\n')
+            (folder/'full_adder.sv').write_text('module full_adder(input logic a, b, cin, output logic s, cout);\n'
+                                                '  assign s = a ^ b ^ cin;\n  assign cout = (a & b) | (cin & (a ^ b));\nendmodule\n')
+            (folder/'top.sv').write_text('import widths::*;\nmodule top(input logic [N-1:0] sw, output logic [1:0] led);\n'
+                                         '  full_adder fa(.a(sw[0]), .b(sw[1]), .cin(sw[2]), .s(led[0]), .cout(led[1]));\nendmodule\n')
+            (folder/'top_tb.sv').write_text('module top_tb; logic [2:0] sw; logic [1:0] led; top dut(.*); initial $finish; endmodule\n')
+            (folder/'old_try.sv').write_text('module half(input a output y) assign y = ; endmodul\n')
+            before = {p.name: p.read_bytes() for p in folder.iterdir()}
+            for clicked in ('top.sv', 'full_adder.sv'):
+                source = folder/clicked
+                cache = Path.home()/'.cache/dewfpga/run'/hashlib.sha256(str(source.resolve()).encode()).hexdigest()[:24]
+                r = subprocess.run([CLI,'run',str(source),'--build-only'],env=ENV,capture_output=True,text=True,timeout=180)
+                out = r.stdout + r.stderr
+                self.assertEqual(r.returncode, 0, out)
+                self.assertIn('(top: top' + ('' if clicked == 'top.sv' else ', in top.sv') + ')', out)
+                self.assertIn('Also reads: ', out)
+                for name in ('old_try.sv', 'top_tb.sv'): self.assertNotIn(name, out)
+                self.netlist_truth(temp, cache)
+            self.assertEqual(before, {p.name: p.read_bytes() for p in folder.iterdir()})
+
+    def test_a_used_sibling_that_is_broken_is_named(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-folder-test-') as temp:
+            folder = Path(temp).resolve(); source = folder/'top.sv'
+            (folder/'full_adder.sv').write_text('module full_adder(input logic a, b, cin, output logic s, cout);\n  assign s = a ^ ;\nendmodule\n')
+            source.write_text('module top(input logic [2:0] sw, output logic [1:0] led);\n'
+                              '  full_adder fa(.a(sw[0]), .b(sw[1]), .cin(sw[2]), .s(led[0]), .cout(led[1]));\nendmodule\n')
+            r = subprocess.run([CLI,'run',str(source),'--build-only'],env=ENV,capture_output=True,text=True,timeout=120)
+            self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
+            self.assertIn(str(folder/'full_adder.sv') + ':2: ERROR', r.stdout + r.stderr)
+            self.assertNotIn('dep1.sv', r.stdout + r.stderr)
+
 if __name__ == '__main__': unittest.main(verbosity=2)

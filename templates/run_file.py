@@ -63,8 +63,9 @@ def auto_xdc(module):
     return "\n".join(lines) + "\n"
 
 
-def stage_source(source, work):
-    """Copy explicit local include/readmem dependencies, never glob other designs.
+def stage_source(source, work, others=()):
+    """Copy the file that runs, the folder files its design uses (others, from check_xdc.py --needed), and their
+    explicit local include/readmem dependencies; never the other designs of the folder.
 
     Paths inside HDL must be relative portable paths. This preserves their spelling
     for the existing compiler; absolute/parent references need the project flow.
@@ -72,6 +73,12 @@ def stage_source(source, work):
     staged = work / ("source" + source.suffix.lower())
     mapping = {staged.name: str(source)}
     staged.write_bytes(source.read_bytes())
+    names = [staged.name]
+    for i, other in enumerate(others, 1):
+        dest = work / (f"dep{i}" + other.suffix.lower())
+        dest.write_bytes(other.read_bytes())
+        mapping[dest.name] = str(other)
+        names.append(dest.name)
     visited = set()
 
     def dependencies(original, staged_parent):
@@ -95,15 +102,17 @@ def stage_source(source, work):
                 # May be inside an inactive preprocessor branch. The compiler
                 # diagnoses missing *active* dependencies, with their source line.
                 continue
-            if dest == staged:
-                fail(f"Dependency '{rel}' collides with the private source name; rename the include.")
+            if dest.name in mapping and dest.parent == work and mapping[dest.name] != str(origin):
+                fail(f"Dependency '{rel}' collides with a private source name; rename the include.")
             dest.parent.mkdir(parents=True, exist_ok=True)
             dest.write_bytes(origin.read_bytes())
             mapping[str(dest.relative_to(work))] = str(origin)
             if include:
                 dependencies(origin, dest.parent)
     dependencies(source, work)
-    return staged.name, mapping
+    for other in others:
+        dependencies(other, work)
+    return names, mapping
 
 
 def main():
@@ -128,7 +137,14 @@ def main():
         # Existing FPGA Makefile needs a workspace path without shell metacharacters.
         with tempfile.TemporaryDirectory(prefix="dewfpga-run-", dir="/tmp") as directory:
             work = Path(directory)
-            staged, mapping = stage_source(source, work)
+            siblings = sorted(p for p in source.parent.iterdir() if p.suffix.lower() in (".sv", ".v")
+                              and not p.name.startswith(".") and p.is_file() and p != source)
+            found = subprocess.run([sys.executable, str(HERE / "check_xdc.py"), "--needed", str(source)]
+                                   + [str(p) for p in siblings], capture_output=True, text=True)
+            uses = [Path(v) for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "FILE"]
+            walked = next((v for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "TOP"), "")
+            staged_names, mapping = stage_source(source, work, [p for p in uses if p != source])
+            staged = " ".join(staged_names)
             env = dict(os.environ, LC_ALL="C", LC_CTYPE="C", LANG="C")
             def mapped(text):
                 for local, original in sorted(mapping.items(), key=lambda pair: -len(pair[0])):
@@ -143,9 +159,9 @@ def main():
                 if rc:
                     raise subprocess.CalledProcessError(rc, command)
             scan = [sys.executable, str(HERE / "check_xdc.py"), "--scan"]
-            if args.top:
-                scan += ["--top", args.top]
-            result = subprocess.run(scan + [staged], cwd=work, env=env, capture_output=True, text=True)
+            if args.top or walked:
+                scan += ["--top", args.top or walked]
+            result = subprocess.run(scan + staged_names, cwd=work, env=env, capture_output=True, text=True)
             fields = {}
             for line in result.stdout.splitlines():
                 key, _, value = line.partition("=")
@@ -160,11 +176,16 @@ def main():
             top = fields.get("TOP", "")
             if result.returncode or not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", top):
                 fail(mapped(result.stderr) or "Could not select a top module; use --top NAME.")
+            srcs = fields.get("DESIGN", "") or staged
+            topfile = Path(mapping.get(fields.get("TOPFILE", ""), str(source)))
             make = ["make", "-s", "-f", str(HERE / "Makefile"), f"TOP={top}",
-                    f"SRCS={staged}", "XDC=pins.xdc", f"CHECKER={HERE / 'check_xdc.py'}"]
-            print(f"Run on Basys3: {source} (top: {top})", flush=True)
+                    f"SRCS={srcs}", "XDC=pins.xdc", f"CHECKER={HERE / 'check_xdc.py'}"]
+            print(f"Run on Basys3: {source} (top: {top}" + (f", in {topfile.name}" if topfile != source else "")
+                  + ")", flush=True)
+            if len(staged_names) > 1:
+                print("Also reads: " + ", ".join(Path(mapping[n]).name for n in staged_names[1:]), flush=True)
             execute(make + ["synth"])
-            xdc = args.xdc.expanduser().resolve() if args.xdc else source.with_suffix(".xdc")
+            xdc = args.xdc.expanduser().resolve() if args.xdc else topfile.with_suffix(".xdc")
             if args.xdc or xdc.exists():
                 if not xdc.is_file():
                     fail(f"Pin file not found: {xdc}")

@@ -619,6 +619,58 @@ def list_tops(files, project_top=None):
     for n in roots: print(f"{n}\t{mods[n]['file']}")
     return 0
 
+def needed(clicked, siblings):
+    """`dewfpga run <file>`: the files of its folder a build of <file> reads. It starts at the design modules in the
+    clicked file; when every one of them is used inside a module of another file (the student ran full_adder.sv,
+    and top.sv instantiates it) and that leads to one top, it starts there instead. Then every module they
+    instantiate, transitively, and the package/interface files those name. A sibling the design does not use is
+    never read by the build, so a broken or unrelated file beside it does not stop the run. Prints TOP=<module>
+    (empty: the clicked file holds the top) and one FILE=<path> per file, the clicked file first."""
+    files = [clicked] + [f for f in siblings if f != clicked]
+    mods, order, inst, _, _ = _parse(files)
+    design = [n for n in order if not mods[n]["tb"] and not mods[n]["sim"]]
+    parents = {}
+    for p in design:
+        for c in inst[p]:
+            if c in mods and not mods[c]["tb"]: parents.setdefault(c, set()).add(p)
+    def above(n, seen):
+        ups = [p for p in parents.get(n, ()) if p not in seen]
+        if not ups: return {n}
+        out = set()
+        for p in ups: seen.add(p); out |= above(p, seen)
+        return out
+    start = [n for n in design if mods[n]["file"] == clicked]
+    tops = set().union(*(above(n, {n}) for n in start)) if start else set()
+    top = ""
+    if start and not any(mods[n]["file"] == clicked for n in tops) and len(tops) == 1:
+        top = next(iter(tops)); start = [top]
+    keep, todo = set(), list(start)
+    while todo:
+        n = todo.pop()
+        if n in keep: continue
+        keep.add(n); todo += [c for c in inst.get(n, ()) if c in mods and not mods[c]["tb"]]
+    used = [clicked] + [f for f in dict.fromkeys(mods[n]["file"] for n in order if n in keep) if f != clicked]
+    # the files that hold no module (a package, an interface): kept when a used file names what they declare
+    texts = {}
+    def text(f):
+        if f not in texts:
+            try: texts[f] = _blank(open(f, encoding="utf-8", errors="replace").read())
+            except OSError: texts[f] = ""
+        return texts[f]
+    holders = set(mods[n]["file"] for n in order)
+    loose = [f for f in files if f not in holders and f != clicked]
+    grew = True
+    while grew:
+        grew = False
+        for f in loose:
+            if f in used: continue
+            names = re.findall(r"^[ \t]*(?:package|interface)\s+([A-Za-z_]\w*)", text(f), re.M)
+            if any(re.search(r"\b" + re.escape(nm) + r"\b", text(u)) for nm in names for u in used):
+                used.append(f); grew = True
+    print("TOP=" + top)
+    for f in used: print("FILE=" + f)
+    return 0
+
 def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
     """Which file holds the top module, which files are testbenches. Printed as KEY=value lines for the shell.
     A testbench is a module with no ports (or an empty port list); a module with ports is a design, even
@@ -806,6 +858,9 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--list-tops":
     args = sys.argv[2:]; pt = None
     if args and args[0] == "--project-top": pt = args[1] or None; args = args[2:]
     sys.exit(list_tops(args, pt))
+if len(sys.argv) >= 3 and sys.argv[1] == "--needed":
+    # --needed <clicked file> <the other .sv/.v files of its folder>...
+    sys.exit(needed(sys.argv[2], sys.argv[3:]))
 if len(sys.argv) >= 2 and sys.argv[1] == "--fix-ports":
     sys.exit(fix_source(sys.argv[2:]))
 if len(sys.argv) >= 3 and sys.argv[1] == "--normalize":

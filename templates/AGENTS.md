@@ -7,8 +7,8 @@ https://nosey-dewdrop.github.io/dewfpga/ (machine index: https://nosey-dewdrop.g
 ## One .sv is enough: never ask for a Makefile, an .xdc or a build script
 
 `dewfpga run top.sv --build-only` builds; `dewfpga run top.sv` also programs the board (ONLY when the user
-asks); `--top NAME` picks the top. `sw[15:0] led[15:0] btnC btnU btnD btnL btnR clk seg[6:0] dp an[3:0]` are
-pinned automatically (a `top.xdc` beside it wins). The tools are installed; never install other FPGA tools.
+asks); modules it uses from other files of the folder are read too. `sw[15:0] led[15:0] btnC btnU btnD btnL
+btnR clk seg[6:0] dp an[3:0]` are pinned automatically (a `top.xdc` beside the top wins). Never install FPGA tools.
 
 ## Folder commands (several files, a testbench, an `.xdc`; run inside this folder)
 
