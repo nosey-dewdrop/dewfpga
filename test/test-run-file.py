@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -191,5 +192,49 @@ class Folder(unittest.TestCase):
             self.assertNotEqual(r.returncode, 0, r.stdout + r.stderr)
             self.assertIn(str(folder/'full_adder.sv') + ':2: ERROR', r.stdout + r.stderr)
             self.assertNotIn('dep1.sv', r.stdout + r.stderr)
+
+class PinsAndProjects(unittest.TestCase):
+    """The pin file and the project a lab folder already has: Run reads them as the folder command does."""
+    def run_cli(self, source, *args):
+        r = subprocess.run([CLI,'run',str(source),'--build-only',*args],env=ENV,capture_output=True,text=True,timeout=240)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_the_folder_pin_file_that_names_the_ports(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-pins-test-') as temp:
+            folder = Path(temp).resolve(); source = folder/'adder.sv'
+            source.write_text('module adder(input logic a, b, output logic y, c);\n  assign y = a ^ b;\n  assign c = a & b;\nendmodule\n')
+            pins = ''.join(f'set_property -dict {{ PACKAGE_PIN {p} IOSTANDARD LVCMOS33 }} [get_ports {n}]\n'
+                           for n, p in (('a','V17'),('b','V16'),('y','U16'),('c','E19')))
+            (folder/'constraints.xdc').write_text('## lab 2 pins\n' + pins)
+            rc, out = self.run_cli(source)
+            self.assertEqual(rc, 0, out); self.assertIn('Pins: ' + str(folder/'constraints.xdc'), out)
+            cache = Path.home()/'.cache/dewfpga/run'/hashlib.sha256(str(source).encode()).hexdigest()[:24]
+            self.assertEqual((cache/'design.xdc').read_text(), (folder/'constraints.xdc').read_text())
+            # a second .xdc that pins none of these ports (another design's) is not a reason to stop
+            (folder/'old_lab.xdc').write_text('set_property -dict { PACKAGE_PIN W5 IOSTANDARD LVCMOS33 } [get_ports clk]\n')
+            rc, out = self.run_cli(source)
+            self.assertEqual(rc, 0, out); self.assertIn('Pins: ' + str(folder/'constraints.xdc'), out)
+            # standard names and only another design's .xdc: the automatic pins, not that file
+            source.write_text('module adder(input logic [1:0] sw, output logic [1:0] led);\n  assign led = {&sw, ^sw};\nendmodule\n')
+            (folder/'constraints.xdc').unlink()
+            rc, out = self.run_cli(source)
+            self.assertEqual(rc, 0, out); self.assertIn('Pins: automatic Basys3 mapping', out)
+
+    def test_a_file_of_a_vivado_project_builds_the_project(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-xpr-test-') as temp:
+            shutil.copytree(ROOT/'test/vivado/fixture', Path(temp)/'fx')
+            root = (Path(temp)/'fx'/'Working Lab').resolve(); new = root/'NEW.srcs'/'sources_1'/'new'
+            rc, out = self.run_cli(new/'topmodule.sv')
+            self.assertEqual(rc, 0, out)
+            self.assertIn('(Vivado project Working Lab: its files, its top, its .xdc)', out)
+            self.assertIn('top from the project: topmodule', out)
+            self.assertTrue((root/'topmodule.bit').is_file())
+            self.assertIn('(full log: ' + str(root/'topmodule.log') + ')', out)
+            text = (new/'topmodule.sv').read_text().splitlines()
+            line = next(i for i, l in enumerate(text) if 'endmodule' in l)
+            (new/'topmodule.sv').write_text('\n'.join(text[:line] + ['  assign = ;'] + text[line:]) + '\n')
+            rc, out = self.run_cli(new/'topmodule.sv')
+            self.assertNotEqual(rc, 0, out)
+            self.assertIn(str(new/'topmodule.sv') + ':' + str(line + 1) + ':', out)
 
 if __name__ == '__main__': unittest.main(verbosity=2)

@@ -8,7 +8,8 @@ https://nosey-dewdrop.github.io/dewfpga/ (machine index: https://nosey-dewdrop.g
 
 `dewfpga run top.sv --build-only` builds; `dewfpga run top.sv` also programs the board (ONLY when the user
 asks); modules it uses from other files of the folder are read too. `sw[15:0] led[15:0] btnC btnU btnD btnL
-btnR clk seg[6:0] dp an[3:0]` are pinned automatically (a `top.xdc` beside the top wins). Never install FPGA tools.
+btnR clk seg[6:0] dp an[3:0]` are pinned automatically unless an .xdc beside the top pins the ports. In a Vivado
+project it builds the project (its files, top and .xdc). Never install FPGA tools.
 
 ## Folder commands (several files, a testbench, an `.xdc`; run inside this folder)
 
@@ -37,8 +38,7 @@ problem in one format: `file:line: ERROR [code]: message Fix: ... https://nosey-
 
 ## How to read a failure
 
-1. Take `diagnostics[].code`, `file`, `line`, `message`, `fix`. Fix the first `ERROR`
-   first: later ones often follow from it, but rerun before trusting the rest.
+1. Take `diagnostics[].code`, `file`, `line`, `message`, `fix`. Fix the first `ERROR` first; rerun after.
 2. Open `diagnostics[].url` for that code when the fix line is not enough.
 3. `artifacts[]` lists `<top>.bit`, the `.vcd` and the log, each with `state` new, cached or stale. A `stale`
    or `cached` `.bit` is not this run's: a build that stops before make (no `.xdc`, two tops) leaves the

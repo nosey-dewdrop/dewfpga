@@ -63,6 +63,21 @@ def auto_xdc(module):
     return "\n".join(lines) + "\n"
 
 
+def xdc_ports(xdc):
+    """The port names an XDC pins: get_ports of its uncommented lines, without the bit select (sw[0] -> sw)."""
+    try:
+        text = xdc.read_text(errors="replace")
+    except OSError:
+        return set()
+    names = set()
+    for line in text.splitlines():
+        line = line.split("#", 1)[0]
+        for m in re.finditer(r"get_ports\s*(?:\{([^}]*)\}|([^\]\s]+))", line):
+            for name in (m.group(1) or m.group(2) or "").split():
+                names.add(re.sub(r"\[.*$", "", name.strip("{}")))
+    return names
+
+
 def stage_source(source, work, others=()):
     """Copy the file that runs, the folder files its design uses (others, from check_xdc.py --needed), and their
     explicit local include/readmem dependencies; never the other designs of the folder.
@@ -115,6 +130,35 @@ def stage_source(source, work, others=()):
     return names, mapping
 
 
+def vivado_root(folder):
+    """The Vivado project a file belongs to, found as bin/dewfpga's locate() finds it: the folder that holds one
+    .xpr (or a <name>.srcs/sources_1), from that folder or from anywhere under <name>.srcs."""
+    d = folder
+    for _ in range(7):
+        if list(d.glob("*.xpr")) or any((x / "sources_1").is_dir() for x in d.glob("*.srcs")):
+            return d
+        if not any(part.endswith(".srcs") for part in d.parts) or d == Path.home() or d == d.parent:
+            return None
+        d = d.parent
+    return None
+
+
+def run_project(source, root, build_only):
+    """Run on a file of a Vivado project builds the project, as the folder command does: its enabled files, its
+    top, its .xdc. That command names files from the project folder; the editor reads a message's file from the
+    file that ran, so every file:line is written out in full."""
+    print(f"Run on Basys3: {source} (Vivado project {root.name}: its files, its top, its .xdc)", flush=True)
+    command = [str(HERE.parent / "bin" / "dewfpga"), "bit" if build_only else "flash"]
+    where = re.compile(r"^(\s*)([^\s:/][^:]*\.(?:sv|v|svh|vh|xdc|xpr|SV|V|XDC)):(\d+):")
+    with subprocess.Popen(command, cwd=source.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          text=True, errors="replace") as child:
+        for line in child.stdout:
+            line = where.sub(lambda m: f"{m.group(1)}{root / m.group(2)}:{m.group(3)}:", line)
+            line = re.sub(r"\(full log: ([^)/][^)]*)\)", lambda m: f"(full log: {root / m.group(1)})", line)
+            print(line, end="", flush=True)
+        return child.wait()
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run a saved .sv/.v file on Basys3; no project folder or XDC needed for standard IO.")
     parser.add_argument("file", type=Path)
@@ -125,6 +169,9 @@ def main():
     source = args.file.expanduser().resolve()
     if not source.is_file() or source.suffix.lower() not in (".sv", ".v"):
         fail(f"Save a .sv or .v file first: {source}")
+    root = vivado_root(source.parent)
+    if root and not args.top and not args.xdc:
+        return run_project(source, root, args.build_only)
     cache = Path.home() / ".cache/dewfpga/run" / hashlib.sha256(str(source).encode()).hexdigest()[:24]
     cache.mkdir(parents=True, exist_ok=True)
     with (cache / "lock").open("w") as lock:
@@ -186,6 +233,15 @@ def main():
                 print("Also reads: " + ", ".join(Path(mapping[n]).name for n in staged_names[1:]), flush=True)
             execute(make + ["synth"])
             xdc = args.xdc.expanduser().resolve() if args.xdc else topfile.with_suffix(".xdc")
+            design = json.loads((work / f"{top}.json").read_text())
+            if not args.xdc and not xdc.exists():
+                # as the folder command reads a folder: the one .xdc beside the top that pins this design's ports
+                # (a lab's constraints.xdc or Basys3_Master.xdc); one that names none of them is another design's
+                ports = set(design["modules"][top]["ports"])
+                named = [x for x in sorted(topfile.parent.glob("*.xdc")) + sorted(topfile.parent.glob("*.XDC"))
+                         if ports & xdc_ports(x)]
+                if len(named) == 1:
+                    xdc = named[0]
             if args.xdc or xdc.exists():
                 if not xdc.is_file():
                     fail(f"Pin file not found: {xdc}")
@@ -193,7 +249,6 @@ def main():
                 mapping["pins.xdc"] = str(xdc)
                 print(f"Pins: {xdc}", flush=True)
             else:
-                design = json.loads((work / f"{top}.json").read_text())
                 (work / "pins.xdc").write_text(auto_xdc(design["modules"][top]))
                 print("Pins: automatic Basys3 mapping", flush=True)
             # the work folder is deleted on the way out: messages name the log where it is kept, failed build too
