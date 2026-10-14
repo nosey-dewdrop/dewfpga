@@ -42,6 +42,11 @@ function stub(opts) {
   const s = {
     calls: { errors: [], infos: [], warns: [], status: [], opened: [], quickPicks: [], updates: [], shown: [] },
     ConfigurationTarget: { Global: 1 },
+    EventEmitter: class { constructor() { this.l = []; this.event = (f) => { this.l.push(f); return { dispose() {} }; }; } fire(v) { this.l.forEach((f) => f(v)); } },
+    DiagnosticSeverity: { Error: 0, Warning: 1, Information: 2 },
+    Range: class { constructor(a, b, c, e) { this.start = { line: a, character: b }; this.end = { line: c, character: e }; } },
+    Diagnostic: class { constructor(range, message, severity) { Object.assign(this, { range, message, severity }); } },
+    languages: { createDiagnosticCollection: () => { const m = new Map(); s.diagnostics = m; return { clear() { m.clear(); }, set(u, l) { m.set(u.fsPath, l); }, dispose() {} }; } },
     Uri: { file: (p) => ({ scheme: 'file', fsPath: p }) },
     window: {
       activeTextEditor: o.active ? { document: { uri: { scheme: 'file', fsPath: o.active } } } : undefined,
@@ -131,19 +136,29 @@ function run(opts, tops, c) {
     const s5 = stub({ folders: [] }); assert.strictEqual(await ext.createExtension(s5, ctx()).newDesign(), undefined); assert.strictEqual(s5.calls.errors.length, 1);
     const s6 = stub({ folders: [empty, dir], answer: 'Create top.sv' }); await ext.createExtension(s6, ctx()).maybeOfferStarter(); assert.strictEqual(s6.calls.infos.length, 0);
   });
-  await t('Run uses the saved active file in a window with no workspace; arguments are literal', async () => {
+  // A Run: the pty terminal the extension creates, opened as VS Code opens it; resolves with what the user saw.
+  async function runAndWatch(s, e) {
+    let term;
+    s.window.createTerminal = (o) => { term = { o, text: '', show() {} }; return term; };
+    const created = await e.runFile();
+    if (!created) return undefined;
+    created.o.pty.onDidWrite((t) => { created.text += t; });
+    created.o.pty.open();
+    created.code = await created.result;
+    return created;
+  }
+  await t('Run uses the saved active file in a window with no workspace; arguments are literal, no shell', async () => {
     const file = "/tmp/anywhere/my 'design $(touch BAD).sv";
     const s = stub({active: file, config: {cliPath: fakeCli}});
-    let options, shown = false, saved = false;
+    let saved = false, spawned;
     s.window.activeTextEditor.document.isDirty = true;
     s.window.activeTextEditor.document.save = async () => { saved = true; return true; };
-    s.window.createTerminal = (o) => { options = o; return {show() {shown = true;}}; };
-    const e = ext.createExtension(s, ctx());
-    await e.runFile();
-    assert(saved && shown);
-    assert.strictEqual(options.shellPath, fakeCli);
-    assert.deepStrictEqual(options.shellArgs, ['run', file]);
-    assert.strictEqual(options.cwd, path.dirname(file));
+    const spawn = (cli, args, o) => { spawned = { cli, args, o }; const c = new (require('events'))(); c.stdout = new (require('events'))(); c.stderr = new (require('events'))(); setImmediate(() => { c.stdout.emit('data', 'lab1_top.bit  2.2 MB\n'); c.emit('close', 0); }); return c; };
+    const term = await runAndWatch(s, ext.createExtension(s, ctx(), { spawn }));
+    assert(saved);
+    assert.deepStrictEqual([spawned.cli, spawned.args, spawned.o.cwd, spawned.o.shell], [fakeCli, ['run', file], path.dirname(file), undefined]);
+    assert.strictEqual(term.code, 0); assert.match(term.text, /lab1_top\.bit  2\.2 MB\r\n/); assert.match(term.text, /is on the Basys3/);
+    assert.strictEqual(s.calls.errors.length, 0); assert.strictEqual(s.calls.infos.length, 1);
     assert.strictEqual(s.workspace.workspaceFolders.length, 0);
   });
   await t('Run save cancelled never starts a process', async () => {
@@ -162,12 +177,37 @@ function run(opts, tops, c) {
       s.window.activeTextEditor.document = {uri: {scheme: 'file', fsPath: '/tmp/saved.v'}};
       return true;
     };
-    let options;
-    s.window.createTerminal = (o) => { options = o; return {show() {}}; };
+    let args;
+    const spawn = (cli, a) => { args = a; const c = new (require('events'))(); c.stdout = new (require('events'))(); c.stderr = new (require('events'))(); setImmediate(() => c.emit('close', 0)); return c; };
+    const e = ext.createExtension(s, ctx(), { spawn });
+    await runAndWatch(s, e); assert.deepStrictEqual(args, ['run', '/tmp/saved.v']);
+    s.window.activeTextEditor.document.uri.fsPath = '/tmp/file.java'; args = undefined;
+    assert.strictEqual(await runAndWatch(s, e), undefined); assert.strictEqual(args, undefined); assert.strictEqual(s.calls.errors.length, 1);
+  });
+  await t('Run that fails (real CLI) shows the first error, underlines its line, and keeps the output open', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dewfpga run fail ')), file = path.join(dir, 'lab1_top.sv');
+    fs.writeFileSync(file, 'module fa(input logic a, output logic s); assign s = a; endmodule\nmodule lab1_top(input logic [1:0] sw, output logic [1:0] led);\n  fa u(.a(sw[0]), .s(led[0]));\n  assign led[1] = sw[1];\nendmodulek\n');
+    const s = stub({active: file, config: {cliPath: path.join(ROOT, 'bin', 'dewfpga')}});
     const e = ext.createExtension(s, ctx());
-    await e.runFile(); assert.deepStrictEqual(options.shellArgs, ['run', '/tmp/saved.v']);
-    s.window.activeTextEditor.document.uri.fsPath = '/tmp/file.java'; options = undefined;
-    await e.runFile(); assert.strictEqual(options, undefined); assert.strictEqual(s.calls.errors.length, 1);
+    const term = await runAndWatch(s, e);
+    assert.strictEqual(term.code, 1);
+    assert.strictEqual(s.calls.errors.length, 1);
+    assert.match(s.calls.errors[0], /^dewfpga: lab1_top\.sv:5: module lab1_top \(\S*\/dewfpga run fail \w+\/lab1_top\.sv:2\) has no endmodule: line 5 reads endmodulek\. Fix: write endmodule on line 5\.$/);
+    const marks = [...s.diagnostics.values()].flat();
+    assert.strictEqual(marks.length, 1); assert.strictEqual([...s.diagnostics.keys()][0].replace(/^\/private/, ''), file.replace(/^\/private/, ''));
+    assert.deepStrictEqual([marks[0].range.start.line, marks[0].severity, marks[0].code, marks[0].source], [4, 0, 'module-without-endmodule', 'dewfpga']);
+    assert.ok(!/https:/.test(marks[0].message));
+    assert.match(term.text, /ERROR \[module-without-endmodule\]/); assert.match(term.text, /Stopped\./); assert.ok(!/\n[^\r]/.test(term.text.replace(/\r\n/g, '')), 'bare \\n in a pty breaks the terminal layout');
+    // the published diagnostic: the student's file, line 5 (0-based 4), an Error, the code, no page link
+    fs.writeFileSync(file, 'Info: a pasted terminal log\nDone\n');
+    const s2 = stub({active: file, config: {cliPath: path.join(ROOT, 'bin', 'dewfpga')}});
+    const t2 = await runAndWatch(s2, ext.createExtension(s2, ctx()));
+    assert.strictEqual(t2.code, 1);
+    assert.match(s2.calls.errors[0], /^dewfpga: lab1_top\.sv:1: no design module in .*lab1_top\.sv\. Fix: /);
+    assert.ok(!/source\.sv/.test(t2.text), 'the staged name must not reach the student');
+    const r = L.runReport('x.sv:7: ERROR [latch]: a latch https://nosey-dewdrop.github.io/dewfpga/errors/latch/\nERROR [two-tops]: two https://e/x/\nwarning [w]: w\n', '/p/y.sv');
+    assert.deepStrictEqual(r.diags.map((dg) => [dg.file, dg.line, dg.severity, dg.code, dg.message]), [['x.sv', 7, 'error', 'latch', 'a latch'], ['/p/y.sv', 1, 'error', 'two-tops', 'two'], ['/p/y.sv', 1, 'warning', 'w', 'w']]);
+    assert.strictEqual(r.first.code, 'latch');
   });
   // --- matcher ---
   await t('matcher regexp equals package.json', () => {

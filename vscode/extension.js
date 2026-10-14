@@ -72,6 +72,27 @@ const STARTER_SV = [
   'endmodule',
   ''].join('\n');
 
+// What `dewfpga run` printed, read for the editor: every `file:line: ERROR [code]: ...` line, and a message without
+// a place (`ERROR [no-design-module]: ...`) on line 1 of the file that ran; the page link is left out of the text.
+// first = the first error, for the notification.
+function runReport(text, file) {
+  const diags = [];
+  let first;
+  for (const raw of String(text).split('\n')) {
+    const line = raw.replace(/\r$/, '');
+    let dg = parseDiagnostic(line);
+    if (!dg) {
+      const m = /^(ERROR|warning|note) \[([a-z0-9-]+)\]: (.*)$/.exec(line);
+      if (m) dg = { file, line: 1, severity: SEVERITY[m[1]], code: m[2], message: m[3] };
+    }
+    if (!dg) continue;
+    dg.message = dg.message.replace(/\s*https:\/\/\S+$/, '');
+    diags.push(dg);
+    if (dg.severity === 'error' && !first) first = dg;
+  }
+  return { diags, first };
+}
+
 // A folder with nothing in it but dotfiles (.vscode, .git, .DS_Store): no design yet, so no Run button either.
 function isEmptyFolder(entries) { return entries.every((n) => n.startsWith('.')); }
 
@@ -242,7 +263,7 @@ function runTops(cli, cwd, execFile) {
 
 // Builds the extension against a vscode-like API (the real one in activate, a stub in tests).
 function createExtension(vscode, context, deps) {
-  const d = Object.assign({ execFile: childProcess.execFile, fs, home: os.homedir() }, deps || {});
+  const d = Object.assign({ execFile: childProcess.execFile, spawn: childProcess.spawn, fs, home: os.homedir() }, deps || {});
   const exists = (p) => { try { d.fs.accessSync(p); return true; } catch (e) { return false; } };
   const REMEMBER = 'dewfpga.topByFolder';
   const OWNED = 'dewfpga.lintingPathOwnership'; // {value, previous}; the 0.x key 'dewfpga.lintingPathOwned' is not read
@@ -258,8 +279,24 @@ function createExtension(vscode, context, deps) {
     return undefined;
   }
 
-  // A terminal process works even in a standalone-file window (no task/workspace required).
-  // shellPath + shellArgs pass the filename as an argument, never as shell source.
+  // Run on Basys3: the extension starts `dewfpga run <file>` itself (no shell: the file name is one argument) and
+  // shows its output in a terminal that stays open. A failed run is never only "exit code 1": the first error is a
+  // notification, and every file:line message is a red line in the file and a row in Problems.
+  const runDiagnostics = vscode.languages.createDiagnosticCollection('dewfpga');
+  const SEV = { error: vscode.DiagnosticSeverity.Error, warning: vscode.DiagnosticSeverity.Warning, info: vscode.DiagnosticSeverity.Information };
+  function publish(diags, file) {
+    runDiagnostics.clear();
+    const byFile = new Map();
+    for (const dg of diags) {
+      const f = path.isAbsolute(dg.file) ? dg.file : path.join(path.dirname(file), dg.file);
+      const diag = new vscode.Diagnostic(new vscode.Range(dg.line - 1, 0, dg.line - 1, 1e6), dg.message, SEV[dg.severity]);
+      diag.source = 'dewfpga'; diag.code = dg.code;
+      if (!byFile.has(f)) byFile.set(f, []);
+      byFile.get(f).push(diag);
+    }
+    for (const [f, list] of byFile) runDiagnostics.set(vscode.Uri.file(f), list);
+  }
+
   async function runFile() {
     let doc = vscode.window.activeTextEditor && vscode.window.activeTextEditor.document;
     if (!doc) { vscode.window.showErrorMessage('dewfpga: open a .sv or .v file first.'); return; }
@@ -273,17 +310,49 @@ function createExtension(vscode, context, deps) {
     }
     const r = resolveCliPath(vscode.workspace.getConfiguration('dewfpga').get('cliPath', ''), exists, d.home);
     if (r.error) { vscode.window.showErrorMessage('dewfpga: ' + r.error); return; }
-    try {
-      const terminal = vscode.window.createTerminal({
-        name: 'Run on Basys3', shellPath: r.cli, shellArgs: ['run', doc.uri.fsPath],
-        cwd: path.dirname(doc.uri.fsPath),
-        env: { ...toolEnvironment(process.env), LC_ALL: 'C', LC_CTYPE: 'C', LANG: 'C' },
-      });
-      terminal.show();
-      return terminal;
-    } catch (error) {
-      vscode.window.showErrorMessage('dewfpga: could not start Run on Basys3: ' + error.message);
+    const file = doc.uri.fsPath;
+    const write = new vscode.EventEmitter(), closed = new vscode.EventEmitter();
+    const show = (text) => write.fire(String(text).replace(/\r?\n/g, '\r\n'));
+    let child, out = '', finished = false, settle;
+    const result = new Promise((res) => { settle = res; });
+    function finish(code, startError) {
+      if (finished) return;
+      finished = true;
+      const report = runReport(out, file);
+      publish(report.diags, file);
+      if (code === 0) {
+        show('\nDone: ' + path.basename(file) + ' is on the Basys3.\n');
+        vscode.window.showInformationMessage('dewfpga: ' + path.basename(file) + ' is on the Basys3.');
+      } else {
+        const first = report.first;
+        const text = startError || (first ? path.basename(first.file) + ':' + first.line + ': ' + first.message
+          : 'Run on Basys3 stopped (exit ' + code + '); the Run on Basys3 terminal has its output.');
+        show('\nStopped. The first error is underlined in the file and listed in Problems.\n');
+        vscode.window.showErrorMessage('dewfpga: ' + text);
+      }
+      settle(code);
     }
+    const pty = {
+      onDidWrite: write.event, onDidClose: closed.event,
+      open() {
+        runDiagnostics.clear();
+        show('dewfpga run ' + file + '\n\n');
+        try {
+          child = d.spawn(r.cli, ['run', file], { cwd: path.dirname(file),
+            env: { ...toolEnvironment(process.env), LC_ALL: 'C', LC_CTYPE: 'C', LANG: 'C' } });
+        } catch (error) { finish(1, 'could not start Run on Basys3: ' + error.message); return; }
+        const take = (chunk) => { out += String(chunk); show(chunk); };
+        child.stdout.on('data', take);
+        child.stderr.on('data', take);
+        child.on('error', (error) => finish(1, 'could not start Run on Basys3: ' + error.message));
+        child.on('close', (code) => finish(code === null ? 1 : code));
+      },
+      close() { if (child && !finished) child.kill(); },
+    };
+    const terminal = vscode.window.createTerminal({ name: 'Run on Basys3', pty });
+    terminal.show(true);
+    terminal.result = result;
+    return terminal;
   }
 
   // Writes top.sv, and the CLI's AGENTS.md + CLAUDE.md so a coding agent opened here runs dewfpga instead of
@@ -437,6 +506,7 @@ function createExtension(vscode, context, deps) {
   }
 
   const subs = [
+    runDiagnostics,
     vscode.commands.registerCommand('dewfpga.run', runFile),
     vscode.commands.registerCommand('dewfpga.newDesign', newDesign),
     vscode.commands.registerCommand('dewfpga.pickTop', pickTop),
@@ -460,4 +530,4 @@ function activate(context) {
 }
 function deactivate() {}
 
-module.exports = { activate, deactivate, createExtension, lib: { MATCHER_REGEXP, SEVERITY, parseDiagnostic, parseTops, chooseTop, resolveCliPath, resolveTaskFolder, simTaskKind, isSimTask, projectRoot, snapshotVcds, pickFreshVcd, isEmptyFolder, STARTER_SV, planLinterSetup, planLinterRemoval, pickOne, runTops, toolEnvironment } };
+module.exports = { activate, deactivate, createExtension, lib: { MATCHER_REGEXP, SEVERITY, parseDiagnostic, runReport, parseTops, chooseTop, resolveCliPath, resolveTaskFolder, simTaskKind, isSimTask, projectRoot, snapshotVcds, pickFreshVcd, isEmptyFolder, STARTER_SV, planLinterSetup, planLinterRemoval, pickOne, runTops, toolEnvironment } };
