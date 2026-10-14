@@ -4776,3 +4776,39 @@ gaps unchanged. The three were closed and rerun: `AGENTS.md` had grown to 74 lin
 held this machine's home path (the suite now writes no bytecode). The SystemVerilog probes are as
 on 8 October: 114 of 148 pass all four stages. Not tried: the button in a real
 VS Code window and programming the board with this change.
+
+### Local candidate · Run shows its error, reads the lab folder, and prints only what a student acts on · 15 October
+
+**A failed Run says why.** The play button used to start `dewfpga run` as the terminal's own process, so
+a failure reached the student as VS Code's `terminal process terminated with exit code: 1` and nothing
+else. That is what happened on a file that held a pasted terminal log instead of a design. Now the extension
+starts the command itself and keeps its output in a terminal that stays open. The first error is a
+notification (`lab1_top.sv:27: module lab1_top ... has no endmodule: line 27 reads endmodulek`), every
+`file:line` message is underlined in its file and listed in Problems, and a success says the file is on
+the Basys3.
+
+**Run reads the lab folder.** A lab's top usually instantiates modules from the files beside it. Run used
+to read only the file it was started on and stopped at `unknown module 'full_adder'`. Now it reads the
+modules the file uses, transitively, from the other `.sv`/`.v` files of its folder, plus the package and
+interface files they name, and prints `Also reads: full_adder.sv`. Run on a submodule's file (`full_adder.sv`)
+builds the one top that uses it (`top: top, in top.sv`). A folder file the design does not use (an old
+try that does not compile, a testbench) is never read.
+
+**The output lost three lines nobody could act on.** A design with no clock printed a `no-create-clock`
+note about `pins.xdc`, a file the student never wrote, and nextpnr's `Warning: No clocks found in design`.
+The note now prints only when the design has a clocked cell, and the warning is dropped like the
+`[current_design]` lines. Run's `full log:` path named a file in a deleted temporary folder; it now names
+the kept copy, also after a failed build. A scan message named the staged copy (`no design module in
+source.sv.`); it now names the student's file. Lab 1's Run output went from 8 lines to 6.
+
+Tests: the VS Code suite passed 42/42; its new check runs the real CLI on a misspelled `endmodule` and
+reads the notification, the underlined line (5) and the terminal text. Two new folder checks (a package,
+a submodule file, the top file, a testbench and a broken old try in one folder) build from either file,
+and the netlist gives the full adder's 8 rows right; a used sibling's error is named with its own file and
+line. Both fail on the installed 1.2.0. The pin checks (23) and the golden bitstream are unchanged.
+The full suite ran once on this candidate: 342 passed, 2 failed. One was this
+change: probe 97's block RAM is a clocked cell, and there nextpnr's `No clocks found` is the gap's own
+evidence, so the warning is now dropped only when the design has no clocked cell; the probe matches
+`expect.tsv` again (known gaps 19). The other was the personal-path check reading the `__pycache__` a
+direct test run leaves; that folder is never committed and is no longer scanned. The SystemVerilog probes
+are unchanged: 114 of 148 pass all four stages.
