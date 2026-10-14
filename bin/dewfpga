@@ -2,6 +2,7 @@
 # dewfpga: Basys3 on macOS without Vivado.
 #   dewfpga install                 install the toolchain into ~/fpga (safe to re-run)
 #   dewfpga check                   verify every piece is in place
+#   dewfpga run <file.sv>           compile this file and load Basys3 (standard pins automatic; --build-only skips USB)
 #   dewfpga sim | bit | flash | clean [top]
 #                                    work on the .sv files in the current folder. top = the module nothing else
 #                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
@@ -33,7 +34,7 @@ die()     { local loc=""; case $1 in *:*) loc="$1: "; shift ;; esac; echo "${loc
 note()    { echo "note [$1]: ${*:2} $SITE/$1/"; }
 [[ $HERE != *[[:space:]]* && $FPGA_HOME != *[[:space:]]* ]] || die path-with-space "a path with a space ($HERE / $FPGA_HOME): the FPGA tools cannot handle that. Fix: move the folder to a path without spaces, or set FPGA_HOME to one."
 
-usage()   { sed -n '2,16s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
+usage()   { sed -n '2,17s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
 version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
 
 cmd_check() {
@@ -265,11 +266,10 @@ cmd_build() {  # <target> [top]
         if [ -z "$chosen" ] && [ -n "$PROJ_TOP" ]; then echo "vivado project: $PROJ_ROOT/$PROJ_XPR (top from the project: $PROJ_TOP)"
         else echo "vivado project: $PROJ_ROOT/${PROJ_XPR:-*.srcs}"; fi
     fi
-    # two lines Vivado accepts and yosys and iverilog refuse are written into the student's file first, and each
-    # changed line is printed as a note: the course's seven-segment port line (`output [6:0] seg, logic dp`) gets
-    # its direction, an instance without a name (`inv(sw[0], led[0]);`) gets one (u_inv). Before sim too: the
-    # same folder must pass or fail sim by its code, not by whether a bit ran first. Nothing else is touched.
-    [ "$target" = clean ] || "$py" "$HERE/templates/check_xdc.py" --fix-ports "${files[@]}"
+    # two lines Vivado accepts and yosys and iverilog refuse (the course's seven-segment port line `output [6:0] seg,
+    # logic dp`, an instance without a name `inv(sw[0], led[0]);`) are read from a normalized copy the Makefile makes
+    # in its private work folder, with a note per line: the student's files are never written (check_xdc.py
+    # --fix-ports is the explicit helper that does write them, and nothing here calls it).
     # what is what: the scanner reads the modules. The top is the design module nothing else instantiates
     # (or the one named on the command line, by module or by file); a testbench is a module without ports;
     # file names are free, and never decide the top. One ERROR= line means it could not decide; PROBLEM=
@@ -319,11 +319,16 @@ cmd_build() {  # <target> [top]
     esac
     # make's own "*** [target] Error 1" trailer adds nothing to the message the recipe already printed.
     # sim: stdout stays a terminal so $display lines appear as they happen (a pipe would buffer them);
-    # only stderr goes through the sed. bit/flash: one merged stream keeps the lines in order, and an
+    # stderr is filtered after make returns, using a regular temporary file rather than /dev/fd.
+    # bit/flash: one merged stream keeps the lines in order, and an
     # empty stream means nothing had changed. sed always exits 0; pipefail (set above) hands back make's code.
     local trailer='/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
     if [ "$target" = sim ]; then
-        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" TB="$tb" XDC="$xdc" INCDIRS="${INCDIRS[*]}" CHECKER="$HERE/templates/check_xdc.py" sim 2> >(sed -E "$trailer" >&2)
+        DEWFPGA_TMP=$(mktemp -t dewfpga); trap 'rm -f "$DEWFPGA_TMP"' EXIT
+        local rc=0
+        make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" TB="$tb" XDC="$xdc" INCDIRS="${INCDIRS[*]}" CHECKER="$HERE/templates/check_xdc.py" sim 2> "$DEWFPGA_TMP" || rc=$?
+        sed -E "$trailer" "$DEWFPGA_TMP" >&2
+        return "$rc"
     else
         DEWFPGA_TMP=$(mktemp -t dewfpga); trap 'rm -f "$DEWFPGA_TMP"' EXIT; local tmp=$DEWFPGA_TMP
         make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" XDC="$xdc" INCDIRS="${INCDIRS[*]}" CHECKER="$HERE/templates/check_xdc.py" "$target" 2>&1 \
@@ -333,12 +338,13 @@ cmd_build() {  # <target> [top]
 }
 
 case "${1:-}" in
+    run) shift; export FPGA_HOME; exec python3 "$HERE/templates/run_file.py" "$@" ;;
     install) [ $# -eq 1 ] || die unknown-option "dewfpga install takes no arguments. Fix: dewfpga install  (FPGA_HOME=/elsewhere dewfpga install to relocate)."; exec bash "$HERE/install.sh" ;;
     uninstall) cmd_uninstall ;;
     vscode)  shift; cmd_vscode "$@" ;;
     check)   cmd_check ;;
     new)     shift; cmd_new "$@" ;;
-    sim|bit|flash|clean) locate; if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then cmd_build "$@" 2> >(abspath >&2) | abspath; else cmd_build "$@"; fi ;;
+    sim|bit|flash|clean) locate; if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then cmd_build "$@" 2>&1 | abspath; else cmd_build "$@"; fi ;;
     tops)    shift; locate; cmd_tops "$@" ;;
     mcp)     [ $# -eq 1 ] || die unknown-option "dewfpga mcp takes no arguments (it speaks MCP over stdio). Fix: dewfpga mcp"
              MCP_PY="$FPGA_HOME/mcp-venv/bin/python"

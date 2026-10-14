@@ -719,7 +719,7 @@ def body(base):
     sys.path.insert(0, os.path.join(ROOT, "templates"))
     import vscode_tasks  # noqa: E402
     check("3 make tasks, each with DEWFPGA_ABSPATH=1 and the dewfpga problem matcher (same regexp as the user tasks)",
-          len(tj["tasks"]) == 3 and all(t["options"]["env"] == {"DEWFPGA_ABSPATH": "1"} and t["problemMatcher"]["pattern"]["regexp"] == vscode_tasks.MATCHER_REGEXP
+          len(tj["tasks"]) == 3 and all(t["options"]["env"] == {"DEWFPGA_ABSPATH": "1", "PATH": "${env:PATH}:/opt/homebrew/bin"} and t["problemMatcher"]["pattern"]["regexp"] == vscode_tasks.MATCHER_REGEXP
                                        and t["command"].startswith("make ") for t in tj["tasks"]), json.dumps(tj, indent=1)[:1500])
     rc, out, err = run(["sed", 's/"make /"dewfpga /', os.path.join(ROOT, "templates", ".vscode", "tasks.json")], {"PATH": "/usr/bin:/bin"})
     check("dewfpga new's sed turns every command into dewfpga and the JSON stays valid", rc == 0 and all(t["command"].startswith("dewfpga ") for t in json.loads(out)["tasks"]), out[:500])

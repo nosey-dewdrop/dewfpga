@@ -100,8 +100,9 @@ export function blank(src) {
 }
 function headerIsTestbench(body) {
   // the header: everything to the first ';'. a module with no port list or an empty one is a testbench.
+  // a header may import packages before its lists (module m import p::*; (...);): those ';' do not end it
+  body = body.replace(/^\s*(?:import\b[^;]*;\s*)+/, '');
   const semi = body.indexOf(';'); let head = semi < 0 ? body : body.slice(0, semi);
-  head = head.replace(/\bimport\b[^;]*?;/g, '');
   // drop one balanced #( ... ) parameter list
   const hash = head.indexOf('#');
   if (hash >= 0) {

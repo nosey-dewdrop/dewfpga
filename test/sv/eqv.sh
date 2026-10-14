@@ -13,18 +13,45 @@ CELLS="$(yosys-config --datdir)/xilinx/cells_sim.v"
 [ $# -eq 1 ] || { echo "usage: eqv.sh <netlist.json>" >&2; exit 1; }
 json=$1
 tmo() { perl -e '$SIG{ALRM}=sub{kill TERM=>$p; select(undef,undef,undef,0.3); kill KILL=>$p; exit 142}; alarm shift; $p=fork; exec @ARGV if !$p; waitpid $p,0; exit($?>>8)' "$TIMEOUT" "$@"; }
-# the folder's design files, packages and interfaces first (iverilog needs them before use)
+# the folder's design files in the product's order (templates/Makefile PKG_SRCS, bin/dewfpga): a file that declares a
+# package first, then a file without a module (a package, an interface, a $unit typedef: iverilog and yosys read the
+# files in the order given and need a declaration before its use), then the rest, each group alphabetical
 rtl_files() {
-    local f first="" rest=""
+    local f pkg="" decl="" rest=""
     for f in *.sv *.v; do
         [ -f "$f" ] || continue
         case $f in tb.sv|net.v|net_eqv.v|eqv.sv) continue ;; esac
-        if grep -qE '^[[:space:]]*(package|interface)[[:space:]]' "$f" && ! grep -qE '^[[:space:]]*module[[:space:]]' "$f"
-        then first="$first $f"; else rest="$rest $f"; fi
+        if grep -E '^[[:space:]]*package[[:space:]]+[A-Za-z_]' "$f" > /dev/null; then pkg="$pkg $f"
+        elif ! grep -E '^[[:space:]]*module[[:space:]]' "$f" > /dev/null; then decl="$decl $f"
+        else rest="$rest $f"; fi
     done
-    echo "$first $rest"
+    echo "$pkg $decl $rest"
 }
-rtl=$(rtl_files)
+# Every reader below reads the text the product's readers read (templates/Makefile MKKW): check_xdc.py --normalize
+# writes a copy of a file whose port direction or instance name the standard needs written in (headed by `line, so
+# a message names the student's file and line; the student's file is never written), and .srcs lists the copy or
+# the file itself. yosys' read_verilog reads a .v without -sv (Verilog-2005); yosys-slang and iverilog read a copy
+# of each .v wrapped in `begin_keywords "1364-2005". -I. finds an `include beside the design; $readmemh paths stay
+# relative to this folder, where the simulation runs.
+KW=eqv_src
+rm -rf "$KW"; mkdir "$KW" || { echo "EQV FAIL: cannot create $KW"; exit 1; }
+# shellcheck disable=SC2046   # file names without spaces
+python3 "$HERE/../../templates/check_xdc.py" --normalize "$KW" --quiet $(rtl_files) > /dev/null \
+    || { echo "EQV FAIL: check_xdc.py --normalize refused the design files"; exit 1; }
+rv=""; sv=""; v=""; rtl=""; n=0
+while IFS= read -r f; do
+    [ -n "$f" ] || continue
+    case $f in
+        *.v) v="$v $f"; n=$((n+1))
+             # shellcheck disable=SC2016   # the backquotes are Verilog directives
+             { printf '`begin_keywords "1364-2005"\n`line 1 "%s" 0\n' "$f"; cat "$f"; printf '\n`end_keywords\n'; } > "$KW/$n.v" \
+                 || { echo "EQV FAIL: cannot write $KW/$n.v"; exit 1; }
+             rtl="$rtl $KW/$n.v" ;;
+        *) sv="$sv $f"; rtl="$rtl $f" ;;
+    esac
+done < "$KW/.srcs"
+[ -z "$sv" ] || rv="read_verilog -I. -sv$sv;"
+[ -z "$v" ] || rv="$rv read_verilog -I.$v;"
 if ! { python3 "$HERE/eqv.py" --netlist "$json" > net_eqv.json && yosys -q -p "read_json net_eqv.json; write_verilog -noattr net_eqv.v"; }; then
     echo "EQV FAIL: could not write the netlist for the bench"; exit 1
 fi
@@ -37,9 +64,9 @@ grep -q '^module top_net(' net_eqv.v || { echo "EQV FAIL: net_eqv.v has no 'modu
 SLANG=${SLANG:-${FPGA_HOME:-$HOME/fpga}/yosys-slang/build/slang.so}
 regs="hierarchy -top top; proc; flatten; memory_collect; opt_dff; write_json rtl_regs.json"
 # shellcheck disable=SC2086   # file names without spaces
-if ! yosys -q -p "read_verilog -sv $rtl; $regs" > rtl_regs.log 2>&1; then
+if ! yosys -q -p "$rv $regs" > rtl_regs.log 2>&1; then
     # shellcheck disable=SC2086
-    if [ -f "$SLANG" ] && yosys -m "$SLANG" -q -l rtl_regs_slang.log -p "read_slang $rtl; $regs" > /dev/null 2>&1; then
+    if [ -f "$SLANG" ] && yosys -m "$SLANG" -q -l rtl_regs_slang.log -p "read_slang --single-unit -I.$rtl; $regs" > /dev/null 2>&1; then
         echo "note: the RTL's registers listed by yosys-slang (yosys' own reader refused this code)"
     else
         cat rtl_regs.log; [ ! -f rtl_regs_slang.log ] || grep -E '^(ERROR|[^ ]+:[0-9]+:[0-9]+: (error|fatal error):)' rtl_regs_slang.log
@@ -48,7 +75,7 @@ if ! yosys -q -p "read_verilog -sv $rtl; $regs" > rtl_regs.log 2>&1; then
 fi
 python3 "$HERE/eqv.py" "$json" rtl_regs.json > eqv.sv || { echo "EQV FAIL: eqv.py could not write the bench"; exit 1; }
 # shellcheck disable=SC2086   # file names without spaces
-bench() { iverilog -g2012 -s eqv -o eqv.vvp $rtl net_eqv.v eqv.sv "$CELLS" > eqv_build.log 2>&1; }
+bench() { iverilog -g2012 -I. -s eqv -o eqv.vvp $rtl net_eqv.v eqv.sv "$CELLS" > eqv_build.log 2>&1; }
 built=0; bench && built=1
 # a register that shares its variable with an assign (led[3:0] <= ...; assign led[15:4] = sw[15:4]) cannot be
 # started whole: iverilog names each such variable, and the bench is written again to start them bit by bit
@@ -61,7 +88,7 @@ if [ $built = 0 ]; then
 fi
 if [ $built = 0 ]; then
     # shellcheck disable=SC2086
-    if iverilog -g2012 -s top -o /dev/null $rtl "$CELLS" > /dev/null 2>&1; then
+    if iverilog -g2012 -I. -s top -o /dev/null $rtl "$CELLS" > /dev/null 2>&1; then
         cat eqv_build.log; echo "EQV FAIL: the RTL compiles but the equivalence bench does not"; exit 1
     fi
     echo "EQV SKIP: iverilog cannot compile the RTL, so only the testbench checked the netlist"; exit 2

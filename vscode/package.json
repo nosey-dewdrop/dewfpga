@@ -1,23 +1,51 @@
 {
   "name": "dewfpga",
   "displayName": "dewfpga",
-  "description": "Choose the top module for a dewfpga build, open the fresh VCD after a simulation, and show Icarus's constant-select 'sorry' as a warning instead of an error.",
-  "version": "0.1.0",
+  "description": "Run a saved SystemVerilog file on Basys3, with automatic board pins and no project setup.",
+  "version": "0.2.0",
   "publisher": "nosey-dewdrop",
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/nosey-dewdrop/dewfpga" },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nosey-dewdrop/dewfpga"
+  },
   "homepage": "https://nosey-dewdrop.github.io/dewfpga/",
-  "engines": { "vscode": "^1.90.0" },
-  "categories": ["Other"],
-  "extensionKind": ["workspace"],
-  "activationEvents": ["onStartupFinished"],
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "workspace"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./extension.js",
   "contributes": {
     "commands": [
-      { "command": "dewfpga.pickTop", "title": "dewfpga: choose the top module" },
-      { "command": "dewfpga.forgetTop", "title": "dewfpga: forget the remembered top module for this folder" },
-      { "command": "dewfpga.setupLinter", "title": "dewfpga: use the dewfpga iverilog lint shim (constant-select 'sorry' becomes a warning)" },
-      { "command": "dewfpga.removeLinter", "title": "dewfpga: stop using the dewfpga iverilog lint shim" }
+      {
+        "command": "dewfpga.run",
+        "title": "dewfpga: Run on Basys3",
+        "icon": "$(play)"
+      },
+      {
+        "command": "dewfpga.pickTop",
+        "title": "dewfpga: choose the top module"
+      },
+      {
+        "command": "dewfpga.forgetTop",
+        "title": "dewfpga: forget the remembered top module for this folder"
+      },
+      {
+        "command": "dewfpga.setupLinter",
+        "title": "dewfpga: use the dewfpga iverilog lint shim (constant-select 'sorry' becomes a warning)"
+      },
+      {
+        "command": "dewfpga.removeLinter",
+        "title": "dewfpga: stop using the dewfpga iverilog lint shim"
+      }
     ],
     "configuration": {
       "title": "dewfpga",
@@ -35,7 +63,10 @@
         "owner": "dewfpga",
         "source": "dewfpga",
         "severity": "info",
-        "fileLocation": ["autoDetect", "${fileDirname}"],
+        "fileLocation": [
+          "autoDetect",
+          "${fileDirname}"
+        ],
         "pattern": {
           "regexp": "^(.+?):(\\d+): (ERROR|warning|note) \\[([a-z0-9-]+)\\]: (.*)$",
           "file": 1,
@@ -45,6 +76,15 @@
           "message": 5
         }
       }
-    ]
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "dewfpga.run",
+          "when": "resourceExtname =~ /\\.(sv|v)$/i",
+          "group": "navigation@1"
+        }
+      ]
+    }
   }
 }

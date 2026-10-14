@@ -83,6 +83,57 @@ function run(opts, tops, c) {
 }
 
 (async () => {
+  await t('editor tool environment preserves overrides and adds missing Homebrew', async () => {
+    const env = { PATH: '/custom/bin:/usr/bin:/bin', KEEP: 'yes' };
+    assert.deepStrictEqual(L.toolEnvironment(env), { PATH: env.PATH + ':/opt/homebrew/bin', KEEP: 'yes' });
+    assert.strictEqual(env.PATH, '/custom/bin:/usr/bin:/bin');
+    assert.strictEqual(L.toolEnvironment({ PATH: '/opt/homebrew/bin:/usr/bin' }).PATH, '/opt/homebrew/bin:/usr/bin');
+    assert.strictEqual(L.toolEnvironment({}).PATH, '/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin');
+    let options;
+    const result = await L.runTops('/cli', '/project', (cli, args, opts, cb) => {
+      options = opts; cb(null, 'top\tdesign.sv\n', '');
+    });
+    assert.strictEqual(result.code, 0);
+    assert.deepStrictEqual(options.env, L.toolEnvironment(process.env));
+  });
+  await t('Run uses the saved active file in a window with no workspace; arguments are literal', async () => {
+    const file = "/tmp/anywhere/my 'design $(touch BAD).sv";
+    const s = stub({active: file, config: {cliPath: fakeCli}});
+    let options, shown = false, saved = false;
+    s.window.activeTextEditor.document.isDirty = true;
+    s.window.activeTextEditor.document.save = async () => { saved = true; return true; };
+    s.window.createTerminal = (o) => { options = o; return {show() {shown = true;}}; };
+    const e = ext.createExtension(s, ctx());
+    await e.runFile();
+    assert(saved && shown);
+    assert.strictEqual(options.shellPath, fakeCli);
+    assert.deepStrictEqual(options.shellArgs, ['run', file]);
+    assert.strictEqual(options.cwd, path.dirname(file));
+    assert.strictEqual(s.workspace.workspaceFolders.length, 0);
+  });
+  await t('Run save cancelled never starts a process', async () => {
+    const s = stub({active: '/tmp/test.sv', config: {cliPath: fakeCli}});
+    s.window.activeTextEditor.document.isDirty = true;
+    s.window.activeTextEditor.document.save = async () => false;
+    s.window.createTerminal = () => {throw new Error('must not launch');};
+    await ext.createExtension(s, ctx()).runFile();
+    assert.strictEqual(s.calls.errors.length, 0);
+  });
+  await t('Run untitled save resolves the newly saved document and refuses non-HDL', async () => {
+    const s = stub({active: '/tmp/new.sv', config: {cliPath: fakeCli}});
+    s.window.activeTextEditor.document.isUntitled = true;
+    s.window.activeTextEditor.document.uri.scheme = 'untitled';
+    s.window.activeTextEditor.document.save = async () => {
+      s.window.activeTextEditor.document = {uri: {scheme: 'file', fsPath: '/tmp/saved.v'}};
+      return true;
+    };
+    let options;
+    s.window.createTerminal = (o) => { options = o; return {show() {}}; };
+    const e = ext.createExtension(s, ctx());
+    await e.runFile(); assert.deepStrictEqual(options.shellArgs, ['run', '/tmp/saved.v']);
+    s.window.activeTextEditor.document.uri.fsPath = '/tmp/file.java'; options = undefined;
+    await e.runFile(); assert.strictEqual(options, undefined); assert.strictEqual(s.calls.errors.length, 1);
+  });
   // --- matcher ---
   await t('matcher regexp equals package.json', () => {
     const pkg = JSON.parse(fs.readFileSync(path.join(ROOT, 'vscode', 'package.json')));
@@ -90,7 +141,7 @@ function run(opts, tops, c) {
     assert.strictEqual(pm.pattern.regexp, L.MATCHER_REGEXP);
     assert.strictEqual(pm.severity, 'info'); // lowercase per VS Code's schema; the fallback only
     assert.deepStrictEqual([pm.pattern.file, pm.pattern.line, pm.pattern.severity, pm.pattern.code, pm.pattern.message], [1, 2, 3, 4, 5]);
-    assert.deepStrictEqual(pkg.contributes.commands.map((c) => c.command), ['dewfpga.pickTop', 'dewfpga.forgetTop', 'dewfpga.setupLinter', 'dewfpga.removeLinter']);
+    assert.deepStrictEqual(pkg.contributes.commands.map((c) => c.command), ['dewfpga.run', 'dewfpga.pickTop', 'dewfpga.forgetTop', 'dewfpga.setupLinter', 'dewfpga.removeLinter']);
   });
   await t('matcher: ERROR/warning/note, file with spaces and abs path', () => {
     assert.deepStrictEqual(L.parseDiagnostic('design.sv:3: ERROR [two-tops]: two modules could be the top. Fix: x https://e/'), { file: 'design.sv', line: 3, severity: 'error', code: 'two-tops', message: 'two modules could be the top. Fix: x https://e/' });
@@ -526,15 +577,15 @@ function run(opts, tops, c) {
   await t('vsix: two builds identical, required members, shim executable, manifest metadata', () => {
     const o1 = fs.mkdtempSync(path.join(os.tmpdir(), 'vsix1')), o2 = fs.mkdtempSync(path.join(os.tmpdir(), 'vsix2'));
     execFileSync('python3', [path.join(ROOT, 'vscode', 'build-vsix.py'), '--out', o1]); execFileSync('python3', [path.join(ROOT, 'vscode', 'build-vsix.py'), '--out', o2]);
-    const a = fs.readFileSync(path.join(o1, 'dewfpga-0.1.0.vsix')), b = fs.readFileSync(path.join(o2, 'dewfpga-0.1.0.vsix'));
+    const a = fs.readFileSync(path.join(o1, 'dewfpga-0.2.0.vsix')), b = fs.readFileSync(path.join(o2, 'dewfpga-0.2.0.vsix'));
     assert.ok(a.equals(b), 'identical bytes'); assert.ok(a.length > 5000);
-    const list = execFileSync('unzip', ['-Z1', path.join(o1, 'dewfpga-0.1.0.vsix')], { encoding: 'utf8' }).trim().split('\n');
+    const list = execFileSync('unzip', ['-Z1', path.join(o1, 'dewfpga-0.2.0.vsix')], { encoding: 'utf8' }).trim().split('\n');
     assert.deepStrictEqual(list, ['[Content_Types].xml', 'extension.vsixmanifest', 'extension/LICENSE', 'extension/README.md', 'extension/bin/iverilog', 'extension/extension.js', 'extension/package.json']);
-    const long = execFileSync('unzip', ['-Z', path.join(o1, 'dewfpga-0.1.0.vsix')], { encoding: 'utf8' });
+    const long = execFileSync('unzip', ['-Z', path.join(o1, 'dewfpga-0.2.0.vsix')], { encoding: 'utf8' });
     assert.match(long, /^-rwxr-xr-x .*extension\/bin\/iverilog$/m);
-    const man = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.1.0.vsix'), 'extension.vsixmanifest'], { encoding: 'utf8' });
-    assert.match(man, /Identity Language="en-US" Id="dewfpga" Version="0.1.0" Publisher="nosey-dewdrop"/); assert.match(man, /<License>extension\/LICENSE<\/License>/);
-    const lic = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.1.0.vsix'), 'extension/LICENSE'], { encoding: 'utf8' }); assert.match(lic, /^MIT License/);
+    const man = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.2.0.vsix'), 'extension.vsixmanifest'], { encoding: 'utf8' });
+    assert.match(man, /Identity Language="en-US" Id="dewfpga" Version="0.2.0" Publisher="nosey-dewdrop"/); assert.match(man, /<License>extension\/LICENSE<\/License>/);
+    const lic = execFileSync('unzip', ['-p', path.join(o1, 'dewfpga-0.2.0.vsix'), 'extension/LICENSE'], { encoding: 'utf8' }); assert.match(lic, /^MIT License/);
     assert.ok(!/\/Users\//.test(a.toString('latin1')), 'no personal path inside the vsix');
   });
   fs.rmSync(path.dirname(fakeCli), { recursive: true, force: true }); fs.rmSync(wdir, { recursive: true, force: true }); fs.rmSync(proj, { recursive: true, force: true });

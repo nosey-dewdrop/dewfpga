@@ -63,7 +63,7 @@ try {
   const base = `http://127.0.0.1:${port}/`;
   console.log(`preview ${base} (pid ${process.pid})`);
   const deadline = Date.now() + timeoutMs;
-  for (const suite of ['e2e.mjs', 'sim17-evidence.mjs', 'board-e2e.mjs', 'hardware-validation.mjs']) {
+  for (const suite of ['e2e.mjs', 'sim17-evidence.mjs', 'board-e2e.mjs', 'xdc-ranges-browser.mjs', 'own-project-browser.mjs', 'hardware-validation.mjs']) {
     exited = false; timedOut = false;
     console.log(`suite ${suite}`);
     code = await new Promise((resolve) => {

@@ -208,9 +208,17 @@ function pickOne(vscode, items, placeholder, active) {
   });
 }
 
+// GUI-launched editors may not inherit Homebrew's shell setup. Keep any
+// explicitly selected tools first, and supply the supported Apple Silicon prefix.
+function toolEnvironment(env) {
+  const inherited = env.PATH || '/usr/bin:/bin:/usr/sbin:/sbin';
+  return { ...env, PATH: inherited.split(':').includes('/opt/homebrew/bin')
+    ? inherited : inherited + ':/opt/homebrew/bin' };
+}
+
 function runTops(cli, cwd, execFile) {
   return new Promise((resolve) => {
-    (execFile || childProcess.execFile)(cli, ['tops'], { cwd, env: process.env, maxBuffer: 1 << 20, windowsHide: true }, (err, stdout, stderr) => {
+    (execFile || childProcess.execFile)(cli, ['tops'], { cwd, env: toolEnvironment(process.env), maxBuffer: 1 << 20, windowsHide: true }, (err, stdout, stderr) => {
       resolve({ code: err ? (typeof err.code === 'number' ? err.code : 1) : 0, stdout: String(stdout || ''), stderr: String(stderr || ''), error: err && typeof err.code === 'string' ? err : null });
     });
   });
@@ -231,6 +239,34 @@ function createExtension(vscode, context, deps) {
     const wf = vscode.workspace.workspaceFolders;
     if (wf && wf.length) return wf[0].uri.fsPath;
     return undefined;
+  }
+
+  // A terminal process works even in a standalone-file window (no task/workspace required).
+  // shellPath + shellArgs pass the filename as an argument, never as shell source.
+  async function runFile() {
+    let doc = vscode.window.activeTextEditor && vscode.window.activeTextEditor.document;
+    if (!doc) { vscode.window.showErrorMessage('dewfpga: open a .sv or .v file first.'); return; }
+    const untitled = doc.isUntitled;
+    if (untitled || doc.isDirty) {
+      if (!await doc.save()) return;
+      if (untitled) doc = vscode.window.activeTextEditor && vscode.window.activeTextEditor.document;
+    }
+    if (!doc || doc.uri.scheme !== 'file' || !/\.(sv|v)$/i.test(doc.uri.fsPath)) {
+      vscode.window.showErrorMessage('dewfpga: save the design as a .sv or .v file first.'); return;
+    }
+    const r = resolveCliPath(vscode.workspace.getConfiguration('dewfpga').get('cliPath', ''), exists, d.home);
+    if (r.error) { vscode.window.showErrorMessage('dewfpga: ' + r.error); return; }
+    try {
+      const terminal = vscode.window.createTerminal({
+        name: 'Run on Basys3', shellPath: r.cli, shellArgs: ['run', doc.uri.fsPath],
+        cwd: path.dirname(doc.uri.fsPath),
+        env: { ...toolEnvironment(process.env), LC_ALL: 'C', LC_CTYPE: 'C', LANG: 'C' },
+      });
+      terminal.show();
+      return terminal;
+    } catch (error) {
+      vscode.window.showErrorMessage('dewfpga: could not start Run on Basys3: ' + error.message);
+    }
   }
 
   // Command input for tasks: a string (top module or '' for auto) runs the task; undefined cancels it.
@@ -348,6 +384,7 @@ function createExtension(vscode, context, deps) {
   }
 
   const subs = [
+    vscode.commands.registerCommand('dewfpga.run', runFile),
     vscode.commands.registerCommand('dewfpga.pickTop', pickTop),
     vscode.commands.registerCommand('dewfpga.forgetTop', forgetTop),
     vscode.commands.registerCommand('dewfpga.setupLinter', setupLinter),
@@ -356,7 +393,7 @@ function createExtension(vscode, context, deps) {
     vscode.tasks.onDidEndTaskProcess(onTaskEnd),
   ];
   for (const s of subs) context.subscriptions.push(s);
-  return { pickTop, forgetTop, setupLinter, removeLinter, onTaskStart, onTaskEnd, maybeOfferLinter, shimDir };
+  return { runFile, pickTop, forgetTop, setupLinter, removeLinter, onTaskStart, onTaskEnd, maybeOfferLinter, shimDir };
 }
 
 function activate(context) {
@@ -368,4 +405,4 @@ function activate(context) {
 }
 function deactivate() {}
 
-module.exports = { activate, deactivate, createExtension, lib: { MATCHER_REGEXP, SEVERITY, parseDiagnostic, parseTops, chooseTop, resolveCliPath, resolveTaskFolder, simTaskKind, isSimTask, projectRoot, snapshotVcds, pickFreshVcd, planLinterSetup, planLinterRemoval, pickOne, runTops } };
+module.exports = { activate, deactivate, createExtension, lib: { MATCHER_REGEXP, SEVERITY, parseDiagnostic, parseTops, chooseTop, resolveCliPath, resolveTaskFolder, simTaskKind, isSimTask, projectRoot, snapshotVcds, pickFreshVcd, planLinterSetup, planLinterRemoval, pickOne, runTops, toolEnvironment } };

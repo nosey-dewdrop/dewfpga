@@ -71,6 +71,7 @@ README = """# dewfpga for VS Code
 
 Companion of the `dewfpga` command (https://nosey-dewdrop.github.io/dewfpga/).
 
+- **Run on Basys3**: save a `.sv`/`.v` anywhere, then click the editor play button. No workspace folder is needed. Standard Basys3 IO gets automatic pins; a same-basename `.xdc` overrides them.
 - `dewfpga: choose the top module` (command id `dewfpga.pickTop`, for a task input of type `command`): runs
   `dewfpga tops` in the active file's folder. One candidate or none: returns an empty string and the CLI picks.
   Two or more: a list; the module chosen last time for this project is highlighted while it is still a

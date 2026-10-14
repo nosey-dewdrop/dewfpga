@@ -4588,3 +4588,151 @@ links, 0 failures.
   close is what stands for it.
 - The board was not plugged in during this close: no flash, no board claim; the netlist's start values were
   checked against the FASM and the netlist simulation, not against a lit LED.
+
+
+## Unreleased: preserve vector indices in pin validation
+
+A parameterized port of width one (`[0:0]`) was mistaken for a scalar, and
+ports such as `[4:1]` were renumbered from zero. Both were rejected before
+place-and-route even with correct XDC assignments. The checker now uses
+Yosys vector metadata and declared offsets, including ascending ranges.
+The student's HDL and pin assignments do not need to change.
+
+Validation: 35 focused checks over seven real Yosys port shapes, including
+missing/commented pins, missing IOSTANDARD and duplicate pin assignments.
+The old checker fails this regression. Probes 96 and 96b pass pin validation
+and place-and-route; RTL simulation and netlist equivalence are checked,
+and their FASM is converted to bitstreams. The restricted execution environment
+blocks CLI simulation's `/dev/fd` redirection and the frame converter's default
+`/dev/stdout`; validation uses the same Makefile simulation target and an explicit
+frame output filename. Full CLI success, VS Code GUI and physical board behavior
+are not claimed for this candidate. No full suite or deployment was run.
+
+
+## Unreleased: editor tasks find the installed Homebrew tools
+
+VS Code tasks and the top-module picker now append `/opt/homebrew/bin` to
+the inherited executable search path. A GUI environment without shell setup
+could find the dewfpga executable but report the installed synthesis, simulation
+and programming tools as missing. Existing tool overrides keep precedence.
+Both generated user tasks and new-project tasks receive the fallback.
+
+Validation: task writer 71 checks and extension 36 checks passed. The actual
+CLI check succeeds with the generated task environment starting from system-only
+PATH; an absent toolchain is still refused. The real CLI top picker also resolves
+the nested mixed-language project from that environment. These are process and
+API tests, not a claim of physical board or GUI acceptance. Existing installations
+need the updated companion/tasks via `dewfpga vscode`; existing project-local
+tasks are not silently rewritten. Not deployed.
+
+
+## Unreleased: build without device-file output redirection
+
+CLI simulation keeps stdout live and filters stderr from a temporary file after
+make returns, preserving its exit status. Editor diagnostics use a merged pipe
+for absolute paths. Frame conversion writes its normal output filename directly.
+This removes the /dev/fd and /dev/stdout dependency that prevented validation in
+restricted execution environments; no permissions were changed. Simulation stderr
+is now delivered when make completes, rather than streamed during execution.
+
+The installed editor task's command and environment were invoked on the nested
+multi-file Working Lab fixture. Simulation passed; build produced a 2.2 MB
+bitstream and passed timing. Programming reached openFPGALoader and returned
+board-not-found. This validates the command path, not a GUI keystroke or physical
+board behavior. Failing-testbench and simulation-timeout regressions both passed.
+
+Follow-up: probes 96 and 96b now pass all four stages through the unmodified
+probe runner and the actual CLI, without manually invoking intermediate stages.
+This closes their earlier restricted-environment validation gap, not physical
+board acceptance.
+
+
+## Unreleased: distinguish programmer access from macOS USB visibility
+
+A failed FTDI open no longer asserts that macOS cannot see the board. The
+message and guide distinguish the programmer's access from physical presence.
+The existing board-not-found code and nonzero exit behavior are preserved.
+Four controlled programmer outcomes pass without synthesis or physical USB
+access; a failure does not erase or modify the existing bitstream.
+
+### Local candidate · Your own project, from editor to board · 8 October
+
+The short CLI guide now starts with the user's own design and pin file, followed by
+`dewfpga flash`, which builds and loads the board. VS Code's task setup and run action
+are explicit. Local testbench simulation and browser simulation have their own paths;
+neither is presented as a prerequisite for programming the board. The English and
+Turkish README introductions follow the same route. Desktop and mobile layout checks
+passed, and the source-site check found no broken links across 118 pages. These are
+local changes, not a published installation test.
+
+The browser simulator previously discarded the source numbering of ports. Correct
+pin files for ascending, nonzero and negative ranges could be rejected or connected
+to the wrong internal bit. The candidate keeps source indices through pin binding,
+board labels and code-to-board hover. Its focused regression uses a new circuit with
+renamed ports, a separately computed truth table, actual switch clicks and LED
+rendering. Both Chromium and WebKit passed the focused checks; changing XOR to AND
+changes the displayed result, and missing or conflicting pins stop the run. The
+existing Chromium board checks also passed. The native reader's `single_bit_vector` net attribute is now preserved too: a known
+`[0:0]` port requires `[0]`, and the bare-name negative control passes. The slang
+reader omits that attribute; unmarked width-one ports retain the browser's existing
+bare-name / `[0]` compatibility, so this is not a claim of universal pin-alias parity. Full-suite closure is recorded below; physical LED observation remains pending. A separate own-project SRAM upload completed successfully.
+
+Separately, three small projects outside the lab corpus express the same function
+with a `for` loop, a statically bounded `while` loop and a reduction expression. Each
+passed CLI simulation, bitstream generation and the generated netlist's independent
+16-row truth table; their source files were unchanged. This proves these examples,
+not all SystemVerilog. Two previously recorded random designs reproduced behavior mismatches even though
+the measurement runner exited successfully. Focused fixes now pass: repeated
+products retain both terms, and an unwritten register is initialized before
+optimization can erase it. Six arithmetic circuits and four startup circuits match
+independently computed expectations in RTL simulation and synthesized netlists.
+The original failing designs also match after the fixes. The earlier #35 assessment
+that both remaining cases were unrelated to startup was incorrect for seed 214. DSP multipliers remain;
+surrounding adders and registers use more LUT/FF resources. These checks do not
+constitute physical arithmetic measurements or a new full random-design campaign.
+
+
+The CLI now compiles compatibility-normalized copies instead of rewriting the user's
+saved source. Inherited port directions and unnamed instances continue to build;
+successful and failing builds preserve source bytes, diagnostics retain the original
+file and line, and editing a source or included header changes the next result.
+The direct Makefile path is covered by an actual forced compile as well.
+
+An updated build recipe or checker now invalidates cached simulation and synthesis
+outputs. Previously, the fixed chain could call a known-wrong old bitstream “up to
+date.” The regression preserves file timestamps while changing tool content, then
+checks both the necessary rebuild and subsequent cache reuse.
+
+A module header may import packages before its port list. Those import semicolons
+previously made the scanner classify a real design as a testbench and select its
+child as top. The CLI now finds the intended design and preserves original line
+locations through normalization. The browser's own-project acceptance uses this
+form rather than changing the user's code into an easier example.
+
+
+The complete Chromium suite passed in 359.7 seconds with unchanged source hashes,
+including the new own-project journey and one-bit-vector negative check. Import
+exclusion notices now remain visible after the automatic compile. The full WebKit
+attempt reached a new test assumption: WebKit does not deliver hidden `.Xil` files
+to the application. The test now checks the actual FileList; the corrected journey
+and the remaining hardware-validation stage passed separately. Earlier passing
+stages were not unnecessarily repeated.
+
+The complete CLI run recorded 332 passes, eight failures and 21 known gaps. The
+original failure record is retained. Targeted follow-ups closed all eight failures:
+old PATH/normalizer test doubles, a missing test SDK, an equivalence reader that
+needed the same lexical source preparation and language mode as the product, and
+outdated probe expectations. The equivalence check still compares RTL with a
+separately synthesized netlist; all 54 controls passed, including 27 deliberately
+wrong netlists that were still rejected. The full 148-row record plus six targeted
+replacement rows has 129 ordinary outcomes and 19 known gaps, with 114 passing all
+four stages. This is a reconciled record, not a second full run. Probe 98 still has
+only its netlist testbench check because its independent equivalence bench cannot
+compile. Missing MMCM/BRAM models and a warned latch race remain explicit limits.
+
+The final package was installed in an isolated directory and built the actual
+browser-downloaded project. Real Basys3 SRAM programming passed, including restoring
+the own-project parity circuit after the suite's blink checks. Physical LED
+observation and an actual VS Code GUI run remain unverified; an isolated extension
+and task installation is not substituted for that GUI observation. Nothing here
+claims a published deployment or universal SystemVerilog support.

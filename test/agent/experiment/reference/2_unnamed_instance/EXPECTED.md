@@ -1,6 +1,6 @@
 # 2_unnamed_instance
 
-Baseline (fixture as given): sim exit 0 (iverilog accepts the unnamed instance); bit exit 0 with note [unnamed-instance] (the CLI names it in the file). Control.
+Baseline (fixture as given): sim exit 0 (iverilog accepts the unnamed instance); bit exit 0 with note [unnamed-instance] (the CLI names it in the compiler copy and preserves the saved source). Control.
 
 Intended behaviour: led[0] = ~sw[0]; led[15:1] = sw[15:1].
 

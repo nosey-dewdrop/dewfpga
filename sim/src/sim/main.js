@@ -175,7 +175,13 @@ async function importFrom(getEntries, from) {
     const { entries, notes, skipped, prefer:choices } = await getEntries();
     const records = validateImport(entries);
     if (skipped) notes.push(`${skipped} files excluded: inactive/disabled sources, project metadata, unsupported types, or generated folders`);
-    if (replaceWorkspace(records, { from, notes, choices })) run();
+    if (replaceWorkspace(records, { from, notes, choices })) {
+      const pending = run(), generation = runGeneration;
+      await pending;
+      // Compilation replaces the console. Keep import exclusions visible, but
+      // never append an older import's notes after another edit or run.
+      if (generation === runGeneration && notes.length) appendLog(notes);
+    }
   } catch (e) { const lines = ['nothing was opened:', ...(e.problems || [e.message || String(e)])]; log(lines); setStatus('nothing was opened: ' + (e.problems ? `${e.problems.length} problems, see below` : e.message)); }
 }
 const folderInput = $('#folder-input');

@@ -71,6 +71,11 @@ check("print: tasks are process tasks running the absolute cli with ${input:dewf
 check("print: verbs flash/sim/bit, env DEWFPGA_ABSPATH=1, cwd ${fileDirname}",
       [t["args"][0] for t in doc["tasks"]] == ["flash", "sim", "bit"]
       and all(t["options"]["env"]["DEWFPGA_ABSPATH"] == "1" and t["options"]["cwd"] == "${fileDirname}" for t in doc["tasks"]))
+check("print: tool PATH keeps editor paths first and adds Apple Silicon Homebrew",
+      all(t["options"]["env"]["PATH"] == "${env:PATH}:/opt/homebrew/bin" for t in doc["tasks"]))
+template = json.loads(open(os.path.join(ROOT, "templates", ".vscode", "tasks.json")).read())
+check("project tasks have the same tool PATH as user tasks",
+      all(t["options"]["env"]["PATH"] == doc["tasks"][0]["options"]["env"]["PATH"] for t in template["tasks"]))
 check("print: flash is the default build task; others have no group",
       doc["tasks"][0]["group"] == {"kind": "build", "isDefault": True} and all("group" not in t for t in doc["tasks"][1:]))
 check("print: input calls dewfpga.pickTop", doc["inputs"][0] == {"id": "dewfpgaTop", "type": "command", "command": "dewfpga.pickTop"})

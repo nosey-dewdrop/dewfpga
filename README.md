@@ -1,7 +1,7 @@
 # dewfpga
 
 Write SystemVerilog on an Apple Silicon Mac and flash a Digilent **Basys3**. No Vivado,
-no virtual machine, no Rosetta. `.sv` → `.bit` → board in under five seconds.
+no virtual machine, no Rosetta. Use your own editor and your own design; labs are examples.
 
 [Türkçe](README.tr.md)
 
@@ -9,13 +9,37 @@ no virtual machine, no Rosetta. `.sv` → `.bit` → board in under five seconds
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 min, about 0.3 GB on disk, once
 ```
 
-Then in any folder with `blink.sv` + `blink.xdc`:
+Save a `.sv` file anywhere and open it in VS Code. Click **▶ Run on Basys3**
+in the editor's upper-right corner. Connect the board through its **PROG** USB port
+and turn it on. No project folder, tasks file or pin file is needed for standard
+Basys3 IO. If the button is missing, run `dewfpga vscode` once and reload VS Code.
+
+```systemverilog
+module my_design(input wire [3:0] sw, output wire [3:0] led);
+    assign led = sw;
+endmodule
+```
+
+The four switches now control the four LEDs. Change `sw` to `~sw` and Run again:
+the LED behavior inverts. Other editors can use the same CLI:
 
 ```bash
-dewfpga sim      # iverilog
-dewfpga bit      # .sv -> .bit   (4.6 s)
-dewfpga flash    # program the board: the LED blinks
+dewfpga run ~/Desktop/my_design.sv
+dewfpga run ~/Desktop/my_design.sv --build-only  # no board needed
 ```
+
+Automatic pins recognize `clk` (100 MHz), `sw[15:0]`, `led[15:0]`,
+`btnC`, `btnU`, `btnD`, `btnL`, `btnR`, `seg[6:0]`, `dp`, and `an[3:0]`.
+Smaller vectors are fine; indices name the corresponding board controls.
+Your module name and its internal logic are yours. Custom port names need a pin
+file: `my_design.xdc` beside `my_design.sv`, or `--xdc path/to/pins.xdc`.
+
+Run reads only the chosen file (including its submodules and explicit local
+includes), not unrelated `.sv` files beside it. Put the top module in the selected
+file. Literal include/data paths must be relative, without spaces or `..`;
+for multiple source files or an existing Vivado project, use `dewfpga flash`
+in its folder with your `.xdc`. `dewfpga sim` runs a separate testbench.
+[Short setup guide](https://nosey-dewdrop.github.io/dewfpga/cli/).
 
 `dewfpga bit` prints three lines and keeps the full place-and-route log in `<top>.log`:
 
@@ -131,10 +155,10 @@ example: [the error catalog](https://nosey-dewdrop.github.io/dewfpga/errors/), g
 
 ## Tests
 
-`test/run.sh` (363 checks, the number `test/run.sh --list` prints: static analysis, golden `.fasm`,
-determinism, multi-file designs, every error path, the rebuild rules, idempotent install, the
-probe runner on a broken copy, and the 148 SystemVerilog probes of `test/sv`; the board test and the clean
-install are counted whether or not they run, so a run prints fewer PASS lines than that, never more). `--list` names
+`test/run.sh` checks static analysis, golden `.fasm`, determinism, multi-file designs,
+error paths, rebuild rules, idempotent install and the SystemVerilog probes in `test/sv`.
+Board and clean-install checks may be skipped when their prerequisites are unavailable.
+`--list` names
 every check; `ONLY=regex test/run.sh` runs the ones whose name matches. `FULL=1 test/run.sh`
 adds a clean install into a temp directory. CI runs the clean install, the suite and the npm package on a fresh
 `macos-15` (Apple Silicon) GitHub runner on every push.

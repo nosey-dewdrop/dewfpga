@@ -284,7 +284,7 @@ def make_task(label, verb, cli, default_build):
         "type": "process",
         "command": cli,
         "args": [verb, "${input:" + INPUT_ID + "}"],
-        "options": {"cwd": "${fileDirname}", "env": {"DEWFPGA_ABSPATH": "1"}},
+        "options": {"cwd": "${fileDirname}", "env": {"DEWFPGA_ABSPATH": "1", "PATH": "${env:PATH}:/opt/homebrew/bin"}},
     }
     if verb == "flash":
         task["group"] = {"kind": "build", "isDefault": True} if default_build else "build"

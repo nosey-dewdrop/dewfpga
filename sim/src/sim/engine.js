@@ -9,6 +9,9 @@ export class Sim {
   constructor(yosysJson) {
     const obj = typeof yosysJson === 'string' ? JSON.parse(yosysJson) : yosysJson;
     this.top = Object.entries(obj.modules).find(([, m]) => m.attributes && m.attributes.top)?.[0] || Object.keys(obj.modules)[0];
+    // yosys keeps the declared numbering beside the bits: offset is the lowest index, upto marks an ascending range
+    this.portInfo = obj.modules[this.top]?.ports || {};
+    this.netInfo = obj.modules[this.top]?.netnames || {};
     const data = yosys2digitaljs(obj, {});
     this.circuit = new HeadlessCircuit(data);
     this.inputs = new Map();
@@ -23,10 +26,13 @@ export class Sim {
     for (const [n] of this.inputs) this._push(n);
     this.settle();
   }
+  // bit i here is bit i of setBit/outBit (lsb first, as yosys' bits array); offset/upto give its source index
   ports() {
     const out = [];
-    for (const [name, c] of this.inputs) out.push({ name, bits: c.get('bits'), dir: 'input' });
-    for (const [name, c] of this.outputs) out.push({ name, bits: c.get('bits'), dir: 'output' });
+    const meta = (name) => ({ offset: this.portInfo[name]?.offset || 0, upto: !!this.portInfo[name]?.upto,
+      singleBitVector: !!Number(this.netInfo[name]?.attributes?.single_bit_vector || 0) });
+    for (const [name, c] of this.inputs) out.push({ name, bits: c.get('bits'), dir: 'input', ...meta(name) });
+    for (const [name, c] of this.outputs) out.push({ name, bits: c.get('bits'), dir: 'output', ...meta(name) });
     return out;
   }
   _push(name) {

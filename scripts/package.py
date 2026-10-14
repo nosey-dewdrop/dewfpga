@@ -12,6 +12,11 @@ def main():
     tracked = subprocess.check_output(
         ["git", "ls-files", "-z", "--", "package.json", "README.md", "README.tr.md",
          "LICENSE", "install.sh", "bin", "templates", "vscode", "docs/agent-interface.md", "docs/errors.md"], cwd=ROOT).split(b"\0")
+    # Required runtime entry points must ship even while a new local candidate is
+    # reviewed before its first commit. Still an explicit allowlist, never a glob.
+    required = b"templates/run_file.py"
+    if required not in tracked:
+        tracked.append(required)
     with tempfile.TemporaryDirectory(prefix="dewfpga-package-") as tmp:
         stage = Path(tmp)
         for entry in tracked:

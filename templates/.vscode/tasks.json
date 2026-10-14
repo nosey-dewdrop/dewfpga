@@ -8,7 +8,8 @@
       "options": {
         "cwd": "${fileDirname}",
         "env": {
-          "DEWFPGA_ABSPATH": "1"
+          "DEWFPGA_ABSPATH": "1",
+          "PATH": "${env:PATH}:/opt/homebrew/bin"
         }
       },
       "group": {
@@ -45,7 +46,8 @@
       "options": {
         "cwd": "${fileDirname}",
         "env": {
-          "DEWFPGA_ABSPATH": "1"
+          "DEWFPGA_ABSPATH": "1",
+          "PATH": "${env:PATH}:/opt/homebrew/bin"
         }
       },
       "presentation": {
@@ -78,7 +80,8 @@
       "options": {
         "cwd": "${fileDirname}",
         "env": {
-          "DEWFPGA_ABSPATH": "1"
+          "DEWFPGA_ABSPATH": "1",
+          "PATH": "${env:PATH}:/opt/homebrew/bin"
         }
       },
       "presentation": {

@@ -32,9 +32,9 @@ export class Board {
     this.state = { sw: new Array(16).fill(0), btn: { btnU: 0, btnD: 0, btnL: 0, btnR: 0, btnC: 0 } };
     this.led = new Array(16).fill(0);
     this.digits = [0, 0, 0, 0];
-    this.map = null;            // the last binding map (port -> [{bit, element, index, pin, dir}]) or null when nothing is configured
-    this.onHover = null;        // ({element, index, port, bit, pin} | null) => void, set by board-links
-    this._byEl = new Map();     // 'led3' | 'sw0' | 'btnC' -> {port, bit, pin, dir}
+    this.map = null;            // the last binding map (port -> [{bit, src, name, element, index, pin, dir}]) or null when nothing is configured
+    this.onHover = null;        // ({element, index, port, bit (source index), pin} | null) => void, set by board-links
+    this._byEl = new Map();     // 'led3' | 'sw0' | 'btnC' -> {port, name, bit, src, pin, dir}
     this._keyHeld = {};         // button name -> true while a key holds it (released on keyup / focus loss)
     this._ptrHeld = {};         // button name -> true while a pointer holds it; the button is up only when neither holds it
     this._hovered = null;
@@ -259,7 +259,7 @@ export class Board {
     const bound = g && this.map ? this._byEl.get(element + index) || null : null;
     if (!g || !this.map) { this._tip.hidden = true; }
     else {
-      const name = bound ? (bound.width > 1 ? `${bound.port}[${bound.bit}]` : bound.port) : null;
+      const name = bound ? bound.name : null;
       this._tip.textContent = bound ? `${name} · pin ${bound.pin} · ${SILK[element](index)}` : `${SILK[element](index)} · no port bound`;
       this._tip.hidden = false;
       // centered above the control, but kept inside the viewport: on a phone the outer columns sit closer to the
@@ -272,7 +272,7 @@ export class Board {
       this._tip.style.left = `${cx - wrap.left}px`;
       this._tip.style.top = `${(below ? r.bottom : r.top) - wrap.top}px`;
     }
-    if (this.onHover) this.onHover(g && this.map ? { element, index, port: bound ? bound.port : null, bit: bound ? bound.bit : null, pin: bound ? bound.pin : null } : null);
+    if (this.onHover) this.onHover(g && this.map ? { element, index, port: bound ? bound.port : null, bit: bound ? bound.src : null, pin: bound ? bound.pin : null } : null);
   }
   // code -> board: light the listed elements ([{element, index}]); [] clears
   setHighlight(list) {
@@ -318,8 +318,8 @@ export class Board {
     const put = (x, y, txt, anchor) => this._t(x, y, txt, 'b-port', this.labelLayer, anchor);
     for (const [port, entries] of Object.entries(map)) {
       for (const e of entries) {
-        const name = entries.length > 1 ? `${port}[${e.bit}]` : port;
-        this._byEl.set(e.element + (e.element in BTN ? 0 : e.index), { port, bit: e.bit, pin: e.pin, dir: e.dir, width: entries.length });
+        const name = e.name ?? (entries.length > 1 ? `${port}[${e.bit}]` : port);
+        this._byEl.set(e.element + (e.element in BTN ? 0 : e.index), { port, name, bit: e.bit, src: e.src ?? e.bit, pin: e.pin, dir: e.dir });
         if (e.element === 'led') put(COL_X(e.index), LED_Y + 20, name, 'middle');
         else if (e.element === 'sw') put(COL_X(e.index), SW_Y + 100, name, 'middle');
         else if (e.element in BTN) { const t = this.btnLbl[e.element]; t.textContent = name; t.setAttribute('class', 'b-port'); }
@@ -332,7 +332,7 @@ export class Board {
     for (const g of this.svg.querySelectorAll('.b-ledg, .b-sw, .b-btn')) {
       const key = g.dataset.led !== undefined ? 'led' + g.dataset.led : g.dataset.sw !== undefined ? 'sw' + g.dataset.sw : g.dataset.btn + 0;
       const b = this._byEl.get(key), base = g.getAttribute('aria-label').replace(/ · .*$/, '');
-      g.setAttribute('aria-label', b ? `${base} · ${b.width > 1 ? `${b.port}[${b.bit}]` : b.port} · pin ${b.pin}` : base);
+      g.setAttribute('aria-label', b ? `${base} · ${b.name} · pin ${b.pin}` : base);
     }
     if (this._hovered) this._hover(this._hovered, this._hovered.dataset.led !== undefined ? 'led' : this._hovered.dataset.sw !== undefined ? 'sw' : this._hovered.dataset.btn, Number(this._hovered.dataset.led ?? this._hovered.dataset.sw ?? 0));
   }

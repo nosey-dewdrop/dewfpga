@@ -5,11 +5,11 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="author" content="Damla Su Bilge">
 <link rel="author" href="https://noseydewdrop.com">
-<title>dewfpga cli: one command from SystemVerilog to a Basys3</title>
+<title>dewfpga cli: write SystemVerilog and run it on your Basys3</title>
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/cli/">
-<meta name="description" content="Install the open-source FPGA chain for a Basys3 on an Apple Silicon Mac with one line, then dewfpga sim, bit and flash in any folder. No Makefile, no project layout.">
+<meta name="description" content="Install once on an Apple Silicon Mac, write your own SystemVerilog in your editor, and run a saved .sv file on Basys3 with automatic pins.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="dewfpga cli: one command from SystemVerilog to a Basys3">
+<meta property="og:title" content="dewfpga cli: write SystemVerilog and run it on your Basys3">
 <meta property="og:description" content="One line installs the chain on an Apple Silicon Mac; then dewfpga sim, bit and flash in any folder.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/cli/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
@@ -18,7 +18,7 @@
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"TechArticle","headline":"dewfpga cli: one command from SystemVerilog to a Basys3","url":"https://nosey-dewdrop.github.io/dewfpga/cli/",
+{"@context":"https://schema.org","@type":"TechArticle","headline":"dewfpga cli: write SystemVerilog and run it on your Basys3","url":"https://nosey-dewdrop.github.io/dewfpga/cli/",
  "author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-20","inLanguage":"en"}
 </script>
 </head>
@@ -35,78 +35,52 @@
 </nav>
 
 <main class="wrap">
-  <h1>One command from SystemVerilog to a Basys3</h1>
-  <p class="lead">The by-hand setup, done for you. One line installs the chain; after that, <code>dewfpga</code> builds whatever <code>.sv</code> files are in the folder.</p>
-  <p class="mute">No Mac or no board with you? The <a href="/dewfpga/sim/">Basys3 simulator</a> and the <a href="/dewfpga/sim/?view=tb">testbench runner</a> do the same first two steps in a browser, with nothing installed.</p>
+  <h1>Your SystemVerilog.<br>Your Basys3.</h1>
+  <p class="lead">Install once. Write your own design in VS Code or another editor. Run it on your Basys3.</p>
+  <p>For Apple Silicon Macs and the Digilent Basys3. Examples help you start; your project does not have to be a lab.</p>
 
-<pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   <span class="c"># ~4 min, about 0.3 GB on disk, once</span></code></pre>
-  <p class="mute small">Requirements: macOS on Apple Silicon and Homebrew (its installer brings Apple's Command Line Tools along; the CLI checks and says so if either is missing). It puts the CLI in <code>~/.dewfpga</code>, links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update. No Node needed.</p>
-
-  <h2 id="cli-to-basys3">CLI to Basys3: how to use the CLI?</h2>
+  <h2 id="cli-to-basys3">How do I get started?</h2>
   <ol class="walls">
-    <li><b>Homebrew.</b> No <code>brew</code> yet? Run the one line on <a href="https://brew.sh">brew.sh</a>, paste the lines it prints under "Next steps", open a new terminal window. It installs Apple's Command Line Tools on the way.</li>
-    <li><b>The chain.</b> Paste the <code>curl ... | bash</code> line above. About four minutes; it ends with <code>dewfpga check</code> printing <code>all good.</code> A red line instead names the missing piece: run the same line again, it skips what is done.</li>
-    <li><b>A project.</b> <code>dewfpga new blink &amp;&amp; cd blink</code> gives you the blinking LED: <code>blink.sv</code>, <code>blink_tb.sv</code>, <code>blink.xdc</code>, a VS Code task. Your own lab goes the same way: the <code>.sv</code> files and the <code>.xdc</code> in one folder.</li>
-    <li><b>Simulate, build.</b> <code>dewfpga sim</code> runs the testbench; <code>dewfpga bit</code> turns the <code>.sv</code> into <code>blink.bit</code>. An error is one line, <code>file:line: ERROR [code]</code>, with the fix and its page.</li>
-    <li><b>The board.</b> Plug the Basys3 into the PROG port, switch it on, <code>dewfpga flash</code>. It builds first when the <code>.bit</code> is older than the <code>.sv</code>. The LED blinks.</li>
+    <li><b>Install.</b> Open Terminal. If Homebrew is missing, install it from <a href="https://brew.sh">brew.sh</a>, follow its “Next steps”, then open a new terminal. Paste:
+<pre data-copy="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
+      Wait for <code>all good.</code> If installation stops, follow the error it prints. The same command also updates an existing install.</li>
+    <li><b>Write a file.</b> Save <code>my_design.sv</code> anywhere and open it in VS Code. You do not need to open a folder. Start with this, or write your own logic:
+<pre><code>module my_design(input wire [3:0] sw, output wire [3:0] led);
+    assign led = sw;
+endmodule</code></pre></li>
+    <li><b>Connect.</b> Connect the Basys3’s <b>PROG</b> USB port to your Mac and switch the board on.</li>
+    <li><b>Run.</b> Click <b>▶ Run on Basys3</b> at the top right of the editor. The four switches now control the four LEDs. Change <code>sw</code> to <code>~sw</code> and Run again: the LED behavior reverses. Your saved code determines the circuit.</li>
   </ol>
 
-  <h2>How do you use it?</h2>
-  <p>In any folder with <code>blink.sv</code> and <code>blink.xdc</code>:</p>
-<pre data-copy="1"><code>dewfpga sim      <span class="c"># iverilog</span>
-dewfpga bit      <span class="c"># .sv -> .bit   (4.6 s)</span>
-dewfpga flash    <span class="c"># program the board: the LED blinks</span></code></pre>
-  <p>For an existing lab, keep the design's <code>.sv</code>/<code>.v</code> files and pin file in one folder and run the commands there. Submodules can live in separate files. The top comes from the module hierarchy; a uniquely matching <code>.xdc</code> can select among candidates, and the CLI prints that choice. Otherwise it stops and asks you to name the module: <code>dewfpga flash &lt;top&gt;</code>. File names alone never silently choose the top.</p>
-  <p>A testbench is a module without ports that instantiates the design. A <code>$finish</code> or <code>$stop</code> in a design module is reported as an error, not used to reclassify it as a testbench. Files containing only packages, interfaces or typedefs are read too, each after the files that declare a name it uses: a package before its users, a typedef file before the interface that uses the type (a file another one <code>`include</code>s is read through the include, not twice). The course's seven-segment source can be repaired automatically; a Vivado-generated simulation netlist is rejected with an explanation.</p>
+  <h2>Where is the Run button?</h2>
+  <p>If VS Code was installed after dewfpga, run <code>dewfpga vscode</code> once in Terminal, then reload VS Code. Open a saved <code>.sv</code> or <code>.v</code> file; hover over the play button to see <b>dewfpga: Run on Basys3</b>.</p>
+  <p>In another editor, run this command in its terminal, using your file’s path:</p>
+<pre data-copy="dewfpga run ~/Desktop/my_design.sv"><code>dewfpga run ~/Desktop/my_design.sv</code></pre>
 
-  <p>Already using Vivado? Run inside the folder containing your <code>.xpr</code> or its <code>.srcs</code> subfolders. The active project sets and top are used; output files land at the project root. <code>dewfpga tops</code> lists candidates without writing files. For editor tasks and the top chooser, run <code>dewfpga vscode</code>; see <a href="/dewfpga/docs/#6-how-do-you-set-up-vs-code">VS Code setup</a>.</p>
+  <h2>How does the code connect to the board?</h2>
+  <p>Standard port names get their Basys3 pins automatically: <code>clk</code> (100 MHz), <code>sw[15:0]</code>, <code>led[15:0]</code>, <code>btnC</code>, <code>btnU</code>, <code>btnD</code>, <code>btnL</code>, <code>btnR</code>, <code>seg[6:0]</code>, <code>dp</code>, <code>an[3:0]</code>. Smaller vectors work too. Choose your module name and internal logic freely.</p>
+  <p>For custom port names, put <code>my_design.xdc</code> beside <code>my_design.sv</code>, or pass <code>--xdc pins.xdc</code>. Run reads the selected file and explicit local includes. For a project spread across several source files, use <code>dewfpga flash</code> in its folder with its pin file; existing Vivado projects also work.</p>
 
-  <h2>What does an error look like?</h2>
-  <p>When <code>sim</code>, <code>bit</code> or <code>flash</code> stops, it prints one line in one format, <code>file:line: ERROR [code]: message</code>, then the fix and the address of that code's page. Every code, with what you saw, why, the fix and an example: <a href="/dewfpga/errors/">the error catalog</a>.</p>
+  <h2>What if I do not have a board?</h2>
+  <p>Open the <a href="/dewfpga/sim/">browser simulator</a>, write or import your design and pin file, then click <b>run on board</b>. Toggle the virtual switches and buttons to see your circuit respond. This is the virtual board; use the installed CLI to program a physical Basys3.</p>
+  <p>For a local single-file build without a board, run <code>dewfpga run my_design.sv --build-only</code>. To run your own testbench, use <code>dewfpga sim</code>; it needs a testbench file in addition to your design.</p>
 
-  <h2>Commands</h2>
-<pre><code>dewfpga install                     install the toolchain (safe to re-run)
-dewfpga check                       is every piece in place
-dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
-dewfpga tops                        list top candidates without writing files
-dewfpga vscode [--remove]           set up or remove the editor integration
-dewfpga new &lt;dir&gt;                   blink example with a VS Code task (⌘⇧B = flash)
-dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link (your files and brew packages stay)
-dewfpga --version</code></pre>
+  <h2>What if it stops?</h2>
+  <p>Read the first error: it names the file or missing setup and links to a fix. If one file contains several independent designs, select one with <code>dewfpga run my_design.sv --top module_name</code>. A successful build is not proof that the board was programmed: the upload must finish too.</p>
+  <p>Some SystemVerilog constructs are still unsupported or have known behavior differences. <a href="/dewfpga/#limits">Current limits</a> · <a href="/dewfpga/errors/">Error help</a> · <a href="/dewfpga/docs/">Full documentation and manual setup</a>. Loading writes the board’s SRAM; power cycling clears the design.</p>
 
-  <h2>What does it install?</h2>
-  <div class="tablewrap cli-tools">
-  <table>
-    <tr><th>stage</th><th>tool</th><th>from</th></tr>
-    <tr><td>simulation</td><td>iverilog</td><td>brew</td></tr>
-    <tr><td>synthesis</td><td>yosys</td><td>brew</td></tr>
-    <tr><td>place &amp; route</td><td>nextpnr-xilinx</td><td>source, pinned commit</td></tr>
-    <tr><td>fasm → frames</td><td>prjxray <code>fasm2frames</code></td><td>source, pinned commit, venv</td></tr>
-    <tr><td>frames → .bit</td><td>prjxray <code>xc7frames2bit</code></td><td>source</td></tr>
-    <tr><td>chipdb XC7A35T</td><td><code>bbaexport</code> + <code>bbasm</code></td><td>generated, ~90 MB</td></tr>
-    <tr><td>programming</td><td>openFPGALoader</td><td>brew</td></tr>
-  </table>
-  </div>
-  <p>Everything goes into <code>~/fpga</code>. Re-running the script skips finished steps. Log: <code>~/fpga/install.log</code>. An install made before 7 October 2026 keeps its clones (1.5 GB, 1543 MB measured on 7 October) and is left as it is; <code>dewfpga uninstall &amp;&amp; dewfpga install</code> gets the small one.</p>
-
-  <h2>What was measured?</h2>
-  <p>19 September 2026, M2 with 8 GB, macOS 15.</p>
-  <dl class="kv">
-    <dt>clean install</dt><dd>3 min 37 s to 4 min 17 s over three runs; about 0.3 GB on disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB); about 1 GB while it builds, the installer asks for 2 GB free</dd>
-    <dt>second run</dt><dd>2.7 s, every step skipped as already done</dd>
-    <dt><code>bit</code></dt><dd>4.6 s, peak 552 MB RAM</dd>
-    <dt>chipdb generation</dt><dd>peak 859 MB RAM</dd>
-    <dt>output</dt><dd>byte-identical <code>.frames</code> to the hand-built chain that lit the LED</dd>
-    <dt>tests</dt><dd>363 checks in <code>test/run.sh</code> (the number <code>test/run.sh --list</code> prints; 148 of them the SystemVerilog probes; the board test and the clean install are counted whether or not they run); CI does a clean install, the suite and the npm package on a fresh macos-15 runner on every push</dd>
-  </dl>
-
-  <h2>Scope</h2>
-  <ul>
-    <li>Board: Digilent Basys3 (XC7A35T-1CPG236C). Other 7-series boards: change <code>DEVICE</code> in <code>install.sh</code>, <code>PART</code> and <code>CHIPDB</code> in the Makefile and the openFPGALoader board name, then regenerate the chipdb; untested.</li>
-    <li>Platform: macOS arm64. Intel Mac and Linux are untested and refused by the script.</li>
-    <li>The course's XDC files work as-is (<code>PACKAGE_PIN</code> + <code>IOSTANDARD</code>).</li>
-    <li><code>flash</code> writes SRAM: the design is gone after a power cycle.</li>
-  </ul>
+  <details>
+    <summary>Commands and verification details</summary>
+<pre><code>dewfpga check          check the installed tools
+dewfpga run file.sv    run one file, automatic standard pins
+dewfpga flash [top]    build and load a project
+dewfpga bit [top]      build without a board
+dewfpga sim [top]      run your testbench
+dewfpga tops           list top modules
+dewfpga vscode         configure VS Code tasks
+dewfpga new &lt;folder&gt;  create a starting project</code></pre>
+    <p>Run <code>test/run.sh --list</code> to list the repository’s current checks, including SystemVerilog probes. These are regression checks, not a promise that every design works. Build time depends on the design; the blink example measured 4.6 seconds on an M2. Installation measured about four minutes, with about 0.3 GB for the chain on disk. See the <a href="https://github.com/nosey-dewdrop/dewfpga#tests">test details</a> for measurement conditions.</p>
+  </details>
 </main>
 
 <footer class="wrap">

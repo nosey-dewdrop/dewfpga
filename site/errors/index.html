@@ -67,12 +67,12 @@
     <p>dewfpga bit, the XDC check before place and route (nextpnr alone prints the raw form below). A port in your design has no pin in the .xdc file. nextpnr names the wrong port.</p>
   </div>
   <div class="err">
-    <span class="step">7</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both)</a>
+    <span class="step">7</span><a class="title" href="/dewfpga/errors/port-neither-input-nor-output/">design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both)</a>
     <p>dewfpga bit, the source scan before the tools run (Yosys alone prints the raw form below). The course&#x27;s seven-segment module has a broken port line. Vivado accepts it, Yosys does not.</p>
   </div>
   <div class="err">
-    <span class="step">flash</span><a class="title" href="/dewfpga/errors/board-not-found/">ERROR [board-not-found]: board not found: the Mac sees no Basys3 on USB (openFPGALoader: unable to open ftdi device). Fix: plug the USB into the PROG port, switch the power ON, and try another cable or port.</a>
-    <p>openFPGALoader, when you program the board. The Mac does not see the Basys3 on the USB bus: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper.</p>
+    <span class="step">flash</span><a class="title" href="/dewfpga/errors/board-not-found/">ERROR [board-not-found]: board not found by openFPGALoader: it could not open the Basys3 USB interface. Fix: check power and the PROG data cable; if macOS lists the Digilent device, check whether this process can access USB. A failed open does not prove the board is unplugged.</a>
+    <p>openFPGALoader, when you program the board. The programmer could not open the Basys3 USB interface. Check physical connection and, if macOS sees the device, the programming process&#x27;s USB access.</p>
   </div>
   <div class="err">
     <span class="step">check</span><a class="title" href="/dewfpga/errors/unknown-command/">ERROR [unknown-command]: unknown command: nope. Fix: one of the commands below.</a>
@@ -167,8 +167,8 @@
     <p>dewfpga sim / bit, the source scan before the tools run. `logic [3:0] sum = sw[3:0] + sw[7:4];` sets a power-up value from a signal; it is not a continuous assignment, and the board would show the value from time 0 forever.</p>
   </div>
   <div class="err">
-    <span class="step">bit</span><a class="title" href="/dewfpga/errors/unnamed-instance/">design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (the standard and Yosys need it; Vivado accepts both)</a>
-    <p>dewfpga sim / bit, the source scan before the tools run. `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in your file and says so.</p>
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/unnamed-instance/">design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both)</a>
+    <p>dewfpga sim / bit, the source scan before the tools run. `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in a temporary compiler copy and says so. Your saved source stays unchanged.</p>
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/vivado-netlist-in-folder/">leftover_func_synth.v:2: ERROR [vivado-netlist-in-folder]: leftover_func_synth.v is a netlist Vivado wrote after synthesis, not source code (its header says so, and Yosys cannot read it); Vivado writes these under .sim/ and .runs/. Fix: delete it from this folder and keep your own .sv files.</a>
@@ -176,7 +176,7 @@
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/port-without-pin/">blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]).</a>
-    <p>dewfpga bit, the XDC check before place and route. A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs, or the port has a shape this check does not read yet ([0:0], [4:1]).</p>
+    <p>dewfpga bit, the XDC check before place and route. A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs.</p>
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-such-pin/">blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic.</a>

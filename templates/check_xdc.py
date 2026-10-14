@@ -32,6 +32,13 @@ def _instances(other, body):
         if not m.group(2) and not _ITEM_START.search(ibody[:m.start()]): continue
         yield m
 
+def _header_view(body):
+    """Blank leading package imports, retaining offsets and lines for the real module header.
+    Their semicolons terminate imports, not the module's port list."""
+    imports = re.match(r"\s*(?:import\b[^;]+;\s*)+", body)
+    if not imports: return body
+    return re.sub(r"[^\n]", " ", body[:imports.end()]) + body[imports.end():]
+
 def _port_list(head):
     """(start, end) of the text inside the port list's parentheses of a module head (the text up to the first
     `;`), or None. The port list is the last (...) of the head: a #(...) parameter block comes before it."""
@@ -46,9 +53,41 @@ def _port_list(head):
     return None
 
 def fix_source(files):
+    """--fix-ports, the explicit helper: the lines _normalized() changes are written into the student's own files, and each
+    changed line is printed as a note. dewfpga sim/bit/flash never call it: they read copies (normalize_copies below)."""
+    for f, (src, text, notes) in _normalized(files).items():
+        open(f, "w", encoding="utf-8", errors="surrogateescape", newline="").write(text)
+        _notes(f, src, text, notes, "")
+    return 0
+
+def _notes(f, src, text, notes, tail):
+    for i, (a, b) in enumerate(zip(src.splitlines(), text.splitlines()), 1):
+        if a != b:
+            code, what = notes.get(i, ("unnamed-instance", "changed"))
+            print(msg("note", code, f"{what}:  {b.strip()}   ({tail}the standard and Yosys need it; Vivado accepts both)", loc=f"{f}:{i}"))
+
+def normalize_copies(work, files, quiet=False):
+    """--normalize <work> [--quiet] files...: the tools read a copy, the student's file is never written. A file _normalized()
+    changes gets a copy in the private work folder (<work>/n<i>.sv or .v, the extension kept, so a .v is still read as
+    Verilog-2005), headed by `line 1 "<file>" 0: every insertion is inside a line, so each diagnostic names the student's
+    file and line. <work>/.srcs lists, in the given order, the path each tool reads: the copy, or the file itself when
+    nothing changed. The notes say which lines the copy differs in (quiet: not again, for the next stage)."""
+    fixed = _normalized(files); out = []
+    for i, f in enumerate(files, 1):
+        if f not in fixed: out.append(f); continue
+        src, text, notes = fixed[f]
+        c = os.path.join(work, "n%d%s" % (i, os.path.splitext(f)[1]))
+        with open(c, "w", encoding="utf-8", errors="surrogateescape", newline="") as h: h.write('`line 1 "%s" 0\n' % f + text)
+        out.append(c)
+        if not quiet: _notes(f, src, text, notes, "in the copy the tools read, your file stays as you wrote it; ")
+    with open(os.path.join(work, ".srcs"), "w") as h: h.write("\n".join(out) + "\n")
+    return 0
+
+def _normalized(files):
     """Two things every CS223 lab may carry, that Vivado accepts and the standard and yosys refuse, are written
-    into the student's file, and each changed line is printed as a note (nothing else in the file changes: comments,
-    strings and the testbench stay, a CRLF file keeps its CRLF):
+    into the text the tools read, as {file: (text before, text after, {line: (code, what)})} for each file that changes
+    (nothing else in the text changes: comments, strings and the testbench stay, a CRLF file keeps its CRLF; every insertion
+    is inside a line, so the line numbers stay):
       - the course's SevenSegmentDisplay.sv declares `output [6:0] seg, logic dp,`: per the standard dp inherits
         `output` from the previous port. Vivado and Icarus accept that, yosys does not ("Module port `dp' is
         neither input nor output"), and a range-only item (`output logic [6:0] seg, [3:0] an`) written in an
@@ -60,7 +99,7 @@ def fix_source(files):
     in the port list (one with a `;` in it) or a module name inside a $display string is not code."""
     # an item that starts with a type (`logic dp`) or with a range (`[3:0] an`) and no direction of its own
     item = re.compile(r"(,\s*)((?:(?:logic|wire|reg|bit)\b\s*(?:\[[^\]]*\]\s*)?|\[[^\]]*\]\s*)[A-Za-z_]\w*)")
-    srcs, views = {}, {}
+    srcs, views, out = {}, {}, {}
     for f in files:
         try: srcs[f] = open(f, encoding="utf-8", errors="surrogateescape", newline="").read()   # CRLF kept as is
         except OSError: continue
@@ -71,7 +110,7 @@ def fix_source(files):
         view = views[f]; edits = {}          # offset into src -> (text to insert there, what the note says)
         for m in _MODULE.finditer(view):
             name, body, off = m.group(1), m.group(2), m.start(2)
-            head = body.split(";", 1)[0]
+            head = _header_view(body).split(";", 1)[0]
             pl = _port_list(head)
             if not pl or not head[pl[0]:pl[1]].strip(): continue      # no ports: a testbench
             plist = head[pl[0]:pl[1]]
@@ -95,12 +134,8 @@ def fix_source(files):
         for at in sorted(edits, reverse=True):
             text = text[:at] + edits[at][0] + text[at:]
             notes[src.count("\n", 0, at) + 1] = edits[at][1]
-        open(f, "w", encoding="utf-8", errors="surrogateescape", newline="").write(text)
-        for i, (a, b) in enumerate(zip(src.splitlines(), text.splitlines()), 1):
-            if a != b:
-                code, what = notes.get(i, ("unnamed-instance", "changed"))
-                print(msg("note", code, f"{what}:  {b.strip()}   (the standard and Yosys need it; Vivado accepts both)", loc=f"{f}:{i}"))
-    return 0
+        out[f] = (src, text, notes)
+    return out
 
 def _blank(src, strings=True):
     """Comments and the text of string literals blanked out (the quotes stay), every newline kept, so offsets
@@ -232,7 +267,7 @@ def _decl_init_problems(f, body, bline, typedefs):
     simulation sets sum at time 0 and yosys makes it the power-up value; the board never follows sw.
     Ports and every net/variable the module declares are the signals; parameters, enum names and package
     constants are not, so a constant start value (`logic [3:0] cnt = 4'd5;`) passes."""
-    head, sep, rest = body.partition(";")
+    head, sep, rest = _header_view(body).partition(";")
     ports = _decl_names(re.sub(r"#\s*\(.*?\)", "", head, flags=re.S), "input|output|inout")
     # function/task bodies are their own scope; a for-loop's `int i = 0` is not a declaration statement
     blank = lambda m: re.sub(r"[^\n]", " ", m.group(0))
@@ -476,8 +511,11 @@ def _parse(files, sim=()):
     problems = []
     raws = {}                       # file -> its text; the files that hold no module are read too (_loose_files)
     holds_module = set()
+    # the text the tools read: the copy normalize_copies() writes (a name and a direction written in, inside a line,
+    # so every line number is the student's), else the student's file
+    fixed = {f: t.encode("utf-8", "surrogateescape").decode("utf-8", "replace") for f, (_, t, _) in _normalized(files).items()}
     for f in files:
-        try: raw = open(f, encoding="utf-8", errors="replace").read()
+        try: raw = fixed.get(f) or open(f, encoding="utf-8", errors="replace").read()
         except OSError: continue
         raws[f] = raw
         src = _blank(raw)               # comments and string texts blanked, same offsets
@@ -493,9 +531,9 @@ def _parse(files, sim=()):
                 problems.append(msg("ERROR", "module-defined-twice", f"module {name} is defined twice: {f1}:{l1} and {f2}:{l2}; the last one read would win silently.",
                                     "keep one, or move the backup out of this folder.", loc=f"{f1}:{l1}"))
                 continue
-            head = body.split(";", 1)[0]
-            ports = re.search(r"\)\s*$", head) and re.sub(r"#\s*\(.*?\)", "", head, flags=re.S)
-            has_ports = bool(ports and re.search(r"\(\s*[^\s)]", ports))
+            head = _header_view(body).split(";", 1)[0]
+            ports = _port_list(head)
+            has_ports = bool(ports and head[ports[0]:ports[1]].strip())
             bline = src.count("\n", 0, m.start(2)) + 1
             mods[name] = dict(file=f, tb=not has_ports, body=body, line=line, off=m.start(), sim=f in sim)
             order.append(name)
@@ -526,8 +564,8 @@ def _parse(files, sim=()):
         inst[n] = set()
         for other in names:
             if other == n: continue
-            # every instance of `other` (see _instances). An instance without a name is named by --fix-ports
-            # before this scan runs; one that is still here is reported.
+            # every instance of `other` (see _instances). An instance without a name is named in the copy the
+            # tools read (the text above); one that is still here is reported.
             for m in _instances(other, d["body"]):
                 inst[n].add(other)
                 if not m.group(2) and not d["tb"]:
@@ -744,6 +782,9 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--list-tops":
     sys.exit(list_tops(args, pt))
 if len(sys.argv) >= 2 and sys.argv[1] == "--fix-ports":
     sys.exit(fix_source(sys.argv[2:]))
+if len(sys.argv) >= 3 and sys.argv[1] == "--normalize":
+    q = sys.argv[3:4] == ["--quiet"]
+    sys.exit(normalize_copies(sys.argv[2], sys.argv[4 if q else 3:], q))
 if len(sys.argv) >= 2 and sys.argv[1] == "--scan":
     # --scan [--top NAME] [--xdc name,name] [--cmd sim|bit|flash|clean] [--sim a.sv,b.sv] files...
     # (--cmd: the command the fix names; --sim: the simulation set's files, simulation-only, never the top)
@@ -778,23 +819,22 @@ tname, tmod = top
 # writes the declaration's file:line as the netname's src attribute (design.sv:2.30-2.32)
 ports = set()
 decl = {}                                   # port -> "design.sv:2"
-form = {}                                   # port -> the shape this check does not read yet ("[0:0]" or "[4:1]")
 nets = tmod.get("netnames", {})
 for p, info in tmod.get("ports", {}).items():
     n = len(info.get("bits", []))
     at = nets.get(p, {}).get("attributes", {}).get("src", "")
     m = re.match(r"(.+?):(\d+)\.", at)
     if m: decl[p] = f"{m.group(1)}:{m.group(2)}"
-    if n == 1:
+    # Yosys stores vector bits from the least significant index, with offset as
+    # the lowest declared index (also for ascending ranges). Preserve those names
+    # rather than renumbering the student's XDC. A width-one vector is not scalar.
+    off = info.get("offset", 0)
+    single = nets.get(p, {}).get("attributes", {}).get("single_bit_vector", 0)
+    single = str(single).strip("0") != ""
+    if n == 1 and not single and off == 0:
         ports.add(p)
-        # a vector of one bit ([N-1:0] with N = 1, IEEE 1800-2017 7.4): its pin in the XDC is sw[0], and yosys
-        # marks the wire single_bit_vector; the names here are still built as a scalar (not read yet: #5)
-        if nets.get(p, {}).get("attributes", {}).get("single_bit_vector"): form[p] = "[0:0]"
     else:
-        ports.update(f"{p}[{i}]" for i in range(n))
-        # bits numbered from elsewhere than 0 ([4:1]): yosys writes the offset, the names here still start at 0
-        off = info.get("offset", 0)
-        if off: form[p] = f"[{off + n - 1}:{off}]"
+        ports.update(f"{p}[{i}]" for i in range(off, off + n))
 def where(p):
     """The student's file:line of a port's declaration (led[3] -> led's line), or '' when yosys did not say."""
     return decl.get(p.split("[")[0], "")
@@ -811,7 +851,7 @@ forms = []                                  # (line, the get_ports text) this ch
 for ln, raw in enumerate(open(xf, encoding="utf-8", errors="replace"), 1):
     code = raw.split("#")[0]
     pm = re.search(r"\bPACKAGE_PIN\s+([A-Za-z0-9_]+)", code)
-    for m in re.finditer(r"get_ports\s*(-\w+\s+)*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", code):
+    for m in re.finditer(r"get_ports\s*(-\w+\s+)*\{?\s*([A-Za-z_]\w*(?:\[-?\d+\])?)", code):
         p = m.group(2)
         xdc_ports.add(p)
         if p not in xline or re.search(r"\bPACKAGE_PIN\b", code): xline[p] = ln
@@ -823,11 +863,11 @@ for ln, raw in enumerate(open(xf, encoding="utf-8", errors="replace"), 1):
         inner = t.strip("{}").strip()
         if re.search(r"[*?]", inner) or re.search(r"\s", inner) or re.search(r"get_ports\s+-", m.group(0)):
             forms.append((ln, m.group(0).strip()))
-    for m in re.finditer(r"get_ports\s*(?:-\w+\s+)*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", raw[len(code):]):
+    for m in re.finditer(r"get_ports\s*(?:-\w+\s+)*\{?\s*([A-Za-z_]\w*(?:\[-?\d+\])?)", raw[len(code):]):
         cline.setdefault(m.group(1), ln)
 
 def by_index(q):  # sw[2] before sw[10]
-    m = re.match(r"(\w+)(?:\[(\d+)\])?$", q); return (m.group(1), int(m.group(2) or 0)) if m else (q, 0)
+    m = re.match(r"(\w+)(?:\[(-?\d+)\])?$", q); return (m.group(1), int(m.group(2) or 0)) if m else (q, 0)
 missing = sorted(ports - xdc_ports, key=by_index)   # in the code, not in the XDC
 extra   = sorted(xdc_ports - ports, key=by_index)   # in the XDC, not in the code
 
@@ -839,22 +879,12 @@ for ln, t in forms:
 
 xdc_base = {q.split("[")[0] for q in xdc_ports}
 if missing:
-    # three different mistakes: the port's shape is one this check does not read ([0:0], [4:1]); the name
-    # exists in the XDC but not for these indices (the lines are still commented out); the name is not in the
-    # XDC at all (the module uses a different name)
+    # Missing names, missing indices and commented-out pin assignments.
     xdc_lower = {q.lower(): q for q in xdc_ports}
     shown = 0
     for p in missing:
         b = p.split("[")[0]
-        if b in form and form[b] == "[0:0]":
-            text = (f"{p} is a vector of one bit ({b} {form[b]}), so its pin in the XDC is named {b}[0]" + (" (the XDC has that line)" if f"{b}[0]" in has_pin else "")
-                    + "; this check reads a one-bit port as the scalar " + b + ", not " + b + "[0]: a [0:0] port is not read yet.")
-            fix = f"declare it as a scalar ({b} without the range) and name it [get_ports {b}] in the XDC; a module written for any width cannot, and then this check is what stops you, not Vivado."
-        elif b in form:
-            text = (f"{p} is not a bit of {b}: {b} is declared {form[b]} (its bits and its XDC names start at {form[b].split(':')[1].rstrip(']')}), "
-                    f"and this check numbers a port's bits from 0: a range that does not start at 0 is not read yet.")
-            fix = f"declare {b} [{len([q for q in ports if q.split('[')[0] == b]) - 1}:0] and use the names from {b}[0] in the XDC; if the handout numbers from 1, this check is what stops you, not Vivado."
-        elif p in cline:
+        if p in cline:
             text = f"{p} has no pin in the XDC: the line that names it starts with # (commented out), so it does not count."
             fix = f"remove the # at the start of that line (the same name, the index the design uses: {p})."
         elif b in xdc_base:
@@ -865,7 +895,7 @@ if missing:
             text = f"{p} has no pin in the XDC: no line names it" + (f" (the XDC has '{near}': same name, different case)." if near else " (the course file uses clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an).")
             fix = (f"rename the port in the module to {near.split('[')[0]}, or the name inside [get_ports ...] on the XDC line to {p.split('[')[0]}." if near
                    else "rename the port in the module to a name the XDC has, or change the name inside [get_ports ...] on its line of the XDC (a line that starts with # is commented out and does not count).")
-        loc = f"{xf}:{cline[p]}" if (b not in form and p in cline) else where(p)
+        loc = f"{xf}:{cline[p]}" if p in cline else where(p)
         print(msg("ERROR", "port-without-pin", text, fix, loc=loc))
         shown += 1
         if shown == 12 and len(missing) > 14:
@@ -889,7 +919,7 @@ def master_pins():
     try: lines = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "Basys3_Master.xdc"), encoding="utf-8", errors="replace")
     except OSError: return out
     for raw in lines:
-        m = re.search(r"PACKAGE_PIN\s+([A-Za-z0-9]+).*get_ports\s*\{?\s*([A-Za-z_]\w*(?:\[\d+\])?)", raw)
+        m = re.search(r"PACKAGE_PIN\s+([A-Za-z0-9]+).*get_ports\s*\{?\s*([A-Za-z_]\w*(?:\[-?\d+\])?)", raw)
         if m: out[m.group(2)] = m.group(1)
     return out
 pinned = sorted((p for p in ports if p in has_pin and p in pin_of), key=by_index)

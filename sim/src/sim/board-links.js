@@ -101,12 +101,12 @@ export class BoardLinks {
       if (pos < r.span[0] || pos > r.span[1]) { this.board.setHighlight([]); return; }
       // `.led(x)` names a port of the instantiated module and `u.led` a signal inside it: not the top's led
       entries = /\.\s*$/.test(text.slice(Math.max(0, a - 8), a)) ? null : this.binding.map[word] || null;
-      const idx = /^\s*\[\s*(\d+)\s*\]/.exec(text.slice(z, z + 12));              // sw[1] -> that one bit
-      if (entries && idx) entries = entries.filter((e) => e.bit === Number(idx[1]));
+      const idx = /^\s*\[\s*(-?\d+)\s*\]/.exec(text.slice(z, z + 12));            // sw[1] -> that one bit, by source index
+      if (entries && idx) entries = entries.filter((e) => e.src === Number(idx[1]));
     } else {
       const doc = ed.view.state.doc, line = doc.lineAt(pos), pins = parseXdc(r.text).pins.filter((p) => p.line === line.number);
       entries = [];
-      for (const p of pins) for (const e of this.binding.map[p.port] || []) if (p.bit === null || p.bit === undefined || Number(p.bit) === e.bit) entries.push(e);
+      for (const p of pins) for (const e of this.binding.map[p.port] || []) if (p.bit === null || p.bit === undefined || Number(p.bit) === e.src) entries.push(e);
     }
     this.board.setHighlight(entries || []);
   }

@@ -22,7 +22,7 @@
 {
   "@context": "https://schema.org",
   "@graph": [
-    {"@type": "WebSite", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "name": "dewfpga", "description": "a browser basys3 simulator, a testbench runner and a mac command-line toolchain for bilkent cs223 digital design, without vivado.", "inLanguage": "en"},
+    {"@type": "WebSite", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "name": "dewfpga", "description": "a browser basys3 simulator, a testbench runner and a mac command-line toolchain for your own digital designs, without vivado.", "inLanguage": "en"},
     {"@type": "SoftwareApplication", "@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#sim", "name": "basys3 simulator and testbench", "applicationCategory": "DeveloperApplication", "operatingSystem": "any (browser)", "url": "https://nosey-dewdrop.github.io/dewfpga/sim/", "description": "one set of files, two views: yosys (webassembly) synthesizes the design and digitaljs drives a virtual digilent basys3; icarus verilog (webassembly) runs the testbench and draws the vcd. same design.sv, tb.sv and xdc as the dewfpga command line.", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "isPartOf": {"@id": "https://nosey-dewdrop.github.io/dewfpga/sim/#site"}, "featureList": ["systemverilog input (always_ff, always_comb, enum, typedef)", "xdc pin constraints mapped to the board, same as vivado", "interactive switches, buttons, leds, seven-segment display", "testbench with $display output and a vcd waveform", "shareable links, code lives in the url", "no install, no account"]}
   ]
 }
@@ -44,7 +44,7 @@
   <section class="hero">
     <p class="hi">write systemverilog, press run</p>
     <h1><span data-typed="a basys3 and a testbench, in your browser."></span></h1>
-    <p class="dim">the files the command line works on: your .sv and .v (names free), the testbench, the .xdc. open your lab folder or drop it here; download it back as a zip the command line builds. <b>board</b> synthesizes with yosys and drives a virtual basys3. <b>testbench</b> compiles with icarus verilog and draws the waveform. nothing to install, nothing is uploaded.</p>
+    <p class="dim">write your own code, or <b>open folder</b> to load your .sv/.v files and .xdc pin file. click <b>run on board</b>, then try the virtual switches and buttons. edit and run again to see your changes. <b>testbench</b> runs your testbench and draws its waveform. download your files as a zip to build with the CLI. nothing to install; your code stays in this browser.</p>
   </section>
 
   <div class="work">

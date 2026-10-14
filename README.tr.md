@@ -1,7 +1,7 @@
 # dewfpga
 
 Apple Silicon Mac'te SystemVerilog yaz, Digilent **Basys3**'e yükle. Vivado yok, sanal
-makine yok, Rosetta yok. `.sv` → `.bit` → kart, beş saniyenin altında.
+makine yok, Rosetta yok. Kendi editörünü ve kendi tasarımını kullan; lablar yalnızca örnek.
 
 [English](README.md)
 
@@ -9,13 +9,36 @@ makine yok, Rosetta yok. `.sv` → `.bit` → kart, beş saniyenin altında.
 curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash   # ~4 dk, diskte yaklaşık 0.3 GB, tek sefer
 ```
 
-Sonra `blink.sv` + `blink.xdc` olan herhangi bir klasörde:
+İstediğin yere bir `.sv` dosyası kaydet ve VS Code'da aç. Sağ üstteki
+**▶ Run on Basys3** düğmesine bas. Kartı **PROG** USB portundan bağla ve aç.
+Standart Basys3 giriş/çıkışları için klasör açmak, görev veya pin dosyası hazırlamak
+gerekmez. Düğme görünmüyorsa bir kez `dewfpga vscode` çalıştır ve VS Code'u yeniden yükle.
+
+```systemverilog
+module devrem(input wire [3:0] sw, output wire [3:0] led);
+    assign led = sw;
+endmodule
+```
+
+Dört anahtar dört LED'i kontrol eder. `sw` yerine `~sw` yazıp yeniden Run'a bas:
+LED'lerin davranışı tersine döner. Diğer editörlerden de aynı CLI kullanılabilir:
 
 ```bash
-dewfpga sim      # iverilog
-dewfpga bit      # .sv -> .bit   (4.6 sn)
-dewfpga flash    # karta yükle: LED yanıp söner
+dewfpga run ~/Desktop/devrem.sv
+dewfpga run ~/Desktop/devrem.sv --build-only  # kart olmadan derle
 ```
+
+Otomatik pinler: `clk` (100 MHz), `sw[15:0]`, `led[15:0]`, `btnC`, `btnU`,
+`btnD`, `btnL`, `btnR`, `seg[6:0]`, `dp`, `an[3:0]`. Daha küçük vektörler de olur;
+indeks, karttaki aynı numaralı giriş/çıkışı seçer. Modül adını ve iç mantığını sen yazarsın.
+Özel port adları için `devrem.sv` yanına `devrem.xdc` koy veya `--xdc pinler.xdc` kullan.
+
+Run yalnız seçtiğin dosyayı, içindeki alt modülleri ve açıkça dahil ettiğin yerel
+dosyaları okur; yanındaki ilgisiz `.sv` dosyalarını toplamaz. Üst modül seçili dosyada
+olmalı. Include/veri yolları göreli olmalı; boşluk ve `..` içermemeli.
+Birden çok kaynak dosyası veya mevcut Vivado projesi için proje klasöründe kendi
+`.xdc` dosyanla `dewfpga flash` kullanabilirsin. `dewfpga sim` ayrı bir testbench çalıştırır.
+[Kısa başlangıç rehberi](https://nosey-dewdrop.github.io/dewfpga/cli/).
 
 `dewfpga bit` üç satır basar, place-and-route logunun tamamı `<top>.log`'da kalır:
 
@@ -132,10 +155,10 @@ ardından düzeltmeyi ve o kodun sayfasının adresini. Her kod, gördüğün sa
 
 ## Testler
 
-`test/run.sh` (363 kontrol, `test/run.sh --list`'in bastığı sayı: statik analiz, golden `.fasm`,
-determinizm, çok dosyalı tasarımlar, her hata yolu, yeniden derleme kuralları, idempotent kurulum,
-bozuk kopyada probe koşturucu ve `test/sv`'deki 148 SystemVerilog probe'u; kart testi ve temiz kurulum koşmasa
-da sayılır, yani bir koşu bundan daha az PASS satırı basar, daha çok değil). `--list` her kontrolün
+`test/run.sh`; statik analizi, golden `.fasm` çıktısını, determinizmi, çok dosyalı
+tasarımları, hata yollarını, yeniden derlemeyi, tekrar kurulumu ve `test/sv` altındaki
+SystemVerilog örneklerini kontrol eder. Kart ve temiz kurulum kontrolleri, gereken
+ortam yoksa atlanabilir. `--list` her kontrolün
 adını basar; `ONLY=regex test/run.sh` adı eşleşenleri koşar. `FULL=1 test/run.sh` geçici bir klasöre temiz kurulumu da
 ekler. CI her push'ta temiz bir `macos-15` (Apple Silicon) GitHub makinesinde temiz kurulumu,
 test paketini ve npm paketini koşar.

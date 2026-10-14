@@ -1,5 +1,19 @@
 # dewfpga
 
+## Güncel ürün koşusu — 8 Ekim 2026
+
+Bu oturumda kullanıcının son talimatı: lablarla sınırlanmayan kendi SystemVerilog
+projesi -> editör/CLI -> Basys3 ve aynı kodun tarayıcı simülatöründeki davranışı.
+Aktif yerel devir: `.claude/handoffs/dewfpga-product-run-20261008.txt`.
+Bu koşuda uygulayıcı **Claude Code Opus 5.5**, mevcut abonelik; eski Fable-only
+ve koşulsuz push/tam mail testi talimatları bu yeni iş için geçerli değil.
+Tek sınırlı görev, en fazla iki düzeltme turu, Codex kanıt kabulü; alt ajan yok.
+Kullanıcı 8 Ekim netleştirdi: devir/plan hazırlığı durma noktası değildir. Codex
+sonucu denetleyip sıradaki işi kendisi verir; her görev bitince devam izni istemez.
+Uygulayıcının görev sonunda durması, orkestratörün bütün çalışmayı durdurması değildir.
+Mevcut kullanıcı değişiklikleri korunur. Canlı yayın ve mail/üyelik işi açılmaz.
+Eski durum kayıtları aşağıda tarihsel bağlamdır; güncel kabul sayılmaz.
+
 ## nerede kaldık — DEVRİ DAİM (4 Ekim 2026)
 
 **DÜŞÜLEN TUZAKLAR** (yeni Claude buna düşme)

@@ -569,7 +569,7 @@ XDC  := Basys3_Master.xdc
 
 Either way, simulation looks for a testbench (with the Makefile: `<top>_tb.sv`); the bitstream
 does not need one. The course's `SevSeg_4digit.sv` builds as it is when it is source code
-(`bit` writes one port direction in); the course also hands it out in netlist form, which the
+(`bit` supplies one port direction in a temporary compiler copy); the course also hands it out in netlist form, which the
 CLI refuses for now. Section 7 says what was changed and why.
 
 ---
@@ -636,14 +636,14 @@ copied the modules in.
 output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard
 ```
 
-Yosys does not implement that inheritance. `dewfpga bit` writes the direction in before
-synthesis and tells you so:
+Yosys does not implement that inheritance. `dewfpga bit` supplies the direction in a
+temporary compiler copy before synthesis and tells you so. Your saved file is unchanged:
 
 ```
-note: SevSeg_4digit.sv:4: wrote the port direction in:  output [6:0]seg, output logic dp,   (Yosys needs it; Vivado accepts both)
+SevSeg_4digit.sv:4: note [port-neither-input-nor-output]: wrote the port direction in:  output [6:0]seg, output logic dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both)
 ```
 
-Vivado accepts the changed line too, so the file still works at the lab computer. The fix
+The original file is preserved, so it remains available to other tools exactly as you wrote it. The fix
 misses the line when a comment sits between `seg,` and `logic dp` (at the end of the `seg,`
 line, on a line of its own, or a `/* */` between the two), or when a comment in the port list
 holds a `;`; then Yosys stops with ``Module port `\dp' is neither input nor output.`` and no fix,

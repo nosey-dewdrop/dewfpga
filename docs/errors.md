@@ -291,14 +291,14 @@ The checker is one of the five project files and the guide's Makefile runs it au
 ## port-neither-input-nor-output
 step: 7
 source: dewfpga bit, the source scan before the tools run (Yosys alone prints the raw form below)
-title: design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both)
+title: design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both)
 summary: The course's seven-segment module has a broken port line. Vivado accepts it, Yosys does not.
 date: 2026-09-19
 
-Since #4 the CLI writes the direction into your file and prints a note; the build goes on:
+The CLI supplies the inherited direction in a temporary compiler copy and prints a note; the build goes on and your saved source stays unchanged:
 
 ```
-design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/
+design.sv:3: note [port-neither-input-nor-output]: wrote the port direction in:  output logic dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/
 ```
 
 Yosys alone, without the CLI, stops with the lines below.
@@ -324,32 +324,32 @@ output logic dp,
 
 After the change the module synthesizes to 46 cells and the rest of the lab goes through unchanged.
 
-`dewfpga bit` makes this change for you and prints a note, unless a comment sits between `seg,` and `logic dp`, or a comment in the port list holds a `;`; then move that comment out. The course's ready modules in netlist form are the other course files that break ([section 7.1](/dewfpga/docs/#71-which-course-file-breaks)). This one is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes `make sim` can still fail in `make bit`. [Section 7](/dewfpga/docs/#7-which-errors-does-the-cli-stop-with-and-what-do-they-mean) and [section 8](/dewfpga/docs/#8-what-can-it-not-do) of the guide.
+`dewfpga bit` makes this change in a temporary compiler copy and prints a note, unless a comment sits between `seg,` and `logic dp`, or a comment in the port list holds a `;`; then move that comment out. The course's ready modules in netlist form are the other course files that break ([section 7.1](/dewfpga/docs/#71-which-course-file-breaks)). This one is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes `make sim` can still fail in `make bit`. [Section 7](/dewfpga/docs/#7-which-errors-does-the-cli-stop-with-and-what-do-they-mean) and [section 8](/dewfpga/docs/#8-what-can-it-not-do) of the guide.
 
 ## board-not-found
 step: flash
 source: openFPGALoader, when you program the board
-title: ERROR [board-not-found]: board not found: the Mac sees no Basys3 on USB (openFPGALoader: unable to open ftdi device). Fix: plug the USB into the PROG port, switch the power ON, and try another cable or port.
-summary: The Mac does not see the Basys3 on the USB bus: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper.
+title: ERROR [board-not-found]: board not found by openFPGALoader: it could not open the Basys3 USB interface. Fix: check power and the PROG data cable; if macOS lists the Digilent device, check whether this process can access USB. A failed open does not prove the board is unplugged.
+summary: The programmer could not open the Basys3 USB interface. Check physical connection and, if macOS sees the device, the programming process's USB access.
 description: openFPGALoader prints 'unable to open ftdi device: -3 (device not found)' and dewfpga flash stops. The five things to check on a Basys3 plugged into an Apple Silicon Mac.
 og-title: ERROR: board not found (dewfpga flash, openFPGALoader)
 date: 2026-09-20
 
-The build went through, then `dewfpga flash` (or `make flash`) stops with these lines. The bitstream is fine; the Mac cannot see the board.
+The build went through, then `dewfpga flash` (or `make flash`) stops with these lines. The build produced a bitstream, but programming did not complete. This message alone does not tell whether macOS can see the board.
 
 ```
 unable to open ftdi device: -3 (device not found)
 JTAG init failed with: unable to open ftdi device
-ERROR [board-not-found]: board not found: the Mac sees no Basys3 on USB (openFPGALoader: unable to open ftdi device). Fix: plug the USB into the PROG port, switch the power ON, and try another cable or port. https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/
+ERROR [board-not-found]: board not found by openFPGALoader: it could not open the Basys3 USB interface. Fix: check power and the PROG data cable; if macOS lists the Digilent device, check whether this process can access USB. A failed open does not prove the board is unplugged. https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/
 ```
 
 ## Why does it happen?
 
-openFPGALoader talks to the FTDI chip on the Basys3 over USB. `device not found` means no such USB device is on the bus at that moment. Nothing on the software side is missing; it is always the cable, the port, the power or the jumper.
+openFPGALoader talks to the FTDI chip on the Basys3 over USB. `device not found` describes what the programmer could access. The board may be disconnected, or macOS may list it while the programmer cannot enumerate or open USB devices. A restricted execution environment can produce this difference; rebuilding the HDL does not fix USB access.
 
 ## What is the fix?
 
-Check these in order; each one has produced exactly this error.
+First check whether macOS lists the Digilent device. If it does not, inspect these physical connections:
 
 1. **The power switch.** It is next to the PROG port, top left of the board. It has to be ON; the red power LED lights.
 2. **The PROG port, not the USB host port.** The micro-USB socket next to the power switch. The full-size USB-A socket on the board is for a keyboard or a mouse, and programming through it does nothing.
@@ -363,7 +363,7 @@ To see whether the Mac has the board at all, before blaming the tools:
 system_profiler SPUSBDataType | grep -A 4 -i "digilent\|ftdi\|basys"
 ```
 
-Nothing printed means the board is not on the USB bus: cable, port, power, jumper. Something printed and `flash` still fails: unplug the cable, wait two seconds, plug it back in, run `dewfpga flash` again. No driver has to be installed on macOS for this to work.
+If no matching device is listed, check the connection. If macOS lists Digilent but `openFPGALoader --scan-usb` sees no devices, investigate USB access in the environment running the programmer. Do not infer that the cable is faulty or reinstall the toolchain from this message alone. Physical connection, programmer access, successful programming and correct circuit behavior are separate checks.
 
 The design lives in the FPGA's SRAM, so after a power cycle the board is blank again and you flash once more; that is normal, not this error.
 
@@ -915,14 +915,14 @@ assign sum = sw[3:0] + sw[7:4];
 ## unnamed-instance
 step: bit
 source: dewfpga sim / bit, the source scan before the tools run
-title: design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (the standard and Yosys need it; Vivado accepts both)
-summary: `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in your file and says so.
+title: design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both)
+summary: `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in a temporary compiler copy and says so. Your saved source stays unchanged.
 date: 2026-09-27
 
-Not an error: the build goes on. The CLI edited the line in your file and prints it. When it cannot edit (a testbench, a read-only file) it prints the ERROR form and stops.
+Not an error: the build goes on using a temporary compiler copy. The CLI prints the normalized line without editing your saved source. A construct that cannot be normalized safely is still reported as an error.
 
 ```
-design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/unnamed-instance/
+design.sv:5: note [unnamed-instance]: named the instance:  inv u_inv(sw[0], led[0]);   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/unnamed-instance/
 design.sv:5: ERROR [unnamed-instance]: `inv(` is an instance without a name: Vivado lets that pass; the standard and Yosys do not. Fix: write  inv u_inv( https://nosey-dewdrop.github.io/dewfpga/errors/unnamed-instance/
 ```
 
@@ -932,7 +932,7 @@ IEEE 1800 requires an instance name between the module name and the port list; V
 
 ## What is the fix?
 
-Nothing, when the note printed: the name is in your file now. Otherwise write one yourself:
+Nothing, when the note printed: the compiler copy has a name; your file is unchanged. To make the name explicit in your source, write:
 
 ```copy
 inv u_inv(sw[0], led[0]);
@@ -963,21 +963,19 @@ rm *_func_synth.v *_time_synth.v
 step: bit
 source: dewfpga bit, the XDC check before place and route
 title: blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]).
-summary: A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs, or the port has a shape this check does not read yet ([0:0], [4:1]).
+summary: A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs.
 date: 2026-09-27
 
-One line per port, the first twelve; the file:line is the commented-out XDC line, or the port's declaration when no XDC line names it. Four causes, four texts:
+One line per port, the first twelve; the file:line is the commented-out XDC line, or the port's declaration when no XDC line names it. Examples:
 
 ```
 blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]). https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
 blink.sv:10: ERROR [port-without-pin]: led[15] has no pin in the XDC: no line names it (the XDC has lines for led with other indices, none for led[15]). Fix: add a line for led[15] to the XDC (copy a led line, change the index and the pin), or make the port narrower. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
-design.sv:2: ERROR [port-without-pin]: led is a vector of one bit (led [0:0]), so its pin in the XDC is named led[0] (the XDC has that line); this check reads a one-bit port as the scalar led, not led[0]: a [0:0] port is not read yet. Fix: declare it as a scalar (led without the range) and name it [get_ports led] in the XDC; a module written for any width cannot, and then this check is what stops you, not Vivado. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
-design.sv:2: ERROR [port-without-pin]: led[0] is not a bit of led: led is declared [4:1] (its bits and its XDC names start at 1), and this check numbers a port's bits from 0: a range that does not start at 0 is not read yet. Fix: declare led [3:0] and use the names from led[0] in the XDC; if the handout numbers from 1, this check is what stops you, not Vivado. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
 ```
 
 ## Why does it happen?
 
-The course's `Basys3_Master.xdc` ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (`LED`, `leds`) matches nothing. The last two texts are limits of this check, not of the chip: a one-bit vector (`[0:0]`) and a range that does not start at 0 are legal SystemVerilog that nextpnr places, and the check does not read them yet.
+The course's `Basys3_Master.xdc` ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (`LED`, `leds`) matches nothing. Single-bit vectors and nonzero-based ranges retain their declared indices: `[0:0]` uses `led[0]`, and `[4:1]` uses `led[1]` through `led[4]`.
 
 ## What is the fix?
 
@@ -987,7 +985,7 @@ Uncomment the line, with the name and index the design uses:
 set_property -dict { PACKAGE_PIN L1    IOSTANDARD LVCMOS33 } [get_ports {led[15]}]
 ```
 
-For the two shapes the check does not read: declare the port as a scalar, or with a range from 0.
+Keep the declared port range and use its exact indices in the XDC; no scalar conversion or renumbering is needed.
 
 ## no-such-pin
 step: bit

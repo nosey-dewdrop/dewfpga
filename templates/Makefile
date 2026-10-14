@@ -97,15 +97,18 @@ TYPEDEF_FILES = $(filter-out $(SRCS),$(filter %.svh %.vh %.sv %.v,$(SRC_DEPS))) 
 # macOS and in Perl everywhere; cksum (POSIX) is the fallback. Only the goals' own stages are checked (sim: the
 # simulation; bit, flash, synth: the netlist and the pins), so a sim folder gets no bit files and clean/check
 # write nothing.
+# A toolchain recipe/checker update must invalidate old successful outputs even when
+# the user has not edited the design. Content hashes also catch same-second updates.
+BUILD_INPUTS := $(lastword $(MAKEFILE_LIST)) $(CHECKER) $(STARTS)
 SUM := $(if $(shell command -v shasum 2>/dev/null),shasum,cksum)
 GOALS := $(or $(MAKECMDGOALS),all)
 # $(call fresh,<deps file>,<file list and checksums>,<the stage's output>)
 fresh = $(shell l="$(2)"; { [ -f $(1) ] && [ "$$(cat $(1))" = "$$l" ]; } || { echo "$$l" > $(1); rm -f $(3); })
 ifneq (,$(filter sim,$(GOALS)))
-$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) 2>/dev/null),$(TOP)_sim)
+$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP)_sim)
 endif
 ifeq (,$(filter sim clean check,$(GOALS)))
-$(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DEPS) 2>/dev/null),$(TOP).json)
+$(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP).json)
 endif
 # dewfpga sim's second path makes $(TOP).json alone (a sub-make): the pins are not its stage
 ifeq (,$(filter sim clean check $(TOP).json,$(GOALS)))
@@ -162,13 +165,13 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  pk=$$(grep -m1 -oE '^[[:space:]]*package[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' "$$f" 2>/dev/null | awk '{print $$2}'); case "$$how" in the\ design*) [ -n "$$pk" ] || continue ;; esac; \
 	  at=$$(grep -nE "^[[:space:]]*\`include[[:space:]]+\"$$i\"" $(TB) | head -1 | cut -d: -f1); wh="its declarations reach"; [ -z "$$pk" ] || wh="$$pk reaches"; \
 	  echo "$(TB)$${at:+:$$at}: ERROR [included-twice]: $(TB) \`includes $$i, and the simulator reads $$b with the design already ($$how): read a second time, $${pk:+package $$pk is declared twice and }iverilog stops at its first line ('syntax error', 'I give up'). Fix: delete the \`include \"$$i\" line from $(TB); $$wh the testbench through the design, which iverilog reads first. $(URL)included-twice/" >&2; exit 1; done
-	@$(call MKKW,$(SRCS)); KWD="$$KWSRCS"; KWDIR="$$KW"; rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; \
+	@$(call MKKW,$(SRCS)); KWD="$$KWSRCS"; KWDIR="$$KW"; KRV="$$RV"; rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; \
 	  if command -v yosys >/dev/null; then py="$(PY)"; [ -x "$$py" ] || py=$$(command -v python3 || true); \
-	    ( yosys -q -p "$(READ_VERILOG) hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 \
-	      || { rm -f $(TOP)_regs.json; [ ! -f "$(SLANG)" ] || ( yosys -m "$(SLANG)" -q -p "read_slang --single-unit $(INC)$$KWD; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; }; \
+	    ( yosys -q -p "$$KRV hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff -keepdc; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 \
+	      || { rm -f $(TOP)_regs.json; [ ! -f "$(SLANG)" ] || ( yosys -m "$(SLANG)" -q -p "read_slang --single-unit $(INC)$$KWD; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff -keepdc; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; }; \
 	    if [ -s $(TOP)_regs.json ] && [ -n "$$py" ]; then snote=$$("$$py" "$(STARTS)" $(TOP)_regs.json $(TB) $(TOP) $(SRCS) $(SIM_DEPS) 2>/dev/null || true); fi; rm -f $(TOP)_regs.json; fi; \
 	  rm -rf "$$KWDIR"; [ -n "$$snote" ] && [ -s $(TOP)_start.sv ] || { snote=""; rm -f $(TOP)_start.sv; }; \
-	  $(call MKKW,$(SRCS) $(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; rc=1; \
+	  $(call MKKW,$(SRCS) $(TB),--quiet); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; rc=1; \
 	  if [ -n "$$snote" ]; then iverilog -g2012 $(INC) -o $@ $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
 	  if [ -z "$$snote" ]; then iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv; \
 	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
@@ -185,10 +188,10 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  if [ $$brc -ne 0 ]; then cat $(TOP)_sim.bld >&2; rm -f $(TOP)_sim.bld; refused "and the build refuses the design too (its lines are above)"; fi; cat $(TOP)_sim.bld; rm -f $(TOP)_sim.bld; \
 	  rd="yosys' own reader"; ! grep -q 'attribute \\hdlname ' $(TOP).il || rd="yosys-slang, the second reader (yosys' own reader refused this code)"; \
 	  yosys -q -p "read_rtlil $(TOP).il; write_verilog -noattr $(TOP)_sim.elab" || exit 1; \
-	  rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; ( yosys -q -p "read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; \
+	  rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; ( yosys -q -p "read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff -keepdc; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; \
 	  if [ -s $(TOP)_regs.json ]; then snote=$$("$(PY)" "$(STARTS)" --plain $(TOP)_regs.json $(TB) $(TOP) $(TOP)_sim.elab 2>/dev/null || true); fi; rm -f $(TOP)_regs.json; [ -n "$$snote" ] && [ -s $(TOP)_start.sv ] || { snote=""; rm -f $(TOP)_start.sv; }; \
 	  echo "$$at: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by $$rd, written back as Verilog ($(TOP)_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an \`ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. $(URL)sim-from-build/"; \
-	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB)); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib} -o $@ $(TOP)_sim.elab $(TB)"; rc=1; \
+	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB),--quiet); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib} -o $@ $(TOP)_sim.elab $(TB)"; rc=1; \
 	  if [ -n "$$snote" ]; then iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
 	  if [ -z "$$snote" ]; then iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv; \
 	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
@@ -531,7 +534,6 @@ PKG_AWK = $(FMT_AWK) $(STRIP_AWK) \
 # applied with this slang build; the wrapper is the form the standard defines and the one measured to work.)
 # The scans before the readers: $isunknown, the package file, ref arguments (neither reader builds those right).
 # The 2-D typedef scan is yosys' alone (slang builds such a parameter right), so it runs inside the first path.
-READ_VERILOG = $(if $(filter %.sv,$(SRCS)),read_verilog $(INC) -sv $(filter %.sv,$(SRCS));) $(if $(filter %.v,$(SRCS)),read_verilog $(INC) $(filter %.v,$(SRCS));)
 # The wrapped copies live in a private folder the recipe makes with mktemp -d .dewfpga-kw.XXXXXX in the build folder
 # (relative, no spaces, so it can sit inside the yosys command string). Never a fixed name: a folder the student owns
 # (top.kw, say) is never removed. Exactly the reserved folder is
@@ -540,9 +542,13 @@ READ_VERILOG = $(if $(filter %.sv,$(SRCS)),read_verilog $(INC) -sv $(filter %.sv
 # iverilog reads every file as SystemVerilog too (-g2012), so the simulation compiles the same wrapped copies;
 # an error in a .v still names the student's file:line (the `line directive). A .v that `includes a file finds it
 # through -I (the copy sits in the private folder, not beside the header).
-# $(call MKKW,<files>) is a shell fragment: afterwards $$KWSRCS is the list the reader gets, in the original order,
-# .sv files as they are, each .v as its copy; $$KW is the folder.
-MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]: cannot create a work folder in $$(pwd). Fix: check that this folder is writable and the disk is not full. $(URL)cannot-write-here/" >&2; exit 1; }; : > "$$KW/.dewfpga-kw"; trap 'rm -rf "$$KW"' EXIT; trap 'rm -rf "$$KW"; exit 130' INT TERM HUP; n=0; KWSRCS=""; for f in $(1); do case $$f in *.v) n=$$((n+1)); { printf '`begin_keywords "1364-2005"\n`line 1 "%s" 0\n' "$$f"; cat "$$f"; printf '\n`end_keywords\n'; } > "$$KW/$$n.v" || exit 1; KWSRCS="$$KWSRCS $$KW/$$n.v" ;; *) KWSRCS="$$KWSRCS $$f" ;; esac; done
+# $(call MKKW,<files>[,--quiet]) is a shell fragment: afterwards $$KWSRCS is the list the reader gets, in the original order,
+# .sv files as they are, each .v as its copy; $$RV is yosys' own read_verilog of the same files; $$KW is the folder.
+# Two lines Vivado accepts and yosys/iverilog refuse (`output logic lamp, logic ready`, an instance with no name) are
+# read from a normalized copy in the same folder (check_xdc.py --normalize): the student's file is never written, not even
+# for a moment (an editor saving it during the build would lose that save), and the next run reads the file as it is then.
+# Each changed line is printed once as a note (--quiet: the later stages of the same recipe).
+MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]: cannot create a work folder in $$(pwd). Fix: check that this folder is writable and the disk is not full. $(URL)cannot-write-here/" >&2; exit 1; }; : > "$$KW/.dewfpga-kw"; trap 'rm -rf "$$KW"' EXIT; trap 'rm -rf "$$KW"; exit 130' INT TERM HUP; kpy="$(PY)"; [ -x "$$kpy" ] || kpy=$$(command -v python3); "$$kpy" "$(CHECKER)" --normalize "$$KW" $(2) $(1) || exit 1; RV=""; s=""; v=""; for f in $$(cat "$$KW/.srcs"); do case $$f in *.v) v="$$v $$f" ;; *) s="$$s $$f" ;; esac; done; [ -z "$$s" ] || RV="read_verilog $(INC) -sv$$s;"; [ -z "$$v" ] || RV="$$RV read_verilog $(INC)$$v;"; n=0; KWSRCS=""; for f in $$(cat "$$KW/.srcs"); do case $$f in *.v) n=$$((n+1)); { printf '`begin_keywords "1364-2005"\n`line 1 "%s" 0\n' "$$f"; cat "$$f"; printf '\n`end_keywords\n'; } > "$$KW/$$n.v" || exit 1; KWSRCS="$$KWSRCS $$KW/$$n.v" ;; *) KWSRCS="$$KWSRCS $$f" ;; esac; done
 # The netlist starts every register as the bitstream does: synth_xilinx leaves INIT = 1'hx on a flip-flop whose register has
 # no start value, and nextpnr-xilinx programs it at 0 (FDRE/FDCE/LDCE/LDPE) or 1 (FDSE/FDPE, and their negedge _1 forms):
 # xilinx/fasm.cc `int def_init = (type == "FDSE" || type == "FDSE_1" || type == "FDPE" || type == "FDPE_1") ? 1 : 0;`,
@@ -574,6 +580,13 @@ MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]:
 # every write stores 8'd230, so the read became the constant 230, 'pnr ok: 11 LUT, 0 FF', and the netlist showed f(230) on seg
 # at cycle 0 where the simulation, starting the memory at 0, showed f(0)); with INIT 0 the words are 0 until written, as the
 # simulation and a surviving LUT RAM (setundef -zero -params t:RAM*, below) have them.
+# A register whose reset is a port tied off by its instance (hold u (.rst(1'b0), ...)) is a $adff/$sdff before flatten,
+# so the setundef above leaves it; after flatten synth_xilinx's opt_dff removes the never-active reset and, when nothing
+# else writes it (if (a != a) q <= a;), folds it to its x init: the LEDs it drove were OBUFs of 1'hx (fuzz seed 214,
+# measured). So the design is flattened here, opt_dff -keepdc removes the dead reset and keeps the register (a $dff whose
+# D is its Q), and the same setundef gives it init 0, the start of a register without a reset. The listing dewfpga sim
+# starts its registers from runs opt_dff -keepdc after flatten too, so it keeps that register and starts it at 0 as well
+# (before, plain opt_dff erased it from the listing and the simulation read x: an if on it took its else branch).
 # check runs right after proc, where synth_xilinx's own first check ran before these passes were put in front of it
 # (its prepare stage is proc; check; flatten; ...; opt_expr; opt_clean; check): the undeclared-name and
 # two-always-drivers lines below read that check's warnings ('Wire top.\summ is used but has no driver', 'multiple
@@ -581,19 +594,22 @@ MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]:
 # check named 'led [0]' instead of summ, the awk found no implicit wire of that name, and the typo built a bitstream)
 # while opt_dff folded the two conflicting flip-flops before any check saw them (probe 05: yosys stopped on a raw
 # 'ERROR: Conflicting init values' line instead of the coded two-always-drivers line).
-SYNTH        = read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; check; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; memory_collect; setundef -zero -params t:\$$mem_v2; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); setattr -unset fsm_encoding; delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
+# Keep multipliers in DSP48E1, but disable surrounding arithmetic/register packing:
+# repeated products (b*b)+(b*b) otherwise synthesized to b*b (seed 302).
+# test/test-dsp-products.py checks sim and netlist against an independent oracle.
+# This costs LUT/FF resources for adders/accumulators; hardware behavior was not measured.
+SYNTH        = read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; check; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; flatten; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; memory_collect; setundef -zero -params t:\$$mem_v2; scratchpad -set xilinx_dsp.multonly 1; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); setattr -unset fsm_encoding; delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
 $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json $(TOP).il $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log
-	@"$(PY)" "$(CHECKER)" --fix-ports $(SRCS)
 	@yosys -p "read_verilog $(INC) -sv -ppdump $(SRCS)" 2>/dev/null | awk '$(ISUNKNOWN_AWK)'
 	@awk '$(PKG_AWK)' $(SRCS) $(SRC_DEPS)
 	@awk '$(REF_AWK)' $(SRCS) $(SRC_DEPS)
 	@ifn=$$(grep -hoE '^[[:space:]]*interface[[:space:]]+[A-Za-z_][A-Za-z0-9_]*' $(sort $(SRCS) $(foreach d,$(INCDIRS),$(wildcard $(d)/*.sv $(d)/*.v $(d)/*.svh))) | awk '{print $$2}' | paste -sd'|' -); ifi=""; \
 	  [ -z "$$ifn" ] || ifi=$$(grep -hoE "^[[:space:]]*($$ifn)[[:space:]]+[A-Za-z_][A-Za-z0-9_]*" $(SRCS) | awk '{print $$2}' | paste -sd' ' -); ifp=""; \
 	  [ -z "$$ifn" ] || ifp=$$(cat $(SRCS) | tr '\n' ' ' | grep -oE "[(,][[:space:]]*($$ifn)(\.[A-Za-z_][A-Za-z0-9_]*)?[[:space:]]+[A-Za-z_][A-Za-z0-9_]*" | awk '{print $$NF}' | paste -sd' ' -); \
-	  set -o pipefail; rc=0; \
+	  set -o pipefail; rc=0; $(call MKKW,$(SRCS)); \
 	  { awk '$(TYPEDEF_AWK)' $(TYPEDEF_FILES) \
-	    && yosys -q -l $(TOP).yosys.log -p "$(READ_VERILOG) hierarchy -top $(TOP); setattr -unset always_comb; proc; write_rtlil $(TOP).il" \
+	    && yosys -q -l $(TOP).yosys.log -p "$$RV hierarchy -top $(TOP); setattr -unset always_comb; proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && awk '$(FSM_KEEP_AWK)' $(TOP).il $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
@@ -608,7 +624,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	      echo "note [second-reader-missing]: yosys' own reader refused this code, and yosys-slang, the second reader (it reads the SystemVerilog Vivado accepts: interfaces, unpacked arrays, foreach, break, enum methods first/last ...), is not installed: $(SLANG) not found. Fix: run  dewfpga install  (it builds that reader, ~3 min), then build again. $(URL)second-reader-missing/"; fi; \
 	    rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
 	  if grep -qE '\[(empty-module|always-and-assign|two-always-drivers|two-assign-drivers|multiple-drivers|implicit-port-width)\]' $(TOP).rv.out; then cat $(TOP).rv.out; rm -f $@ $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
-	  rm -f $@ $(TOP).il; rc=0; $(call MKKW,$(SRCS)); \
+	  rm -f $@ $(TOP).il; rc=0; \
 	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang --single-unit $(INC)$$KWSRCS; hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && awk '$(FSM_KEEP_AWK)' $(TOP).il $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
@@ -708,7 +724,7 @@ $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 
 $(TOP).frames: $(TOP).fasm
 	@grep -qE '^[A-Z0-9_]+\.' $< || { echo "ERROR [empty-fasm]: $< has no FASM features (an empty or corrupt place-and-route output, usually a build interrupted half way). Fix: run  dewfpga clean  and build again. $(URL)empty-fasm/" >&2; exit 1; }
-	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< > $@
+	@PYTHONWARNINGS=ignore "$(PY)" "$(F2F)" --part $(PART) --db-root "$(XRAYDB)" $< $@
 
 bit: $(TOP).bit
 $(TOP).bit: $(TOP).frames
@@ -719,7 +735,7 @@ $(TOP).bit: $(TOP).frames
 flash: $(TOP).bit
 	@openFPGALoader -b basys3 $(TOP).bit > $(TOP)_flash.out 2>&1; rc=$$?; grep -v '^empty$$' $(TOP)_flash.out || true; \
 	  if [ $$rc -ne 0 ]; then \
-	    if grep -q 'unable to open ftdi device' $(TOP)_flash.out; then echo "ERROR [board-not-found]: board not found: the Mac sees no Basys3 on USB (openFPGALoader: unable to open ftdi device). Fix: plug the USB into the PROG port, switch the power ON, and try another cable or port. $(URL)board-not-found/" >&2; \
+	    if grep -q 'unable to open ftdi device' $(TOP)_flash.out; then echo "ERROR [board-not-found]: board not found by openFPGALoader: it could not open the Basys3 USB interface. Fix: check power and the PROG data cable; if macOS lists the Digilent device, check whether this process can access USB. A failed open does not prove the board is unplugged. $(URL)board-not-found/" >&2; \
 	    else echo "ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit $$rc (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on. $(URL)openfpgaloader-failed/" >&2; fi; exit 1; fi
 
 clean:
