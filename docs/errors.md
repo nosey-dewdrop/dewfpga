@@ -565,28 +565,27 @@ dewfpga new blink2
 ## no-xdc-file
 step: bit
 source: dewfpga bit / flash, before synthesis
-title: ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.
-summary: The folder has the design but no .xdc; the pin file says which pin of the Basys3 each port goes to, and without it nothing can be placed.
+title: ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board's (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.
+summary: The folder has no .xdc and some ports have names the board does not use, so nothing says which pin they go to; ports with the board's names get their pins without a file.
 date: 2026-09-27
 
-`dewfpga sim` works without it; `dewfpga bit` stops here, before synthesis. The line prints the full path of the template.
+`dewfpga sim` works without it; `dewfpga bit` stops here, before synthesis. The line names the ports without a board name and prints the full path of the template.
 
 ```
-ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy /Users/you/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/
+ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board's (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy /Users/you/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/
 ```
 
 ## Why does it happen?
 
-The XDC is the one file Vivado projects keep outside the sources, so a lab folder copied without it has the design and nothing that binds `led[0]` to pin U16.
+A port called `sw`, `led`, `btnC`, `clk`, `seg`, `dp` or `an` has its pin on the board's own label, and the CLI writes those pins itself (`pins: automatic Basys3 mapping`), as Run does. A port called `a` or `y` could be any switch or LED: that choice is the student's, and it lives in an `.xdc`. A lab folder copied without its XDC has the design and nothing that binds `y` to pin U16.
 
 ## What is the fix?
 
-Copy the course's master file next to the design and remove the `#` in front of the pins the design uses; the CLI takes `<top>.xdc`, or the only `.xdc` in the folder:
+Name the ports like the board's (`input logic [1:0] sw`, `output logic [0:0] led`), or copy the course's master file next to the design and remove the `#` in front of the pins the design uses; the CLI takes `<top>.xdc`, or the only `.xdc` in the folder:
 
 ```copy
 cp ~/.dewfpga/templates/Basys3_Master.xdc . && dewfpga bit
 ```
-
 ## two-xdc-files
 step: bit
 source: dewfpga bit / flash, before synthesis

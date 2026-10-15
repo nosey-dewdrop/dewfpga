@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="author" content="Damla Su Bilge">
 <link rel="author" href="https://noseydewdrop.com">
-<title>ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. (fix, macOS)</title>
-<meta name="description" content="The folder has the design but no .xdc; the pin file says which pin of the Basys3 each port goes to, and without it nothing can be placed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<title>ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board&#x27;s (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. (fix, macOS)</title>
+<meta name="description" content="The folder has no .xdc and some ports have names the board does not use, so nothing says which pin they go to; ports with the board&#x27;s names get their pins without a file. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. (fix, macOS)">
-<meta property="og:description" content="The folder has the design but no .xdc; the pin file says which pin of the Basys3 each port goes to, and without it nothing can be placed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:title" content="ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board&#x27;s (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. (fix, macOS)">
+<meta property="og:description" content="The folder has no .xdc and some ports have names the board does not use, so nothing says which pin they go to; ports with the board&#x27;s names get their pins without a file. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board's (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-09-27","inLanguage":"en"}</script>
 </head>
 <body>
 <nav class="top" aria-label="Site">
@@ -33,13 +33,13 @@
 
 <main class="wrap">
   <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit / flash, before synthesis</p>
-  <h1 class="mono">ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.</h1>
-<p><code>dewfpga sim</code> works without it; <code>dewfpga bit</code> stops here, before synthesis. The line prints the full path of the template.</p>
-<pre><code>ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy /Users/you/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/</code></pre>
+  <h1 class="mono">ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board&#x27;s (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.</h1>
+<p><code>dewfpga sim</code> works without it; <code>dewfpga bit</code> stops here, before synthesis. The line names the ports without a board name and prints the full path of the template.</p>
+<pre><code>ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board&#39;s (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy /Users/you/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use. https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
-<p>The XDC is the one file Vivado projects keep outside the sources, so a lab folder copied without it has the design and nothing that binds <code>led[0]</code> to pin U16.</p>
+<p>A port called <code>sw</code>, <code>led</code>, <code>btnC</code>, <code>clk</code>, <code>seg</code>, <code>dp</code> or <code>an</code> has its pin on the board's own label, and the CLI writes those pins itself (<code>pins: automatic Basys3 mapping</code>), as Run does. A port called <code>a</code> or <code>y</code> could be any switch or LED: that choice is the student's, and it lives in an <code>.xdc</code>. A lab folder copied without its XDC has the design and nothing that binds <code>y</code> to pin U16.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
-<p>Copy the course's master file next to the design and remove the <code>#</code> in front of the pins the design uses; the CLI takes <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder:</p>
+<p>Name the ports like the board's (<code>input logic [1:0] sw</code>, <code>output logic [0:0] led</code>), or copy the course's master file next to the design and remove the <code>#</code> in front of the pins the design uses; the CLI takes <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder:</p>
 <pre data-copy="1"><code>cp ~/.dewfpga/templates/Basys3_Master.xdc . &amp;&amp; dewfpga bit</code></pre>
 </main>
 

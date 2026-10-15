@@ -258,8 +258,17 @@ def main():
     return 0
 
 
+def autopins(json_path, top):
+    """`run_file.py --autopins <top>.json <top>`: the automatic pins for the folder command (templates/Makefile),
+    from the same synthesized ports and the same function as Run."""
+    sys.stdout.write(auto_xdc(json.loads(Path(json_path).read_text())["modules"][top]))
+    return 0
+
+
 if __name__ == "__main__":
     try:
+        if sys.argv[1:2] == ["--autopins"]:
+            sys.exit(autopins(sys.argv[2], sys.argv[3]))
         sys.exit(main())
     except (ValueError, OSError) as error:
         print(f"ERROR [single-file-run]: {error}", file=sys.stderr)

@@ -107,8 +107,8 @@
     <p>dewfpga new. The folder dewfpga new was told to create is already there; it never overwrites a design.</p>
   </div>
   <div class="err">
-    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-xdc-file/">ERROR [no-xdc-file]: no .xdc pin file in this folder, so nothing says which pin each port is on. Fix: copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.</a>
-    <p>dewfpga bit / flash, before synthesis. The folder has the design but no .xdc; the pin file says which pin of the Basys3 each port goes to, and without it nothing can be placed.</p>
+    <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-xdc-file/">ERROR [no-xdc-file]: no .xdc pin file in this folder, and these ports of adder have no board name: a b y. Ports named like the board&#x27;s (clk sw led btnC btnU btnD btnL btnR seg dp an) need no .xdc. Fix: rename those ports, or copy ~/.dewfpga/templates/Basys3_Master.xdc here and uncomment the pins you use.</a>
+    <p>dewfpga bit / flash, before synthesis. The folder has no .xdc and some ports have names the board does not use, so nothing says which pin they go to; ports with the board&#x27;s names get their pins without a file.</p>
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/two-xdc-files/">ERROR [two-xdc-files]: 2 .xdc files here (a.xdc b.xdc) and none is named blink.xdc, so nothing says which one holds the pins. Fix: keep one, or name it blink.xdc.</a>

@@ -112,7 +112,10 @@ $(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DE
 endif
 # dewfpga sim's second path makes $(TOP).json alone (a sub-make): the pins are not its stage
 ifeq (,$(filter sim clean check $(TOP).json,$(GOALS)))
+# automatic pins (XDC=<top>.autopins) are written from $(TOP).json, so the design's own checksum already covers them
+ifneq ($(XDC),$(TOP).autopins)
 $(call fresh,$(TOP).pins.deps,$(XDC) | $(shell $(SUM) $(XDC) 2>/dev/null),$(TOP).fasm)
+endif
 endif
 # the .deps files are written above; a goal that skipped its check (make $(TOP)_sim) still has a rule for them
 $(TOP)_sim.deps $(TOP).deps $(TOP).pins.deps: ;
@@ -687,6 +690,11 @@ CLK_AWK = FILENAME ~ /\.json$$/ { if (/^    "[^"]+": \{$$/) { mod=$$0; sub(/^ *"
 # of this stage and the next two go first, so what is in the folder after a failed build is never yesterday's design
 # (the synthesis rule above does the same). The pin names are checked against the chip's package pins
 # ($(XRAYDB)/$(PART)/package_pins.csv, the prjxray database the bitstream is built from) before nextpnr runs.
+# XDC=<top>.autopins (bin/dewfpga: no .xdc, and every port has a board name): the pins Run writes for one file,
+# from the synthesized ports (widths, offsets), so they follow every change of the design
+$(TOP).autopins: $(TOP).json
+	@"$(PY)" "$(dir $(CHECKER))run_file.py" --autopins $(TOP).json $(TOP) > $@ || { rm -f $@; exit 1; }
+
 $(TOP).fasm: $(TOP).json $(XDC) $(wildcard $(FPGA)/chipdb/.sha)
 	@rm -f $(TOP).bit $(TOP).frames $(TOP)_routed.json $@
 	@"$(PY)" "$(CHECKER)" --pins "$(XRAYDB)/$(PART)/package_pins.csv" $(TOP).json $(XDC)
@@ -750,4 +758,4 @@ flash: $(TOP).bit
 
 clean:
 	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_regs.json $(TOP)_start.sv $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
-	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log
+	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log $(TOP).autopins
