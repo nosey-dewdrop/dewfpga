@@ -198,8 +198,12 @@ class FakeCli(Scratch):
             with self.subTest(signal=sig):
                 pidfile = os.path.join(self.d, "signal-%s.pid" % sig)
                 env = dict(ENV, FAKE_PID_FILE=pidfile)
+                # A parent that sends SIGINT runs the wrapper in the foreground. A shell without job control starts a
+                # background job (`run.sh &`) with SIGINT ignored, the wrapper inherits that and rightly keeps
+                # ignoring it, and this test would wait 15 s for nothing: the child gets the default action here.
                 p = subprocess.Popen([sys.executable, WRAPPER, "--cli", os.path.join(FIX, "fake-slow-cli"), "--", "bit"],
-                                     cwd=self.d, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                     cwd=self.d, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
                 child = None
                 try:
                     deadline = time.monotonic() + 10
