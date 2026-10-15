@@ -267,4 +267,28 @@ class NetlistPorts(unittest.TestCase):
             v = subprocess.run(['vvp','sim'],cwd=temp,env=ENV,capture_output=True,text=True)
             self.assertIn('PASS netlist', v.stdout, v.stdout + v.stderr)
 
+class NetlistNets(unittest.TestCase):
+    """Vivado netlists use implicit nets between cells; a design module may share a cell's name."""
+    def build(self, folder, text):
+        source = folder/'top.sv'; source.write_text(text)
+        r = subprocess.run([CLI,'run',str(source),'--build-only'],env=ENV,capture_output=True,text=True,timeout=180)
+        return r.returncode, r.stdout + r.stderr, source
+
+    def test_implicit_net_driven_by_a_cell_output(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-netlist-test-') as temp:
+            folder = Path(temp).resolve()
+            (folder/'ready_toggle.v').write_text('module ready_toggle(clk, q);\n  input clk;\n  output q;\n'
+                '  FDRE #(.INIT(1\'b0)) state_reg (.C(clk), .CE(1\'b1), .D(next_state), .Q(state), .R(1\'b0));\n'
+                '  LUT1 #(.INIT(2\'h1)) next_i (.I0(state), .O(next_state));\n  assign q = state;\nendmodule\n')
+            rc, out, source = self.build(folder, 'module top(input logic clk, output logic [0:0] led);\n'
+                                                 '  ready_toggle u(.clk(clk), .q(led[0]));\nendmodule\n')
+            self.assertEqual(rc, 0, out); self.assertNotIn('undeclared-name', out)
+            self.assertIn('1 FF', out)
+
+    def test_a_design_module_named_like_a_cell_stays_with_the_first_reader(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-netlist-test-') as temp:
+            rc, out, _ = self.build(Path(temp).resolve(), 'module INV(input logic a, output logic y); assign y = ~a; endmodule\n'
+                'module top(input logic [0:0] sw, output logic [0:0] led);\n  INV u(.a(sw[0]), .y(led[0]));\nendmodule\n')
+            self.assertEqual(rc, 0, out); self.assertNotIn('read-with-slang', out); self.assertIn('1 LUT', out)
+
 if __name__ == '__main__': unittest.main(verbosity=2)

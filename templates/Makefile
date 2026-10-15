@@ -598,7 +598,14 @@ MKKW = KW=$$(mktemp -d .dewfpga-kw.XXXXXX) || { echo "ERROR [cannot-write-here]:
 # repeated products (b*b)+(b*b) otherwise synthesized to b*b (seed 302).
 # test/test-dsp-products.py checks sim and netlist against an independent oracle.
 # This costs LUT/FF resources for adders/accumulators; hardware behavior was not measured.
-SYNTH        = read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; check; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; flatten; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; memory_collect; setundef -zero -params t:\$$mem_v2; scratchpad -set xilinx_dsp.multonly 1; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); setattr -unset fsm_encoding; delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
+# CHECK: yosys' check, run on its own before SYNTH, with the Xilinx cell library read as black boxes, so a cell's
+# output pin counts as a driver: a Vivado netlist's implicit net from a flip-flop's Q to a LUT input is driven, not
+# "used but has no driver" (the undeclared-name stop). -nooverwrite keeps a design module named like a cell (INV).
+# It is diagnosis only: SYNTH reads the .il again without the library, so the netlist is the one built before.
+# Its hierarchy's "Resizing cell port" lines are dropped: a netlist's CARRY4 has them, and the reader's and SYNTH's
+# own lines (the implicit-port-width case) still come.
+CHECK        = read_rtlil $(TOP).il; read_verilog -lib -nooverwrite +/xilinx/cells_sim.v; logger -nowarn Resizing.cell.port; hierarchy -top $(TOP); proc; check
+SYNTH        = read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; flatten; opt_clean; opt_dff -keepdc; setundef -zero -init t:\$$dff t:\$$dffe t:\$$dlatch t:\$$dlatchsr t:\$$sr t:\$$dffsr t:\$$dffsre; memory_collect; setundef -zero -params t:\$$mem_v2; scratchpad -set xilinx_dsp.multonly 1; synth_xilinx -flatten -abc9 -nobram -arch xc7 -top $(TOP); setattr -unset fsm_encoding; delete t:\$$print; setundef -zero -params t:FDRE t:FDRE_1 t:FDCE t:FDCE_1 t:LDCE t:LDPE t:LUT* t:RAM* t:SRL*; setundef -one -params t:FDSE t:FDSE_1 t:FDPE t:FDPE_1; write_json $(TOP).json
 $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	@rm -f $(TOP).bit $(TOP).frames $(TOP).fasm $(TOP)_routed.json $(TOP).il $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log
 	@yosys -p "read_verilog $(INC) -sv -ppdump $(SRCS)" 2>/dev/null | awk '$(ISUNKNOWN_AWK)'
@@ -612,7 +619,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	    && yosys -q -l $(TOP).yosys.log -p "$$RV hierarchy -top $(TOP); setattr -unset always_comb; proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && awk '$(FSM_KEEP_AWK)' $(TOP).il $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
-	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
+	    && yosys -q -p "$(CHECK)" && yosys -q -p "$(SYNTH)"; } 2>&1 \
 	  | awk -v rd=verilog -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il -v ylog=$(TOP).yosys.log '$(YOSYS_AWK)' > $(TOP).rv.out || rc=$$?; \
 	  if [ $$rc -eq 0 ]; then cat $(TOP).rv.out; rm -f $(TOP).rv.out $(TOP).yosys.log; exit 0; fi; \
 	  crash=$$(grep -oE '(Segmentation fault|Abort trap|Bus error|Illegal instruction)(: [0-9]+)?' $(TOP).rv.out | head -1); \
@@ -628,7 +635,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	  { yosys -m "$(SLANG)" -q -l $(TOP).slang.log -p "read_slang --single-unit $(INC)$$KWSRCS; hierarchy -top $(TOP); proc; write_rtlil $(TOP).il" \
 	    && awk '$(INOUT_Z_AWK)' $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
 	    && awk '$(FSM_KEEP_AWK)' $(TOP).il $(TOP).il > $(TOP).il.tmp && mv $(TOP).il.tmp $(TOP).il \
-	    && yosys -q -p "$(SYNTH)"; } 2>&1 \
+	    && yosys -q -p "$(CHECK)" && yosys -q -p "$(SYNTH)"; } 2>&1 \
 	  | awk -v rd=slang -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il '$(YOSYS_AWK)' > $(TOP).sl.out || rc=$$?; \
 	  rm -rf "$$KW"; \
 	  if [ $$rc -eq 0 ]; then echo "note [read-with-slang]: $(TOP) read with yosys-slang, the second reader (yosys' own reader refused this code; the build is the same from here). $(URL)read-with-slang/"; cat $(TOP).sl.out; rm -f $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log; exit 0; fi; \
