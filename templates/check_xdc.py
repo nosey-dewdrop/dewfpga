@@ -266,6 +266,39 @@ def _split_commas(s):
     out.append(s[start:])
     return out
 
+def _port_names(body):
+    """The names of a module's ports, from its header: ANSI (`input logic [3:0] a`), Verilog-1995 (`a, b`) or
+    explicit (`.dp(...)`)."""
+    head = _header_view(body).split(";", 1)[0]
+    pl = _port_list(head)
+    if not pl: return set()
+    words = {"input", "output", "inout", "logic", "wire", "reg", "bit", "signed", "unsigned", "var", "tri", "integer"}
+    names = set()
+    for item in _split_commas(head[pl[0]:pl[1]]):
+        m = re.match(r"\s*\.\s*([A-Za-z_]\w*)", item)
+        ids = [m.group(1)] if m else [i for i in re.findall(r"[A-Za-z_]\w*", re.sub(r"\[[^\]]*\]|=.*", " ", item)) if i not in words]
+        if ids: names.add(ids[-1])
+    return names
+
+def xdc_ports(xdc):
+    """The port names an XDC pins: get_ports of its uncommented lines, without the bit select (sw[0] -> sw)."""
+    try: text = open(xdc, encoding="utf-8", errors="replace").read()
+    except OSError: return set()
+    names = set()
+    for line in text.splitlines():
+        for m in re.finditer(r"get_ports\s*(?:\{([^}]*)\}|([^\]\s]+))", line.split("#", 1)[0]):
+            for name in (m.group(1) or m.group(2) or "").split():
+                names.add(re.sub(r"\[.*$", "", name.strip("{}")))
+    return names
+
+def xdc_for(ports, xdcs):
+    """`--xdc-for`: among several pin files, the one that pins any of the top's ports, when exactly one does (a
+    Vivado constraint set with one file per lab part: Vivado applies them all, and the others pin none of these
+    ports). Prints its path, or nothing."""
+    hits = [x for x in xdcs if set(ports) & xdc_ports(x)]
+    if len(hits) == 1: print(hits[0])
+    return 0
+
 def _decl_names(text, types):
     """The names declared by every `<type> [range] a = .., b;` statement in text (ports or body)."""
     names = set()
@@ -741,6 +774,7 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
     print("DESIGN=" + " ".join(dict.fromkeys(loose + [mods[n]["file"] for n in design])))
     print("TB=" + (mods[tb_for[0]]["file"] if tb_for else ""))
     print("AUTO=" + ("1" if not want else "0"))
+    print("PORTS=" + " ".join(sorted(_port_names(mods[top]["body"]))))
     return 0
 
 def _vivado_files(src_dir, xdc_dir, sim_dir):
@@ -873,6 +907,9 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--list-tops":
     args = sys.argv[2:]; pt = None
     if args and args[0] == "--project-top": pt = args[1] or None; args = args[2:]
     sys.exit(list_tops(args, pt))
+if len(sys.argv) >= 3 and sys.argv[1] == "--xdc-for":
+    # --xdc-for "<port> <port> ..." <file.xdc>...
+    sys.exit(xdc_for(sys.argv[2].split(), sys.argv[3:]))
 if len(sys.argv) >= 3 and sys.argv[1] == "--needed":
     # --needed <clicked file> <the other .sv/.v files of its folder>...
     sys.exit(needed(sys.argv[2], sys.argv[3:]))

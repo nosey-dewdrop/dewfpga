@@ -277,7 +277,7 @@ cmd_build() {  # <target> [top]
     # module defined twice, a netlist Vivado wrote left in the folder). Both come in the message format
     # above, with the code and the student's file:line; --cmd names this command in the fix.
     for f in ${XDCS[@]+"${XDCS[@]}"}; do f=${f##*/}; xn="$xn,${f%.xdc}"; done
-    local scan line design="" tb="" auto=0 problems=0 why=""
+    local scan line design="" tb="" auto=0 problems=0 why="" ports=""
     local simarg=""; if [ "$target" = sim ]; then for f in ${PROJ_SIM[@]+"${PROJ_SIM[@]}"}; do simarg="$simarg$f
 "; done; fi
     scan=$("$py" "$HERE/templates/check_xdc.py" --scan ${top:+--top "$top"} --xdc "${xn#,}" --cmd "$target" --sim "$simarg" "${files[@]}") || true
@@ -290,6 +290,7 @@ cmd_build() {  # <target> [top]
             DESIGN=*)  design=${line#DESIGN=} ;;
             TB=*)      tb=${line#TB=} ;;
             AUTO=*)    auto=${line#AUTO=} ;;
+            PORTS=*)   ports=${line#PORTS=} ;;
         esac
     done <<< "$scan"
     [ $problems -eq 0 ] || exit 1
@@ -309,6 +310,8 @@ cmd_build() {  # <target> [top]
                 local xdcs=() named=(); for f in ${XDCS[@]+"${XDCS[@]}"}; do xdcs+=("$f"); [ "${f##*/}" = "$top.xdc" ] && named+=("$f"); done
                 if   [ ${#named[@]} -eq 1 ]; then xdc=${named[0]}
                 elif [ ${#xdcs[@]} -eq 1 ]; then xdc=${xdcs[0]}
+                elif [ ${#xdcs[@]} -gt 1 ] && byports=$("$py" "$HERE/templates/check_xdc.py" --xdc-for "$ports" "${xdcs[@]}") && [ -n "$byports" ]; then
+                    xdc=$byports; echo "pins: $xdc (the one .xdc here that pins $top's ports)"
                 elif [ ${#xdcs[@]} -eq 0 ]; then die no-xdc-file "no .xdc pin file in ${PROJ_XPR:+the project ${PROJ_XPR} or }this folder, so nothing says which pin each port is on. Fix: copy $HERE/templates/Basys3_Master.xdc here and uncomment the pins you use."
                 elif [ -n "${PROJ_ROOT:-}" ]; then die two-xdc-files "${#xdcs[@]} .xdc files in the project's constraint set (${xdcs[*]}) and none is named $top.xdc, so nothing says which one holds the pins. Fix: in Vivado keep one of them in the set (Sources > Remove File from Project) or rename one to $top.xdc, and save the project."
                 else die two-xdc-files "${#xdcs[@]} .xdc files here (${xdcs[*]}) and none is named $top.xdc, so nothing says which one holds the pins. Fix: keep one, or name it $top.xdc."; fi

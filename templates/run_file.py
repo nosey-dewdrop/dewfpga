@@ -63,21 +63,6 @@ def auto_xdc(module):
     return "\n".join(lines) + "\n"
 
 
-def xdc_ports(xdc):
-    """The port names an XDC pins: get_ports of its uncommented lines, without the bit select (sw[0] -> sw)."""
-    try:
-        text = xdc.read_text(errors="replace")
-    except OSError:
-        return set()
-    names = set()
-    for line in text.splitlines():
-        line = line.split("#", 1)[0]
-        for m in re.finditer(r"get_ports\s*(?:\{([^}]*)\}|([^\]\s]+))", line):
-            for name in (m.group(1) or m.group(2) or "").split():
-                names.add(re.sub(r"\[.*$", "", name.strip("{}")))
-    return names
-
-
 def stage_source(source, work, others=()):
     """Copy the file that runs, the folder files its design uses (others, from check_xdc.py --needed), and their
     explicit local include/readmem dependencies; never the other designs of the folder.
@@ -237,11 +222,12 @@ def main():
             if not args.xdc and not xdc.exists():
                 # as the folder command reads a folder: the one .xdc beside the top that pins this design's ports
                 # (a lab's constraints.xdc or Basys3_Master.xdc); one that names none of them is another design's
-                ports = set(design["modules"][top]["ports"])
-                named = [x for x in sorted(topfile.parent.glob("*.xdc")) + sorted(topfile.parent.glob("*.XDC"))
-                         if ports & xdc_ports(x)]
-                if len(named) == 1:
-                    xdc = named[0]
+                files = sorted(topfile.parent.glob("*.xdc")) + sorted(topfile.parent.glob("*.XDC"))
+                one = subprocess.run([sys.executable, str(HERE / "check_xdc.py"), "--xdc-for",
+                                      " ".join(design["modules"][top]["ports"])] + [str(x) for x in files],
+                                     capture_output=True, text=True).stdout.strip()
+                if one:
+                    xdc = Path(one)
             if args.xdc or xdc.exists():
                 if not xdc.is_file():
                     fail(f"Pin file not found: {xdc}")

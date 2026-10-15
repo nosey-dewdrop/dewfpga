@@ -291,4 +291,40 @@ class NetlistNets(unittest.TestCase):
                 'module top(input logic [0:0] sw, output logic [0:0] led);\n  INV u(.a(sw[0]), .y(led[0]));\nendmodule\n')
             self.assertEqual(rc, 0, out); self.assertNotIn('read-with-slang', out); self.assertIn('1 LUT', out)
 
+class SeveralPinFiles(unittest.TestCase):
+    """A folder or a Vivado constraint set with one .xdc per lab part: the one that pins the top's ports."""
+    AND = 'module and_gate(input logic a, b, output logic y);\n  assign y = a & b;\nendmodule\n'
+    def pins(self, *pairs):
+        return ''.join(f'set_property -dict {{ PACKAGE_PIN {p} IOSTANDARD LVCMOS33 }} [get_ports {n}]\n' for n, p in pairs)
+    def bit(self, cwd):
+        r = subprocess.run([CLI,'bit'],cwd=cwd,env=ENV,capture_output=True,text=True,timeout=240)
+        return r.returncode, r.stdout + r.stderr
+
+    def test_flat_folder(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-xdcs-test-') as temp:
+            d = Path(temp)
+            (d/'and_gate.sv').write_text(self.AND)
+            (d/'part_a.xdc').write_text(self.pins(('a','V17'),('b','V16'),('y','U16')))
+            (d/'part_b.xdc').write_text(self.pins(('x0','W16'),('z','E19')))
+            rc, out = self.bit(d)
+            self.assertEqual(rc, 0, out)
+            self.assertIn("pins: part_a.xdc (the one .xdc here that pins and_gate's ports)", out)
+            self.assertTrue((d/'and_gate.bit').is_file())
+            (d/'part_b.xdc').write_text(self.pins(('y','E19')))       # both pin y: which one Vivado keeps is not ours to guess
+            rc, out = self.bit(d)
+            self.assertNotEqual(rc, 0, out); self.assertIn('ERROR [two-xdc-files]', out)
+
+    def test_vivado_constraint_set(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-xdcs-test-') as temp:
+            root = Path(temp)/'Lab3'; new = root/'Lab3.srcs'/'sources_1'/'new'; cons = root/'Lab3.srcs'/'constrs_1'/'new'
+            new.mkdir(parents=True); cons.mkdir(parents=True)
+            (new/'and_gate.sv').write_text(self.AND)
+            (cons/'cons_decoder.xdc').write_text(self.pins(('a0','W16'),('y0','E19')))
+            (cons/'cons_and.xdc').write_text(self.pins(('a','V17'),('b','V16'),('y','U16')))
+            rc, out = self.bit(new)
+            self.assertEqual(rc, 0, out)
+            self.assertIn("pins: Lab3.srcs/constrs_1/new/cons_and.xdc (the one .xdc here that pins and_gate's ports)", out)
+            rc, out = subprocess.run([CLI,'run',str(new/'and_gate.sv'),'--build-only'],env=ENV,capture_output=True,text=True,timeout=240).returncode, ''
+            self.assertEqual(rc, 0)
+
 if __name__ == '__main__': unittest.main(verbosity=2)
