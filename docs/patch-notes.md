@@ -4842,3 +4842,61 @@ beside another lab's `.xdc`, and a design with board port names and only another
 automatic pins. A copy of the Vivado project fixture builds from its source file, the `.bit` lands next to
 the `.xpr`, and an error is named with the source's full path and line. The full suite passed 343 of 343 with 19 known gaps; the SystemVerilog probes are unchanged (114 of
 148 pass all four stages).
+
+### Local candidate · The course's ready netlist modules build · 15 October
+
+**`SevSeg_4digit.sv` stopped every design that used it.** The course hands out its four-digit
+seven-segment driver as a Vivado netlist. Its port list ends in `.dp(\<const0> )`, an explicit port: the
+port `dp`, whose inside is the net `\<const0>` (Vivado writes a constant output that way), declared as
+`output \<const0> ;`. Vivado builds it; yosys' reader stopped at the `.` (`syntax error, unexpected
+TOK_ID, expecting '.'`), and yosys-slang, the second reader, does not know Vivado's cells (`GND`, `LUT4`).
+In the corpus, 5 lab folders stopped there. The copy the tools read now has `dp` in the port list and
+`output dp; assign dp = \<const0> ;` on the declaration's line, with a note for each line (`explicit-port`);
+the student's file stays as it is.
+
+Checked against an independent simulation: the original module, as Vivado means it, under iverilog with the
+Xilinx cell models, against the netlist the build writes, both driving the same inputs (changed halfway):
+600,000 clock cycles, 0 differences, no `x`, the digit select switched 10 times, `dp` 0. A netlist with one
+LUT bit flipped differs within 400,000 cycles, so the comparison is not blind.
+
+Tests: a new check builds a small netlist-form module of the same shape (an explicit constant port, a `GND`,
+a `LUT2`), reads the two notes, keeps the file's bytes, and simulates the netlist: the AND is right on all
+4 inputs and `dp` is 0. It fails on the installed 1.2.0.
+
+**An implicit net between two cells was refused as undeclared.** Vivado's netlists connect cells with
+nets they never declare (`.Q(direction_motor)` on a flip-flop, `.I4(direction_motor)` on a LUT): an
+implicit wire, as Verilog allows. The build's first check ran before yosys knew which pin of `FDRE` is an
+output, reported the wire as `used but has no driver`, and the CLI turned that into `undeclared-name ...
+nothing drives it`. The course's ready stepper-motor module stopped there. That check now runs on its own,
+before the synthesis, with the Xilinx cell library read as black boxes (`read_verilog -lib -nooverwrite`),
+so a cell's output counts as a driver; a design module named like a cell (`INV`) stays the student's. The
+synthesis itself reads the design as before. A first try loaded the library into the synthesis run: the
+suite caught it, because probe 75's longest path went from 33.61 MHz to 23.02 MHz (the library read without
+its timing data took that data from the LUT mapping). With the check on its own, probe 75 is at 33.61 MHz
+again.
+
+Checked the same way: a lab project that uses both ready modules (keypad, stepper motor, seven-segment),
+its sources under iverilog with the Xilinx cell models against the built netlist, reset then key and start
+presses: 399,969 compared cycles, 0 differences, no `x` in the reference (its outputs changed 9 times in
+that window, so this is a narrow check). The seven-segment comparison was repeated with this change: 0
+differences in 600,000 cycles. Two new checks: an implicit net from a flip-flop to a LUT builds (it fails
+on the installed 1.2.0), and a design module called `INV` is read by yosys' own reader with one LUT.
+On the 89 corpus folders, Run now builds 24 (17 before) and the folder command 20 (13 before); every
+folder the folder command builds, Run builds. The 7 new ones are the course's example projects and a
+student game that use these ready modules.
+
+**Several pin files: the one that pins the top's ports.** A Vivado constraint set often holds one `.xdc` per
+lab part (`cons_decoder2to4.xdc`, `cons_mux8to1_function.xdc`), and Vivado applies them all; a port no
+design has is skipped with a warning. The folder command used to stop at `two-xdc-files` unless one was
+named after the top. Now, when exactly one of them pins any of the top's ports, it uses that one and says so
+(`pins: ... (the one .xdc here that pins mux8to1_function's ports)`). When two of them pin the same port
+(`out[3]` in one file, `out` in the other), which pin Vivado keeps is not guessed: the stop stays. Run picks
+its folder's pin file by the same code. Two new checks: a flat folder with two files (one for another part)
+builds, the same folder with both pinning `y` stops, and a Vivado-layout constraint set builds from both
+the folder command and Run. Both fail on the installed 1.2.0. On the corpus this adds the 2 folders of one
+student's Lab 3 project: Run builds 26 of the 89 folders, the folder command 22. The full suite passed every product check (342, 19 known gaps; the SystemVerilog probes unchanged,
+114 of 148). The one failure was a test's: the SIGINT case of `test-json.py` waited 15 s for a wrapper that
+never got the signal, because the suite had been started with `run.sh &`, and a shell without job control
+starts a background job with SIGINT ignored, which the wrapper rightly keeps. The test now starts the wrapper
+with SIGINT at its default; it passes under both launches, and the old test fails the same way when its
+parent ignores SIGINT.
