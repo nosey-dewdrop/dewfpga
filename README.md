@@ -32,13 +32,14 @@ Automatic pins recognize `clk` (100 MHz), `sw[15:0]`, `led[15:0]`,
 `btnC`, `btnU`, `btnD`, `btnL`, `btnR`, `seg[6:0]`, `dp`, and `an[3:0]`.
 Smaller vectors are fine; indices name the corresponding board controls.
 Your module name and its internal logic are yours. Custom port names need a pin
-file: `my_design.xdc` beside `my_design.sv`, or `--xdc path/to/pins.xdc`.
+file: `my_design.xdc` beside `my_design.sv`, the one `.xdc` in the folder that pins
+those ports (a lab's `constraints.xdc`), or `--xdc path/to/pins.xdc`.
 
-Run reads only the chosen file (including its submodules and explicit local
-includes), not unrelated `.sv` files beside it. Put the top module in the selected
-file. Literal include/data paths must be relative, without spaces or `..`;
-for multiple source files or an existing Vivado project, use `dewfpga flash`
-in its folder with your `.xdc`. `dewfpga sim` runs a separate testbench.
+Run reads the chosen file and the modules it uses from the other `.sv`/`.v` files of
+its folder (with the package files they name), never a file the design does not use.
+Run on a submodule's file builds the one top that uses it. Inside a Vivado project,
+Run builds the project: its files, its top, its `.xdc`. Literal include/data paths
+must be relative, without spaces or `..`. `dewfpga sim` runs a separate testbench.
 [Short setup guide](https://nosey-dewdrop.github.io/dewfpga/cli/).
 
 `dewfpga bit` prints three lines and keeps the full place-and-route log in `<top>.log`:
@@ -49,7 +50,8 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-Use a flat folder of `.sv`/`.v` modules and an `.xdc`, or run inside a Vivado project:
+Use a flat folder of `.sv`/`.v` modules (an `.xdc` only for ports without a board name),
+or run inside a Vivado project:
 its `.xpr` selects the enabled design, constraint and simulation files. Commands from a
 nested `.srcs` folder use the project root; outputs go there too. `dewfpga tops` lists
 top candidates without writing files. The project's selected top wins unless you name

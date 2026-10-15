@@ -31,13 +31,14 @@ dewfpga run ~/Desktop/devrem.sv --build-only  # kart olmadan derle
 Otomatik pinler: `clk` (100 MHz), `sw[15:0]`, `led[15:0]`, `btnC`, `btnU`,
 `btnD`, `btnL`, `btnR`, `seg[6:0]`, `dp`, `an[3:0]`. Daha küçük vektörler de olur;
 indeks, karttaki aynı numaralı giriş/çıkışı seçer. Modül adını ve iç mantığını sen yazarsın.
-Özel port adları için `devrem.sv` yanına `devrem.xdc` koy veya `--xdc pinler.xdc` kullan.
+Özel port adları için `devrem.sv` yanına `devrem.xdc` koy, klasörde o portları pinleyen
+tek `.xdc` olsun (lab'ın `constraints.xdc`'si gibi) veya `--xdc pinler.xdc` kullan.
 
-Run yalnız seçtiğin dosyayı, içindeki alt modülleri ve açıkça dahil ettiğin yerel
-dosyaları okur; yanındaki ilgisiz `.sv` dosyalarını toplamaz. Üst modül seçili dosyada
-olmalı. Include/veri yolları göreli olmalı; boşluk ve `..` içermemeli.
-Birden çok kaynak dosyası veya mevcut Vivado projesi için proje klasöründe kendi
-`.xdc` dosyanla `dewfpga flash` kullanabilirsin. `dewfpga sim` ayrı bir testbench çalıştırır.
+Run seçtiğin dosyayı ve onun kullandığı modülleri klasördeki öbür `.sv`/`.v` dosyalarından
+(adını andıkları paket dosyalarıyla) okur; tasarımın kullanmadığı bir dosyayı okumaz.
+Bir alt modülün dosyasında Run, onu kullanan üst modülü derler. Bir Vivado projesinin içinde
+Run projeyi derler: projenin dosyaları, üst modülü, `.xdc`'si. Include/veri yolları göreli
+olmalı; boşluk ve `..` içermemeli. `dewfpga sim` ayrı bir testbench çalıştırır.
 [Kısa başlangıç rehberi](https://nosey-dewdrop.github.io/dewfpga/cli/).
 
 `dewfpga bit` üç satır basar, place-and-route logunun tamamı `<top>.log`'da kalır:
@@ -48,7 +49,8 @@ pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
 blink.bit  2.2 MB
 ```
 
-`.sv`/`.v` modülleri ve `.xdc` bulunan düz bir klasörde veya Vivado projesinde çalışır.
+`.sv`/`.v` modülleri bulunan düz bir klasörde (kart adı taşımayan portlar için bir `.xdc` ile)
+veya Vivado projesinde çalışır.
 `.xpr`, etkin tasarım, kısıt ve simülasyon dosyalarını seçer. İç içe bir `.srcs` klasöründen
 çalıştırılan komut proje kökünü kullanır; çıktılar da oraya yazılır. `dewfpga tops`, dosya
 bırakmadan top adaylarını listeler. Adını ayrıca vermediğinde projenin seçili top modülü
