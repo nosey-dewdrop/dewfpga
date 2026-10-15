@@ -237,4 +237,34 @@ class PinsAndProjects(unittest.TestCase):
             self.assertNotEqual(rc, 0, out)
             self.assertIn(str(new/'topmodule.sv') + ':' + str(line + 1) + ':', out)
 
+class NetlistPorts(unittest.TestCase):
+    """A course ready module in Vivado's netlist form, with an explicit port for its constant output."""
+    def test_explicit_constant_port_builds_and_stays_zero(self):
+        with tempfile.TemporaryDirectory(prefix='dewfpga-netlist-test-') as temp:
+            folder = Path(temp).resolve(); source = folder/'top.sv'
+            ready = folder/'ready_and.v'
+            ready.write_text('(* keep_hierarchy = "yes" *)\nmodule ready_and\n   (a, b,\n    y, .dp(\\<const0> ));\n'
+                             '  input a;\n  input b;\n  output y;\n  output \\<const0> ;\n\n  wire \\<const0> ;\n'
+                             '  GND GND\n       (.G(\\<const0> ));\n  LUT2 #(\n    .INIT(4\'h8))\n    y_INST_0\n'
+                             '       (.I0(a),\n        .I1(b),\n        .O(y));\nendmodule\n')
+            source.write_text('module top(input logic [1:0] sw, output logic [0:0] led, output logic dp);\n'
+                              '  ready_and u(.a(sw[0]), .b(sw[1]), .y(led[0]), .dp(dp));\nendmodule\n')
+            before = ready.read_bytes()
+            r = subprocess.run([CLI,'run',str(source),'--build-only'],env=ENV,capture_output=True,text=True,timeout=180)
+            out = r.stdout + r.stderr
+            self.assertEqual(r.returncode, 0, out)
+            self.assertIn(str(ready) + ':4: note [explicit-port]: wrote the port as a plain name:', out)
+            self.assertIn(str(ready) + ':8: note [explicit-port]: declared the port and connected its net:  output dp; assign dp = \\<const0> ;', out)
+            self.assertEqual(ready.read_bytes(), before)
+            cache = Path.home()/'.cache/dewfpga/run'/hashlib.sha256(str(source).encode()).hexdigest()[:24]
+            subprocess.run(['yosys','-Q','-q','-p',f'read_json {cache}/design.json; setattr -mod -unset keep_hierarchy *; hierarchy -top top; flatten; write_verilog -noattr net.v'],cwd=temp,env=ENV,check=True)
+            (Path(temp)/'tb.v').write_text('module tb; reg [1:0] sw; wire [0:0] led; wire dp; integer i;\n'
+                'top dut(.sw(sw), .led(led), .dp(dp)); initial begin\n'
+                'for(i=0;i<4;i=i+1) begin sw=i; #1; if(led !== (i==3) || dp !== 1\'b0) $fatal(1,"wrong %0d %b %b",i,led,dp); end\n'
+                '$display("PASS netlist"); $finish; end endmodule\n')
+            data = subprocess.check_output(['yosys-config','--datdir'],env=ENV,text=True).strip()
+            subprocess.run(['iverilog','-g2012','-s','tb','-o','sim','tb.v','net.v',str(Path(data)/'xilinx/cells_sim.v')],cwd=temp,env=ENV,check=True)
+            v = subprocess.run(['vvp','sim'],cwd=temp,env=ENV,capture_output=True,text=True)
+            self.assertIn('PASS netlist', v.stdout, v.stdout + v.stderr)
+
 if __name__ == '__main__': unittest.main(verbosity=2)

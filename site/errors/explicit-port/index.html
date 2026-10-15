@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp, (fix, macOS)</title>
+<meta name="description" content="Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp, (fix, macOS)">
+<meta property="og:description" content="Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp,","url":"https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-10-15","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga run / sim / bit, the source preparation before the tools run</p>
+  <h1 class="mono">SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp,</h1>
+<p>The course's ready seven-segment module comes as a Vivado netlist. Its constant decimal-point output is written as an explicit port, and its declaration names the net inside it. The build writes both lines in the form yosys reads, in the copy the tools read; your file stays as it is.</p>
+<pre><code>SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/
+SevSeg_4digit.sv:58: note [explicit-port]: declared the port and connected its net:  output dp; assign dp = \&lt;const0&gt; ;   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>Verilog-2001 lets a port list name a port with an expression: <code>.dp(\&lt;const0&gt; )</code> is a port called <code>dp</code> whose inside is the net <code>\&lt;const0&gt;</code>. Vivado writes its netlists that way for an output it drives with a constant, and builds them. yosys' own reader stops at the <code>.</code> with <code>syntax error, unexpected TOK_ID, expecting '.'</code>.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Nothing to do: the build writes <code>dp</code> in the port list and <code>output dp; assign dp = \&lt;const0&gt; ;</code> in place of <code>output \&lt;const0&gt; ;</code>, on the same lines. The port and its value are the same; the decimal point stays off as Vivado builds it.</p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

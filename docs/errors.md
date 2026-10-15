@@ -750,6 +750,28 @@ Nothing, unless you installed elsewhere:
 FPGA_HOME=/path/you/used dewfpga uninstall
 ```
 
+## explicit-port
+step: bit
+source: dewfpga run / sim / bit, the source preparation before the tools run
+title: SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp,
+summary: Not an error: a port list in Vivado's netlist form names a port with an expression, .dp(\<const0> ), which Vivado builds and yosys' reader does not; the copy the tools read writes it as a plain port.
+date: 2026-10-15
+
+The course's ready seven-segment module comes as a Vivado netlist. Its constant decimal-point output is written as an explicit port, and its declaration names the net inside it. The build writes both lines in the form yosys reads, in the copy the tools read; your file stays as it is.
+
+```
+SevSeg_4digit.sv:42: note [explicit-port]: wrote the port as a plain name:  a, b, c, d, e, f, g, dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/
+SevSeg_4digit.sv:58: note [explicit-port]: declared the port and connected its net:  output dp; assign dp = \<const0> ;   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both) https://nosey-dewdrop.github.io/dewfpga/errors/explicit-port/
+```
+
+## Why does it happen?
+
+Verilog-2001 lets a port list name a port with an expression: `.dp(\<const0> )` is a port called `dp` whose inside is the net `\<const0>`. Vivado writes its netlists that way for an output it drives with a constant, and builds them. yosys' own reader stops at the `.` with `syntax error, unexpected TOK_ID, expecting '.'`.
+
+## What is the fix?
+
+Nothing to do: the build writes `dp` in the port list and `output dp; assign dp = \<const0> ;` in place of `output \<const0> ;`, on the same lines. The port and its value are the same; the decimal point stays off as Vivado builds it.
+
 ## module-without-endmodule
 step: bit
 source: dewfpga run / sim / bit, the source scan before the tools run

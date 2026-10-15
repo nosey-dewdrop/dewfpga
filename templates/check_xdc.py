@@ -95,10 +95,16 @@ def _normalized(files):
       - an instance without a name (`inv(sw[0], led[0]);`): Vivado builds it, yosys and Icarus stop. A name is
         written in: u_<module>, then u_<module>_2 ... when that name is already in the file. A testbench (a
         module without ports) is left alone: yosys never reads it.
+      - an explicit port in a Verilog-1995 port list, as Vivado writes a netlist's constant output: the course's
+        ready SevSeg_4digit.sv has `a, b, ..., g, .dp(<const0> ),` (an escaped name) and `output <const0> ;`. Vivado builds
+        it, yosys' reader stops at the `.`. The port becomes `dp`, and its declaration `output dp; assign dp =
+        <const0> ;`: the same port and the same net, in the form yosys reads (these two are replacements).
     The text is searched with comments and string literals blanked out (same length, same offsets), so a comment
     in the port list (one with a `;` in it) or a module name inside a $display string is not code."""
     # an item that starts with a type (`logic dp`) or with a range (`[3:0] an`) and no direction of its own
     item = re.compile(r"(,\s*)((?:(?:logic|wire|reg|bit)\b\s*(?:\[[^\]]*\]\s*)?|\[[^\]]*\]\s*)[A-Za-z_]\w*)")
+    # `.dp(\<const0> )` in a port list: a port name and the net inside it (an escaped name ends at white space)
+    explicit = re.compile(r"\.\s*([A-Za-z_]\w*)\s*\(\s*(\\\S+|[A-Za-z_]\w*)\s*\)")
     srcs, views, out = {}, {}, {}
     for f in files:
         try: srcs[f] = open(f, encoding="utf-8", errors="surrogateescape", newline="").read()   # CRLF kept as is
@@ -120,6 +126,14 @@ def _normalized(files):
                 if not dirs: continue
                 d = dirs[-1]; typ = (d.group(3) + " ") if d.group(3) and mm.group(2).startswith("[") else ""
                 edits[off + pl[0] + mm.start(2)] = (d.group(1) + " " + typ, ("port-neither-input-nor-output", "wrote the port direction in"))
+            for mm in explicit.finditer(plist):
+                port, net = mm.group(1), mm.group(2)
+                end = r"(?=\s)" if net.startswith("\\") else r"\b"
+                decl = re.search(r"\boutput\b(\s*(?:wire\s+)?(?:\[[^\]]*\]\s*)?)" + re.escape(net) + end + r"\s*;", body)
+                if not decl: continue           # an input, or a net declared with others: left to the readers
+                edits[off + pl[0] + mm.start()] = (port, ("explicit-port", "wrote the port as a plain name"), mm.end() - mm.start())
+                edits[off + decl.start()] = (f"output{decl.group(1).rstrip()} {port}; assign {port} = {net} ;",
+                                             ("explicit-port", "declared the port and connected its net"), decl.end() - decl.start())
             for other in modules:
                 if other == name: continue
                 # `inv (`, `inv #(.N(4)) (`: an instance with no name between the module name and the port list
@@ -132,7 +146,8 @@ def _normalized(files):
         if not edits: continue
         text, notes = src, {}
         for at in sorted(edits, reverse=True):
-            text = text[:at] + edits[at][0] + text[at:]
+            gone = edits[at][2] if len(edits[at]) > 2 else 0      # an insertion replaces nothing
+            text = text[:at] + edits[at][0] + text[at + gone:]
             notes[src.count("\n", 0, at) + 1] = edits[at][1]
         out[f] = (src, text, notes)
     return out
