@@ -4900,3 +4900,21 @@ never got the signal, because the suite had been started with `run.sh &`, and a 
 starts a background job with SIGINT ignored, which the wrapper rightly keeps. The test now starts the wrapper
 with SIGINT at its default; it passes under both launches, and the old test fails the same way when its
 parent ignores SIGINT.
+
+### Local candidate · The folder command needs no pin file for the board's port names · 15 October
+
+**⌘⇧B and `dewfpga flash` stopped where Run did not.** A folder with only `lab1_top.sv` (ports `sw`,
+`led`) built with Run, but the folder command, and with it VS Code's build task, stopped at `no-xdc-file:
+copy Basys3_Master.xdc here and uncomment the pins you use`. That is the file a student had to write by hand
+for lab 1. Now, with no `.xdc` in the folder and every port of the top named like the board's, the folder
+command writes `<top>.autopins` from the synthesized ports with the same code as Run, says
+`pins: automatic Basys3 mapping (no .xdc here, and lab1_top's ports have the board's names)`, and builds.
+The pins are byte for byte the ones Run writes for the same file. They follow the design: a new `an` port
+gets its pins on the next build, a second build with nothing changed is `up to date`, and `dewfpga clean`
+removes the file. A port without a board name still stops the build, and the message now names those ports
+(`these ports of adder have no board name: a b y`). The READMEs say what Run and the folder command read
+since last night.
+
+Tests: the two checks that expected the stop for board names now expect the build, its pins, `up to date`
+and `clean`; a new check keeps the stop and the named ports for `a b y`. On the corpus, the folder command now builds 24
+of the 89 folders (22 before): the 2 new ones have no `.xdc` and only board port names. SUITE_C6
