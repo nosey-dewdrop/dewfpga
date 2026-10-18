@@ -145,6 +145,12 @@ for _row in _tsv[1:]:
     for _c in sorted(set(re.findall(r"\[([a-z0-9][a-z0-9-]*)\]", _r["today"]))):
         PROBES.setdefault(_c, []).append((_r["id"], _r["construct"]))
 
+# the command pages docs/pages-build.py writes, by code (read from each entry's step: and source:)
+import importlib.util
+_spec = importlib.util.spec_from_file_location("pages_build", "docs/pages-build.py")
+_pb = importlib.util.module_from_spec(_spec); _spec.loader.exec_module(_pb)
+COMMANDS = _pb.error_commands(set(_pb.TYPES))
+
 SUFFIX = " How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac."
 written = []
 for code, m, body in entries:
@@ -160,6 +166,11 @@ for code, m, body in entries:
              f"<span class=\"step\">{html.escape(m['step'])}</span>{html.escape(m['source'])}</p>\n")
     page += f"  <h1 class=\"mono\">{html.escape(title)}</h1>\n"
     page += pandoc(body)
+    if COMMANDS.get(code):
+        page += "<h2 id=\"which-command-prints-it\">Which command prints it?</h2>\n<ul>\n"
+        for c in COMMANDS[code]:
+            page += f"<li><a href=\"{_pb.cmd_href(c)}\"><code>{html.escape(_pb.cmd_label(c))}</code></a></li>\n"
+        page += "</ul>\n"
     if PROBES.get(code):
         page += "<h2 id=\"which-probes-print-it\">Which probes in test/sv print this code?</h2>\n<ul>\n"
         for pid, construct in PROBES[code]:
@@ -190,6 +201,13 @@ page += "</main>\n" + FOOT.format(back="/dewfpga/", label="home")
 stale = sorted(p.name for p in OUT.iterdir() if p.is_dir() and p.name not in written)
 print(f"site/errors: {len(written)} codes + index" + (f"; folders without an entry: {' '.join(stale)}" if stale else ""))
 
+PY
+# the probe pages quote each code's summary, and the command pages list the codes; an error page
+# links them, so they are written before the link check
+python3 docs/pages-build.py
+python3 - <<'PY'
+import pathlib, re, sys
+OUT = pathlib.Path("site/errors")
 # every site link in the pages just written must resolve in the site tree (file, and anchor).
 # CI serves site/ as the root and copies templates/ and sim/dist (built from sim/) next to it.
 bad = []
@@ -204,6 +222,4 @@ if bad:
     sys.exit("links that do not resolve:\n  " + "\n  ".join(bad))
 print("links: every /dewfpga/ href in site/errors resolves")
 PY
-# the probe pages quote each code's summary, and the sections and notes link the codes
-python3 docs/pages-build.py
 python3 docs/sitemap-build.py

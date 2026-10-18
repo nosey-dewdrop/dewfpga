@@ -39,6 +39,10 @@
 <p>A child could not start, an output reader failed, or a descendant kept output open after the command exited. These cases cannot be treated as successful results. A parent signal can also interrupt the command.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Read the diagnostic and temporary log. Verify the installed CLI files and filesystem access, then retry. Preserve the diagnostic and command when reporting a reproducible wrapper error. Do not use a leftover bitstream as proof that the interrupted command succeeded.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

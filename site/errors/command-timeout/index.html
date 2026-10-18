@@ -39,6 +39,10 @@
 <p>The command took longer than the selected timeout. A stalled simulation, slow build or disconnected programmer can require investigation.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Read <code>log.tail</code> and <code>log.path</code>. Fix an unbounded testbench or tool problem first. If the command is making progress, retry with a larger limit, for example <code>dewfpga bit --json --timeout=1200</code>.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

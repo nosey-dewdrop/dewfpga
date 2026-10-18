@@ -82,6 +82,8 @@ def pages():
         p[f] = ("en", "c-notes")
     for f in sorted(glob.glob("site/docs/*/index.html")):
         p[f] = ("en", None)
+    for f in sorted(glob.glob("site/cli/*/index.html") + glob.glob("site/agents/*/index.html")):
+        p[f] = ("en", "c-cli")
     return p
 
 

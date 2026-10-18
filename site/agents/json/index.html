@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>Machine-readable CLI: dewfpga for coding agents</title>
+<meta name="description" content="dewfpga check --json, dewfpga sim [top] --json, dewfpga bit [top] --json and dewfpga flash [top] --json print exactly one JSON object on stdout.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/agents/json/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Machine-readable CLI: dewfpga for coding agents">
+<meta property="og:description" content="dewfpga check --json, dewfpga sim [top] --json, dewfpga bit [top] --json and dewfpga flash [top] --json print exactly one JSON object on stdout.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/agents/json/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Machine-readable CLI","url":"https://nosey-dewdrop.github.io/dewfpga/agents/json/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">agents</span>for coding agents</p>
+  <h1>Machine-readable CLI</h1>
+<p><code>dewfpga check --json</code>, <code>dewfpga sim [top] --json</code>, <code>dewfpga bit [top] --json</code> and <code>dewfpga flash [top] --json</code> print exactly one JSON object on stdout. Text commands retain their existing output. <code>flash</code> programs attached hardware; request it only when the user has authorized programming the board.</p>
+<p>The schema tag is <code>dewfpga/result@1</code>. <code>command</code>, <code>ok</code>, <code>exit_code</code>, <code>cause</code> and <code>code</code> identify the result. The process exit is <code>exit_code</code>; success requires <code>ok: true</code> and exit 0. <code>child_exit</code> preserves the underlying command's status. <code>duration_ms</code> measures elapsed time; <code>version</code> is the CLI version. <code>top</code> and <code>testbench</code> are null when unknown.</p>
+<table>
+<thead>
+<tr>
+<th>Exit</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>success</td>
+</tr>
+<tr>
+<td>1</td>
+<td>design/project failure or a failed child without a known diagnostic</td>
+</tr>
+<tr>
+<td>2</td>
+<td>invalid usage</td>
+</tr>
+<tr>
+<td>3</td>
+<td>missing or broken toolchain</td>
+</tr>
+<tr>
+<td>4</td>
+<td>board/programmer failure</td>
+</tr>
+<tr>
+<td>70</td>
+<td>wrapper failure or incomplete child output</td>
+</tr>
+<tr>
+<td>124</td>
+<td>timeout</td>
+</tr>
+<tr>
+<td>130 / 143</td>
+<td>interrupted by SIGINT / SIGTERM</td>
+</tr>
+</tbody>
+</table>
+<p><code>diagnostics</code> holds severity, code, file, line, message, fix and URL. Locations can be null. A multi-location driver error uses its first location; the original line is retained in the log. A warning flood cannot displace errors: at most 50 errors and 50 warnings/notes are kept, with <code>diagnostics_truncated</code> set when more arrive. Do not assume the first message proves the sole cause. Fix it and run again.</p>
+<p><code>log.path</code> names a temporary log holding at most 8 MiB of child output plus a short truncation marker. <code>log.tail</code> holds at most 60 lines and 8192 UTF-8 bytes total; <code>log.truncated</code> also reports write failures. The caller may remove the log when finished. Output capture runs concurrently for stdout and stderr. Readers failing or descendants holding output open cannot return success.</p>
+<p><code>artifacts</code> describes known outputs with <code>path</code>, <code>kind</code>, <code>state</code> and fingerprints. <code>new</code> means created or changed in this run, <code>cached</code> means unchanged after a successful command, and <code>stale</code> means unchanged after a failure. Files larger than 64 MiB are omitted. State is null if the parent folder could not be scanned before the run. Unrelated old files are not attributed to a guessed top. Inspect <code>ok</code> and the artifact state together: file existence alone proves no successful build. <code>sim.testbench_errors</code> is null when the output provides no count.</p>
+<p><code>--timeout=N</code> accepts 1–3600 whole seconds. <code>DEWFPGA_JSON_TIMEOUT</code> accepts a positive number up to 3600 seconds when the option is absent. Defaults: check 60, sim 180, bit 900, flash 120 seconds. Timeout or parent interruption stops the CLI's process group. A deliberately daemonized descendant that leaves that group is outside this cleanup boundary. No shell string is evaluated by the wrapper.</p>
+<h2 id="errors">Which errors can it stop with?</h2>
+<p class="mute small">2 codes in the error catalog.</p>
+<ul>
+<li><a href="/dewfpga/errors/command-timeout/">command-timeout</a>: The JSON wrapper stopped a command that did not finish within its deadline.</li>
+<li><a href="/dewfpga/errors/internal/">internal</a>: Starting the command, reading its output or another wrapper operation failed.</li>
+</ul>
+<hr>
+<p class="mute small">next: <a href="/dewfpga/agents/mcp/">MCP server</a><br>
+From <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/docs/agent-interface.md">docs/agent-interface.md</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

@@ -39,10 +39,10 @@ body = body.replace(f'<h3 id="{latest}">', f'<span id="latest"></span>\n<h3 id="
 import importlib.util
 spec = importlib.util.spec_from_file_location("pages_build", "docs/pages-build.py")
 pages_build = importlib.util.module_from_spec(spec); spec.loader.exec_module(pages_build)
-with_page = {n for _, n, *_ in pages_build.note_pages() if n}
+with_page = {e[1]: key for key, group in pages_build.note_pages() for e in group if e[1]}
 def item(n, rest):
     t = html.escape(rest)
-    return f'<li><a href="#{n}">#{n}</a> ' + (f'<a href="/dewfpga/patch-notes/{n}/">{t}</a>' if n in with_page else t) + '</li>\n'
+    return f'<li><a href="#{n}">#{n}</a> ' + (f'<a href="/dewfpga/patch-notes/{with_page[n]}/">{t}</a>' if n in with_page else t) + '</li>\n'
 items = "".join(item(n, rest) for n, rest in sorted(entries, reverse=True))
 index = (f'<p class="docbar"><span>{len(entries)} updates</span><a href="#latest">latest: #{latest}</a>'
          f'<a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/docs/patch-notes.md">source</a></p>\n'

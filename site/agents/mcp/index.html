@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>MCP server: dewfpga for coding agents</title>
+<meta name="description" content="dewfpga mcp serves the same CLI through standard input/output. dewfpga install builds a separate $FPGA_HOME/mcp-venv, with mcp==2.3.0 and mcp-types==2.3.0.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/agents/mcp/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MCP server: dewfpga for coding agents">
+<meta property="og:description" content="dewfpga mcp serves the same CLI through standard input/output. dewfpga install builds a separate $FPGA_HOME/mcp-venv, with mcp==2.3.0 and mcp-types==2.3.0.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/agents/mcp/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"MCP server","url":"https://nosey-dewdrop.github.io/dewfpga/agents/mcp/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">agents</span>for coding agents</p>
+  <h1>MCP server</h1>
+<p><code>dewfpga mcp</code> serves the same CLI through standard input/output. <code>dewfpga install</code> builds a separate <code>$FPGA_HOME/mcp-venv</code>, with <code>mcp==2.3.0</code> and <code>mcp-types==2.3.0</code>. The plain CLI remains usable if that optional installation fails. Set <code>DEWFPGA_SKIP_MCP=1</code> to skip the automatic SDK step. <code>dewfpga check</code> reports its presence without making an absent optional SDK a toolchain failure.</p>
+<p>For Claude Code, from the project folder:</p>
+<pre class="sh"><code>claude mcp add --transport stdio --scope local dewfpga -- dewfpga mcp</code></pre>
+<p>This registers a local client configuration; the installer does not register clients. Other MCP clients use <code>command: "dewfpga"</code>, <code>args: ["mcp"]</code>. If the client does not inherit your shell PATH, use the absolute executable path printed by <code>command -v dewfpga</code>. The server supports the SDK's protocol negotiation; tests exercise protocol 2026-07-28.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Arguments</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check</code></td>
+<td>none</td>
+<td>inspect installed tools</td>
+</tr>
+<tr>
+<td><code>new</code></td>
+<td><code>name</code>, absolute <code>parent</code></td>
+<td>create a blink project; refuse an existing path</td>
+</tr>
+<tr>
+<td><code>sim</code></td>
+<td>absolute <code>project</code>, optional <code>testbench</code>, <code>timeout_s</code></td>
+<td>run the testbench; default 120 s, max 600 s</td>
+</tr>
+<tr>
+<td><code>bit</code></td>
+<td>absolute <code>project</code>, optional module <code>top</code>, <code>timeout_s</code></td>
+<td>build a bitstream; default 600 s, max 1800 s</td>
+</tr>
+<tr>
+<td><code>flash</code></td>
+<td>absolute <code>project</code>, optional <code>timeout_s</code></td>
+<td>build and program the board; default 120 s, max 300 s</td>
+</tr>
+<tr>
+<td><code>explain_error</code></td>
+<td><code>code</code></td>
+<td>read the packaged error catalog offline</td>
+</tr>
+</tbody>
+</table>
+<p>The CLI may fix port directions or name unnamed instances while building. <code>sim</code> and <code>bit</code> therefore declare that they can write project files. <code>flash</code> declares destructive hardware effects: call it only when the user has asked to program the connected board. Annotations inform the client; they do not enforce user approval by themselves.</p>
+<p>A tool failure has <code>isError: true</code>. CLI-backed structured results use the JSON schema above; malformed, mismatched or contradictory results are rejected. Server stdout is reserved for protocol messages. Child stdout is bounded at 4 MiB; stderr retains at most 64 KiB. Cancellation stops observed descendant process groups and waits for cleanup without blocking the event loop. A daemon that reparents before observation can escape that process-tree boundary; PID reuse and availability of <code>ps</code> remain limitations.</p>
+<p>SDK setup uses a private staging directory, an ownership marker and a lock. Failed replacement preserves the previous environment; uninstall refuses a concurrent SDK installation and keeps foreign or symlinked destinations. It does not remove unrelated projects or install packages into the system Python.</p>
+<p>Tests can run without an SDK, explicitly skipping protocol cases. CI sets <code>DEWFPGA_MCP_REQUIRE_SDK=1</code>, which makes an absent SDK a failure. For a separate test venv, set <code>DEWFPGA_MCP_TEST_PYTHON</code> to its Python executable. The test suite itself performs no network installation.</p>
+<h2 id="errors">Which errors can it stop with?</h2>
+<p class="mute small">1 codes in the error catalog.</p>
+<ul>
+<li><a href="/dewfpga/errors/mcp-not-installed/">mcp-not-installed</a>: The isolated MCP Python environment is missing or cannot import the required SDK.</li>
+</ul>
+<h2 id="patch-notes">Which patch notes name it?</h2>
+<ul>
+<li><a href="/dewfpga/patch-notes/23/">#23 Prepare simulator discovery and enforce its browser checks</a></li>
+<li><a href="/dewfpga/patch-notes/29/">#29 A failed build leaves no old bitstream, wrong pins are named, a quick save rebuilds</a></li>
+</ul>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/agents/json/">Machine-readable CLI</a><br>
+From <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/docs/agent-interface.md">docs/agent-interface.md</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

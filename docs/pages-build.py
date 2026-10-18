@@ -38,7 +38,7 @@ from nav import render  # noqa: E402
 SITE = Path("site")
 HOST = "https://nosey-dewdrop.github.io/dewfpga/"
 GITHUB = "https://github.com/nosey-dewdrop/dewfpga"
-TYPES = ["sv", "notes", "guide"]  # what a plain run builds
+TYPES = ["sv", "notes", "guide", "agents"]  # what a plain run builds
 THIN = 150  # words: a patch note shorter than this stays in the full list only
 
 NOTES_LEFT_OUT = {
@@ -52,6 +52,8 @@ NOTE_SLUGS = {
     "Unreleased: preserve vector indices in pin validation": "pin-validation-vector-indices",
     "Local candidate · The course's ready netlist modules build · 15 October": "course-netlist-modules",
 }
+# thin entries printed together on one page: folder -> their numbers or headings
+NOTE_MERGE = {}
 # guide sections. A section of THIN words or more gets its own page, in the folder named here; a
 # shorter subsection is printed on its parent's page, a shorter section stays in the whole guide only.
 GUIDE_LEFT_OUT = {"2": "the one-line install", "6": "VS Code, set up by the CLI", "7": "the CLI's messages"}
@@ -62,6 +64,10 @@ GUIDE_SLUGS = {
     "8": "limits", "9": "tested-versions",
 }
 GUIDE_RELATED = {"7.1": "sv", "8": "sv"}
+# docs/agent-interface.md: its h1 and each `## ` part -> folder under site/agents/
+AGENT_SLUGS = {"Machine-readable CLI": "json", "MCP server": "mcp"}
+# the commands bin/dewfpga's help lists; a command named here has no page of its own
+CLI_NO_PAGE = {"--version": "one line", "mcp": "its page is the MCP server's, /agents/mcp/"}
 
 ICON = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
@@ -187,16 +193,40 @@ def notes():
         m = re.match(r"#(\d+) · (.*) · (.*)$", heading)
         if m:
             out.append((m.group(1), int(m.group(1)), heading, m.group(2), m.group(3), body))
-        elif heading in NOTE_SLUGS:
+        elif heading in NOTE_SLUGS or heading in {m for ms in NOTE_MERGE.values() for m in ms}:
             parts = heading.split(" · ")
             title = parts[1] if len(parts) == 3 else heading.split(": ", 1)[1]
             date = parts[2] if len(parts) == 3 else ""
-            out.append((NOTE_SLUGS[heading], None, heading, title[0].upper() + title[1:], date, body))
+            out.append((NOTE_SLUGS.get(heading), None, heading, title[0].upper() + title[1:], date, body))
     return out
 
 
 def note_pages():
-    return [n for n in notes() if n[1] not in NOTES_LEFT_OUT and words(n[5]) >= THIN]
+    """[(folder, [entries])]: an entry of THIN words or more on its own page; the thin entries named
+    together in NOTE_MERGE on one page; the rest only in the full list"""
+    merged = {m: folder for folder, ms in NOTE_MERGE.items() for m in ms}
+    out, done = [], set()
+    for e in notes():
+        ident = e[1] if e[1] is not None else e[2]
+        if ident in merged:
+            folder = merged[ident]
+            if folder not in done:
+                group = [x for x in notes() if (x[1] if x[1] is not None else x[2]) in NOTE_MERGE[folder]]
+                if any(words(x[5]) >= THIN for x in group):
+                    sys.exit(f"NOTE_MERGE {folder}: an entry of {THIN} words or more gets a page of its own")
+                if sum(words(x[5]) for x in group) >= THIN:
+                    out.append((folder, group))
+                done.add(folder)
+        elif e[0] and e[1] not in NOTES_LEFT_OUT and words(e[5]) >= THIN:
+            out.append((e[0], [e]))
+    return out
+
+
+def note_label(group):
+    """'#9 One navigation source…', '#18, #21, #22 A workspace…; …', 'Preserve vector indices…'"""
+    nums = [e[1] for e in group if e[1]]
+    titles = "; ".join(plain(pandoc(e[3])) for e in group)
+    return (", ".join(f"#{n}" for n in nums) + " " if nums else "") + titles
 
 
 def guide_sections():
@@ -224,6 +254,139 @@ def guide_ids():
         if m:
             ids[m.group(1)] = hid
     return ids
+
+
+def md_blocks(md):
+    """markdown -> [(kind, text)]: kind is head, code, table or prose; a list item is a block of its own"""
+    md = re.sub(r"<!--.*?-->", "", md, flags=re.S)
+    out, cur, kind, fence = [], [], "prose", False
+
+    def flush():
+        if cur:
+            out.append((kind, "\n".join(cur)))
+        cur.clear()
+    for l in md.split("\n"):
+        if l.startswith("```"):
+            if not fence:
+                flush()
+                kind, fence = "code", True
+                cur.append(l)
+            else:
+                cur.append(l)
+                flush()
+                kind, fence = "prose", False
+            continue
+        if fence:
+            cur.append(l)
+            continue
+        if not l.strip():
+            flush()
+            continue
+        if l.startswith("#"):
+            flush()
+            out.append(("head", l))
+            continue
+        if re.match(r"^([-*]|\d+\.) ", l) or (l.startswith("|") and not (cur and cur[0].startswith("|"))) \
+                or (cur and cur[0].startswith("|") and not l.startswith("|")):
+            flush()
+        kind = "table" if l.startswith("|") else "prose"
+        cur.append(l)
+    flush()
+    return out
+
+
+def error_entries():
+    """docs/errors.md: code -> its key: value lines"""
+    out, lines = {}, Path("docs/errors.md").read_text().split("\n")
+    for i, line in enumerate(lines):
+        m = re.match(r"^## ([a-z0-9][a-z0-9-]*)\s*$", line)
+        j = i + 1
+        while m and j < len(lines) and lines[j].strip():
+            k, _, v = lines[j].partition(":")
+            out.setdefault(m.group(1), {})[k.strip()] = v.strip()
+            j += 1
+    return out
+
+
+def cli_help():
+    """bin/dewfpga's help text (the lines its usage() prints): command -> its entry, in that order"""
+    lines = [re.sub(r"^# ?", "", l) for l in Path("bin/dewfpga").read_text().split("\n")[1:17]]
+    entries = []
+    for l in lines:
+        if re.match(r"^  dewfpga ", l):
+            entries.append([l])
+        elif entries and l.startswith("   "):
+            entries[-1].append(l)
+    out = {}
+    for e in entries:
+        for c in cmd_words(e[0].strip()[len("dewfpga "):]):
+            out[c] = "\n".join(x[2:] for x in e)
+    return out
+
+
+def cmd_words(line):
+    """'sim | bit | flash | clean [top]   work on ...' -> [sim, bit, flash, clean]"""
+    first = re.split(r"\s{2,}", line.strip())[0]
+    return [w for w in re.split(r"[\s|]+", first.split("[")[0].split("<")[0]) if w]
+
+
+def cli_lines():
+    """the one-line description of each command on the cli page (site/cli/index.html, its command list)"""
+    page = html.unescape((SITE / "cli/index.html").read_text())
+    return {m.group(1): m.group(2).strip() for m in re.finditer(r"^dewfpga (\S+)(?: \S+)?\s{2,}(.+)$", page, re.M)}
+
+
+def cmd_re(c):
+    return re.compile(r"\bdewfpga " + re.escape(c) + r"(?![\w-])")
+
+
+def cli_cmds(types):
+    """the commands with a page (cli) and the agent pages (agents), in the help's order"""
+    out = [c for c in cli_help() if c not in CLI_NO_PAGE] if "cli" in types else []
+    return out + (["json", "mcp"] if "agents" in types else [])
+
+
+def cmd_href(c):
+    return f"/dewfpga/agents/{c}/" if c in ("json", "mcp") else f"/dewfpga/cli/{c}/"
+
+
+def cmd_label(c):
+    return {"json": "dewfpga … --json", "mcp": "dewfpga mcp"}.get(c, f"dewfpga {c}")
+
+
+def commands_in(text, types):
+    """the commands with a page that a record names (`dewfpga bit`, `--json`, `dewfpga mcp`)"""
+    have = cli_cmds(types)
+    found = [c for c in have if c not in ("json", "mcp") and cmd_re(c).search(text)]
+    if "json" in have and re.search(r"(?<![\w-])--json\b", text):
+        found.append("json")
+    if "mcp" in have and (cmd_re("mcp").search(text) or "MCP" in text):
+        found.append("mcp")
+    return found
+
+
+def commands_line(text, types, what, own=None):
+    cs = [c for c in commands_in(text, types) if c != own]
+    if not cs:
+        return None
+    return f"The commands {what} names: " + " · ".join(f"<a href=\"{cmd_href(c)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cs)
+
+
+def error_commands(types):
+    """docs/errors.md: code -> the command pages it belongs to, read from its step: and source: lines"""
+    have, out = cli_cmds(types), {}
+    for code, m in error_entries().items():
+        found = set(re.split(r"[\s,/]+", m.get("step", "").lower()))
+        for mm in re.finditer(r"\bdewfpga ([a-z]+(?:\s*/\s*[a-z]+)*)", m.get("source", "")):
+            found |= set(re.split(r"\s*/\s*", mm.group(1)))
+        if "MCP" in m.get("source", "") or code.startswith("mcp"):
+            found.add("mcp")
+        elif "agent" in found:
+            found.add("json")
+        cs = [c for c in have if c in found]
+        if cs:
+            out[code] = cs
+    return out
 
 
 # ---------------------------------------------------------------- probes
@@ -276,11 +439,11 @@ def link_record(text, codes, note_link):
 def build_sv(types, written):
     rows, codes = probes(), error_codes()
     numbered = {n for _, n, *_ in notes() if n}
-    with_page = {n for _, n, *_ in note_pages() if n} if "notes" in types else set()
+    with_page = {e[1]: key for key, group in note_pages() for e in group if e[1]} if "notes" in types else {}
 
     def note_link(n, label):
         if n in with_page:
-            return f'<a href="/dewfpga/patch-notes/{n}/">{label}</a>'
+            return f'<a href="/dewfpga/patch-notes/{with_page[n]}/">{label}</a>'
         if n in numbered:
             return f'<a href="/dewfpga/patch-notes/#{n}">{label}</a>'
         return label
@@ -384,42 +547,52 @@ def note_folder(key):
 
 def build_notes(types, written):
     pages = note_pages()
-    keys = [k for k, *_ in pages]
-    for i, (key, num, heading, title, date, body) in enumerate(pages):
+    keys = [k for k, _ in pages]
+    for i, (key, group) in enumerate(pages):
         url = f"{HOST}patch-notes/{key}/"
-        ptitle = plain(pandoc(title))
-        label = f"#{num}" if num else heading.split(":")[0].split(" · ")[0].lower()
-        page_title = (f"{label} {ptitle}" if num else ptitle) + ": dewfpga patch notes"
-        text = plain(pandoc(body, "gfm-tex_math_dollars-raw_html"))
-        desc = summary(text)
-        h1 = f"{label} · {ptitle}" if num else ptitle
+        nums = [e[1] for e in group if e[1]]
+        label = ", ".join(f"#{n}" for n in nums) if nums else group[0][2].split(":")[0].split(" · ")[0].lower()
+        ptitle = "; ".join(plain(pandoc(e[3])) for e in group)
+        page_title = (f"{label} {ptitle}" if nums else ptitle) + ": dewfpga patch notes"
+        if len(group) == 1:
+            body_md = group[0][5]
+        else:
+            body_md = "\n\n".join(f"## {e[2]}\n\n{e[5]}" for e in group)
+        bodyhtml = pandoc(body_md, "gfm-tex_math_dollars-raw_html")
+        desc = summary(plain(bodyhtml if len(group) == 1 else re.sub(r"<h2.*?</h2>", "", bodyhtml)))
+        h1 = f"{label} · {ptitle}" if nums else ptitle
+        dates = " · ".join(dict.fromkeys(e[4] for e in group if e[4]))
         p = head(page_title, desc, url, "c-notes", article(h1, url))
         p += "<main class=\"wrap docs\">\n"
         p += (f"  <p class=\"eyebrow\"><a href=\"/dewfpga/patch-notes/\">patch notes</a> · <span class=\"step\">{esc(label)}</span>"
-              f"{esc(date)}</p>\n")
-        h1_html = pandoc(title).strip()[3:-4]
-        p += f"  <h1>{(esc(label) + ' · ') if num else ''}{h1_html}</h1>\n"
-        p += pandoc(body, "gfm-tex_math_dollars-raw_html")
+              f"{esc(dates)}</p>\n")
+        h1_html = "; ".join(pandoc(e[3]).strip()[3:-4] for e in group)
+        p += f"  <h1>{(esc(label) + ' · ') if nums else ''}{h1_html}</h1>\n"
+        p += bodyhtml
         nav = []
         if i:
-            pk, pn, _, pt, *_ = pages[i - 1]
-            nav.append(f"previous: <a href=\"/dewfpga/patch-notes/{pk}/\">{('#' + str(pn) + ' ') if pn else ''}{esc(plain(pandoc(pt)))}</a>")
+            nav.append(f"previous: <a href=\"/dewfpga/patch-notes/{pages[i - 1][0]}/\">{esc(note_label(pages[i - 1][1]))}</a>")
         if i + 1 < len(pages):
-            nk, nn, _, nt, *_ = pages[i + 1]
-            nav.append(f"next: <a href=\"/dewfpga/patch-notes/{nk}/\">{('#' + str(nn) + ' ') if nn else ''}{esc(plain(pandoc(nt)))}</a>")
-        where = f"/dewfpga/patch-notes/#{num}" if num else "/dewfpga/patch-notes/"
-        p += ("<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "<br>\n"
-              f"<a href=\"{where}\">This entry in the full list</a>"
-              + ("<br>\nEvery SystemVerilog construct measured so far, next to what Vivado does: <a href=\"/dewfpga/sv/\">the probes, stage by stage</a>" if "sv" in types else "")
-              + "</p>\n")
+            nav.append(f"next: <a href=\"/dewfpga/patch-notes/{pages[i + 1][0]}/\">{esc(note_label(pages[i + 1][1]))}</a>")
+        where = f"/dewfpga/patch-notes/#{nums[0]}" if nums else "/dewfpga/patch-notes/"
+        nav.append(f"<a href=\"{where}\">{'This entry' if len(group) == 1 else 'These entries'} in the full list</a>")
+        line = commands_line(body_md, types, "this entry" if len(group) == 1 else "these entries")
+        if line:
+            nav.append(line)
+        if "sv" in types:
+            nav.append("Every SystemVerilog construct measured so far, next to what Vivado does: <a href=\"/dewfpga/sv/\">the probes, stage by stage</a>")
+        p += "<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "</p>\n"
         p += "</main>\n" + FOOT.format(links='<a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a>', script=COPY_ALL)
         write(note_folder(key), p)
-        written.append((note_folder(key), page_title, plain(h1), desc))
+        written.append((note_folder(key), page_title, plain(h1_html if not nums else h1), desc))
     stale = sorted(d.name for d in (SITE / "patch-notes").iterdir() if d.is_dir() and d.name not in {str(k) for k in keys})
-    left = [n for _, n, *_ in notes() if n in NOTES_LEFT_OUT]
-    thin = [k for k, n, _, _, _, b in notes() if n not in NOTES_LEFT_OUT and words(b) < THIN]
-    return (f"site/patch-notes: {len(pages)} entry pages; left out {len(left)} (the CLI, its install, agents, mail), "
-            f"{len(thin)} under {THIN} words: {' '.join('#' + str(t) for t in thin)}" + (f"; folders without an entry: {' '.join(stale)}" if stale else ""))
+    paged = {e[2] for _, g in pages for e in g}
+    rest = [e for e in notes() if e[2] not in paged]
+    left = [e for e in rest if e[1] in NOTES_LEFT_OUT]
+    thin = [e for e in rest if e[1] not in NOTES_LEFT_OUT]
+    return (f"site/patch-notes: {len(pages)} pages for {len(paged)} entries; left out {len(left)}; "
+            f"only in the full list: {' '.join(('#' + str(e[1])) if e[1] else repr(e[2][:30]) for e in thin) or 'none'}"
+            + (f"; folders without an entry: {' '.join(stale)}" if stale else ""))
 
 
 # ---------------------------------------------------------------- the guide
@@ -510,6 +683,202 @@ def guide_contents():
     write(path, page)
 
 
+# ---------------------------------------------------------------- agents and commands
+
+def agent_parts():
+    """docs/agent-interface.md: [(folder, heading, body)], the h1's part first, then each `## ` part"""
+    text = Path("docs/agent-interface.md").read_text()
+    parts = re.split(r"^(#{1,2} .*)$", text, flags=re.M)[1:]
+    out = []
+    for h, body in zip(parts[0::2], parts[1::2]):
+        heading = h.lstrip("#").strip()
+        if heading not in AGENT_SLUGS:
+            sys.exit(f"docs/agent-interface.md: give the part {heading!r} a folder in AGENT_SLUGS")
+        out.append((AGENT_SLUGS[heading], heading, body.strip("\n")))
+    return out
+
+
+def link_md(md, origin, types):
+    """a source's own links, made to work on a page: README and agent-interface paths, guide anchors"""
+    def one(m):
+        target = m.group(2)
+        if target.startswith(("http", "/", "mailto:")):
+            return m.group(0)
+        if origin == "guide" and target.startswith("#"):
+            return f"{m.group(1)}({guide_link(target[1:], types)})"
+        path, _, frag = target.partition("#")
+        if path == "docs/agent-interface.md" and "agents" in types:
+            return f"{m.group(1)}(/dewfpga/agents/{'mcp' if frag == 'mcp-server' else 'json'}/)"
+        if not path:
+            return f"{m.group(1)}({GITHUB}#{frag})"
+        return f"{m.group(1)}({GITHUB}/blob/main/{path}{'#' + frag if frag else ''})"
+    return re.sub(r"(\[[^\]]*\])\(([^)\s]+)\)", one, md)
+
+
+def guide_link(anchor, types):
+    """an anchor of the whole guide -> the page that holds that section, when it has one"""
+    if "guide" not in types:
+        return f"/dewfpga/docs/#{anchor}"
+    secs, ids = guide_sections(), guide_ids()
+    pages, folded = guide_pages(secs)
+    slug = dict(pages)
+    num = next((n for n, i in ids.items() if i == anchor), None)
+    if num in slug:
+        return f"/dewfpga/docs/{slug[num]}/"
+    if num in folded:
+        return f"/dewfpga/docs/{slug[folded[num]]}/#{anchor}"
+    return f"/dewfpga/docs/#{anchor}"
+
+
+def errors_list(cmd, types):
+    entries, codes = error_entries(), [c for c, cs in error_commands(types).items() if cmd in cs]
+    if not codes:
+        return ""
+    out = f"<h2 id=\"errors\">Which errors can it stop with?</h2>\n<p class=\"mute small\">{len(codes)} codes in the error catalog.</p>\n<ul>\n"
+    for c in codes:
+        out += f"<li><a href=\"/dewfpga/errors/{c}/\">{c}</a>: {esc(entries[c].get('summary', ''))}</li>\n"
+    return out + "</ul>\n"
+
+
+def notes_list(cmd, types):
+    if "notes" not in types:
+        return ""
+    hits = [(key, group) for key, group in note_pages() if cmd in commands_in("\n".join(e[5] for e in group), types)]
+    if not hits:
+        return ""
+    out = "<h2 id=\"patch-notes\">Which patch notes name it?</h2>\n<ul>\n"
+    for key, group in hits:
+        out += f"<li><a href=\"/dewfpga/patch-notes/{key}/\">{esc(note_label(group))}</a></li>\n"
+    return out + "</ul>\n"
+
+
+def build_agents(types, written):
+    parts = agent_parts()
+    for i, (folder, heading, body) in enumerate(parts):
+        url = f"{HOST}agents/{folder}/"
+        bodyhtml = pandoc(link_md(body, "agent", types))
+        first = re.search(r"<p>(.*?)</p>", bodyhtml, re.S)
+        desc = summary(plain(first.group(1)))
+        title = f"{heading}: dewfpga for coding agents"
+        p = head(title, desc, url, "c-cli", article(heading, url))
+        p += "<main class=\"wrap docs\">\n"
+        p += (f"  <p class=\"eyebrow\"><a href=\"/dewfpga/cli/\">cli</a> · <span class=\"step\">agents</span>"
+              f"for coding agents</p>\n")
+        p += f"  <h1>{esc(heading)}</h1>\n" + bodyhtml
+        p += errors_list(folder, types) + notes_list(folder, types)
+        nav = [f"{'next' if j > i else 'previous'}: <a href=\"/dewfpga/agents/{f}/\">{esc(h)}</a>"
+               for j, (f, h, _) in enumerate(parts) if j != i]
+        line = commands_line(body, types, "this page", own=folder)
+        if line:
+            nav.append(line)
+        nav.append(f"From <a href=\"{GITHUB}/blob/main/docs/agent-interface.md\">docs/agent-interface.md</a>")
+        p += "<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "</p>\n"
+        p += "</main>\n" + FOOT.format(links='<a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a>', script=COPY_ALL)
+        write(SITE / "agents" / folder / "index.html", p)
+        written.append((SITE / "agents" / folder / "index.html", title, heading, desc))
+    return f"site/agents: {len(parts)} pages"
+
+
+def cmd_blocks(cmd, origin, md, types):
+    """the blocks of one source that name a command; a list of commands (every line `dewfpga ...`)
+    gives only its lines for this command; a table, only its header and this command's row"""
+    out = []
+    for kind, b in md_blocks(md):
+        lines = [l for l in b.split("\n") if l.strip() and not l.startswith("```")]
+        if kind == "head":
+            continue
+        if kind == "code" and lines and all(l.startswith(("dewfpga ", " ")) for l in lines):
+            hit = [l for l in lines if l.startswith("dewfpga ") and cmd in cmd_words(l[len("dewfpga "):])]
+            if hit:
+                out.append(("code", "```\n" + "\n".join(hit) + "\n```"))
+            continue
+        if kind == "table" and origin == "agent":
+            rows = [l for l in lines[2:] if re.match(r"^\|\s*`" + re.escape(cmd) + r"`\s*\|", l)]
+            if rows:
+                out.append(("table", "\n".join(lines[:2] + rows)))
+            continue
+        if cmd_re(cmd).search(b) or (cmd == "run" and origin == "readme" and re.search(r"\bRun\b", b)):
+            out.append((kind, b))
+    return out
+
+
+def build_cli(types, written):
+    helps, lines, cmds = cli_help(), cli_lines(), [c for c in cli_cmds(types) if c not in ("json", "mcp")]
+    readme, agent = Path("README.md").read_text(), Path("docs/agent-interface.md").read_text()
+    secs = guide_sections()
+    for i, cmd in enumerate(cmds):
+        url = f"{HOST}cli/{cmd}/"
+        one = lines.get(cmd) or re.split(r"\s{2,}", helps[cmd].split("\n")[0].strip(), maxsplit=1)[-1]
+        title = f"dewfpga {cmd}: {one}"
+        rb = cmd_blocks(cmd, "readme", readme, types)
+        gb = [(n, b) for n in secs for b in cmd_blocks(cmd, "guide", secs[n][2], types)]
+        ab = cmd_blocks(cmd, "agent", agent, types)
+        own = words(helps[cmd]) + sum(words(b) for _, b in rb + ab) + sum(words(b[1]) for _, b in gb)
+        if own < THIN:
+            sys.exit(f"cli: dewfpga {cmd} has {own} words of its own text; name it in CLI_NO_PAGE or give it more")
+        p_body = "<h2 id=\"help\">What does its help text say?</h2>\n"
+        p_body += f"<pre><code>{esc(helps[cmd], quote=False)}</code></pre>\n"
+        p_body += f"<p class=\"mute small\">From <code>dewfpga --help</code>, as <a href=\"{GITHUB}/blob/main/bin/dewfpga\">bin/dewfpga</a> prints it.</p>\n"
+        if rb:
+            p_body += "<h2 id=\"readme\">What does the README say?</h2>\n"
+            p_body += pandoc(link_md("\n\n".join(b for _, b in rb), "readme", types))
+            p_body += f"<p class=\"mute small\">From <a href=\"{GITHUB}#readme\">the README</a>.</p>\n"
+        if gb:
+            p_body += "<h2 id=\"guide\">What does the guide say?</h2>\n"
+            for n in dict.fromkeys(n for n, _ in gb):
+                p_body += pandoc(link_md("\n\n".join(b for m, b in gb if m == n), "guide", types))
+                ids = guide_ids()
+                p_body += (f"<p class=\"mute small\">From section {n}, <a href=\"{guide_link(ids[n], types)}\">"
+                           f"{esc(secs[n][1])}</a>.</p>\n")
+        if ab:
+            p_body += "<h2 id=\"agents\">How does a coding agent call it?</h2>\n"
+            p_body += pandoc(link_md("\n\n".join(b for _, b in ab), "agent", types))
+            if "agents" in types:
+                p_body += ("<p class=\"mute small\">From the agent interface: <a href=\"/dewfpga/agents/json/\">the machine-readable CLI</a>"
+                           " and <a href=\"/dewfpga/agents/mcp/\">the MCP server</a>.</p>\n")
+        p_body += errors_list(cmd, types) + notes_list(cmd, types)
+        p_body = p_body.replace('<pre class="copy"><code>', '<pre data-copy="1"><code>')
+        firsts = [plain(m) for m in re.findall(r"<p>(.*?)</p>", p_body, re.S)[:1]]
+        desc = summary(f"dewfpga {cmd}: {one}. " + (firsts[0] if firsts else ""))
+        p = head(title, desc, url, "c-cli", article(f"dewfpga {cmd}", url))
+        p += "<main class=\"wrap docs\">\n"
+        p += f"  <p class=\"eyebrow\"><a href=\"/dewfpga/cli/\">cli</a> · <span class=\"step\">{esc(cmd)}</span>{esc(one)}</p>\n"
+        p += f"  <h1>dewfpga {esc(cmd)}</h1>\n" + p_body
+        nav = []
+        if i:
+            nav.append(f"previous: <a href=\"/dewfpga/cli/{cmds[i - 1]}/\">dewfpga {esc(cmds[i - 1])}</a>")
+        if i + 1 < len(cmds):
+            nav.append(f"next: <a href=\"/dewfpga/cli/{cmds[i + 1]}/\">dewfpga {esc(cmds[i + 1])}</a>")
+        nav.append("Every command: " + " · ".join(f"<a href=\"{cmd_href(c)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cli_cmds(types)))
+        p += "<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "</p>\n"
+        p += "</main>\n" + FOOT.format(links='<a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a>', script=COPY_ALL)
+        write(SITE / "cli" / cmd / "index.html", p)
+        written.append((SITE / "cli" / cmd / "index.html", title, f"dewfpga {cmd}", desc))
+    return f"site/cli: {len(cmds)} command pages (none for {', '.join(CLI_NO_PAGE)})"
+
+
+CLI_HUB_BEGIN, CLI_HUB_END = "<!-- command pages (docs/pages-build.py) -->\n", "<!-- /command pages -->\n"
+
+
+def cli_hub(types):
+    """the cli page links every command page, between two markers under its command list"""
+    path = SITE / "cli/index.html"
+    page = path.read_text()
+    cs = cli_cmds(types)
+    block = (CLI_HUB_BEGIN + "  <p class=\"mute small\">On their own pages: "
+             + " · ".join(f"<a href=\"{cmd_href(c)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cs) + ".</p>\n"
+             + CLI_HUB_END) if cs else ""
+    if CLI_HUB_BEGIN in page:
+        i, j = page.index(CLI_HUB_BEGIN), page.index(CLI_HUB_END) + len(CLI_HUB_END)
+        page = page[:i] + block + page[j:]
+    elif block:
+        anchor = "  </details>\n"
+        if page.count(anchor) != 1:
+            sys.exit("site/cli/index.html: no single '  </details>' to put the command links under")
+        page = page.replace(anchor, anchor + block)
+    write(path, page)
+
+
 # ---------------------------------------------------------------- checks
 
 def check(written):
@@ -545,14 +914,19 @@ def main():
         print(f"pages-build --check: {len(probes()) + 1} probe pages, {len(STALE)} differ")
         sys.exit(1 if STALE else 0)
     types = set(a.only.split(","))
-    if not types <= {"sv", "notes", "guide"}:
-        sys.exit("--only takes sv, notes, guide")
+    if not types <= {"sv", "notes", "guide", "agents", "cli"}:
+        sys.exit("--only takes sv, notes, guide, agents, cli")
     written, said = [], []
     if "notes" in types:
         said.append(build_notes(types, written))
     if "guide" in types:
         said.append(build_guide(types, written))
         guide_contents()
+    if "agents" in types:
+        said.append(build_agents(types, written))
+    if "cli" in types:
+        said.append(build_cli(types, written))
+    cli_hub(types)
     if "sv" in types:
         said.append(build_sv(types, written))
     check(written)
