@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.286): '$error, $warning, $info: Supported only within initial blocks, and can only be used to evaluate constant expressions; for example, parameters.'; Ch.9 Table 21 (p.241): '$warning: Supported', '$info: Supported'</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#4">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 0 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
+<p>since <a href="/dewfpga/patch-notes/4/">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 0 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
 <h2 id="code">What is the probe's code?</h2>
 <p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/90_elab_warning_initial">test/sv/90_elab_warning_initial</a>.</p>
 <p><code>design.sv</code></p>

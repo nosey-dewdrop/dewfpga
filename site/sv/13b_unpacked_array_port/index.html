@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.5 '3D RAM Inference' (p.161): the single-port example rams_sp_3d.sv declares 'input [A_WID-1:0] addr [NUM_RAMS-1:0]' and 'output reg [D_WID-1:0] dout [NUM_RAMS-1:0]'; the simple and true dual-port examples (p.162, p.164) do the same, and so does UG901 v2022.2 (p.160-162). IEEE 1800-2017 A.1.3: an ANSI port declaration takes unpacked dimensions</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#4">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 26 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
+<p>since <a href="/dewfpga/patch-notes/4/">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 26 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
 <h2 id="code">What is the probe's code?</h2>
 <p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/13b_unpacked_array_port">test/sv/13b_unpacked_array_port</a>.</p>
 <p><code>design.sv</code></p>

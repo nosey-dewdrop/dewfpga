@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.9 'Using While Loops' (p.257): 'When using always blocks, use while loops to execute repetitive procedures.'; 'Example of While Loop' (p.258) is this design's always block, while (!found &amp;&amp; (i &lt; P))</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#4">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 4 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048560 output bits compared, all equal'</p>
+<p>since <a href="/dewfpga/patch-notes/4/">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 4 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048560 output bits compared, all equal'</p>
 <h2 id="code">What is the probe's code?</h2>
 <p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/16c_while_loop">test/sv/16c_while_loop</a>.</p>
 <p><code>design.sv</code></p>

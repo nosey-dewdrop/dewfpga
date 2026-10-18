@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> Vivado 2020.1 synthesis log of a public CS223 lab repo: its top module instantiates two submodules without instance names, and the log says 'INFO: [Synth 8-6155] done synthesizing module '&lt;its top&gt;' (3#1)' and 'Synthesis finished with 0 errors, 0 critical warnings and 0 warnings.'; implementation: 'write_bitstream completed successfully'. Not in UG901; IEEE 1800 requires the name</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#4">#4</a> the instance is named in the compiler copy, with a note: 'design.sv:5: note [<a href="/dewfpga/errors/unnamed-instance/">unnamed-instance</a>]: named the instance:  inv u_inv(sw[0], led[0]);' (the standard and Yosys need it; Vivado accepts both); all four stages pass</p>
+<p>since <a href="/dewfpga/patch-notes/4/">#4</a> the instance is named in the compiler copy, with a note: 'design.sv:5: note [<a href="/dewfpga/errors/unnamed-instance/">unnamed-instance</a>]: named the instance:  inv u_inv(sw[0], led[0]);' (the standard and Yosys need it; Vivado accepts both); all four stages pass</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/unnamed-instance/">unnamed-instance</a>: `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in a temporary compiler copy and says so. Your saved source stays unchanged.</li>

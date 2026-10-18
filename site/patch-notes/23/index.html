@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#23 Prepare simulator discovery and enforce its browser checks: dewfpga patch notes</title>
+<meta name="description" content="The simulator&#x27;s noindex directive is removed, its source metadata enters sitemap validation, and the home page distinguishes the available simulator/testbench/CLI from the future browser bitstream…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/23/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#23 Prepare simulator discovery and enforce its browser checks: dewfpga patch notes">
+<meta property="og:description" content="The simulator&#x27;s noindex directive is removed, its source metadata enters sitemap validation, and the home page distinguishes the available simulator/testbench/CLI from the future browser bitstream…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/23/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#23 · Prepare simulator discovery and enforce its browser checks","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/23/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#23</span>3 October</p>
+  <h1>#23 · Prepare simulator discovery and enforce its browser checks</h1>
+<p>The simulator's noindex directive is removed, its source metadata enters sitemap validation, and the home page distinguishes the available simulator/testbench/CLI from the future browser bitstream compiler. Existing source checks plus deliberately broken metadata catch a restored noindex, missing sitemap entry and bad canonical.</p>
+<p>CI now runs the UI, five original regressions, board and hardware worker suites on both Chromium and WebKit. macOS additionally checks actual worker netlists and engine isolation with native tools. The original expanded WebKit gate failed before the CDP fixture repair; that failure is retained. Final combined acceptance is recorded below. The main-only deployment guard remains; this development update does not publish a live site or establish physical-board or GUI acceptance.</p>
+<p>Combined #17–#23 root acceptance passed in both Chromium and WebKit: source <strong>24/0</strong>, workspace <strong>69/0</strong>, UI <strong>129/0</strong>, original regressions <strong>5/0</strong>, board <strong>72/0</strong> and worker <strong>17/0</strong>, with no page errors. The assembled Pages and mirror packages each passed <strong>104 pages, 0 failures, 1909 links</strong>. Their CLI archive is byte-identical to the #16 archive already tested with real sim and bit commands. The required SDK-backed full CLI rerun passed <strong>273/0 with 52 known gaps</strong> in 20 minutes 26 seconds; all product and test hashes stayed unchanged (only these release notes and their HTML changed). A first local attempt omitted the SDK Python setting, failed the required MCP check and was stopped; that attempt is preserved separately. Remote CI run 37129232619 then passed on the exact db5b855 head: both web jobs and macOS succeeded. CI CLI counted 271/0 with 52 known gaps; two version-dependent checks were skipped with the CI Yosys build. The Pages deployment job was skipped.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/20/">#20 Located diagnostics while typing</a><br>
+next: <a href="/dewfpga/patch-notes/28/">#28 dewfpga sim simulates what the build reads when iverilog refuses the design</a><br>
+<a href="/dewfpga/patch-notes/#23">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

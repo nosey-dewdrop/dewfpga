@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> Vivado 2020.1 synthesis log of a public CS223 lab repo: a register toggled by a counter is the clock of another module's always_ff @(posedge clk), 'Synthesis finished with 0 errors, 0 critical warnings and 0 warnings.', implementation 'write_bitstream completed successfully'. UG901 v2023.2 Ch.5 (p.81): 'Rising or falling-edge clocks'</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#5">#5</a> the pnr line names both clocks, the port and the divided one: 'pnr ok: 19 LUT, 4 FF, slow' 'MHz), clk' (before <a href="/dewfpga/patch-notes/#5">#5</a> the same two names; the derived clock keeps the name the student gave its net)</p>
+<p>since <a href="/dewfpga/patch-notes/5/">#5</a> the pnr line names both clocks, the port and the divided one: 'pnr ok: 19 LUT, 4 FF, slow' 'MHz), clk' (before <a href="/dewfpga/patch-notes/5/">#5</a> the same two names; the derived clock keeps the name the student gave its net)</p>
 <h2 id="code">What is the probe's code?</h2>
 <p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/32_clkdiv_7seg">test/sv/32_clkdiv_7seg</a>.</p>
 <p><code>design.sv</code></p>

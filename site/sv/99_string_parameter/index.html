@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Unverified.</b> UG901 v2023.2 does not say what Vivado does with a parameter of type string: Ch.10 Table 27 (p.285) has no row for the string type, Ch.9 Table 20 (p.238) lists the constant type String as Unsupported while the example on p.247 declares an untyped string parameter (parameter component = "TMS380C16"), and p.232 says 'Null string parameters are not supported'. No Vivado log in the corpus uses one</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#4">#4</a>; built by yosys-slang, yosys' own reader refused this code: 'note [<a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>]: top read with yosys-slang, the second reader'; rtl: PASS; bit: 'pnr ok: 7 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
+<p>since <a href="/dewfpga/patch-notes/4/">#4</a>; built by yosys-slang, yosys' own reader refused this code: 'note [<a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>]: top read with yosys-slang, the second reader'; rtl: PASS; bit: 'pnr ok: 7 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>: Not an error: yosys&#x27; own reader refused the code, yosys-slang read it, and synthesis went on as usual.</li>

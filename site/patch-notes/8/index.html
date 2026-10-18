@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#8 Browser tests and checks before publishing: dewfpga patch notes</title>
+<meta name="description" content="cd sim &amp;&amp; npm test now builds the simulator, serves it on a free local port and runs 31 real browser checks.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/8/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#8 Browser tests and checks before publishing: dewfpga patch notes">
+<meta property="og:description" content="cd sim &amp;&amp; npm test now builds the simulator, serves it on a free local port and runs 31 real browser checks.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/8/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#8 · Browser tests and checks before publishing","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/8/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#8</span>3 October</p>
+  <h1>#8 · Browser tests and checks before publishing</h1>
+<p><code>cd sim &amp;&amp; npm test</code> now builds the simulator, serves it on a free local port and runs 31 real browser checks. It uses Playwright's installed browser by default, closes the preview, and returns failure for failed assertions or a timeout. On macOS/Linux, timeout cleanup also terminates browser descendants still attached to the test process. The old machine-specific executable path is gone. Both a cached-browser run and an independent default-browser run passed <strong>31, failed 0</strong>; the latter used Chromium 145.0.7632.6. A forced timeout returned 124 and left no new Chromium process. Processes already reparented outside the test tree are a known limit of this cleanup; it is not a general process supervisor.</p>
+<p>The Ubuntu CI job installs the locked dependencies and Chromium, then runs those browser tests. Pages publication requires that job and the macOS CLI job. The assembled Pages artifact and the rewritten mirror bundle must pass <code>test/site-check.py</code> before publication. Checks cover links and anchors, navigation presence and consistency, canonical metadata, sitemap membership, duplicate IDs, question punctuation and unexpected package files. The question rule is a language heuristic. Ten deliberately broken site fixtures now run in CI, including deleted navigation, missing local anchors and questions outside h1–h6; an earlier review showed those cases could pass silently.</p>
+<p>The source check exposed 69 missing error-page sitemap entries. <code>docs/sitemap-build.py</code> now regenerates the sitemap from tracked indexable pages and is called by the documentation builders. Local validation after rebuilding both artifacts: <strong>86 source pages, 0 failures; 88 Pages bundle pages, 0 failures; 88 mirror pages, 0 failures</strong>. The same-page anchor fix and the sitemap fix were checked together on rebuilt artifacts. Remote CI is pending for this commit; local browser results are not represented as Ubuntu results. Commands are in <code>sim/test/README.md</code>.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/5/">#5 Every message in one shape, with its code and its page</a><br>
+next: <a href="/dewfpga/patch-notes/9/">#9 One navigation source, unchanged desktop layout</a><br>
+<a href="/dewfpga/patch-notes/#8">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

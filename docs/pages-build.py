@@ -7,7 +7,7 @@
   docs/manual-setup.md                 -> site/docs/<slug>/index.html (the whole guide stays
                                           docs/build.sh's, whose contents list links each page here)
 
-  python3 docs/pages-build.py                     every type
+  python3 docs/pages-build.py                     the types in TYPES
   python3 docs/pages-build.py --only sv,notes     some types; links into a type left out are not made
 
 Run after editing any of the three sources; the output is committed. Needs pandoc and python3.
@@ -36,6 +36,7 @@ from nav import render  # noqa: E402
 SITE = Path("site")
 HOST = "https://nosey-dewdrop.github.io/dewfpga/"
 GITHUB = "https://github.com/nosey-dewdrop/dewfpga"
+TYPES = ["sv", "notes"]  # what a plain run builds
 THIN = 150  # words: a patch note shorter than this stays in the full list only
 
 NOTES_LEFT_OUT = {
@@ -113,15 +114,17 @@ def plain(fragment):
 
 
 def summary(text, limit=200):
-    """whole sentences of the record's own text, up to about limit characters"""
+    """whole sentences of the record's own text, up to about limit characters; a sentence that
+    does not fit is cut at a word"""
     sentences = re.split(r"(?<=[.!?:])\s+(?=[A-Z`(\"'])", text)
     out = ""
     for s in sentences:
-        if out and len(out) + 1 + len(s) > limit:
-            break
-        out = (out + " " + s).strip()
-    if len(out) > limit + 60:
-        out = out[:limit].rsplit(" ", 1)[0].rstrip(",;:") + "…"
+        if len(out) + 1 + len(s) <= limit:
+            out = (out + " " + s).strip()
+            continue
+        if len(out) < limit // 2:
+            out = (out + " " + s).strip()[:limit].rsplit(" ", 1)[0].rstrip(",;:(") + "…"
+        break
     return out
 
 
@@ -397,8 +400,8 @@ def build_notes(types, written):
         where = f"/dewfpga/patch-notes/#{num}" if num else "/dewfpga/patch-notes/"
         p += ("<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "<br>\n"
               f"<a href=\"{where}\">This entry in the full list</a>"
-              + (", next to every SystemVerilog probe: <a href=\"/dewfpga/sv/\">the probes, stage by stage</a>" if "sv" in types else "")
-              + ".</p>\n")
+              + ("<br>\nEvery SystemVerilog construct measured so far, next to what Vivado does: <a href=\"/dewfpga/sv/\">the probes, stage by stage</a>" if "sv" in types else "")
+              + "</p>\n")
         p += "</main>\n" + FOOT.format(links='<a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a>', script=COPY_ALL)
         write(note_folder(key), p)
         written.append((note_folder(key), page_title, plain(h1), desc))
@@ -509,7 +512,7 @@ def check(written):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--only", default="sv,notes,guide")
+    ap.add_argument("--only", default=",".join(TYPES))
     ap.add_argument("--contents", action="store_true", help="only link the guide's contents list (docs/build.sh)")
     a = ap.parse_args()
     if a.contents:

@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.287): 'Unique-if, unique0-if and priority-if: Supported'</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#28">#28</a> rtl: PASS: iverilog refuses the design, 'design.sv:4: syntax error', and dewfpga sim goes on with 'design.sv:4: note [<a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>]' (the simulation runs on the design as the build reads it, read by yosys' own reader, written back as Verilog and compiled with the testbench and yosys' cell models), then 'PASS'; iverilog 13 alone: syntax error at unique0 if (design.sv:4); yosys builds it; netlist: testbench only, eqv.sh cannot compile the RTL with iverilog</p>
+<p>since <a href="/dewfpga/patch-notes/28/">#28</a> rtl: PASS: iverilog refuses the design, 'design.sv:4: syntax error', and dewfpga sim goes on with 'design.sv:4: note [<a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>]' (the simulation runs on the design as the build reads it, read by yosys' own reader, written back as Verilog and compiled with the testbench and yosys' cell models), then 'PASS'; iverilog 13 alone: syntax error at unique0 if (design.sv:4); yosys builds it; netlist: testbench only, eqv.sh cannot compile the RTL with iverilog</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>: Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.</li>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#12 Vivado projects and editor tasks that preserve user files: dewfpga patch notes</title>
+<meta name="description" content="Commands now discover a Vivado .xpr or .srcs layout and read the enabled design, constraint and simulation sets. Running from a nested source directory writes build outputs in the project root.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/12/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#12 Vivado projects and editor tasks that preserve user files: dewfpga patch notes">
+<meta property="og:description" content="Commands now discover a Vivado .xpr or .srcs layout and read the enabled design, constraint and simulation sets. Running from a nested source directory writes build outputs in the project root.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/12/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#12 · Vivado projects and editor tasks that preserve user files","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/12/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#12</span>3 October</p>
+  <h1>#12 · Vivado projects and editor tasks that preserve user files</h1>
+<p>Commands now discover a Vivado <code>.xpr</code> or <code>.srcs</code> layout and read the enabled design, constraint and simulation sets. Running from a nested source directory writes build outputs in the project root. The project's selected top is respected unless explicitly named. <code>dewfpga tops</code> lists candidates as module/file pairs without writing files. Missing design files and ambiguous active sets produce actionable errors; a problem confined to the simulation set stops <code>sim</code>, not <code>bit</code>, <code>tops</code> or <code>clean</code>.</p>
+<p>Local include directories reach both readers. <code>.v</code> files retain Verilog-2005 keywords in Icarus and the slang fallback. The first implementation deleted a pre-existing <code>top.kw</code> directory and mapped <code>a/b.v</code> and <code>a_b.v</code> to the same temporary filename. Root counterexamples rejected it. Wrappers now use a privately reserved directory, numbered filenames and scoped cleanup. <code>clean</code> leaves other recipes' temporary folders alone. Probe 74's RTL stage now passes; its netlist stage remains a known gap.</p>
+<p><code>dewfpga vscode</code> builds a deterministic companion VSIX and installs user tasks only for the selected supported editor and named profiles with the companion available. JSONC comments and unrelated tasks survive. Removal checks recorded content hashes, keeps user edits, and rolls back task writes if the ownership record cannot be saved. Symlinked setup records are refused. Automatic install/uninstall hooks can be skipped with <code>DEWFPGA_SKIP_VSCODE=1</code>; explicit editor setup still works. Native tests use that flag and isolated fake editors so they cannot modify a developer's real profile.</p>
+<p>Independent review reproduced Cursor's <code>code</code> being mistaken for VS Code and a failed profile retry losing its earlier ownership record. A further root case showed that a <code>code</code> symlink into Insiders must not be selected for a Code removal. These cases have specific regression checks. Profile metadata was checked against Microsoft's source; that is distinct from testing the real editor GUI.</p>
+<p>Focused checks before final acceptance: task writer <strong>69/0</strong>, companion <strong>35/0</strong>, Vivado <strong>82/0</strong>, setup <strong>89/0</strong>. An additional eight editor-boundary checks passed in a corrected isolated copy. The first full run caught two flat-folder compile-line regressions despite those focused results. They are retained in the test history; the corrected full run passed <strong>269, failed 0, with 52 known gaps</strong>, in 24 minutes 11 seconds, with the tested files unchanged. The command list contains <strong>325 available checks</strong>, not 325 executed successes. Real GUI and Basys3 acceptance remain unverified. Remote CI is pending for this integration.</p>
+<p>Release review then found the tracked-file package builder omitted the companion sources. The old archive now fails validation for all four missing files. The fixed archive builds a VSIX byte-identical to the source tree and runs <code>vscode --print</code>. Both assembled site variants pass: <strong>101 pages, 0 failures</strong> each. CI now builds the companion from the unpacked release, so source-only success cannot hide this omission.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/10/">#10 Patch notes on the site and working navigation hit areas</a><br>
+next: <a href="/dewfpga/patch-notes/17/">#17 Browser compilation checks the design and clears failed runs</a><br>
+<a href="/dewfpga/patch-notes/#12">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

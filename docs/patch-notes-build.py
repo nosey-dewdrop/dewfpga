@@ -4,7 +4,8 @@
 Each `### #N · title · date` heading becomes <h3 id="N">, the newest entry also carries id="latest",
 and an index of entries goes under the h1. The only date not written in the notes themselves is the
 file's last commit date, read from git (dateModified); nothing is invented. Idempotent: a second run
-writes the same bytes. Ends by running docs/nav.py (the nav stub) and docs/sitemap-build.py.
+writes the same bytes. An entry that has its own page (docs/pages-build.py) links its title there.
+Ends by running docs/nav.py (the nav stub), docs/pages-build.py and docs/sitemap-build.py.
 """
 import html, os, re, subprocess, sys
 
@@ -33,8 +34,16 @@ if not entries: sys.exit("no `### #N · …` entries found in " + SRC)
 latest = max(entries)[0]
 body = body.replace(f'<h3 id="{latest}">', f'<span id="latest"></span>\n<h3 id="{latest}">', 1)
 
-# the index of entries goes under the h1, newest first
-items = "".join(f'<li><a href="#{n}">#{n}</a> {html.escape(rest)}</li>\n' for n, rest in sorted(entries, reverse=True))
+# the index of entries goes under the h1, newest first; an entry with its own page
+# (docs/pages-build.py decides which) links its title there
+import importlib.util
+spec = importlib.util.spec_from_file_location("pages_build", "docs/pages-build.py")
+pages_build = importlib.util.module_from_spec(spec); spec.loader.exec_module(pages_build)
+with_page = {n for _, n, *_ in pages_build.note_pages() if n}
+def item(n, rest):
+    t = html.escape(rest)
+    return f'<li><a href="#{n}">#{n}</a> ' + (f'<a href="/dewfpga/patch-notes/{n}/">{t}</a>' if n in with_page else t) + '</li>\n'
+items = "".join(item(n, rest) for n, rest in sorted(entries, reverse=True))
 index = (f'<p class="docbar"><span>{len(entries)} updates</span><a href="#latest">latest: #{latest}</a>'
          f'<a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/docs/patch-notes.md">source</a></p>\n'
          f'<ul class="notes-index">\n{items}</ul>\n')
@@ -83,4 +92,5 @@ os.makedirs(os.path.dirname(OUT), exist_ok=True)
 open(OUT, "w").write(page)
 print(f"{OUT}: {len(page.encode())} bytes, {len(entries)} entries, latest #{latest}, dateModified {date or 'none'}")
 subprocess.run([sys.executable, "docs/nav.py"], check=True)
+subprocess.run([sys.executable, "docs/pages-build.py"], check=True)   # the entries' own pages
 subprocess.run([sys.executable, "docs/sitemap-build.py"], check=True)

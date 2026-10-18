@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.287): 'Pass by reference: Supported', 'Return values and void functions: Supported'</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>iverilog: 'sorry: Reference ports not supported yet.' (design.sv:2); dewfpga bit stops before yosys, since <a href="/dewfpga/patch-notes/#5">#5</a> with the code: 'design.sv:2: ERROR [<a href="/dewfpga/errors/ref-argument/">ref-argument</a>]: function inc takes an argument by reference (ref logic [3:0] x): yosys does not read ref, and yosys-slang drops it, so the variable it is called with would never change on the board. Fix: pass the value in and return it (function automatic logic [3:0] inc(input logic [3:0] x); ... return x + 1;  and  v = inc(v);).'</p>
+<p>iverilog: 'sorry: Reference ports not supported yet.' (design.sv:2); dewfpga bit stops before yosys, since <a href="/dewfpga/patch-notes/5/">#5</a> with the code: 'design.sv:2: ERROR [<a href="/dewfpga/errors/ref-argument/">ref-argument</a>]: function inc takes an argument by reference (ref logic [3:0] x): yosys does not read ref, and yosys-slang drops it, so the variable it is called with would never change on the board. Fix: pass the value in and return it (function automatic logic [3:0] inc(input logic [3:0] x); ... return x + 1;  and  v = inc(v);).'</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/ref-argument/">ref-argument</a>: A function or task argument passed by reference; yosys&#x27; reader stops on it and yosys-slang builds the call as nothing.</li>

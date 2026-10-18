@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>The course&#x27;s ready netlist modules build: dewfpga patch notes</title>
+<meta name="description" content="SevSeg_4digit.sv stopped every design that used it. The course hands out its four-digit seven-segment driver as a Vivado netlist.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/course-netlist-modules/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="The course&#x27;s ready netlist modules build: dewfpga patch notes">
+<meta property="og:description" content="SevSeg_4digit.sv stopped every design that used it. The course hands out its four-digit seven-segment driver as a Vivado netlist.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/course-netlist-modules/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"The course's ready netlist modules build","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/course-netlist-modules/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">local candidate</span>15 October</p>
+  <h1>The course's ready netlist modules build</h1>
+<p><strong><code>SevSeg_4digit.sv</code> stopped every design that used it.</strong> The course hands out its four-digit seven-segment driver as a Vivado netlist. Its port list ends in <code>.dp(\&lt;const0&gt; )</code>, an explicit port: the port <code>dp</code>, whose inside is the net <code>\&lt;const0&gt;</code> (Vivado writes a constant output that way), declared as <code>output \&lt;const0&gt; ;</code>. Vivado builds it; yosys' reader stopped at the <code>.</code> (<code>syntax error, unexpected TOK_ID, expecting '.'</code>), and yosys-slang, the second reader, does not know Vivado's cells (<code>GND</code>, <code>LUT4</code>). In the corpus, 5 lab folders stopped there. The copy the tools read now has <code>dp</code> in the port list and <code>output dp; assign dp = \&lt;const0&gt; ;</code> on the declaration's line, with a note for each line (<code>explicit-port</code>); the student's file stays as it is.</p>
+<p>Checked against an independent simulation: the original module, as Vivado means it, under iverilog with the Xilinx cell models, against the netlist the build writes, both driving the same inputs (changed halfway): 600,000 clock cycles, 0 differences, no <code>x</code>, the digit select switched 10 times, <code>dp</code> 0. A netlist with one LUT bit flipped differs within 400,000 cycles, so the comparison is not blind.</p>
+<p>Tests: a new check builds a small netlist-form module of the same shape (an explicit constant port, a <code>GND</code>, a <code>LUT2</code>), reads the two notes, keeps the file's bytes, and simulates the netlist: the AND is right on all 4 inputs and <code>dp</code> is 0. It fails on the installed 1.2.0.</p>
+<p><strong>An implicit net between two cells was refused as undeclared.</strong> Vivado's netlists connect cells with nets they never declare (<code>.Q(direction_motor)</code> on a flip-flop, <code>.I4(direction_motor)</code> on a LUT): an implicit wire, as Verilog allows. The build's first check ran before yosys knew which pin of <code>FDRE</code> is an output, reported the wire as <code>used but has no driver</code>, and the CLI turned that into <code>undeclared-name ... nothing drives it</code>. The course's ready stepper-motor module stopped there. That check now runs on its own, before the synthesis, with the Xilinx cell library read as black boxes (<code>read_verilog -lib -nooverwrite</code>), so a cell's output counts as a driver; a design module named like a cell (<code>INV</code>) stays the student's. The synthesis itself reads the design as before. A first try loaded the library into the synthesis run: the suite caught it, because probe 75's longest path went from 33.61 MHz to 23.02 MHz (the library read without its timing data took that data from the LUT mapping). With the check on its own, probe 75 is at 33.61 MHz again.</p>
+<p>Checked the same way: a lab project that uses both ready modules (keypad, stepper motor, seven-segment), its sources under iverilog with the Xilinx cell models against the built netlist, reset then key and start presses: 399,969 compared cycles, 0 differences, no <code>x</code> in the reference (its outputs changed 9 times in that window, so this is a narrow check). The seven-segment comparison was repeated with this change: 0 differences in 600,000 cycles. Two new checks: an implicit net from a flip-flop to a LUT builds (it fails on the installed 1.2.0), and a design module called <code>INV</code> is read by yosys' own reader with one LUT. On the 89 corpus folders, Run now builds 24 (17 before) and the folder command 20 (13 before); every folder the folder command builds, Run builds. The 7 new ones are the course's example projects and a student game that use these ready modules.</p>
+<p><strong>Several pin files: the one that pins the top's ports.</strong> A Vivado constraint set often holds one <code>.xdc</code> per lab part (<code>cons_decoder2to4.xdc</code>, <code>cons_mux8to1_function.xdc</code>), and Vivado applies them all; a port no design has is skipped with a warning. The folder command used to stop at <code>two-xdc-files</code> unless one was named after the top. Now, when exactly one of them pins any of the top's ports, it uses that one and says so (<code>pins: ... (the one .xdc here that pins mux8to1_function's ports)</code>). When two of them pin the same port (<code>out[3]</code> in one file, <code>out</code> in the other), which pin Vivado keeps is not guessed: the stop stays. Run picks its folder's pin file by the same code. Two new checks: a flat folder with two files (one for another part) builds, the same folder with both pinning <code>y</code> stops, and a Vivado-layout constraint set builds from both the folder command and Run. Both fail on the installed 1.2.0. On the corpus this adds the 2 folders of one student's Lab 3 project: Run builds 26 of the 89 folders, the folder command 22. The full suite passed every product check (342, 19 known gaps; the SystemVerilog probes unchanged, 114 of 148). The one failure was a test's: the SIGINT case of <code>test-json.py</code> waited 15 s for a wrapper that never got the signal, because the suite had been started with <code>run.sh &amp;</code>, and a shell without job control starts a background job with SIGINT ignored, which the wrapper rightly keeps. The test now starts the wrapper with SIGINT at its default; it passes under both launches, and the old test fails the same way when its parent ignores SIGINT.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/pin-validation-vector-indices/">Preserve vector indices in pin validation</a><br>
+<a href="/dewfpga/patch-notes/">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

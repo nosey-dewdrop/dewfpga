@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#28 dewfpga sim simulates what the build reads when iverilog refuses the design: dewfpga patch notes</title>
+<meta name="description" content="The simulation no longer stops where the bitstream goes through. Of the 111 probes Vivado supports, 52 did not pass all four stages, and 28 of those failed only in dewfpga sim: iverilog does not read…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/28/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#28 dewfpga sim simulates what the build reads when iverilog refuses the design: dewfpga patch notes">
+<meta property="og:description" content="The simulation no longer stops where the bitstream goes through. Of the 111 probes Vivado supports, 52 did not pass all four stages, and 28 of those failed only in dewfpga sim: iverilog does not read…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/28/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#28 · dewfpga sim simulates what the build reads when iverilog refuses the design","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/28/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#28</span>4 October</p>
+  <h1>#28 · <code>dewfpga sim</code> simulates what the build reads when iverilog refuses the design</h1>
+<p><strong>The simulation no longer stops where the bitstream goes through.</strong> Of the 111 probes Vivado supports, 52 did not pass all four stages, and 28 of those failed only in <code>dewfpga sim</code>: iverilog does not read unique if, interfaces and modports, unpacked structs and unions, streaming, whole-array compare/copy/slice, a class used for its static function, the type operator and more, while the build read the same file and made a working bitstream. A student got a <code>.bit</code> from <code>dewfpga bit</code> and <code>design.sv:7: ERROR [iverilog-refused]: iverilog cannot compile this code</code> from <code>dewfpga sim</code>.</p>
+<p>Now, when iverilog refuses a design file (not the testbench), <code>sim</code> runs the build's own front half, the same readers and the same checks as <code>dewfpga bit</code>, writes that design back as Verilog (<code>top_sim.elab</code>) and simulates it with the testbench and yosys' models of the Xilinx cells: <code>design.sv:7: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it ...</code>, then the testbench's own <code>PASS</code>. A design the build refuses is refused by <code>sim</code> too, with the build's line: a function with a <code>ref</code> argument, which yosys-slang silently drops, still stops instead of passing (measured: without that rule the second path printed the testbench's FAIL). A testbench iverilog cannot read gets the old error. What differs from simulating the source (delays inside the design are ignored, a testbench reference to an internal signal the build renamed can break) is on the new error page.</p>
+<p>An independent review found one case this path got wrong: a testbench that sets the top module's parameters (<code>top #(.W(2)) dut</code>). The build keeps the defaults, so the elaborated design had no parameter left and iverilog blamed the student's testbench. Vivado's simulator applies those values; this path cannot, so it now stops at the testbench's line with <code>[sim-from-build-parameters]</code> and says why, instead of testing another design.</p>
+<p><strong>Numbers.</strong> Vivado-supported probes passing all four stages: 59/111 → 86/111; all four stages 64/133 → 95/133; synthesis 108/133 → 108/133. Known gaps: 52 → 25. Silent wrongs (bitstream built, netlist check fails): 3 → 3, the same rows (<code>35</code>, <code>74</code>, <code>97</code>). Closed in simulation: 31 probes (27 of them Vivado-supported). Not closed: <code>35</code> (no simulation model of MMCME2_BASE in yosys' cell library), <code>51c</code> (the 2-D typedef scan stops before iverilog), <code>60</code> (a <code>ref</code> argument, refused on purpose). Blink's simulation is byte-identical and as fast as before; a design on the second path takes about 3 s instead of failing.</p>
+<p><strong>Tests.</strong> 6 new checks; each turns red when its rule is removed: the second path passes an interface design; a <code>ref</code> design is refused, not passed; a testbench iverilog cannot read keeps the old error; a design both readers refuse prints both; a testbench that sets parameters gets the new error at its line; blink's output is unchanged.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/23/">#23 Prepare simulator discovery and enforce its browser checks</a><br>
+next: <a href="/dewfpga/patch-notes/29/">#29 A failed build leaves no old bitstream, wrong pins are named, a quick save rebuilds</a><br>
+<a href="/dewfpga/patch-notes/#28">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

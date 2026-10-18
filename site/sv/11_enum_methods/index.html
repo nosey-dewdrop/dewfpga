@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.285): 'Enumerated type methods: Supported'</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>yosys: "Can't resolve function name `\s.first'"; since <a href="/dewfpga/patch-notes/#5">#5</a> the CLI names the line and the fix: 'design.sv:5: ERROR [<a href="/dewfpga/errors/enum-method-next-prev/">enum-method-next-prev</a>]: s.next() is an enum method that steps through the values (next/prev): yosys does not build enum methods, and yosys-slang builds first()/last() only; Vivado builds next/prev (UG901 Ch.10 Table 27). Fix: write the step out as a case on s, in the order the enum lists its values (with IDLE, RUN, DONE: case (s) IDLE: s &lt;= RUN; RUN: s &lt;= DONE; DONE: s &lt;= IDLE; endcase).'</p>
+<p>yosys: "Can't resolve function name `\s.first'"; since <a href="/dewfpga/patch-notes/5/">#5</a> the CLI names the line and the fix: 'design.sv:5: ERROR [<a href="/dewfpga/errors/enum-method-next-prev/">enum-method-next-prev</a>]: s.next() is an enum method that steps through the values (next/prev): yosys does not build enum methods, and yosys-slang builds first()/last() only; Vivado builds next/prev (UG901 Ch.10 Table 27). Fix: write the step out as a case on s, in the order the enum lists its values (with IDLE, RUN, DONE: case (s) IDLE: s &lt;= RUN; RUN: s &lt;= DONE; DONE: s &lt;= IDLE; endcase).'</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/enum-method-next-prev/">enum-method-next-prev</a>: The enum methods next() and prev(); neither reader builds them, Vivado does.</li>

@@ -45,7 +45,7 @@
 <h2 id="vivado">What does Vivado do with it?</h2>
 <p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.288): 'Package declarations', 'Referencing data in packages': Supported; the guide does not say in which order a project's files are compiled</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>since <a href="/dewfpga/patch-notes/#33">#33</a> the CLI hands pkg.sv first: rtl: 'iverilog -g2012 -o top_sim pkg.sv design.sv sub.sv tb.sv', PASS; bit: yosys' own reader refused the code and yosys-slang read it ('note [<a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>]'), 'pnr ok: 2 LUT, 0 FF, no clocked paths, timing not applicable'; netlist: 'EQV PASS: 1048576 output bits compared, all equal', the RTL's registers listed by yosys-slang</p>
+<p>since <a href="/dewfpga/patch-notes/33/">#33</a> the CLI hands pkg.sv first: rtl: 'iverilog -g2012 -o top_sim pkg.sv design.sv sub.sv tb.sv', PASS; bit: yosys' own reader refused the code and yosys-slang read it ('note [<a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>]'), 'pnr ok: 2 LUT, 0 FF, no clocked paths, timing not applicable'; netlist: 'EQV PASS: 1048576 output bits compared, all equal', the RTL's registers listed by yosys-slang</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>: Not an error: yosys&#x27; own reader refused the code, yosys-slang read it, and synthesis went on as usual.</li>

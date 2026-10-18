@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#10 Patch notes on the site and working navigation hit areas: dewfpga patch notes</title>
+<meta name="description" content="The seventh navigation chip opens /patch-notes/, generated from this file by python3 docs/patch-notes-build.py. The index lists updates newest first and #latest links to the highest numbered entry.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/10/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#10 Patch notes on the site and working navigation hit areas: dewfpga patch notes">
+<meta property="og:description" content="The seventh navigation chip opens /patch-notes/, generated from this file by python3 docs/patch-notes-build.py. The index lists updates newest first and #latest links to the highest numbered entry.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/10/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#10 · Patch notes on the site and working navigation hit areas","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/10/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#10</span>3 October</p>
+  <h1>#10 · Patch notes on the site and working navigation hit areas</h1>
+<p>The seventh navigation chip opens <code>/patch-notes/</code>, generated from this file by <code>python3 docs/patch-notes-build.py</code>. The index lists updates newest first and <code>#latest</code> links to the highest numbered entry. The Turkish navigation calls it “yama notları”. The generator disables dollar-delimited mathematics: an independent review reproduced Pandoc treating a paragraph containing <code>$finish</code> as mathematics and corrupting its prose. Raw HTML is disabled too; code and prose remain text. The page's modification date comes from this file's last Git commit, not from an invented release date.</p>
+<p>The review also found that the existing transparent desktop link boxes used percentage units for their vertical positions. At widths 900, 1024 and 1366, the visible chips' centres hit the navigation bar instead of their links; the home link was affected too. Container width units now place all eight link boxes over the artwork. Independent hit tests and real mouse clicks passed at 900, 1024, 1366, 1920, 390 and 320 pixels on five pages. At desktop widths, every changed pixel on the checked static pages lies inside the added chip; the six existing chips keep their artwork and positions. Mobile chips remain 44 pixels high. The simulator's animated content is not claimed pixel-identical.</p>
+<p>Two generator runs are byte-identical. The final source check passed on <strong>87 pages</strong>; rebuilt Pages and mirror artifacts each passed on <strong>89 pages, 0 failures</strong>. The clean baseline and ten deliberately broken site fixtures passed, as did the Vite build. A root rerun verified <strong>210 chip clicks across 30 page/viewport combinations</strong>, with no failed hit or click. A 320-pixel CLI table overflow was reproduced in the previous page too and is corrected in #11. Chromium is the measured browser; Safari, Firefox, physical phones and older browsers without container width units remain unverified. The page is long, mostly because of the historical #2 report; its newest-first index and latest link provide direct access. Remote CI and publication are separate checks.</p>
+<p>CI evidence now available for #8: clean macOS installation and suite <strong>261 passed, 0 failed, 52 known gaps</strong>; Ubuntu browser suite <strong>31 passed, 0 failed</strong>; assembled Pages artifact <strong>88 clean pages, 0 failures</strong>. Run: <a href="https://github.com/nosey-dewdrop/dewfpga/actions/runs/37107944441">37107944441</a>. These results apply to that commit and do not claim that the later Vivado or VS Code changes passed.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/9/">#9 One navigation source, unchanged desktop layout</a><br>
+next: <a href="/dewfpga/patch-notes/12/">#12 Vivado projects and editor tasks that preserve user files</a><br>
+<a href="/dewfpga/patch-notes/#10">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

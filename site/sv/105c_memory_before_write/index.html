@@ -43,9 +43,9 @@
 <tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
 </table>
 <h2 id="vivado">What does Vivado do with it?</h2>
-<p><b>Unverified.</b> UG901 v2023.2 does not say what Vivado does with a distributed RAM that has no initial value before its first write; the 0 is the INIT <a href="/dewfpga/patch-notes/#34">#34</a> writes and nextpnr programs</p>
+<p><b>Unverified.</b> UG901 v2023.2 does not say what Vivado does with a distributed RAM that has no initial value before its first write; the 0 is the INIT <a href="/dewfpga/patch-notes/34/">#34</a> writes and nextpnr programs</p>
 <h2 id="today">What does the open-source chain do with it?</h2>
-<p>every stage prints 'PASS': the rtl stage prints 'note [<a href="/dewfpga/errors/sim-starts-as-board/">sim-starts-as-board</a>]: 1 memory without a start value starts as the board does, not at x: mem at 0 (a LUT RAM).' and starts every x bit of the memory at 0, so the before-any-write check passes where before <a href="/dewfpga/patch-notes/#35">#35</a> it reported mem[0] reads xxxxxxxx (expected 0) while netlist and bit passed: a silent wrong; the netlist stage prints 'EQV PASS: 262144 output bits compared, all equal' and bit 'pnr ok: 16 LUT, 0 FF, no clocked paths, timing not applicable'</p>
+<p>every stage prints 'PASS': the rtl stage prints 'note [<a href="/dewfpga/errors/sim-starts-as-board/">sim-starts-as-board</a>]: 1 memory without a start value starts as the board does, not at x: mem at 0 (a LUT RAM).' and starts every x bit of the memory at 0, so the before-any-write check passes where before <a href="/dewfpga/patch-notes/35/">#35</a> it reported mem[0] reads xxxxxxxx (expected 0) while netlist and bit passed: a silent wrong; the netlist stage prints 'EQV PASS: 262144 output bits compared, all equal' and bit 'pnr ok: 16 LUT, 0 FF, no clocked paths, timing not applicable'</p>
 <h2 id="errors">Which error pages explain the messages?</h2>
 <ul>
 <li><a href="/dewfpga/errors/sim-starts-as-board/">sim-starts-as-board</a>: Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board.</li>
