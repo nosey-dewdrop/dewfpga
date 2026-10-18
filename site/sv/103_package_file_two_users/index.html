@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a package in its own file (pkg.sv: localparam, typedef, function), imported inside two modules in two files (design.sv, sub.sv), no `include anywhere · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="a package in its own file (pkg.sv: localparam, typedef, function), imported inside two modules in two files (design.sv, sub.sv), no `include anywhere. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 103 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/103_package_file_two_users/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a package in its own file (pkg.sv: localparam, typedef, function), imported inside two modules in two files (design.sv, sub.sv), no `include anywhere · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="a package in its own file (pkg.sv: localparam, typedef, function), imported inside two modules in two files (design.sv, sub.sv), no `include anywhere. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 103 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/103_package_file_two_users/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a package in its own file (pkg.sv: localparam, typedef, function), imported inside two modules in two files (design.sv, sub.sv), no `include anywhere","url":"https://nosey-dewdrop.github.io/dewfpga/sv/103_package_file_two_users/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">103</span>Vivado: supported</p>
+  <h1>a package in its own file (pkg.sv: localparam, typedef, function), imported inside two modules in two files (design.sv, sub.sv), no `include anywhere</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.288): 'Package declarations', 'Referencing data in packages': Supported; the guide does not say in which order a project's files are compiled</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>since <a href="/dewfpga/patch-notes/#33">#33</a> the CLI hands pkg.sv first: rtl: 'iverilog -g2012 -o top_sim pkg.sv design.sv sub.sv tb.sv', PASS; bit: yosys' own reader refused the code and yosys-slang read it ('note [<a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>]'), 'pnr ok: 2 LUT, 0 FF, no clocked paths, timing not applicable'; netlist: 'EQV PASS: 1048576 output bits compared, all equal', the RTL's registers listed by yosys-slang</p>
+<h2 id="errors">Which error pages explain the messages?</h2>
+<ul>
+<li><a href="/dewfpga/errors/read-with-slang/">read-with-slang</a>: Not an error: yosys&#x27; own reader refused the code, yosys-slang read it, and synthesis went on as usual.</li>
+</ul>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/103_package_file_two_users">test/sv/103_package_file_two_users</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic [15:0] sw, output logic [15:0] led);
+  import cfg_pkg::*;
+  nib_t hi;
+  sub u_sub (.a(sw[3:0]), .y(led[3:0]));
+  assign hi = sw[7:4] &amp; MAGIC;
+  assign led[7:4]  = hi;
+  assign led[15:8] = '0;
+endmodule</code></pre>
+<p><code>pkg.sv</code></p>
+<pre data-copy="1"><code>package cfg_pkg;                                     // alone in its file, no `include anywhere: two modules import it
+  localparam logic [3:0] MAGIC = 4'hA;
+  typedef logic [3:0] nib_t;
+  function automatic nib_t twice(input nib_t x);
+    twice = x &lt;&lt; 1;
+  endfunction
+endpackage</code></pre>
+<p><code>sub.sv</code></p>
+<pre data-copy="1"><code>module sub(input logic [3:0] a, output logic [3:0] y);
+  import cfg_pkg::*;
+  assign y = twice(a) ^ MAGIC;
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led;
+  integer i;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    for (i = 0; i &lt; 256; i = i + 1) begin
+      sw = {8'hC3, i[7:0]}; #1
+      if (!(led === {8'd0, sw[7:4] &amp; 4'hA, 4'(sw[3:0] &lt;&lt; 1) ^ 4'hA})) begin $display("FAIL: package used from two files (sw=%h led=%h)", sw, led); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/102c_named_conn_width/">the same instance connected by name, sub #(.N(8)) u (.sub_in(sub_in), .sub_out(sub_out)), with 4-bit signals</a><br>
+next: <a href="/dewfpga/sv/103b_two_packages_order/">two package files where a_pkg.sv imports z_pkg (declared in z_pkg.sv) and the design imports a_pkg::*; alphabetical order reads a_pkg.sv first</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

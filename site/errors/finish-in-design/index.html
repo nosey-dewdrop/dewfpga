@@ -42,6 +42,11 @@
 <pre data-copy="1"><code>`ifndef SYNTHESIS
   if (done) $finish;
 `endif</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/81_finish_in_design/">a design module that calls $finish in a simulation check (always @(posedge clk) if (...) $finish;), its submodule&#x27;s ports named as the XDC&#x27;s (counter.sv)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

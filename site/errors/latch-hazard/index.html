@@ -51,6 +51,13 @@ endmodule</code></pre>
 <pre data-copy="1"><code>always_ff @(posedge clk)
   if (s &lt; sw) led &lt;= {15&#39;b0, (sw &lt; 16&#39;d1791)};</code></pre>
 <p>Keep <code>always_latch</code> only when the gate is held steady while the data changes (a bus-hold or an address latch with a setup time its driver respects): then the warning tells you what the design counts on.</p>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/101_always_latch/">always_latch if (sw[1]) q = sw[0]; (a latch on purpose, sw[1] its gate), read by yosys&#x27; own reader</a></li>
+<li><a href="/dewfpga/sv/101b_always_latch_slang/">the same always_latch next to a foreach loop (43_foreach_loop), so the design is read with yosys-slang</a></li>
+<li><a href="/dewfpga/sv/101c_always_latch_race/">an always_latch whose gate (s &lt; sw) and data (sw &lt; 16&#x27;d1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

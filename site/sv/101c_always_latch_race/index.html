@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>an always_latch whose gate (s &lt; sw) and data (sw &lt; 16&#x27;d1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk) · Vivado: unverified · open-source chain: it builds a bitstream, and the netlist check fails</title>
+<meta name="description" content="an always_latch whose gate (s &lt; sw) and data (sw &lt; 16&#x27;d1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk). Vivado: unverified. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it builds a bitstream, and the netlist check fails. Probe 101c of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/101c_always_latch_race/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="an always_latch whose gate (s &lt; sw) and data (sw &lt; 16&#x27;d1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk) · Vivado: unverified · open-source chain: it builds a bitstream, and the netlist check fails">
+<meta property="og:description" content="an always_latch whose gate (s &lt; sw) and data (sw &lt; 16&#x27;d1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk). Vivado: unverified. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it builds a bitstream, and the netlist check fails. Probe 101c of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/101c_always_latch_race/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"an always_latch whose gate (s < sw) and data (sw < 16'd1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk)","url":"https://nosey-dewdrop.github.io/dewfpga/sv/101c_always_latch_race/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">101c</span>Vivado: unverified</p>
+  <h1>an always_latch whose gate (s &lt; sw) and data (sw &lt; 16&#x27;d1791) come from the same inputs, so both change at once (seed 7 of test/fuzz, shrunk)</h1>
+<p>Vivado: unverified. The open-source chain: it builds a bitstream, and the netlist check fails.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>fail</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Unverified.</b> UG901 v2023.2 Ch.5 Latches (p.84) describes the LDCE Vivado builds and does not say what Vivado does when a latch's gate and data change together; no Vivado log</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>a documented silent wrong: the bitstream builds and the build warns at the always_latch line: 'design.sv:4: warning [<a href="/dewfpga/errors/latch-hazard/">latch-hazard</a>]: always_latch builds a latch for led (an LDCE cell, as Vivado builds it, UG901 Ch.5 Latches), and a latch has no clock: when its gate (s &lt; sw) closes in the same instant its data changes, the board keeps the old value or takes the new one depending on which wire is faster, where the simulation always keeps the old one; dewfpga sim cannot show that race. Fix: if a register was meant, write always_ff @(posedge clk) with the gate as its enable:  if (s &lt; sw) led &lt;= ...;  keep always_latch only when the gate is held steady while the data changes.'; rtl: PASS (iverilog keeps the old led at the step sw 16'h2bdc -&gt; 16'h0000); netlist: 'FAIL: step 1: sw=0000 led=0001, expected 0000 (the gate closed as the data changed)' (the LDCE took the new data as the gate closed); bit: 'pnr ok: 22 LUT, 1 FF, no clocked paths, timing not applicable'</p>
+<h2 id="errors">Which error pages explain the messages?</h2>
+<ul>
+<li><a href="/dewfpga/errors/latch-hazard/">latch-hazard</a>: An always_latch whose gate and data come from the same inputs: when both change at once the board races, where the simulation keeps the old value; the build goes on with the warning.</li>
+</ul>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/101c_always_latch_race">test/sv/101c_always_latch_race</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [1:0] s;
+  assign s = {sw[1] ^ sw[0], sw[0] ^ sw[1]};
+  always_latch if (s &lt; sw) led = {15'b0, (sw &lt; 16'd1791)};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0, btnU = 1'b0, btnD = 1'b0, btnL = 1'b0, btnR = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led; wire [6:0] seg; wire dp; wire [3:0] an;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #200000 $display("FAIL: timeout"); $finish; end
+  top dut(.sw(sw), .led(led));
+  initial begin
+    // the gate (s &lt; sw) is open at 16'h2bdc; at 16'h0000 it closes in the same instant the data (sw &lt; 1791) changes
+    sw = 16'h2bdc; #1
+    if (!(led === 16'h0000)) begin $display("FAIL: step 0: sw=2bdc led=%h, expected 0000", led); $finish; end
+    sw = 16'h0000; #1
+    if (!(led === 16'h0000)) begin $display("FAIL: step 1: sw=0000 led=%h, expected 0000 (the gate closed as the data changed)", led); $finish; end
+    sw = 16'h2bdc; #1
+    if (!(led === 16'h0000)) begin $display("FAIL: step 2: sw=2bdc led=%h, expected 0000", led); $finish; end
+    sw = 16'h0100; #1
+    if (!(led === 16'h0001)) begin $display("FAIL: step 3: sw=0100 led=%h, expected 0001", led); $finish; end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/101b_always_latch_slang/">the same always_latch next to a foreach loop (43_foreach_loop), so the design is read with yosys-slang</a><br>
+next: <a href="/dewfpga/sv/102_dotstar_param_width/">a .* connection whose port (N bits, N = 8) and signal (4 bits) widths differ</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

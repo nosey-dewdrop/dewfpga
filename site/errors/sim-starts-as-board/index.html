@@ -56,6 +56,13 @@ state_t state = IDLE;</code></pre>
 <p>Only a memory with no value at all is started. A table that <code>$readmemh</code> fills in part (<code>$readmemh("rom.hex", rom, 0, 3)</code> on a 16-word <code>rom</code>, or a file shorter than the table) keeps <code>x</code> in the words it did not load, and the note says so after the started names:</p>
 <pre><code>note [sim-starts-as-board]: 1 register without a start value starts as the board does, not at x: q at 0 (no reset). Vivado&#39;s simulator shows x there until the first reset; a start value in the declaration (logic [7:0] q = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). rom: 12 of its 16 words were given no value and stay x; the build treats such a word as a free choice (the netlist and the board read some value there, not 0), so load every word, or fill the table first (initial begin for (int i = 0; i &lt; 16; i++) rom[i] = 0; $readmemh(...); end). https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/</code></pre>
 <p>Measured on that design: yosys folds the 16-word table into one LUT with the 12 unloaded words as don't-care, and the netlist reads <code>CC</code> (the value of the loaded word 2) at <code>rom[10]</code>, not 0; the first version of #35 started those words at 0 and said the board does the same, which the netlist it built contradicted. Now <code>rom[10]</code> reads <code>x</code> in the simulation, as it did before #35 (nobody gave it a value), and the note names the gap and the fix. A design whose only memory is such a table and whose registers all have start values gets no note: the simulation is iverilog's alone.</p>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/105_reset_value_start/">four 4-bit registers read before the first clock edge: a synchronous reset to 5, an asynchronous reset to 4&#x27;b1010, no reset, a declared start value (logic [3:0] d = 4&#x27;d9)</a></li>
+<li><a href="/dewfpga/sv/105b_fsm_first_edge/">a 3-state enum FSM with a synchronous reset and no start value, read at the first clock edge before any reset (the board starts in IDLE and moves to RUN)</a></li>
+<li><a href="/dewfpga/sv/105c_memory_before_write/">a 4-word LUT RAM read before any write (mem[0] on the first edge)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

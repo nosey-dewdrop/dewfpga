@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a repeat loop with a constant count in always_comb (count the switches that are up) · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="a repeat loop with a constant count in always_comb (count the switches that are up). Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 84 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/84_repeat_const/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a repeat loop with a constant count in always_comb (count the switches that are up) · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="a repeat loop with a constant count in always_comb (count the switches that are up). Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 84 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/84_repeat_const/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a repeat loop with a constant count in always_comb (count the switches that are up)","url":"https://nosey-dewdrop.github.io/dewfpga/sv/84_repeat_const/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">84</span>Vivado: supported</p>
+  <h1>a repeat loop with a constant count in always_comb (count the switches that are up)</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.9 Table 20 (p.238): 'repeat statements: Supported, but repeat value must be constant'</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>dewfpga sim passes and prints iverilog's "A repeat statement cannot be synthesized in an always_comb process." (design.sv:5), which UG901 contradicts for a constant count; yosys builds it and the netlist matches the RTL</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/84_repeat_const">test/sv/84_repeat_const</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [7:0] x; logic [3:0] n;
+  always_comb begin                       // how many of sw[7:0] are up
+    x = sw[7:0]; n = '0;
+    repeat (8) begin n = n + x[0]; x = x &gt;&gt; 1; end
+  end
+  assign led = {sw[15:8], 4'd0, n};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  logic [15:0] sw; logic [15:0] led;
+  top dut(.sw(sw), .led(led));
+  integer i, k, bad = 0; logic [3:0] want;
+  initial begin
+    for (i = 0; i &lt; 256; i++) begin
+      sw = {i[7:0] ^ 8'h5a, i[7:0]}; #1;
+      want = 0; for (k = 0; k &lt; 8; k++) want = want + sw[k];
+      if (led !== {sw[15:8], 4'd0, want}) begin bad++; if (bad &lt; 4) $display("FAIL: sw=%h led=%h", sw, led); end
+    end
+    if (bad == 0) $display("PASS"); else $display("FAIL: %0d of 256", bad);
+    $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/83_realtobits/">$realtobits and $bitstoreal in localparams (a real turned into its IEEE 754 bits and back)</a><br>
+next: <a href="/dewfpga/sv/85_bitstream_cast/">a bitstream cast to an unpacked array: q = quad_t&#x27;(sw[7:0]); with typedef logic [3:0] quad_t [0:1]</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

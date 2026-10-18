@@ -59,6 +59,11 @@ endmodule</code></pre>
       default: led[1:0] = 2&#39;d0;
     endcase</code></pre>
 <p>If the first match should win, say so: <code>priority casez</code> builds the if/else chain the simulation shows. If neither matters, drop <code>unique</code>: a plain <code>casez</code> is a priority chain in every tool.</p>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/100_unique_casez_overlap/">a unique casez whose items overlap: 4&#x27;b10?? and 4&#x27;b??11 both match 4&#x27;b1011 (the simulation takes the first item, the hardware ORs both)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

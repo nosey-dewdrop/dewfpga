@@ -88,7 +88,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <ul>
     <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. Write your own synthesizable logic for the functions you need; importing a vendor IP block is a separate capability.</li>
     <li>On the Mac chain there is no waveform viewer, schematic or in-chip debugger: <code>dewfpga sim</code> writes a <code>.vcd</code> file and stops there. The <a href="/dewfpga/sim/?view=tb">testbench runner in the browser</a> draws the waveform instead.</li>
-    <li>Some SystemVerilog that Vivado compiles is refused here, and some builds a wrong bitstream with no error. The constructs measured so far, next to what Vivado does: <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/test/sv/expect.tsv">the list</a>.</li>
+    <li>Some SystemVerilog that Vivado compiles is refused here, and some builds a wrong bitstream with no error. The constructs measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the list</a>.</li>
     <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
     <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#8-what-can-it-not-do">The limits, in detail.</a></li>
   </ul>

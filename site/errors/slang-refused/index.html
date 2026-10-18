@@ -44,6 +44,11 @@ blink.v:8: ERROR [slang-refused]: use of undeclared identifier &#39;logic&#39; (
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Read yosys-slang's message and the caret; fix the first one, the later ones often follow from it. A <code>.v</code> file holding SystemVerilog:</p>
 <pre data-copy="1"><code>mv blink.v blink.sv</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/102_dotstar_param_width/">a .* connection whose port (N bits, N = 8) and signal (4 bits) widths differ</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

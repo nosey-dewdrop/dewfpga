@@ -41,6 +41,11 @@ design.sv:2: ERROR [wired-net]: a wor/wand net (declared at design.sv:2 and desi
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>logic [3:0] any;
 assign any = sw[3:0] | sw[7:4];</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/70_wor_wand/">a wor and a wand net, two drivers each</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

@@ -40,6 +40,11 @@ design.sv:3: ERROR [initial-from-signal]: `num = sw` here is a start value, not 
 <p><code>initial num = sw;</code> is evaluated once at time 0 in simulation. On the chip a register's start value is written into the bitstream, a constant; nothing can follow <code>sw</code>.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>assign num = sw;</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/77_initial_from_signal/">an initial block that reads a signal: initial num = sw; (seen in a CS223 lab)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

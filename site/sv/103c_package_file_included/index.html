@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a package in its own file (pkg.sv) that design.sv `includes on line 1, 23c&#x27;s documented fix · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="a package in its own file (pkg.sv) that design.sv `includes on line 1, 23c&#x27;s documented fix. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 103c of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/103c_package_file_included/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a package in its own file (pkg.sv) that design.sv `includes on line 1, 23c&#x27;s documented fix · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="a package in its own file (pkg.sv) that design.sv `includes on line 1, 23c&#x27;s documented fix. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 103c of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/103c_package_file_included/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a package in its own file (pkg.sv) that design.sv `includes on line 1, 23c's documented fix","url":"https://nosey-dewdrop.github.io/dewfpga/sv/103c_package_file_included/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">103c</span>Vivado: supported</p>
+  <h1>a package in its own file (pkg.sv) that design.sv `includes on line 1, 23c&#x27;s documented fix</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.288): 'Package declarations', 'Referencing data in packages': Supported; Ch.10 'Compilation Units' (p.270)</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>the `include brings pkg.sv in and the CLI leaves it to the `include: rtl: 'iverilog -g2012 -o top_sim design.sv tb.sv', PASS; bit: read by yosys' own reader, 'pnr ok: 2 LUT, 0 FF, no clocked paths, timing not applicable'; netlist: the testbench prints PASS, the eqv half 'EQV SKIP: iverilog cannot compile the RTL, so only the testbench checked the netlist' (test/sv/eqv.sh hands iverilog pkg.sv and design.sv both, so the package is declared twice there)</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/103c_package_file_included">test/sv/103c_package_file_included</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>`include "pkg.sv"
+module top(input logic [15:0] sw, output logic [15:0] led);
+  assign led[3:0]  = cfg_pkg::MAGIC ^ sw[3:0];     // pkg.sv is brought in by the `include above: read once
+  assign led[7:4]  = sw[7:4] &lt;&lt; cfg_pkg::SHIFT;
+  assign led[15:8] = '0;
+endmodule</code></pre>
+<p><code>pkg.sv</code></p>
+<pre data-copy="1"><code>package cfg_pkg;
+  localparam logic [3:0] MAGIC = 4'hA;
+  parameter int SHIFT = 1;
+endpackage</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led;
+  integer i;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    for (i = 0; i &lt; 256; i = i + 1) begin
+      sw = {8'hC3, i[7:0]}; #1
+      if (!(led === {8'd0, sw[6:4], 1'b0, sw[3:0] ^ 4'hA})) begin $display("FAIL: package constants (sw=%h led=%h)", sw, led); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/103b_two_packages_order/">two package files where a_pkg.sv imports z_pkg (declared in z_pkg.sv) and the design imports a_pkg::*; alphabetical order reads a_pkg.sv first</a><br>
+next: <a href="/dewfpga/sv/104_fsm_before_first_reset/">a 3-state enum FSM with no start value, read by a case and an if before its first reset (led before the first clock edge)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a clock divider&#x27;s output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course&#x27;s master XDC arrives · Vivado: supported · open-source chain: it stops before a bitstream</title>
+<meta name="description" content="a clock divider&#x27;s output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course&#x27;s master XDC arrives. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it stops before a bitstream. Probe 89 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/89_clkdiv_slow_logic/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a clock divider&#x27;s output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course&#x27;s master XDC arrives · Vivado: supported · open-source chain: it stops before a bitstream">
+<meta property="og:description" content="a clock divider&#x27;s output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course&#x27;s master XDC arrives. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it stops before a bitstream. Probe 89 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/89_clkdiv_slow_logic/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a clock divider's output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course's master XDC arrives","url":"https://nosey-dewdrop.github.io/dewfpga/sv/89_clkdiv_slow_logic/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">89</span>Vivado: supported</p>
+  <h1>a clock divider&#x27;s output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course&#x27;s master XDC arrives</h1>
+<p>Vivado: supported. The open-source chain: it stops before a bitstream.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>fail</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> Vivado routed timing reports of CS223 labs in the corpus (11 runs, Vivado 2015.2 to 2021.2, each next to the .bit it wrote): a register clocked from another register is listed as 'There are N register/latch pins with no clock driven by root clock pin: &lt;divider&gt;/&lt;its register&gt;/Q (HIGH)' and is not timed; in the runs whose XDC has no create_clock the board clock is listed the same way ('... root clock pin: clk (HIGH)'), so nothing is timed</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>dewfpga bit: "note [<a href="/dewfpga/errors/no-create-clock/">no-create-clock</a>]: no create_clock in Basys3_Master.xdc; timing is checked against the Basys3's 100 MHz oscillator (--freq 100).", and every clock is checked at 100 MHz, the divided one too: 'ERROR [<a href="/dewfpga/errors/timing-not-met/">timing-not-met</a>]: timing not met: clk' 'slow' '(FAIL at 100.00 MHz)', and since <a href="/dewfpga/patch-notes/#5">#5</a> the fix names the derived clock: 'slow is a clock made inside the design and is checked at the same 100 MHz, so clock those registers on the port clock with a clock enable (if (tick) ...) instead of on slow.' The slow clock reached about 35 MHz; it runs at 3.1 MHz here and at about 1 Hz in a lab. With create_clock uncommented nextpnr checks slow at its default 12 MHz and builds the breaker's version of this design (measured apart)</p>
+<h2 id="errors">Which error pages explain the messages?</h2>
+<ul>
+<li><a href="/dewfpga/errors/no-create-clock/">no-create-clock</a>: Not an error: the XDC has no create_clock line, so every clock is checked at the board&#x27;s 100 MHz.</li>
+<li><a href="/dewfpga/errors/timing-not-met/">timing-not-met</a>: The longest path between two registers is longer than the clock period; the CLI writes no bitstream where Vivado would, with a critical warning.</li>
+</ul>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/89_clkdiv_slow_logic">test/sv/89_clkdiv_slow_logic</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic clk, input logic btnC, input logic [15:0] sw, output logic [15:0] led);
+  logic [3:0] div = '0;                   // a clock divider (a lab divides by 2^26; the width does not change the timing check)
+  logic slow = 1'b0;
+  always_ff @(posedge clk) begin div &lt;= div + 4'd1; if (div == 4'd0) slow &lt;= ~slow; end
+  logic [13:0] value = '0;
+  logic [3:0] d0 = '0, d1 = '0, d2 = '0, d3 = '0;
+  always_ff @(posedge slow) if (btnC) value &lt;= sw[13:0];
+  always_ff @(posedge slow) begin         // the number's four decimal digits, on the slow clock
+    d0 &lt;= value % 10; d1 &lt;= (value / 10) % 10; d2 &lt;= (value / 100) % 10; d3 &lt;= value / 1000;
+  end
+  assign led = {d3, d2, d1, d0};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #20000000 $display("FAIL: timeout"); $finish; end
+  top dut(.clk(clk), .btnC(btnC), .sw(sw), .led(led));
+  integer i, v; reg [15:0] want;
+  // two edges of the slow clock (32 board clocks each): value loads on the first, the digits on the second
+  task slow_edges; begin repeat (64) tick; end endtask
+  initial begin
+    for (i = 0; i &lt; 300; i = i + 1) begin
+      v = i == 0 ? 0 : i == 1 ? 9999 : i == 2 ? 16383 : i == 3 ? 1000 : $urandom % 16384;
+      sw = v; btnC = 1; slow_edges; btnC = 0; slow_edges;
+      want = {4'(v / 1000), 4'((v / 100) % 10), 4'((v / 10) % 10), 4'(v % 10)};
+      if (led !== want) begin $display("FAIL: value %0d: led=%h, want %h", v, led, want); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/88_class_static/">a class used for its static function, called as util::rev(sw[3:0]) (no object is made)</a><br>
+next: <a href="/dewfpga/sv/90_elab_warning_initial/">a parameter check in an initial block: initial if (N &lt; 8) $warning(...)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

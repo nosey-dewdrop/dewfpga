@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a .v design file with bit and final as names (keywords in SystemVerilog, names in Verilog 2005) · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="a .v design file with bit and final as names (keywords in SystemVerilog, names in Verilog 2005). Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 74 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/74_verilog2005_file/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a .v design file with bit and final as names (keywords in SystemVerilog, names in Verilog 2005) · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="a .v design file with bit and final as names (keywords in SystemVerilog, names in Verilog 2005). Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 74 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/74_verilog2005_file/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a .v design file with bit and final as names (keywords in SystemVerilog, names in Verilog 2005)","url":"https://nosey-dewdrop.github.io/dewfpga/sv/74_verilog2005_file/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">74</span>Vivado: supported</p>
+  <h1>a .v design file with bit and final as names (keywords in SystemVerilog, names in Verilog 2005)</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.10 'Targeting SystemVerilog for a Specific File' (p.269): 'By default, the Vivado synthesis tool compiles *.v files with the Verilog 2005 syntax and *.sv files with the SystemVerilog syntax.'</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>rtl: 'iverilog -g2012 -o top_sim design.v tb.sv': dewfpga sim compiles a .v through a Verilog-2005 keyword wrapper (begin_keywords 1364-2005), so bit and final are names and the testbench prints PASS; bit: 'pnr ok: 10 LUT, 0 FF'; netlist: the testbench prints PASS on the netlist, then 'EQV PASS: 1048576 output bits compared, all equal'. Until 8 Oct 2026 the netlist stage failed in the harness, not the product: test/sv/eqv.sh read the .v with read_verilog -sv, which refused bit on line 3, and listed no registers (4a's read_slang copy of eqv.sh failed the same way); eqv.sh now reads a .v as the product does, read_verilog without -sv for yosys and the 1364-2005 keyword wrapper for yosys-slang and iverilog</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/74_verilog2005_file">test/sv/74_verilog2005_file</a>.</p>
+<p><code>design.v</code></p>
+<pre data-copy="1"><code>// a Verilog-2005 file (.v): bit and final are SystemVerilog keywords, ordinary names in Verilog
+module top(input [15:0] sw, output [15:0] led);
+  wire bit;
+  wire [3:0] final;
+  assign bit = sw[0] ^ sw[1];
+  assign final = sw[7:4] + 4'd1;
+  assign led = {11'b0, final, bit};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led;
+  integer i;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    for (i = 0; i &lt; 256; i = i + 1) begin
+      sw = {8'hc3, i[7:0]}; #1
+      if (!(led === {11'd0, 4'(sw[7:4] + 4'd1), sw[0] ^ sw[1]})) begin $display("FAIL: final and bit (sw=%h led=%h)", sw, led); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/73_array_arg/">an unpacked array as a function argument</a><br>
+next: <a href="/dewfpga/sv/75_timing_not_met/">a design that misses 100 MHz: a 14-bit value turned into four registered decimal digits (a long divide chain)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

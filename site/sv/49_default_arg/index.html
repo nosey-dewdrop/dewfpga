@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>function argument with a default value, called without it · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="function argument with a default value, called without it. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 49 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/49_default_arg/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="function argument with a default value, called without it · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="function argument with a default value, called without it. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 49 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/49_default_arg/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"function argument with a default value, called without it","url":"https://nosey-dewdrop.github.io/dewfpga/sv/49_default_arg/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">49</span>Vivado: supported</p>
+  <h1>function argument with a default value, called without it</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.287): 'Default argument value: Supported'</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>since <a href="/dewfpga/patch-notes/#4">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); rtl: PASS; bit: 'pnr ok: 34 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV PASS: 1048576 output bits compared, all equal'</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/49_default_arg">test/sv/49_default_arg</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic [15:0] sw, output logic [15:0] led);
+  function automatic logic [7:0] addk(input logic [7:0] a, input logic [7:0] k = 8'd3);
+    addk = a + k;
+  endfunction
+  assign led[7:0]  = addk(sw[7:0]);           // k left out: its default, 3
+  assign led[15:8] = addk(sw[15:8], 8'd5);
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0, btnU = 1'b0, btnD = 1'b0, btnL = 1'b0, btnR = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led; wire [6:0] seg; wire dp; wire [3:0] an;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #200000 $display("FAIL: timeout"); $finish; end
+  integer i;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    for (i = 0; i &lt; 65536; i = i + 1) begin
+      sw = i; #1
+      if (!(led === {8'(sw[15:8] + 5), 8'(sw[7:0] + 3)})) begin $display("FAIL: default argument (sw=%h led=%h)", sw, led); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/48_iff_event/">iff event qualifier: always_ff @(posedge clk iff sw[15])</a><br>
+next: <a href="/dewfpga/sv/50_arg_by_name/">function arguments bound by name, in another order: diff(.b(x), .a(y))</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

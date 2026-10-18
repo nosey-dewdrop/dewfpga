@@ -40,6 +40,11 @@
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>`include &quot;pkg.sv&quot;</code></pre>
 <p>as the first line of the file that uses the package, or move the package into that file above the module.</p>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/23c_package_own_file/">a package in its own file (pkg.sv), referenced as cfg_pkg::NAME</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a conditional between two values of one enum: next = sw[0] ? RUN : IDLE; · Vivado: unverified · open-source chain: all four stages pass</title>
+<meta name="description" content="a conditional between two values of one enum: next = sw[0] ? RUN : IDLE;. Vivado: unverified. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 55 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/55_enum_conditional/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a conditional between two values of one enum: next = sw[0] ? RUN : IDLE; · Vivado: unverified · open-source chain: all four stages pass">
+<meta property="og:description" content="a conditional between two values of one enum: next = sw[0] ? RUN : IDLE;. Vivado: unverified. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 55 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/55_enum_conditional/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a conditional between two values of one enum: next = sw[0] ? RUN : IDLE;","url":"https://nosey-dewdrop.github.io/dewfpga/sv/55_enum_conditional/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">55</span>Vivado: unverified</p>
+  <h1>a conditional between two values of one enum: next = sw[0] ? RUN : IDLE;</h1>
+<p>Vivado: unverified. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Unverified.</b> UG901 v2023.2 does not say what Vivado does with a conditional whose two values are of one enum type (Table 27 (p.285) lists 'Type checking' and 'Enumerated types in numerical expressions' as Supported, neither about this). No Vivado log of this case in the corpus. slang, a strict IEEE 1800 frontend, accepts it</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>since <a href="/dewfpga/patch-notes/#28">#28</a> rtl: PASS: iverilog refuses the design, 'design.sv:7: error: This assignment requires an explicit cast.', and dewfpga sim goes on with 'design.sv:7: note [<a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>]' (the simulation runs on the design as the build reads it, read by yosys' own reader, written back as Verilog and compiled with the testbench and yosys' cell models), then 'PASS'; iverilog 13 alone: 'This assignment requires an explicit cast.' (design.sv:7), no fix offered; yosys builds it; netlist: testbench only, eqv.sh cannot compile the RTL with iverilog</p>
+<h2 id="errors">Which error pages explain the messages?</h2>
+<ul>
+<li><a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>: Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.</li>
+</ul>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/55_enum_conditional">test/sv/55_enum_conditional</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic clk, input logic btnC, input logic [15:0] sw, output logic [15:0] led);
+  typedef enum logic [1:0] {IDLE, RUN, DONE} state_t;
+  state_t state, next;
+  always_ff @(posedge clk) if (btnC) state &lt;= IDLE; else state &lt;= next;
+  always_comb
+    case (state)
+      IDLE:    next = sw[0] ? RUN : IDLE;    // a conditional between two values of one enum
+      RUN:     next = sw[1] ? DONE : RUN;
+      default: next = sw[2] ? IDLE : DONE;
+    endcase
+  assign led = {14'b0, state};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0, btnU = 1'b0, btnD = 1'b0, btnL = 1'b0, btnR = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led; wire [6:0] seg; wire dp; wire [3:0] an;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #200000 $display("FAIL: timeout"); $finish; end
+  integer s, v; reg [1:0] want;
+  top dut(.clk(clk), .btnC(btnC), .sw(sw), .led(led));
+  // from reset to state s: IDLE, then RUN with sw[0] up, then DONE with sw[1] up
+  task goto(input integer s); begin
+    btnC = 1'b1; sw = 16'h0000; tick; btnC = 1'b0;
+    if (s &gt;= 1) begin sw = 16'h0001; tick; end
+    if (s &gt;= 2) begin sw = 16'h0002; tick; end
+    if (!(led === {14'd0, s[1:0]})) begin $display("FAIL: reach state %0d (led=%h)", s, led); $finish; end
+  end endtask
+  initial begin
+    // every reachable state, with every value of sw[2:0] and btnC (the other switches vary too)
+    for (s = 0; s &lt; 3; s = s + 1)
+      for (v = 0; v &lt; 16; v = v + 1) begin
+        goto(s);
+        sw = {13'(v * 16'h2b9 + s * 16'h1c3), v[2:0]}; btnC = v[3]; tick; btnC = 1'b0;
+        want = v[3] ? 2'd0 : (s == 0) ? (v[0] ? 2'd1 : 2'd0) : (s == 1) ? (v[1] ? 2'd2 : 2'd1) : (v[2] ? 2'd0 : 2'd2);
+        if (!(led === {14'd0, want})) begin $display("FAIL: state %0d, sw[2:0]=%b, btnC=%b: next %0d (led=%h)", s, v[2:0], v[3], want, led); $finish; end
+      end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/54_use_before_decl/">a name used before its declaration: assign led[0] = stop; logic stop;</a><br>
+next: <a href="/dewfpga/sv/56_unit_scope_enum/">typedef enum {S0, S1, S2} outside the module (compilation-unit scope), with the textbook&#x27;s state names</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

@@ -41,6 +41,11 @@ design.sv:2: ERROR [empty-module]: the module blinker (design.sv:2), instantiate
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Write the body, or comment the instance out until then.</p>
 <pre data-copy="1"><code>// blinker u_blink(.clk(clk), .led(led[0]));</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/95_empty_submodule/">a submodule declared with its ports and no body (a lab part not written yet), its output used by top</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

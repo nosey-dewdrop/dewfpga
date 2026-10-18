@@ -135,6 +135,16 @@ FOOT = """
 </html>
 """
 
+# the probes in test/sv whose recorded result (expect.tsv, the today column) prints a code; each has
+# a page from docs/pages-build.py, and the code's page lists them
+PROBES = {}
+_tsv = pathlib.Path("test/sv/expect.tsv").read_text().rstrip("\n").split("\n")
+_keys = _tsv[0].split("\t")
+for _row in _tsv[1:]:
+    _r = dict(zip(_keys, _row.split("\t")))
+    for _c in sorted(set(re.findall(r"\[([a-z0-9][a-z0-9-]*)\]", _r["today"]))):
+        PROBES.setdefault(_c, []).append((_r["id"], _r["construct"]))
+
 SUFFIX = " How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac."
 written = []
 for code, m, body in entries:
@@ -150,6 +160,12 @@ for code, m, body in entries:
              f"<span class=\"step\">{html.escape(m['step'])}</span>{html.escape(m['source'])}</p>\n")
     page += f"  <h1 class=\"mono\">{html.escape(title)}</h1>\n"
     page += pandoc(body)
+    if PROBES.get(code):
+        page += "<h2 id=\"which-probes-print-it\">Which probes in test/sv print this code?</h2>\n<ul>\n"
+        for pid, construct in PROBES[code]:
+            page += f"<li><a href=\"/dewfpga/sv/{pid}/\">{html.escape(construct)}</a></li>\n"
+        page += ("</ul>\n<p class=\"mute small\">Every probe, with what Vivado does and what each stage does here: "
+                 "<a href=\"/dewfpga/sv/\">the probes, stage by stage</a>.</p>\n")
     page += "</main>\n" + FOOT.format(back="/dewfpga/errors/", label="all errors")
     d = OUT / code
     d.mkdir(parents=True, exist_ok=True)

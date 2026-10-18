@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6) · Vivado: unverified · open-source chain: it stops before a bitstream</title>
+<meta name="description" content="a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6). Vivado: unverified. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it stops before a bitstream. Probe 63b of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/63b_real_localparam_expr/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6) · Vivado: unverified · open-source chain: it stops before a bitstream">
+<meta property="og:description" content="a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6). Vivado: unverified. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it stops before a bitstream. Probe 63b of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/63b_real_localparam_expr/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6)","url":"https://nosey-dewdrop.github.io/dewfpga/sv/63b_real_localparam_expr/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">63b</span>Vivado: unverified</p>
+  <h1>a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6)</h1>
+<p>Vivado: unverified. The open-source chain: it stops before a bitstream.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>fail</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>not run</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>fail</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Unverified.</b> UG901 v2023.2 contradicts itself for an operator on a real: Ch.10 Table 27 (p.285) lists 'Real, shortreal, and realtime data types: Supported', and 'Real Numbers' (p.273) says 'They can only be used as parameter values.', but the same table (p.286) lists 'Operators with real operands: Not Supported', and MAX - 1 applies one to a real parameter. No Vivado log in the corpus: none of its .sv or .v files writes a real literal in a parameter</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>since <a href="/dewfpga/patch-notes/#5">#5</a>: rtl PASS; synth fail on both readers, and how differs by machine: on this Mac yosys' own reader dies with a segmentation fault on the real literal in the localparam and the CLI reports it as [<a href="/dewfpga/errors/yosys-crashed/">yosys-crashed</a>] with the line and the known cause (a real value in a parameter); on CI's yosys build it refuses without crashing; yosys-slang refuses the real cast (Feature unimplemented). No bitstream either way, so the row quotes no machine-specific line.</p>
+<h2 id="errors">Which error pages explain the messages?</h2>
+<ul>
+<li><a href="/dewfpga/errors/yosys-crashed/">yosys-crashed</a>: yosys died with a signal instead of an error message; a real literal in a parameter is the known cause, and the line that holds one is named.</li>
+</ul>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/63b_real_localparam_expr">test/sv/63b_real_localparam_expr</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic clk, input logic btnC, output logic [15:0] led);
+  localparam MAX = 1e1;                   // a real literal, 10 (a lab writes 50e6 for one second)
+  logic [3:0] count = '0;
+  logic blink = 1'b0;
+  always_ff @(posedge clk)
+    if (btnC) begin count &lt;= 0; blink &lt;= 0; end
+    else if (count == MAX - 1) begin count &lt;= 0; blink &lt;= ~blink; end
+    else count &lt;= count + 1;
+  assign led = {15'd0, blink};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0;
+  wire [15:0] led;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  top dut(.clk(clk), .btnC(btnC), .led(led));
+  integer i;
+  initial begin
+    btnC = 1; tick; btnC = 0;
+    // blink toggles on every 10th edge: edges 10, 20, 30, ...
+    for (i = 1; i &lt;= 60; i = i + 1) begin
+      tick; #1
+      if (led !== {15'd0, 1'((i / 10) % 2)}) begin $display("FAIL: after %0d edges led=%h", i, led); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/63_real_cast/">a real localparam cast to int: localparam int INC = int&#x27;(STEP); (2.6 rounds to 3)</a><br>
+next: <a href="/dewfpga/sv/64_unpacked_struct/">an unpacked struct: typedef struct { logic [3:0] a; logic [3:0] b; } (no packed)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

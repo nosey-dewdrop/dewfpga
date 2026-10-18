@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 22e of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/22e_modport_expression/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 22e of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/22e_modport_expression/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib","url":"https://nosey-dewdrop.github.io/dewfpga/sv/22e_modport_expression/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">22e</span>Vivado: supported</p>
+  <h1>a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.288): 'Modport expressions: Supported' (IEEE 1800-2017 25.5.4, the .name(expression) form; slang's table of LRM clauses names 25.5.4 so)</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>since <a href="/dewfpga/patch-notes/#28">#28</a> rtl: PASS: iverilog refuses the design, 'design.sv:5: syntax error', and dewfpga sim goes on with 'design.sv:5: note [<a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>]' (the simulation runs on the design as the build reads it, 'read by yosys-slang, the second reader', written back as Verilog and compiled with the testbench and yosys' cell models), then 'PASS'; since <a href="/dewfpga/patch-notes/#4">#4</a>; built by yosys-slang, yosys' own reader refused this code (the note in bit.log); iverilog alone refuses it, 'design.sv:5: syntax error'; bit: 'pnr ok: 4 LUT, 0 FF, no clocked paths, timing not applicable   (full log: top.log)'; netlist: PASS, 'EQV SKIP: iverilog cannot compile the RTL, so only the testbench checked the netlist'</p>
+<h2 id="errors">Which error pages explain the messages?</h2>
+<ul>
+<li><a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>: Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.</li>
+</ul>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/22e_modport_expression">test/sv/22e_modport_expression</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>interface bus_if;
+  logic [7:0] data;
+  modport lo (input .nib(data[3:0]));   // a modport expression: nib is the low half of data
+endinterface
+module use_lo(bus_if.lo b, output logic [3:0] y);
+  assign y = ~b.nib;
+endmodule
+module top(input logic [15:0] sw, output logic [15:0] led);
+  bus_if bus();
+  assign bus.data = sw[7:0];
+  use_lo u_lo (.b(bus), .y(led[3:0]));
+  assign led[15:4] = '0;
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led;
+  integer i;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    for (i = 0; i &lt; 256; i = i + 1) begin
+      sw = {8'hA5, i[7:0]}; #1
+      if (!(led === {12'd0, ~sw[3:0]})) begin $display("FAIL: the modport expression (sw=%h led=%h)", sw, led); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/22d_interface_array/">an array of interfaces: pair_if p [0:1] (); p[0].d and p[1].d driven and read in top</a><br>
+next: <a href="/dewfpga/sv/22f_interface_member_access/">an interface without ports whose members the module that instantiates it drives and reads: add_if bus (); assign bus.a = sw[7:0]; ... led = bus.s</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

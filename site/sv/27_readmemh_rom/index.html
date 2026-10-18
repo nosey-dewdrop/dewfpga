@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>ROM from initial $readmemh(&quot;rom.mem&quot;) with async and sync read · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="ROM from initial $readmemh(&quot;rom.mem&quot;) with async and sync read. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 27 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/27_readmemh_rom/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ROM from initial $readmemh(&quot;rom.mem&quot;) with async and sync read · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="ROM from initial $readmemh(&quot;rom.mem&quot;) with async and sync read. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 27 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/27_readmemh_rom/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ROM from initial $readmemh(\"rom.mem\") with async and sync read","url":"https://nosey-dewdrop.github.io/dewfpga/sv/27_readmemh_rom/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">27</span>Vivado: supported</p>
+  <h1>ROM from initial $readmemh(&quot;rom.mem&quot;) with async and sync read</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.9 Table 21 (p.240): '$readmemh: Supported'; Ch.5 'Specifying RAM Initial Contents in an External Data File' (p.155) and 'ROM HDL Coding Techniques' (p.177)</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>All four stages pass; <code>expect.tsv</code> records no message for this probe.</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/27_readmemh_rom">test/sv/27_readmemh_rom</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);
+  logic [7:0] rom [0:15];
+  initial $readmemh("rom.mem", rom);
+  logic [7:0] rom_q;
+  assign led[7:0] = rom[sw[3:0]];              // async read
+  always_ff @(posedge clk) rom_q &lt;= rom[sw[7:4]];   // sync read
+  assign led[15:8] = rom_q;
+endmodule</code></pre>
+<p><code>rom.mem</code></p>
+<pre data-copy="1"><code>3C
+A5
+0F
+F0
+12
+34
+56
+78
+9A
+BC
+DE
+F1
+23
+45
+67
+89</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0, btnU = 1'b0, btnD = 1'b0, btnL = 1'b0, btnR = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led; wire [6:0] seg; wire dp; wire [3:0] an;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #200000 $display("FAIL: timeout"); $finish; end
+  top dut(.clk(clk), .sw(sw), .led(led));
+  initial begin
+    sw = 16'h0052; tick;
+    if (!(led === 16'h340F)) begin $display("FAIL: rom[2]=0F, rom[5]=34 (led=%h seg=%b an=%b)", led, seg, an); $finish; end
+    sw = 16'h00FA; tick;
+    if (!(led === 16'h89DE)) begin $display("FAIL: rom[A]=DE, rom[F]=89 (led=%h seg=%b an=%b)", led, seg, an); $finish; end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/26_inst_array/">array of instances: inv u_inv [3:0] (.a(sw[3:0]), .y(led[3:0]));</a><br>
+next: <a href="/dewfpga/sv/28_dist_ram/">RAM: sync write, async read (distributed RAM, -nobram)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>SystemVerilog do ... while in always_comb, twice: a popcount, and a loop whose condition is false on entry (its body still runs once, which tells do-while from while) · Vivado: supported · open-source chain: it stops before a bitstream</title>
+<meta name="description" content="do ... while in always_comb, twice: a popcount, and a loop whose condition is false on entry (its body still runs once, which tells do-while from while). Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it stops before a bitstream. Probe 44 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/44_do_while_loop/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SystemVerilog do ... while in always_comb, twice: a popcount, and a loop whose condition is false on entry (its body still runs once, which tells do-while from while) · Vivado: supported · open-source chain: it stops before a bitstream">
+<meta property="og:description" content="do ... while in always_comb, twice: a popcount, and a loop whose condition is false on entry (its body still runs once, which tells do-while from while). Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, it stops before a bitstream. Probe 44 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/44_do_while_loop/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"do ... while in always_comb, twice: a popcount, and a loop whose condition is false on entry (its body still runs once, which tells do-while from while)","url":"https://nosey-dewdrop.github.io/dewfpga/sv/44_do_while_loop/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">44</span>Vivado: supported</p>
+  <h1>SystemVerilog do ... while in always_comb, twice: a popcount, and a loop whose condition is false on entry (its body still runs once, which tells do-while from while)</h1>
+<p>Vivado: supported. The open-source chain: it stops before a bitstream.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>fail</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>not run</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>fail</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.10 Table 27 (p.287): 'Loop statements: Supported'; Ch.10 'Loop Statements' (p.280): 'The do-while loop performs the same function as the while loop, but instead it tests the expression after the statement.'</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>yosys: syntax error at do (design.sv:7)</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/44_do_while_loop">test/sv/44_do_while_loop</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic [15:0] sw, output logic [15:0] led);
+  logic [4:0] n;
+  logic f;
+  always_comb begin
+    int i;
+    n = 0; i = 0;
+    do begin n = n + sw[i]; i++; end while (i &lt; 16);   // the condition is tested after the body
+    f = 1'b0; i = 16;
+    do begin f = sw[i - 1]; i++; end while (i &lt; 16);   // false on entry: the body still runs once
+  end
+  assign led = {10'b0, f, n};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0, btnU = 1'b0, btnD = 1'b0, btnL = 1'b0, btnR = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led; wire [6:0] seg; wire dp; wire [3:0] an;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #200000 $display("FAIL: timeout"); $finish; end
+  integer i, b, c;
+  top dut(.sw(sw), .led(led));
+  initial begin
+    for (i = 0; i &lt; 65536; i = i + 1) begin
+      sw = i; #1
+      c = 0; for (b = 0; b &lt; 16; b = b + 1) c = c + sw[b];
+      if (!(led === {10'b0, sw[15], 5'(c)})) begin $display("FAIL: do-while popcount, and a body that runs once (sw=%h led=%h want %0d, %b)", sw, led, c, sw[15]); $finish; end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/43_foreach_loop/">foreach over an unpacked array in always_comb</a><br>
+next: <a href="/dewfpga/sv/45_break/">break out of a for loop in always_comb (lowest set bit)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

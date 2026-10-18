@@ -62,6 +62,12 @@ endmodule</code></pre>
 <pre data-copy="1"><code>logic [7:0] sub_in, sub_out;</code></pre>
 <p>Or connect the port by name, which pads or cuts the signal to the port's width, as the simulation did:</p>
 <pre data-copy="1"><code>sub #(.N(8)) u (.sub_in(sub_in), .sub_out(sub_out));</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/102_dotstar_param_width/">a .* connection whose port (N bits, N = 8) and signal (4 bits) widths differ</a></li>
+<li><a href="/dewfpga/sv/102c_named_conn_width/">the same instance connected by name, sub #(.N(8)) u (.sub_in(sub_in), .sub_out(sub_out)), with 4-bit signals</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

@@ -65,6 +65,42 @@ design.sv:2: ERROR [iverilog-refused]: iverilog cannot compile this code (its me
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Nothing: the note says what ran. To make iverilog read the source itself, rewrite the construct it names (<code>unique if</code> as a plain <code>if</code>, a struct as separate signals, a copy of an array as a loop).</p>
 <pre data-copy="1"><code>dewfpga sim</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/12b_struct_assign_pattern/">named assignment pattern &#x27;{hi: x, lo: y} and &#x27;{default: 0}</a></li>
+<li><a href="/dewfpga/sv/13c_unpacked_array_concat/">an unpacked array concatenation: assign arr = {sw[3:0], sw[7:4]}; to logic [3:0] arr [0:1]</a></li>
+<li><a href="/dewfpga/sv/13d_packed_2d_var_index/">a packed 2-D array indexed by a variable, then a bit or part select: grid[i][j] &lt;= ... in a loop, grid[sw[13:12]][3:1]</a></li>
+<li><a href="/dewfpga/sv/18b_unique_priority_if/">unique if / priority if</a></li>
+<li><a href="/dewfpga/sv/18c_unique0_if/">unique0 if: an if/else if chain where no branch may match</a></li>
+<li><a href="/dewfpga/sv/20_inside/">set membership: x inside {1,3,[8:10]} and case (x) inside</a></li>
+<li><a href="/dewfpga/sv/21b_assign_in_expr/">an assignment within an expression: a = (b = sw[3:0]) + 4&#x27;d1; in always_comb</a></li>
+<li><a href="/dewfpga/sv/22_interface_modport/">interface with two modports, modport-typed module ports (sum_if.prod bus)</a></li>
+<li><a href="/dewfpga/sv/22b_interface_own_file/">an interface declared in its own file (sum_if.sv), generic interface ports</a></li>
+<li><a href="/dewfpga/sv/22e_modport_expression/">a modport expression: modport lo (input .nib(data[3:0])); a submodule reads b.nib</a></li>
+<li><a href="/dewfpga/sv/34_bufg/">UNISIM primitive instantiation: BUFG</a></li>
+<li><a href="/dewfpga/sv/38_gate_primitives/">gate primitives (not, and, or, xor) driving logic variables and an output logic port</a></li>
+<li><a href="/dewfpga/sv/42_streaming_concat/">streaming concatenation: {&lt;&lt;{sw[7:0]}} (bit reverse) and {&lt;&lt;4{sw[15:8]}}</a></li>
+<li><a href="/dewfpga/sv/48_iff_event/">iff event qualifier: always_ff @(posedge clk iff sw[15])</a></li>
+<li><a href="/dewfpga/sv/51_unpacked_param_array/">an unpacked array localparam set with an assignment pattern: localparam logic [6:0] SEGS [0:3] = &#x27;{...}</a></li>
+<li><a href="/dewfpga/sv/51b_packed_param_array/">a packed 2-D localparam as a lookup table: localparam logic [3:0][6:0] SEG = {...}; seg = SEG[sw[1:0]];</a></li>
+<li><a href="/dewfpga/sv/54_use_before_decl/">a name used before its declaration: assign led[0] = stop; logic stop;</a></li>
+<li><a href="/dewfpga/sv/55_enum_conditional/">a conditional between two values of one enum: next = sw[0] ? RUN : IDLE;</a></li>
+<li><a href="/dewfpga/sv/57_ready_module_netlist/">a course &#x27;ready module&#x27; in netlist form in its own file ((* keep_hierarchy *), \&lt;const0&gt;, GND, LUT2), instantiated by the design</a></li>
+<li><a href="/dewfpga/sv/62_type_operator/">the type operator: var type(a) b;</a></li>
+<li><a href="/dewfpga/sv/64_unpacked_struct/">an unpacked struct: typedef struct { logic [3:0] a; logic [3:0] b; } (no packed)</a></li>
+<li><a href="/dewfpga/sv/64b_unpacked_union/">an unpacked union: typedef union { logic [7:0] byte_v; logic [3:0] nib; } (no packed), one member written and read</a></li>
+<li><a href="/dewfpga/sv/65_stream_unpack/">streaming concatenation as the target of an assignment: {&gt;&gt;{a, b}} = sw[7:0];</a></li>
+<li><a href="/dewfpga/sv/67_array_compare/">equality of two whole unpacked arrays: a == b, a != b</a></li>
+<li><a href="/dewfpga/sv/68_array_slice/">a slice of an unpacked array: b = a[2:3];</a></li>
+<li><a href="/dewfpga/sv/71_array_copy/">one whole unpacked array assigned to another in always_ff: b &lt;= a;</a></li>
+<li><a href="/dewfpga/sv/72_void_func_outputs/">a void function that returns through output arguments</a></li>
+<li><a href="/dewfpga/sv/73_array_arg/">an unpacked array as a function argument</a></li>
+<li><a href="/dewfpga/sv/83_realtobits/">$realtobits and $bitstoreal in localparams (a real turned into its IEEE 754 bits and back)</a></li>
+<li><a href="/dewfpga/sv/85_bitstream_cast/">a bitstream cast to an unpacked array: q = quad_t&#x27;(sw[7:0]); with typedef logic [3:0] quad_t [0:1]</a></li>
+<li><a href="/dewfpga/sv/86_extern_module/">an extern module declaration ahead of the module: extern module inv4(input logic [3:0] a, output logic [3:0] y);</a></li>
+<li><a href="/dewfpga/sv/88_class_static/">a class used for its static function, called as util::rev(sw[3:0]) (no object is made)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

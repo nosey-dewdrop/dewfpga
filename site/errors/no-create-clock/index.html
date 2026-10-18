@@ -40,6 +40,11 @@
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Nothing, or uncomment the clock line for a clock of your own period:</p>
 <pre data-copy="1"><code>create_clock -add -name sys_clk_pin -period 10.00 -waveform {0 5} [get_ports clk]</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/89_clkdiv_slow_logic/">a clock divider&#x27;s output clocks more logic than 100 MHz allows (four decimal digits of a 14-bit value on the slow clock); the XDC has no create_clock, as the course&#x27;s master XDC arrives</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

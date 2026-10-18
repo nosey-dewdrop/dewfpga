@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>a $display debug print left in a clocked design module: if (q == 4&#x27;d15) $display(&quot;wrapped&quot;); · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="a $display debug print left in a clocked design module: if (q == 4&#x27;d15) $display(&quot;wrapped&quot;);. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 92 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/92_display_in_design/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="a $display debug print left in a clocked design module: if (q == 4&#x27;d15) $display(&quot;wrapped&quot;); · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="a $display debug print left in a clocked design module: if (q == 4&#x27;d15) $display(&quot;wrapped&quot;);. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 92 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/92_display_in_design/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"a $display debug print left in a clocked design module: if (q == 4'd15) $display(\"wrapped\");","url":"https://nosey-dewdrop.github.io/dewfpga/sv/92_display_in_design/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">92</span>Vivado: supported</p>
+  <h1>a $display debug print left in a clocked design module: if (q == 4&#x27;d15) $display(&quot;wrapped&quot;);</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> UG901 v2023.2 Ch.9 Table 21 (p.239): '$display: Limited Support', and 'Vivado synthesis ignores unsupported system tasks.'</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>the CLI drops the print before place and route (delete t:$print in its synthesis script), as Vivado ignores it; dewfpga sim prints 'wrapped' each time the counter wraps, and iverilog warns "System task ($display) cannot be synthesized in an always_ff process."</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/92_display_in_design">test/sv/92_display_in_design</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module top(input logic clk, input logic btnC, input logic [15:0] sw, output logic [15:0] led);
+  logic [3:0] q = '0;
+  always_ff @(posedge clk) begin
+    if (btnC) q &lt;= '0; else q &lt;= q + 4'd1;
+    if (q == 4'd15) $display("wrapped");  // a debug print left in the design
+  end
+  assign led = {sw[15:4], q};
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [15:0] led;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  top dut(.clk(clk), .btnC(btnC), .sw(sw), .led(led));
+  integer i;
+  initial begin
+    btnC = 1; tick; btnC = 0;
+    for (i = 0; i &lt; 40; i = i + 1) begin
+      sw = $urandom; #1
+      if (led !== {sw[15:4], 4'(i)}) begin $display("FAIL: after %0d edges sw=%h led=%h", i, sw, led); $finish; end
+      tick;
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/91_submodule_own_file/">a design split over two files: top in design.sv, its submodule counter in counter.sv (the usual lab layout)</a><br>
+next: <a href="/dewfpga/sv/93_two_roots_file_name/">two modules nothing instantiates, in one file named after one of them (counter.sv: the plain counter, and the board version the project names as its top)</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

@@ -31,7 +31,7 @@ CHIPS = [  # class, href, label (en), label (tr)
 ]
 BRAND = {"en": "/dewfpga/", "tr": "/dewfpga/tr/"}
 
-# page -> (language, active chip). site/errors/**/index.html is added below.
+# page -> (language, active chip). site/errors/**/index.html and the pages docs/pages-build.py writes are added below.
 PAGES = {
     "site/index.html": ("en", None),
     "site/404.html": ("en", None),
@@ -75,6 +75,13 @@ def pages():
     p = dict(PAGES)
     for f in sorted(glob.glob("site/errors/**/index.html", recursive=True)):
         p[f] = ("en", "c-err")
+    # docs/pages-build.py: the probes, one page per patch note, one per guide section
+    for f in sorted(glob.glob("site/sv/**/index.html", recursive=True)):
+        p[f] = ("en", None)
+    for f in sorted(glob.glob("site/patch-notes/*/index.html")):
+        p[f] = ("en", "c-notes")
+    for f in sorted(glob.glob("site/docs/*/index.html")):
+        p[f] = ("en", None)
     return p
 
 

@@ -42,6 +42,11 @@ design.sv:5: ERROR [unnamed-instance]: `inv(` is an instance without a name: Viv
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Nothing, when the note printed: the compiler copy has a name; your file is unchanged. To make the name explicit in your source, write:</p>
 <pre data-copy="1"><code>inv u_inv(sw[0], led[0]);</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/02_unnamed_inst/">module instance with no instance name: inv(sw[0], led[0]);</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

@@ -47,6 +47,13 @@
 output logic dp,</code></pre>
 <p>After the change the module synthesizes to 46 cells and the rest of the lab goes through unchanged.</p>
 <p><code>dewfpga bit</code> makes this change in a temporary compiler copy and prints a note, unless a comment sits between <code>seg,</code> and <code>logic dp</code>, or a comment in the port list holds a <code>;</code>; then move that comment out. The course's ready modules in netlist form are the other course files that break (<a href="/dewfpga/docs/#71-which-course-file-breaks">section 7.1</a>). This one is also the clearest example of a bigger point: two tools read your code, Icarus for simulation and Yosys for synthesis, and they do not agree on everything. Code that passes <code>make sim</code> can still fail in <code>make bit</code>. <a href="/dewfpga/docs/#7-which-errors-does-the-cli-stop-with-and-what-do-they-mean">Section 7</a> and <a href="/dewfpga/docs/#8-what-can-it-not-do">section 8</a> of the guide.</p>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/08_port_dir_inherit/">ANSI port inheriting its direction: output [6:0] seg, logic dp, (the course&#x27;s seven-segment file)</a></li>
+<li><a href="/dewfpga/sv/08b_port_dir_comment/">the course&#x27;s port line (output [6:0] seg, logic dp) with comments in the port list: one after seg, one with a &#x27;;&#x27; in it</a></li>
+<li><a href="/dewfpga/sv/08c_port_dir_inherit_proc/">the course&#x27;s port line shape with a range only, written in an always block: output logic [6:0] seg, [3:0] an; with an set in an always_comb</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

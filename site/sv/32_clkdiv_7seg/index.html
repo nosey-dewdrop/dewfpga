@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>clock divider making a derived clock (always_ff @(posedge slow)) + 4-digit 7-seg multiplexing + hex ROM via case · Vivado: supported · open-source chain: all four stages pass</title>
+<meta name="description" content="clock divider making a derived clock (always_ff @(posedge slow)) + 4-digit 7-seg multiplexing + hex ROM via case. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 32 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/sv/32_clkdiv_7seg/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="clock divider making a derived clock (always_ff @(posedge slow)) + 4-digit 7-seg multiplexing + hex ROM via case · Vivado: supported · open-source chain: all four stages pass">
+<meta property="og:description" content="clock divider making a derived clock (always_ff @(posedge slow)) + 4-digit 7-seg multiplexing + hex ROM via case. Vivado: supported. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, all four stages pass. Probe 32 of the dewfpga test suite, with its code and the source for Vivado&#x27;s verdict.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/sv/32_clkdiv_7seg/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"clock divider making a derived clock (always_ff @(posedge slow)) + 4-digit 7-seg multiplexing + hex ROM via case","url":"https://nosey-dewdrop.github.io/dewfpga/sv/32_clkdiv_7seg/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/sv/">SystemVerilog probes</a> · <span class="step">32</span>Vivado: supported</p>
+  <h1>clock divider making a derived clock (always_ff @(posedge slow)) + 4-digit 7-seg multiplexing + hex ROM via case</h1>
+<p>Vivado: supported. The open-source chain: all four stages pass.</p>
+<table>
+<tr><th>stage</th><th>today</th></tr>
+<tr><td><a href="/dewfpga/sv/#rtl">rtl</a>, simulation</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#synth">synth</a>, synthesis</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#netlist">netlist</a>, the netlist</td><td>pass</td></tr>
+<tr><td><a href="/dewfpga/sv/#bit">bit</a>, the bitstream</td><td>pass</td></tr>
+</table>
+<h2 id="vivado">What does Vivado do with it?</h2>
+<p><b>Supported.</b> Vivado 2020.1 synthesis log of a public CS223 lab repo: a register toggled by a counter is the clock of another module's always_ff @(posedge clk), 'Synthesis finished with 0 errors, 0 critical warnings and 0 warnings.', implementation 'write_bitstream completed successfully'. UG901 v2023.2 Ch.5 (p.81): 'Rising or falling-edge clocks'</p>
+<h2 id="today">What does the open-source chain do with it?</h2>
+<p>since <a href="/dewfpga/patch-notes/#5">#5</a> the pnr line names both clocks, the port and the divided one: 'pnr ok: 19 LUT, 4 FF, slow' 'MHz), clk' (before <a href="/dewfpga/patch-notes/#5">#5</a> the same two names; the derived clock keeps the name the student gave its net)</p>
+<h2 id="code">What is the probe's code?</h2>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga/tree/main/test/sv/32_clkdiv_7seg">test/sv/32_clkdiv_7seg</a>.</p>
+<p><code>design.sv</code></p>
+<pre data-copy="1"><code>module hex7(input logic [3:0] x, output logic [6:0] seg);
+  always_comb
+    case (x)                              // ROM via case
+      4'h0: seg = 7'b1000000; 4'h1: seg = 7'b1111001; 4'h2: seg = 7'b0100100; 4'h3: seg = 7'b0110000;
+      4'h4: seg = 7'b0011001; 4'h5: seg = 7'b0010010; 4'h6: seg = 7'b0000010; 4'h7: seg = 7'b1111000;
+      4'h8: seg = 7'b0000000; 4'h9: seg = 7'b0010000; 4'hA: seg = 7'b0001000; 4'hB: seg = 7'b0000011;
+      4'hC: seg = 7'b1000110; 4'hD: seg = 7'b0100001; 4'hE: seg = 7'b0000110; default: seg = 7'b0001110;
+    endcase
+endmodule
+module top(input logic clk, input logic btnC, input logic [15:0] sw,
+           output logic [6:0] seg, output logic dp, output logic [3:0] an);
+  logic divcnt, slow;                     // clock divider: a derived clock, CS223 style
+  always_ff @(posedge clk)
+    if (btnC) begin divcnt &lt;= 1'b0; slow &lt;= 1'b0; end
+    else begin divcnt &lt;= divcnt + 1'b1; if (divcnt) slow &lt;= ~slow; end
+  logic [1:0] digit;
+  always_ff @(posedge slow or posedge btnC)
+    if (btnC) digit &lt;= 2'd0; else digit &lt;= digit + 2'd1;
+  logic [3:0] nib;
+  always_comb
+    case (digit)
+      2'd0:    begin an = 4'b1110; nib = sw[3:0];   end
+      2'd1:    begin an = 4'b1101; nib = sw[7:4];   end
+      2'd2:    begin an = 4'b1011; nib = sw[11:8];  end
+      default: begin an = 4'b0111; nib = sw[15:12]; end
+    endcase
+  hex7 u_hex (.x(nib), .seg(seg));
+  assign dp = 1'b1;
+endmodule</code></pre>
+<p><code>tb.sv</code></p>
+<pre data-copy="1"><code>module tb;
+  reg clk = 1'b0;
+  reg btnC = 1'b0;
+  reg [15:0] sw = 16'h0000;
+  wire [6:0] seg; wire dp; wire [3:0] an;
+  task tick; begin #5 clk = 1'b1; #5 clk = 1'b0; end endtask
+  initial begin #200000 $display("FAIL: timeout"); $finish; end
+  top dut(.clk(clk), .btnC(btnC), .sw(sw), .seg(seg), .dp(dp), .an(an));
+  // the reference: the 16 hex patterns (active low, gfedcba) and the digit order an = 1110, 1101, 1011, 0111
+  reg [6:0] hex [0:15];
+  reg [3:0] prev; integer n, p, k;
+  initial begin
+    hex[0] = 7'b1000000; hex[1] = 7'b1111001; hex[2] = 7'b0100100; hex[3] = 7'b0110000;
+    hex[4] = 7'b0011001; hex[5] = 7'b0010010; hex[6] = 7'b0000010; hex[7] = 7'b1111000;
+    hex[8] = 7'b0000000; hex[9] = 7'b0010000; hex[10] = 7'b0001000; hex[11] = 7'b0000011;
+    hex[12] = 7'b1000110; hex[13] = 7'b0100001; hex[14] = 7'b0000110; hex[15] = 7'b0001110;
+  end
+  task check(input integer d); begin
+    if (an !== ~(4'b0001 &lt;&lt; d) || seg !== hex[sw[4*d +: 4]] || dp !== 1'b1) begin
+      $display("FAIL: digit %0d of sw=%h: an=%b seg=%b, want an=%b seg=%b", d, sw, an, seg, ~(4'b0001 &lt;&lt; d), hex[sw[4*d +: 4]]); $finish; end
+  end endtask
+  initial begin
+    for (p = 0; p &lt; 4; p = p + 1) begin
+      sw = {4'(4*p + 3), 4'(4*p + 2), 4'(4*p + 1), 4'(4*p)};    // every hex digit shows once
+      btnC = 1; tick; btnC = 0; #1
+      check(0);
+      for (k = 1; k &lt;= 4; k = k + 1) begin               // the derived clock steps the digit; 4 wraps to 0
+        prev = an; n = 0;
+        while (an === prev &amp;&amp; n &lt; 12) begin tick; n = n + 1; end
+        check(k % 4);
+      end
+    end
+    $display("PASS"); $finish;
+  end
+endmodule</code></pre>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/sv/31b_negedge_set/">registers on the falling edge with no start value: a counter with a synchronous set (FDSE_1) and a bit with an asynchronous preset (FDPE_1), both reset from two switches</a><br>
+next: <a href="/dewfpga/sv/33_tristate_pmod/">inout JA: JA[0] = oe ? d : 1&#x27;bz and read back; JA[7:1] = &#x27;z, JA[1] read as input</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/sv/">all probes</a> · <a href="/dewfpga/errors/">errors</a></span>
+</footer>
+</body>
+</html>

@@ -41,6 +41,12 @@ design.sv:2: ERROR [internal-tristate]: a tri-state driver (a z, at design.sv:2)
 <p><code>assign bus = sel ? a : 'z;</code> on an internal wire describes a shared bus; a 7-series chip has no internal tri-state, Vivado rewrites it as a mux (UG901 Ch.5 Tristates), yosys does not.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>assign bus = sel ? b : a;</code></pre>
+<h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
+<ul>
+<li><a href="/dewfpga/sv/33c_tristate_submodule_port/">the textbook&#x27;s tristate buffer module (assign y = en ? a : 4&#x27;bz) instantiated four times, each driving one nibble of an output tri [15:0] port</a></li>
+<li><a href="/dewfpga/sv/52_internal_tristate/">an internal tri bus with two tristate drivers taking turns (the textbook&#x27;s mux from tristate buffers)</a></li>
+</ul>
+<p class="mute small">Every probe, with what Vivado does and what each stage does here: <a href="/dewfpga/sv/">the probes, stage by stage</a>.</p>
 </main>
 
 <footer class="wrap">

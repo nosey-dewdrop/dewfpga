@@ -4,6 +4,8 @@ description: Every error hit while building the open-source FPGA chain for a Dig
 
 Every wall hit while setting up the chain on a Mac, in the order of the guide, filed under the exact line the terminal printed. Press Cmd F and paste a piece of your error. Two of them, sections 3.1 and 3.4, print no error line; they are the places you get stuck with nothing to search for.
 
+Every SystemVerilog construct measured so far, with what Vivado does, what each stage does here and the code it prints: [the probes, stage by stage](/dewfpga/sv/).
+
 ## Your error is not here?
 
 Read the last lines in the terminal, not the first. Most tools print the real reason last. If it is still stuck, send the last ten lines and the section number on [LinkedIn](https://www.linkedin.com/in/damla-su-bilge-278841278/).
