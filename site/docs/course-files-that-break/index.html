@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>Which course file breaks? CS223 on a Mac without Vivado, section 7.1</title>
+<meta name="description" content="Two. One is fixed for you: SevSeg_4digit.sv (also handed out as SevenSegmentDisplay.sv), as source code, has a port line that Vivado and Icarus accept and Yosys does not…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/course-files-that-break/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Which course file breaks? CS223 on a Mac without Vivado, section 7.1">
+<meta property="og:description" content="Two. One is fixed for you: SevSeg_4digit.sv (also handed out as SevenSegmentDisplay.sv), as source code, has a port line that Vivado and Icarus accept and Yosys does not…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/course-files-that-break/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Which course file breaks?","url":"https://nosey-dewdrop.github.io/dewfpga/docs/course-files-that-break/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/docs/">the guide</a> · <span class="step">7.1</span>How do you run CS223 labs on a Mac without Vivado?</p>
+  <h1>Which course file breaks?</h1>
+<p>Two. One is fixed for you: <code>SevSeg_4digit.sv</code> (also handed out as <code>SevenSegmentDisplay.sv</code>), as source code, has a port line that Vivado and Icarus accept and Yosys does not (<a href="https://nosey-dewdrop.github.io/dewfpga/errors/port-neither-input-nor-output/">port-neither-input-nor-output</a>). The other is not fixed yet: the ready modules the course hands out in netlist form (LUT primitives, <code>\&lt;const0&gt;</code>, <code>(* keep_hierarchy *)</code>), <code>SevSeg_4digit.sv</code> among them, build in Vivado, but the CLI takes them for a netlist Vivado left behind and stops <code>sim</code> and <code>bit</code> with "Delete it from this folder". 5 of the 89 folders measured from old student repos hold such a module: 4 are one repo's copy of the course's handout folder (its example projects and ready modules), 1 is a student's project that copied the modules in.</p>
+<pre class="systemverilog"><code>output [6:0]seg, logic dp,     // dp inherits `output` from the previous port, per the standard</code></pre>
+<p>Yosys does not implement that inheritance. <code>dewfpga bit</code> supplies the direction in a temporary compiler copy before synthesis and tells you so. Your saved file is unchanged:</p>
+<pre><code>SevSeg_4digit.sv:4: note [port-neither-input-nor-output]: wrote the port direction in:  output [6:0]seg, output logic dp,   (in the copy the tools read, your file stays as you wrote it; the standard and Yosys need it; Vivado accepts both)</code></pre>
+<p>The original file is preserved, so it remains available to other tools exactly as you wrote it. The fix misses the line when a comment sits between <code>seg,</code> and <code>logic dp</code> (at the end of the <code>seg,</code> line, on a line of its own, or a <code>/* */</code> between the two), or when a comment in the port list holds a <code>;</code>; then Yosys stops with <code>Module port `\dp' is neither input nor output.</code> and no fix, so move the comment out of the way. More things Vivado lets through and Yosys refuses came up in old student repos. One more port-line shape is fixed the same way, by <code>bit</code>; the rest stop the build and name the line, except where the item says otherwise:</p>
+<ul>
+<li>An instance without a name, <code>trans_3s_clock(clk, reset, out);</code>. The standard requires a name: <code>trans_3s_clock u1(clk, reset, out);</code>.</li>
+<li>A latch in an <code>always_comb</code> block: a signal not assigned on every path (an <code>if</code> without <code>else</code>, a <code>case</code> without <code>default</code>). Vivado builds a latch and warns; Yosys refuses. Give the signal a default value at the top of the block.</li>
+<li>A port list where a later port only has a range, <code>input logic [7:0] d, [2:0] s</code>: <code>bit</code> writes the direction in, like the seven-segment line above; <code>sim</code> does not. When such an output is written in an <code>always</code> block (<code>output logic [6:0] seg, [3:0] an</code>), <code>sim</code> stops with "'an' is not a valid l-value" until a <code>bit</code> has rewritten the line.</li>
+<li>A reset branch that loads a signal, not a constant, in an <code>always_ff</code> with <code>posedge reset</code>: the bitstream is built with Yosys warnings only, and while the reset is held the board does not do what <code>sim</code> shows. A register written on both clock edges stops the build, with no line number.</li>
+<li>An asynchronous reset ORed with a synchronous clear, <code>always_ff @(posedge clk, posedge reset) if (reset || clear)</code>: the build stops with "Multiple edge sensitive events found for this signal!", no line number, and advice about two always blocks that does not fit one.</li>
+<li>A statement after the reset's <code>if</code>/<code>else</code> in an <code>always_ff</code> with an asynchronous reset: the build stops with "Async reset ... yields non-constant value", no line number, and advice about the reset branch.</li>
+<li>A file Vivado wrote after synthesis (<code>\&lt;const0&gt;</code>, <code>keep_hierarchy</code>) copied in as if it were source: the build stops, names the file and says to delete it. The same check also stops the course's netlist-form modules above, and a module with UG901's own <code>(* keep_hierarchy = "yes" *)</code> attribute.</li>
+</ul>
+<p>What else was tried: four modules from old student repos, together in one design. An FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer and the seven-segment driver above: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features in those files that both Icarus (<code>sim</code>) and Yosys (<code>bit</code>) accepted: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code> (Icarus 13 accepts one only while no module port is typed with it; a port like <code>sum_if.prod bus</code> fails <code>sim</code> and builds in <code>bit</code>). A submodule file named differently from its module, Turkish characters in comments, and spaces in the folder path went through too. A file saved as "UTF-8 with BOM" stops the build, with the command that removes the mark. That is four files, not the whole course.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/docs/your-own-lab/">5 How do you use it for your own lab?</a><br>
+next: <a href="/dewfpga/docs/limits/">8 What can it not do?</a><br>
+<a href="/dewfpga/docs/#71-which-course-file-breaks">This section in the whole guide</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+<p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

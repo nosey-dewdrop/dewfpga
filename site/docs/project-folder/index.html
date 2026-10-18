@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>What is in the project folder? CS223 on a Mac without Vivado, section 4</title>
+<meta name="description" content="A project is one folder. Download the files, do not type them:">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/project-folder/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What is in the project folder? CS223 on a Mac without Vivado, section 4">
+<meta property="og:description" content="A project is one folder. Download the files, do not type them:">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/project-folder/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"What is in the project folder?","url":"https://nosey-dewdrop.github.io/dewfpga/docs/project-folder/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/docs/">the guide</a> · <span class="step">4</span>How do you run CS223 labs on a Mac without Vivado?</p>
+  <h1>What is in the project folder?</h1>
+<p>A project is one folder. Download the files, do not type them:</p>
+<pre class="bash"><code>mkdir -p ~/cs223/blink &amp;&amp; cd ~/cs223/blink
+curl -L -o blink.zip https://nosey-dewdrop.github.io/dewfpga/blink.zip &amp;&amp; unzip -q blink.zip &amp;&amp; rm blink.zip &amp;&amp; ls -A
+# .vscode  Makefile  blink.sv  blink.xdc  blink_tb.sv  check_xdc.py</code></pre>
+<table>
+<thead>
+<tr>
+<th>file</th>
+<th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/blink.sv"><code>blink.sv</code></a></td>
+<td>the design: LED 0 blinks once a second while switch 0 is on, LED 15 follows switch 0</td>
+</tr>
+<tr>
+<td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/blink_tb.sv"><code>blink_tb.sv</code></a></td>
+<td>the testbench: three checks, prints <code>PASS</code> or <code>FAIL</code></td>
+</tr>
+<tr>
+<td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/blink.xdc"><code>blink.xdc</code></a></td>
+<td>Digilent's Basys3 master XDC with the 33 pin lines for <code>clk</code>, <code>sw</code> and <code>led</code> uncommented. Vivado reads the same file</td>
+</tr>
+<tr>
+<td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/check_xdc.py"><code>check_xdc.py</code></a></td>
+<td>compares the design's ports with the XDC before place and route, because nextpnr's own error <a href="https://nosey-dewdrop.github.io/dewfpga/errors/no-iostandard-property/">names the wrong port</a></td>
+</tr>
+<tr>
+<td><a href="https://nosey-dewdrop.github.io/dewfpga/templates/Makefile"><code>Makefile</code></a></td>
+<td>runs the six tools in order. <code>--seed 1</code> makes every build byte-identical</td>
+</tr>
+<tr>
+<td><code>.vscode/tasks.json</code></td>
+<td>Cmd Shift B in VS Code runs <code>make flash</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>dewfpga new blink</code> gives the same <code>blink.sv</code>, <code>blink_tb.sv</code> and <code>blink.xdc</code> without the Makefile, and its <code>tasks.json</code> says <code>dewfpga flash</code> instead.</p>
+<p>If you copied the Makefile from somewhere else and <code>make</code> says <code>missing separator</code>, the tabs became spaces: <a href="https://nosey-dewdrop.github.io/dewfpga/errors/missing-separator/">missing-separator</a>.</p>
+<p>Plug the board in over USB, switch it on, then from inside the folder:</p>
+<pre class="bash"><code>make check</code></pre>
+<pre><code>yosys            /opt/homebrew/bin/yosys
+iverilog         /opt/homebrew/bin/iverilog
+openFPGALoader   /opt/homebrew/bin/openFPGALoader
+nextpnr-xilinx   /Users/you/fpga/nextpnr-xilinx/build/nextpnr-xilinx
+xc7frames2bit    /Users/you/fpga/prjxray/build/tools/xc7frames2bit
+chipdb           /Users/you/fpga/chipdb/xc7a35t.bin
+fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
+venv             /Users/you/fpga/venv/bin/python</code></pre>
+<p>Eight lines, each ending in a path, and no <code>-MISSING-</code> anywhere: done. A line such as <code>chipdb           -MISSING-</code> names the step of section 3 to redo (3.4 here). Then:</p>
+<pre class="bash"><code>make sim       # PASS: 3 checks
+make bit       # xdc ok / pnr ok / blink.bit, under five seconds
+make flash     # Load SRAM ... done 1</code></pre>
+<p>The outputs are the same three blocks shown in section 2. <code>make sim</code> also writes <code>blink.vcd</code>. No waveform viewer is installed by this guide; to look at the waveform, open the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> and paste the same <code>blink.sv</code> and <code>blink_tb.sv</code> there, and it draws it.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/docs/yosys-slang/">3.6 yosys-slang</a><br>
+next: <a href="/dewfpga/docs/your-own-lab/">5 How do you use it for your own lab?</a><br>
+<a href="/dewfpga/docs/#4-what-is-in-the-project-folder">This section in the whole guide</a></p>
+<p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

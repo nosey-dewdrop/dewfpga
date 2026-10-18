@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>What can it not do? CS223 on a Mac without Vivado, section 8</title>
+<meta name="description" content="This covers the part of Vivado that CS223 uses, not all of it yet, and nothing beyond it.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/limits/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What can it not do? CS223 on a Mac without Vivado, section 8">
+<meta property="og:description" content="This covers the part of Vivado that CS223 uses, not all of it yet, and nothing beyond it.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/limits/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"What can it not do?","url":"https://nosey-dewdrop.github.io/dewfpga/docs/limits/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/docs/">the guide</a> · <span class="step">8</span>How do you run CS223 labs on a Mac without Vivado?</p>
+  <h1>What can it not do?</h1>
+<p>This covers the part of Vivado that CS223 uses, not all of it yet, and nothing beyond it.</p>
+<ul>
+<li><strong>Nothing from Vivado's IP Catalog.</strong> No Block Design, MicroBlaze, AXI, Clocking Wizard, or the BRAM, VGA and UART cores. 35 old student repos with 240 source files were searched for those; none use any of it. (Searched, not synthesized.)</li>
+<li><strong>No GUI.</strong> No waveform viewer, schematic or in-chip debugger. <code>sim</code> writes a <code>.vcd</code>; the <a href="https://nosey-dewdrop.github.io/dewfpga/sim/?view=tb">browser testbench</a> draws the waveform for the same files.</li>
+<li><strong>SystemVerilog that Vivado compiles and this chain does not, yet.</strong> <code>test/sv</code> in the repository holds one probe for each construct measured so far, each run through <code>sim</code>, <code>bit</code> and a simulation of the synthesized netlist, next to what Vivado does and the source for it (<a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/test/sv/expect.tsv"><code>expect.tsv</code></a>). It is not every construct: each round of testing has found more. On 26 September, 82 of the 111 constructs Vivado supports failed a stage: 58 stop before a bitstream (Yosys refuses them, or the CLI, place and route or its timing check does), 12 fail only in <code>sim</code> (Icarus 13 refuses them or has no model), 2 (an MMCM, and a memory marked as a block RAM) build but have no model to check them against, and 10 build a bitstream that does not do what the code says, with no error: a hierarchical name such as <code>u_fsm.state</code>, <code>$isunknown</code>, the members of an interface used from the module that instantiates it (<code>bus.a</code>, with or without ports, or in an array of interfaces: 3 probes), a package in its own file, reading an <code>inout</code> pin the design sets to a constant <code>z</code>, a design module that calls <code>$finish</code>, a packed 2-D <code>localparam</code> whose type is a <code>typedef</code> (the table comes out as zeros), and two modules nothing instantiates where one is named like its own file (the CLI builds that one, not the top your project names).</li>
+<li><strong>Two parsers.</strong> Icarus reads your code for simulation, Yosys for synthesis, and they do not support the same SystemVerilog. Code that passes <code>sim</code> can fail in <code>bit</code>; section 7 lists what the course's files and old student repos hit, and <code>expect.tsv</code> above every construct measured.</li>
+<li><strong>The timing number is nextpnr's estimate.</strong> Vivado's report is the official one. In the two designs above the margin was 1.5x (four modules) and 2.8x (blink) over 100 MHz.</li>
+<li><strong>Unofficial tools.</strong> AMD does not make or support them; prjxray worked out the bitstream format without AMD's documentation. If a lab is graded in Vivado, open it in Vivado once before the demo.</li>
+<li><strong>Memories become distributed RAM</strong> (<code>-nobram</code>). The 16x8 RAM in section 7 mapped to four RAM32M cells. A large memory such as a VGA framebuffer would not fit this way; big multipliers and DSP blocks are untested. The one exception is a memory the code asks to be a block RAM, <code>(* ram_style = "block" *)</code> or <code>(* rom_style = "block" *)</code>: Yosys builds a RAMB18E1 then, which the timing check does not time and the test suite cannot simulate (<code>97_ram_style_block</code>).</li>
+<li><strong>One board, one platform.</strong> Basys3 (XC7A35T), Apple Silicon. Intel Mac, Linux and other boards are untested and the installer refuses them.</li>
+<li><strong>Confirmed on the board</strong> (19 and 20 September): five designs: <code>blink</code>, switches to LEDs, the Lab 2 adder/subtractor, the button counter on the display and the traffic-light FSM with sensor hold (the last three are the simulator's examples). The four-module design in section 7 went as far as a bitstream and was not loaded.</li>
+<li><strong><code>`ifdef SIM</code>.</strong> The browser simulator defines <code>SIM</code>; the command line does not. A design can use it to shorten a clock divider for the browser and keep the real value for the board, as <code>blink.sv</code> does.</li>
+</ul>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/docs/course-files-that-break/">7.1 Which course file breaks?</a><br>
+<a href="/dewfpga/docs/#8-what-can-it-not-do">This section in the whole guide</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+<p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

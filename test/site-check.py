@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""site check: links, anchors, canonical, sitemap, nav copies, question headings, private files. stdlib only.
+"""site check: links, anchors, canonical, sitemap, nav copies, probe pages, question headings, private files. stdlib only.
 
   test/site-check.py                      source mode: site/ as git tracks it; links into bundle-made files
                                           (dewfpga.tgz, templates/, blink.zip, sim/) are deferred, not skipped silently
@@ -306,6 +306,11 @@ def main():
     r = subprocess.run([sys.executable, 'docs/nav.py', '--check'], capture_output=True, text=True)
     if r.returncode != 0:
         fail('docs/nav.py', '--check: ' + (r.stdout + r.stderr).strip().replace('\n', '; '))
+
+    # 4c. every probe page matches test/sv, as docs/pages-build.py makes it
+    r = subprocess.run([sys.executable, 'docs/pages-build.py', '--check'], capture_output=True, text=True)
+    if r.returncode != 0:
+        fail('docs/pages-build.py', '--check: ' + (r.stdout + r.stderr).strip().replace('\n', '; '))
 
     # 5. headings: a heading in question form ends with "?"
     q_start = re.compile(r'^(why|how|what|which|who|when|where|is|are|do|does|did|can|could|should|would|will|has|have|was|were|neden|nasıl|ne|hangi|kim|ne zaman|nerede)\b', re.I)

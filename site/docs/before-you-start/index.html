@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>What do you need before you start? CS223 on a Mac without Vivado, section 1</title>
+<meta name="description" content="The board. A Digilent Basys3 and its micro-USB cable. Apple Silicon MacBooks have only USB-C ports, so you also need a USB-C to USB-A adapter or hub.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/before-you-start/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="What do you need before you start? CS223 on a Mac without Vivado, section 1">
+<meta property="og:description" content="The board. A Digilent Basys3 and its micro-USB cable. Apple Silicon MacBooks have only USB-C ports, so you also need a USB-C to USB-A adapter or hub.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/before-you-start/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"What do you need before you start?","url":"https://nosey-dewdrop.github.io/dewfpga/docs/before-you-start/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/docs/">the guide</a> · <span class="step">1</span>How do you run CS223 labs on a Mac without Vivado?</p>
+  <h1>What do you need before you start?</h1>
+<p><strong>The board.</strong> A Digilent Basys3 and its micro-USB cable. Apple Silicon MacBooks have only USB-C ports, so you also need a USB-C to USB-A adapter or hub. The board is powered from the cable; leave the JP2 jumper on USB.</p>
+<p><strong>The terminal.</strong> Press Cmd Space, type <code>Terminal</code>, press Enter. Every command in this guide goes into that window: paste it, press Enter, wait until the line ending in <code>%</code> comes back before you paste the next one. Some commands span several lines and end in <code>\</code>; copy the whole grey block at once.</p>
+<p><strong>Homebrew.</strong> It installs developer tools by name, and on a Mac that does not have them it first installs Apple's command line tools (<code>git</code>, <code>make</code>, the C compiler), which the chain is built with; that is the installer's own <code>should_install_command_line_tools</code> step. So this one line covers both:</p>
+<pre class="bash"><code>/bin/bash -c &quot;$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)&quot;</code></pre>
+<p>It asks for your Mac password; the letters do not show while you type. At the end it prints a few lines under "Next steps". Paste those into the terminal too: they put <code>/opt/homebrew/bin</code> on your PATH, and without them the next command answers <code>command not found</code>. Open a new terminal window and check:</p>
+<pre class="bash"><code>brew --version
+# Homebrew 4.x</code></pre>
+<p>If <code>dewfpga install</code> later stops with <code>Xcode Command Line Tools missing</code> (a Homebrew copied over by Migration Assistant, or a tools download that failed), run <code>xcode-select --install</code>, click Install in the window, and run it again. If it stops with <code>Homebrew is installed (...) but not on your PATH</code>, the "Next steps" lines were the missing part; it prints the one line that fixes it.</p>
+<p><strong>VS Code.</strong> Download it from code.visualstudio.com. Then in VS Code press Cmd Shift P, type <code>shell command</code>, choose "Install 'code' command in PATH". After that <code>code .</code> in the terminal opens the current folder. Do not edit these files in TextEdit; it saves rich text, and the tools cannot read that.</p>
+<hr>
+<p class="mute small">next: <a href="/dewfpga/docs/build-by-hand/">3 How do you build the chain by hand?</a><br>
+<a href="/dewfpga/docs/#1-what-do-you-need-before-you-start">This section in the whole guide</a></p>
+<p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

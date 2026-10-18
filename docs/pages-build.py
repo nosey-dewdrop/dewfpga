@@ -9,6 +9,7 @@
 
   python3 docs/pages-build.py                     the types in TYPES
   python3 docs/pages-build.py --only sv,notes     some types; links into a type left out are not made
+  python3 docs/pages-build.py --check             exit 1 when a probe page differs from test/sv (site-check)
 
 Run after editing any of the three sources; the output is committed. Needs pandoc and python3.
 Idempotent: a second run writes the same bytes. Every page's text comes from its record: the
@@ -20,7 +21,8 @@ What gets a page, and what does not:
   notes  every numbered entry, and the unnumbered ones in NOTE_SLUGS, except NOTES_LEFT_OUT
          (the CLI as a tool, its install and its agent interface: those pages wait; mail and
          accounts: not launched) and entries under THIN words, which stay in the full list only
-  guide  the sections in GUIDE_PAGES; sections 2, 6 and 7 are about the CLI and wait
+  guide  every section of THIN words or more, except GUIDE_LEFT_OUT (sections 2, 6 and 7 are about
+         the CLI and wait); a shorter subsection is printed on its parent's page
 
 Ends with the head, nav and link checks: every title, h1 and description unique among the pages
 written, every /dewfpga/ href resolves in the site tree, anchors included. Then docs/nav.py.
@@ -36,7 +38,7 @@ from nav import render  # noqa: E402
 SITE = Path("site")
 HOST = "https://nosey-dewdrop.github.io/dewfpga/"
 GITHUB = "https://github.com/nosey-dewdrop/dewfpga"
-TYPES = ["sv", "notes"]  # what a plain run builds
+TYPES = ["sv", "notes", "guide"]  # what a plain run builds
 THIN = 150  # words: a patch note shorter than this stays in the full list only
 
 NOTES_LEFT_OUT = {
@@ -50,14 +52,15 @@ NOTE_SLUGS = {
     "Unreleased: preserve vector indices in pin validation": "pin-validation-vector-indices",
     "Local candidate · The course's ready netlist modules build · 15 October": "course-netlist-modules",
 }
-# guide section -> folder; 3.1 and 3.2 are on section 3's page
-GUIDE_PAGES = [
-    ("1", "before-you-start"), ("3", "build-by-hand"), ("3.3", "nextpnr-xilinx"),
-    ("3.4", "chip-database"), ("3.5", "prjxray"), ("3.6", "yosys-slang"),
-    ("3.7", "after-the-builds"), ("4", "project-folder"), ("5", "your-own-lab"),
-    ("7.1", "course-files-that-break"), ("8", "limits"), ("9", "tested-versions"),
-]
-GUIDE_KEEP_INSIDE = {"3.1": "3", "3.2": "3"}
+# guide sections. A section of THIN words or more gets its own page, in the folder named here; a
+# shorter subsection is printed on its parent's page, a shorter section stays in the whole guide only.
+GUIDE_LEFT_OUT = {"2": "the one-line install", "6": "VS Code, set up by the CLI", "7": "the CLI's messages"}
+GUIDE_SLUGS = {
+    "1": "before-you-start", "3": "build-by-hand", "3.1": "homebrew-packages", "3.2": "python-venv",
+    "3.3": "nextpnr-xilinx", "3.4": "chip-database", "3.5": "prjxray", "3.6": "yosys-slang",
+    "3.7": "after-the-builds", "4": "project-folder", "5": "your-own-lab", "7.1": "course-files-that-break",
+    "8": "limits", "9": "tested-versions",
+}
 GUIDE_RELATED = {"7.1": "sv", "8": "sv"}
 
 ICON = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
@@ -132,9 +135,16 @@ def words(md):
     return len(re.sub(r"[`*#|>-]", " ", md).split())
 
 
+STALE = None  # --check: the pages that differ from what the sources make, instead of writing them
+
+
 def write(path, text):
-    path.parent.mkdir(parents=True, exist_ok=True)
     old = path.read_text() if path.is_file() else None
+    if STALE is not None:
+        if old != text:
+            STALE.append(str(path))
+        return
+    path.parent.mkdir(parents=True, exist_ok=True)
     if old != text:
         path.write_text(text)
 
@@ -414,39 +424,44 @@ def build_notes(types, written):
 
 # ---------------------------------------------------------------- the guide
 
+def guide_pages(secs):
+    """[(number, folder)] in the guide's order, and {subsection: the page it is printed on}"""
+    def parent(n):
+        return n.split(".")[0] if "." in n else None
+    own = [n for n in secs if n not in GUIDE_LEFT_OUT and words(secs[n][2]) >= THIN]
+    for n in own:
+        if n not in GUIDE_SLUGS:
+            sys.exit(f"docs/manual-setup.md: section {n} has {THIN} words or more; give it a folder in GUIDE_SLUGS")
+    folded = {n: parent(n) for n in secs if n not in own and parent(n) in own}
+    return [(n, GUIDE_SLUGS[n]) for n in own], folded
+
+
 def build_guide(types, written):
     secs, ids = guide_sections(), guide_ids()
-    slug = dict(GUIDE_PAGES)
-    for num, _ in GUIDE_PAGES:
-        if num not in secs:
-            sys.exit(f"docs/manual-setup.md: no section {num}")
-    order = [n for n, _ in GUIDE_PAGES]
+    pages, folded = guide_pages(secs)
+    slug = dict(pages)
 
     def anchor_href(a):
         num = next((n for n, i in ids.items() if i == a), None)
         if num in slug:
             return f"/dewfpga/docs/{slug[num]}/"
-        if num in GUIDE_KEEP_INSIDE:
-            return f"/dewfpga/docs/{slug[GUIDE_KEEP_INSIDE[num]]}/#{a}"
+        if num in folded:
+            return f"/dewfpga/docs/{slug[folded[num]]}/#{a}"
         return f"/dewfpga/docs/#{a}"
 
-    for i, (num, folder) in enumerate(GUIDE_PAGES):
+    for i, (num, folder) in enumerate(pages):
         level, heading, body = secs[num]
         parent = secs[num.split(".")[0]][1] if "." in num else None
         md = body
-        inside = [n for n, host in GUIDE_KEEP_INSIDE.items() if host == num]
-        subs = [n for n in order if "." in n and n.split(".")[0] == num]
-        for n in sorted(inside):
-            md += f"\n\n## {n} {secs[n][1]}\n\n{secs[n][2]}"
+        for n in [n for n in secs if n.split(".")[0] == num and "." in n]:
+            if n in folded:
+                md += f"\n\n## {n} {secs[n][1]}\n\n{secs[n][2]}"
+            elif n in slug:   # its own page: the heading, its first sentence and the link
+                first = re.split(r"(?<=\.)\s", secs[n][2].strip(), maxsplit=1)[0]
+                md += f"\n\n## {n} {secs[n][1]}\n\n{first} On its own page: [{n} {secs[n][1]}](/dewfpga/docs/{slug[n]}/)."
         md = re.sub(r"\]\(#([^)]+)\)", lambda m: f"]({anchor_href(m.group(1))})", md)
-        md = re.sub(r"^### ", "## ", md, flags=re.M) if level == "###" else md
         bodyhtml = pandoc(md, "gfm-tex_math_dollars")
         bodyhtml = bodyhtml.replace('<pre class="copy"><code>', '<pre data-copy="1"><code>')
-        if subs:
-            bodyhtml += "<h2 id=\"the-steps-on-their-own-pages\">Which steps have their own page?</h2>\n<ul>\n"
-            for n in subs:
-                bodyhtml += f"<li><a href=\"/dewfpga/docs/{slug[n]}/\">{n} {esc(secs[n][1])}</a></li>\n"
-            bodyhtml += "</ul>\n"
         first = re.search(r"<p>(.*?)</p>", bodyhtml, re.S)
         desc = summary(plain(first.group(1)) if first else heading)
         url = f"{HOST}docs/{folder}/"
@@ -463,10 +478,10 @@ def build_guide(types, written):
         p += f"  <h1>{esc(heading)}</h1>\n" + bodyhtml
         nav = []
         if i:
-            pn, pf = GUIDE_PAGES[i - 1]
+            pn, pf = pages[i - 1]
             nav.append(f"previous: <a href=\"/dewfpga/docs/{pf}/\">{pn} {esc(secs[pn][1])}</a>")
-        if i + 1 < len(GUIDE_PAGES):
-            nn, nf = GUIDE_PAGES[i + 1]
+        if i + 1 < len(pages):
+            nn, nf = pages[i + 1]
             nav.append(f"next: <a href=\"/dewfpga/docs/{nf}/\">{nn} {esc(secs[nn][1])}</a>")
         nav.append(f"<a href=\"/dewfpga/docs/#{ids[num]}\">This section in the whole guide</a>")
         if GUIDE_RELATED.get(num) == "sv" and "sv" in types:
@@ -476,17 +491,22 @@ def build_guide(types, written):
         p += "</main>\n" + FOOT.format(links='<a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a>', script=COPY_ALL)
         write(SITE / "docs" / folder / "index.html", p)
         written.append((SITE / "docs" / folder / "index.html", title, heading, desc))
-    return f"site/docs: {len(GUIDE_PAGES)} section pages"
+    stale = sorted(d.name for d in (SITE / "docs").iterdir() if d.is_dir() and d.name not in set(slug.values()))
+    return (f"site/docs: {len(pages)} section pages; on their parent's page: {' '.join(folded)}; "
+            f"left out: {' '.join(sorted(GUIDE_LEFT_OUT))} (the CLI)"
+            + "".join(f"; {n} under {THIN} words" for n in secs if n not in GUIDE_LEFT_OUT and n not in slug and n not in folded)
+            + (f"; folders without a section: {' '.join(stale)}" if stale else ""))
 
 
 def guide_contents():
     """the whole guide's contents list links each section that has a page; docs/build.sh calls this"""
     path = SITE / "docs/index.html"
-    page, ids, slug = path.read_text(), guide_ids(), dict(GUIDE_PAGES)
+    page, ids, slug = path.read_text(), guide_ids(), dict(guide_pages(guide_sections())[0])
     for num, hid in ids.items():
         if num in slug:
-            li = re.compile(r'(<li><a href="#' + re.escape(hid) + r'">.*?</a>)(</li>)')
-            page = li.sub(lambda m: m.group(1) + f' · <a href="/dewfpga/docs/{slug[num]}/">its own page</a>' + m.group(2), page, count=1)
+            # grey on the page, hidden in the PDF (docs/pdf.sh hides .mute); [^<]* keeps a second run from adding it twice
+            li = re.compile(r'(<li><a href="#' + re.escape(hid) + r'">[^<]*</a>)(</li>)')
+            page = li.sub(lambda m: m.group(1) + f'<span class="mute"> · <a href="/dewfpga/docs/{slug[num]}/">its own page</a></span>' + m.group(2), page, count=1)
     write(path, page)
 
 
@@ -513,11 +533,17 @@ def check(written):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--only", default=",".join(TYPES))
-    ap.add_argument("--contents", action="store_true", help="only link the guide's contents list (docs/build.sh)")
+    ap.add_argument("--check", action="store_true",
+                    help="exit 1 and name the probe pages that differ from test/sv (test/site-check.py; no pandoc needed)")
     a = ap.parse_args()
-    if a.contents:
-        guide_contents()
-        return
+    if a.check:
+        global STALE
+        STALE = []
+        build_sv(set(TYPES), [])
+        for f in STALE:
+            print(f"{f}: differs from test/sv/expect.tsv or its probe; run python3 docs/pages-build.py")
+        print(f"pages-build --check: {len(probes()) + 1} probe pages, {len(STALE)} differ")
+        sys.exit(1 if STALE else 0)
     types = set(a.only.split(","))
     if not types <= {"sv", "notes", "guide"}:
         sys.exit("--only takes sv, notes, guide")

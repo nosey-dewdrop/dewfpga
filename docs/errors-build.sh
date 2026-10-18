@@ -204,4 +204,6 @@ if bad:
     sys.exit("links that do not resolve:\n  " + "\n  ".join(bad))
 print("links: every /dewfpga/ href in site/errors resolves")
 PY
+# the probe pages quote each code's summary, and the sections and notes link the codes
+python3 docs/pages-build.py
 python3 docs/sitemap-build.py

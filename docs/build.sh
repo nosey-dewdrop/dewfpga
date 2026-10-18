@@ -9,6 +9,8 @@ pandoc -f gfm-tex_math_dollars -t html5 --syntax-highlighting=none --wrap=none \
 # the docbar goes right under the h1
 perl -0pi -e 's{(</h1>)}{$1\n<p class="docbar"><span>19 and 20 September 2026 · M2, 8 GB, macOS 15</span><a href="/dewfpga/docs/CS223_Mac_Setup.pdf">PDF</a><a href="#4-what-is-in-the-project-folder">the five project files</a><span>section 1 prerequisites, 2 the one-line install, 3 the setup by hand, 4 to 8 your lab and the limits, 9 the tested versions</span></p>}' site/docs/index.html
 echo "site/docs/index.html: $(wc -c < site/docs/index.html) bytes"
+# one page per section, and the contents list above links them (docs/pages-build.py, which runs docs/nav.py)
+python3 docs/pages-build.py
 # the nav comes from one source, docs/nav.py (the template above holds a stub)
 python3 docs/nav.py
 python3 docs/sitemap-build.py
