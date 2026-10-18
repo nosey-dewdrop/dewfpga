@@ -43,6 +43,10 @@ design.sv:3: ERROR [async-reset-not-alone]: this always block is sensitive to tw
 <pre data-copy="1"><code>if (btnC) q &lt;= &#39;0;
 else if (btnU) q &lt;= &#39;0;
 else q &lt;= q + 1;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/53_async_reset_sync_clear/">async reset ORed with a synchronous clear: always_ff @(posedge clk, posedge btnC) if (btnC || btnU) q &lt;= 0;</a></li>

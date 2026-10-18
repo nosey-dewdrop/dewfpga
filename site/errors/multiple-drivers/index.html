@@ -39,6 +39,10 @@
 <p>yosys found two drivers on the signal (its "multiple conflicting drivers" warning) and resolved them to a constant. When the two writers are two always blocks, an always block and an assign, or two assigns, dewfpga names that case (<a href="../two-always-drivers/">two-always-drivers</a>, <a href="../always-and-assign/">always-and-assign</a>, <a href="../two-assign-drivers/">two-assign-drivers</a>); this is the general message, printed when the writers are something else (a task, an instance port and an assign) or when the scan could not read them. The lines are the ones yosys named.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Look at the lines named: every signal gets one writer. Two always blocks merge into one; an assign next to an always block goes into the block; a submodule output and an assign on the same wire get two wires.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

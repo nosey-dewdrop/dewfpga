@@ -44,6 +44,10 @@ top_tb.sv:3: ERROR [sim-from-build-parameters]: iverilog cannot compile the desi
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Either rewrite the construct iverilog names on the first line (<code>unique if</code> as a plain <code>if</code>, a struct as separate signals, an array copy as a loop: <a href="/dewfpga/errors/sim-from-build/">sim-from-build</a> lists the usual ones), so that iverilog simulates your source and applies <code>#(...)</code> itself; or test the top module with its default parameters (drop <code>#(...)</code> from the instance in the testbench).</p>
 <pre data-copy="1"><code>dewfpga sim</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

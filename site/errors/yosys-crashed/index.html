@@ -40,6 +40,10 @@ yosys-slang: ERROR: Feature unimplemented at slang_frontend.cc:776, see AST and 
 <p>yosys 0.69 segfaults on <code>localparam int MAX = 1e1;</code> (a real in a parameter expression); the shell sees only the signal. The CLI looks for a real literal in the sources to name the line; without one it prints the crash alone and asks for a report.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>localparam int MAX = 10;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/63b_real_localparam_expr/">a real literal in a localparam used in an expression: localparam MAX = 1e1; ... count == MAX - 1 (a lab writes 50e6)</a></li>

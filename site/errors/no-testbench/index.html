@@ -40,6 +40,10 @@
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Write <code>blink_tb.sv</code> next to the design: a module with no ports, an instance of <code>blink</code>, a clock, checks with <code>$error</code>, and <code>$finish</code> at the end. <code>dewfpga new blink</code> gives one to copy from.</p>
 <pre data-copy="1"><code>dewfpga new example &amp;&amp; cat example/blink_tb.sv</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

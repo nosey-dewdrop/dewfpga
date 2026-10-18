@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>dewfpga run: run one file, automatic standard pins</title>
+<meta name="description" content="dewfpga run: run one file, automatic standard pins. Click ▶ Run on Basys3 in the editor&#x27;s upper-right corner.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/cli/run/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dewfpga run: run one file, automatic standard pins">
+<meta property="og:description" content="dewfpga run: run one file, automatic standard pins. Click ▶ Run on Basys3 in the editor&#x27;s upper-right corner.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/cli/run/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"dewfpga run","url":"https://nosey-dewdrop.github.io/dewfpga/cli/run/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">run</span>run one file, automatic standard pins</p>
+  <h1>dewfpga run</h1>
+<h2 id="help">What does its help text say?</h2>
+<pre><code>dewfpga run &lt;file.sv&gt;           compile this file and load Basys3 (standard pins automatic; --build-only skips USB)</code></pre>
+<p class="mute small">From <code>dewfpga --help</code>, as <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/bin/dewfpga">bin/dewfpga</a> prints it.</p>
+<h2 id="readme">What does the README say?</h2>
+<p>Save a <code>.sv</code> file anywhere and open it in VS Code. Click <strong>▶ Run on Basys3</strong> in the editor's upper-right corner. Connect the board through its <strong>PROG</strong> USB port and turn it on. No project folder, tasks file or pin file is needed for standard Basys3 IO. If the button is missing, run <code>dewfpga vscode</code> once and reload VS Code.</p>
+<p>The four switches now control the four LEDs. Change <code>sw</code> to <code>~sw</code> and Run again: the LED behavior inverts. Other editors can use the same CLI:</p>
+<pre><code>dewfpga run ~/Desktop/my_design.sv
+dewfpga run ~/Desktop/my_design.sv --build-only  # no board needed</code></pre>
+<p>Run reads the chosen file and the modules it uses from the other <code>.sv</code>/<code>.v</code> files of its folder (with the package files they name), never a file the design does not use. Run on a submodule's file builds the one top that uses it. Inside a Vivado project, Run builds the project: its files, its top, its <code>.xdc</code>. Literal include/data paths must be relative, without spaces or <code>..</code>. <code>dewfpga sim</code> runs a separate testbench. <a href="https://nosey-dewdrop.github.io/dewfpga/cli/">Short setup guide</a>.</p>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga#readme">the README</a>.</p>
+<h2 id="errors">Which errors can it stop with?</h2>
+<p class="mute small">2 codes in the error catalog.</p>
+<ul>
+<li><a href="/dewfpga/errors/explicit-port/">explicit-port</a>: Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port.</li>
+<li><a href="/dewfpga/errors/module-without-endmodule/">module-without-endmodule</a>: A module&#x27;s endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.</li>
+</ul>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/cli/check/">dewfpga check</a><br>
+next: <a href="/dewfpga/cli/sim/">dewfpga sim</a><br>
+Every command: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a> · <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a> · <a href="/dewfpga/cli/sim/#clean"><code>dewfpga clean</code></a> · <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/cli/new/"><code>dewfpga new</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a> · <a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

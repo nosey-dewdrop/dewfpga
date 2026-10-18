@@ -50,6 +50,10 @@ top.bit  2.2 MB</code></pre>
 <p>None for this board: the note says what the build did, and the attribute may stay in the file for Vivado. To start the machine in a state other than the one with code 0, every tool honours a start value in the declaration (UG901 v2022.2 Ch.4 p.79):</p>
 <pre data-copy="1"><code>(* fsm_encoding = &quot;one_hot&quot; *) logic [1:0] state = RUN;</code></pre>
 <p>A press of the reset button puts the register in its reset state in every tool alike.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

@@ -41,6 +41,10 @@ ERROR [design-too-big]: the design does not fit the XC7A35T (no SLICE_LUTX left:
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p><code>top.log</code> lists the counts per cell type. Ask for a block RAM, narrow the data, share the operator over cycles.</p>
 <pre data-copy="1"><code>(* ram_style = &quot;block&quot; *) logic [7:0] mem [0:4095];</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

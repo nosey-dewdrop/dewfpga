@@ -46,6 +46,10 @@ yosys-slang: design.sv:4:9: error: polarity of condition doesn&#39;t match edge 
 <pre data-copy="1"><code>always_ff @(posedge clk or posedge btnC)
   if (btnC) q &lt;= &#39;0;
   else q &lt;= sw;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

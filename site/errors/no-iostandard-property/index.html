@@ -50,6 +50,10 @@
       A line that still starts with # is commented out and does not count.</code></pre>
 <p>Then open the <code>.xdc</code> and remove the <code>#</code> from every line your design uses, or fix the name inside <code>[get_ports ...]</code>. For the blink example that is the two <code>clk</code> lines, sixteen <code>sw</code> lines and sixteen <code>led</code> lines: 33 pin lines plus the <code>create_clock</code> line. Digilent's pin file calls the ports <code>clk</code>, <code>sw[0]</code>, <code>led[0]</code>, <code>seg[0]</code>, <code>an[0]</code>, <code>btnC</code> and so on; your module has to use the same names.</p>
 <p>The checker is one of the five project files and the guide's Makefile runs it automatically: <a href="/dewfpga/templates/check_xdc.py">check_xdc.py</a>, <a href="/dewfpga/docs/#4-what-is-in-the-project-folder">section 4</a>.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

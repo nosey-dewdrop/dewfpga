@@ -41,6 +41,10 @@ design.sv:5: ERROR [enum-method-next-prev]: s.next() is an enum method that step
 <p>yosys' own reader has no enum methods; yosys-slang implements <code>first()</code> and <code>last()</code> and stops at <code>next()</code>/<code>prev()</code>. A known gap of the chain.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>case (s) IDLE: s &lt;= RUN; RUN: s &lt;= DONE; DONE: s &lt;= IDLE; endcase</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/11_enum_methods/">enum methods s.first() / s.next() / s.last()</a></li>

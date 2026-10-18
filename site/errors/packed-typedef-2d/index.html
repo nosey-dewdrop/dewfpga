@@ -41,6 +41,11 @@
 <p>Put the dimensions on the declaration; for a parameter keep it flat and slice with <code>+:</code>:</p>
 <pre data-copy="1"><code>localparam logic [4*7-1:0] SEG = {7&#39;h7F, 7&#39;h06, 7&#39;h5B, 7&#39;h4F};
 assign seg = SEG[i*7 +: 7];</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/51c_packed_param_typedef/">the same lookup table with its type named first: typedef logic [3:0][6:0] tab_t; localparam tab_t SEG = {...};</a></li>

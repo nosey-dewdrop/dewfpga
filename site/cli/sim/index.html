@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>dewfpga sim: run your testbench</title>
+<meta name="description" content="dewfpga sim: run your testbench. dewfpga sim runs a separate testbench.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/cli/sim/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dewfpga sim: run your testbench">
+<meta property="og:description" content="dewfpga sim: run your testbench. dewfpga sim runs a separate testbench.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/cli/sim/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"dewfpga sim","url":"https://nosey-dewdrop.github.io/dewfpga/cli/sim/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">sim</span>run your testbench</p>
+  <h1>dewfpga sim</h1>
+<h2 id="help">What does its help text say?</h2>
+<pre><code>dewfpga sim | bit | flash | clean [top]
+                                 work on the .sv files in the current folder. top = the module nothing else
+                                 instantiates (or name it: a module or a file). pins = &lt;top&gt;.xdc or the only .xdc
+                                 In a Vivado project (a folder with one .xpr, or anywhere under its .srcs): the
+                                 project's enabled files, its top module, its .xdc; outputs land next to the .xpr</code></pre>
+<p class="mute small">From <code>dewfpga --help</code>, as <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/bin/dewfpga">bin/dewfpga</a> prints it.</p>
+<h2 id="readme">What does the README say?</h2>
+<p>Run reads the chosen file and the modules it uses from the other <code>.sv</code>/<code>.v</code> files of its folder (with the package files they name), never a file the design does not use. Run on a submodule's file builds the one top that uses it. Inside a Vivado project, Run builds the project: its files, its top, its <code>.xdc</code>. Literal include/data paths must be relative, without spaces or <code>..</code>. <code>dewfpga sim</code> runs a separate testbench. <a href="https://nosey-dewdrop.github.io/dewfpga/cli/">Short setup guide</a>.</p>
+<pre><code>dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project</code></pre>
+<p>For coding agents, <code>check</code>, <code>sim</code>, <code>bit</code> and <code>flash</code> accept <code>--json</code>, for example <code>dewfpga sim --json --timeout=180</code>. Standard output contains one <code>dewfpga/result@1</code> object; the process exit matches <code>exit_code</code>. Read <code>diagnostics</code> for source locations, error codes and fix links, and <code>log.tail</code> when no structured diagnostic is available. <code>artifacts</code> distinguishes new, cached and stale outputs; an old <code>.bit</code> is not proof that the current build succeeded. Full protocol and limits: <a href="/dewfpga/agents/json/">agent interface</a>.</p>
+<p><code>test/fuzz/run.sh &lt;first seed&gt; &lt;count&gt;</code> is separate from the suite: <code>gen.py</code> writes a random design per seed in the SystemVerilog DDCA teaches (every feature a switch, <code>--list</code> names them), <code>dewfpga sim</code> and <code>dewfpga bit</code> run on it, the netlist is simulated with the same testbench, and the two traces are compared bit by bit. Its last line counts the outcomes (<code>ok</code>, <code>silent-wrong</code>, <code>refused-coded</code>, <code>refused-uncoded</code>, <code>crash</code>, <code>sim-refused</code>).</p>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga#readme">the README</a>.</p>
+<h2 id="guide">What does the guide say?</h2>
+<pre class="bash"><code>dewfpga new blink    # prints: blink/ ready:  cd blink &amp;&amp; dewfpga flash    (VS Code: ⌘⇧B)
+cd blink
+dewfpga sim          # simulation
+dewfpga bit          # .sv -&gt; .bit
+dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is missing or older than the .sv</code></pre>
+<p>What each one prints when it works. <code>dewfpga sim</code>:</p>
+<ul>
+<li><p><code>dewfpga sim</code> needs a testbench that instantiates the top; <code>&lt;top&gt;_tb.sv</code> is the usual name but any name works. <code>bit</code> and <code>flash</code> do not need one. A testbench that never reaches <code>$finish</code> is stopped after 120 s with an error; <code>SIM_TIMEOUT=600 dewfpga sim</code> waits longer. <code>$stop</code> ends the run like <code>$finish</code>. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</p></li>
+<li><p><code>dewfpga bit</code> writes no bitstream when timing is not met, and synthesis failures remove the previous <code>.bit</code>. A failure during XDC validation can still leave an old <code>.bit</code> on disk; a file being present does not prove that the latest build succeeded. Without a <code>create_clock</code> in the XDC every clock is checked at 100 MHz, a divided one too, which Vivado does not time; a multiplier that Yosys puts in a DSP48E1 with a register inside is not timed at all (nextpnr-xilinx). When nothing changed, <code>bit</code> prints one line saying so. <code>$display</code> in synthesizable code is dropped, as Vivado does. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</p></li>
+</ul>
+<pre><code>dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project</code></pre>
+<p class="mute small">From section 2, <a href="/dewfpga/docs/one-line-install/">How do you install it in one line?</a>.</p>
+<h2 id="agents">How does a coding agent call it?</h2>
+<p><code>dewfpga check --json</code>, <code>dewfpga sim [top] --json</code>, <code>dewfpga bit [top] --json</code> and <code>dewfpga flash [top] --json</code> print exactly one JSON object on stdout. Text commands retain their existing output. <code>flash</code> programs attached hardware; request it only when the user has authorized programming the board.</p>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Arguments</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>sim</code></td>
+<td>absolute <code>project</code>, optional <code>testbench</code>, <code>timeout_s</code></td>
+<td>run the testbench; default 120 s, max 600 s</td>
+</tr>
+</tbody>
+</table>
+<p class="mute small">From the agent interface: <a href="/dewfpga/agents/json/">the machine-readable CLI</a> and <a href="/dewfpga/agents/mcp/">the MCP server</a>.</p>
+<h2 id="errors">Which errors can it stop with?</h2>
+<p class="mute small">32 codes in the error catalog.</p>
+<ul>
+<li><a href="/dewfpga/errors/unknown-option/">unknown-option</a>: A word starting with - after the command, or an argument after install: the commands take a module or file name at most, install takes nothing.</li>
+<li><a href="/dewfpga/errors/no-source-file/">no-source-file</a>: The current folder holds no .sv or .v file; dewfpga works on the files in the folder you run it in.</li>
+<li><a href="/dewfpga/errors/run-inside-the-folder/">run-inside-the-folder</a>: The argument holds a slash: the CLI takes a module or a file name in the current folder, not a path.</li>
+<li><a href="/dewfpga/errors/file-name-with-space/">file-name-with-space</a>: A .sv, .v or .xdc file name with a space in it; yosys, iverilog and nextpnr take file lists split at spaces.</li>
+<li><a href="/dewfpga/errors/utf8-bom/">utf8-bom</a>: The file starts with the three invisible bytes EF BB BF that Notepad and some editors write; yosys reads them as a token it does not know.</li>
+<li><a href="/dewfpga/errors/no-testbench/">no-testbench</a>: No module without ports instantiates the top module, so there is nothing to simulate it with.</li>
+<li><a href="/dewfpga/errors/no-top-module/">no-top-module</a>: The source scan ended without a top module and without a reason; naming the module on the command line settles it.</li>
+<li><a href="/dewfpga/errors/explicit-port/">explicit-port</a>: Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port.</li>
+<li><a href="/dewfpga/errors/module-without-endmodule/">module-without-endmodule</a>: A module&#x27;s endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.</li>
+<li><a href="/dewfpga/errors/two-tops/">two-tops</a>: Two or more design modules that nothing instantiates; the CLI does not pick one by file name (Lab 4 folders name the file after the wrong one).</li>
+<li><a href="/dewfpga/errors/top-is-a-testbench/">top-is-a-testbench</a>: The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</li>
+<li><a href="/dewfpga/errors/no-such-module/">no-such-module</a>: The name on the command line is neither a module nor a file of this folder.</li>
+<li><a href="/dewfpga/errors/no-design-module/">no-design-module</a>: Every module in the folder has no ports; there is nothing to build.</li>
+<li><a href="/dewfpga/errors/module-defined-twice/">module-defined-twice</a>: Two files in the folder declare the same module; the tools would take the last one read, so a backup could be built instead of the design.</li>
+<li><a href="/dewfpga/errors/finish-in-design/">finish-in-design</a>: A $finish or $stop inside a module with ports; there is no hardware for it, and yosys stops on it where Vivado drops it.</li>
+<li><a href="/dewfpga/errors/decl-init-reads-signal/">decl-init-reads-signal</a>: `logic [3:0] sum = sw[3:0] + sw[7:4];` sets a power-up value from a signal; it is not a continuous assignment, and the board would show the value from time 0 forever.</li>
+<li><a href="/dewfpga/errors/unnamed-instance/">unnamed-instance</a>: `inv(sw[0], led[0]);`, an instance without a name: Vivado accepts it, the standard and yosys do not, so the CLI names it u_inv in a temporary compiler copy and says so. Your saved source stays unchanged.</li>
+<li><a href="/dewfpga/errors/vivado-netlist-in-folder/">vivado-netlist-in-folder</a>: A .v file whose header says it is a Vivado post-synthesis simulation netlist sits next to the sources; it is not a design and yosys cannot read it.</li>
+<li><a href="/dewfpga/errors/iverilog-refused/">iverilog-refused</a>: iverilog stopped with an error; its own lines are above, and this line names the first of them.</li>
+<li><a href="/dewfpga/errors/sim-from-build/">sim-from-build</a>: Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names.</li>
+<li><a href="/dewfpga/errors/sim-from-build-parameters/">sim-from-build-parameters</a>: iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design.</li>
+<li><a href="/dewfpga/errors/sim-starts-as-board/">sim-starts-as-board</a>: Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board.</li>
+<li><a href="/dewfpga/errors/sim-timeout/">sim-timeout</a>: The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</li>
+<li><a href="/dewfpga/errors/sim-exit/">sim-exit</a>: vvp ended with a non-zero exit: a $fatal in the testbench, or a run that ended without $finish.</li>
+<li><a href="/dewfpga/errors/testbench-error/">testbench-error</a>: The simulation ran to $finish, and the testbench printed ERROR: lines with $error: a check failed.</li>
+<li><a href="/dewfpga/errors/packed-typedef-2d/">packed-typedef-2d</a>: A typedef of a two-dimensional packed array used to declare a parameter or a net; yosys flattens the type and every row index picks one bit.</li>
+<li><a href="/dewfpga/errors/package-file-not-given/">package-file-not-given</a>: The package lives in a file the tools are not given: a .svh or .vh that no design file `includes, or a file outside the folder or the project.</li>
+<li><a href="/dewfpga/errors/included-twice/">included-twice</a>: The testbench `includes a file the simulation reads with the design already (a package file of the folder, or one the design `includes), so the package is declared twice and iverilog stops.</li>
+<li><a href="/dewfpga/errors/package-not-found/">package-not-found</a>: An import or pkg::NAME names a package no file in the folder declares.</li>
+<li><a href="/dewfpga/errors/unique-case-overlap/">unique-case-overlap</a>: Two items of a unique casez (or casex) can match the same value; the simulator takes the first, the hardware ORs both, so the board would not do what the simulation showed.</li>
+<li><a href="/dewfpga/errors/implicit-port-width/">implicit-port-width</a>: A .* or .name port connection whose port and signal widths differ: the simulator pads or cuts and runs, neither synthesis reader builds it; the same line at sim and at bit names the port, the two widths and the fix.</li>
+<li><a href="/dewfpga/errors/cannot-write-here/">cannot-write-here</a>: The build directory is not writable, or the disk has no space for the temporary source copies.</li>
+</ul>
+<h2 id="patch-notes">Which patch notes name it?</h2>
+<ul>
+<li><a href="/dewfpga/patch-notes/2/">#2 132 SystemVerilog probes run through the product, every stage checked</a></li>
+<li><a href="/dewfpga/patch-notes/3/">#3 Silent wrongs stop the build</a></li>
+<li><a href="/dewfpga/patch-notes/5/">#5 Every message in one shape, with its code and its page</a></li>
+<li><a href="/dewfpga/patch-notes/28/">#28 dewfpga sim simulates what the build reads when iverilog refuses the design</a></li>
+<li><a href="/dewfpga/patch-notes/29/">#29 A failed build leaves no old bitstream, wrong pins are named, a quick save rebuilds</a></li>
+<li><a href="/dewfpga/patch-notes/31/">#31 A random-design generator checks the SystemVerilog DDCA teaches against its own simulation</a></li>
+<li><a href="/dewfpga/patch-notes/32/">#32 A latch whose gate and data change together, and a unique casez whose items overlap: the chain names both before the board differs from the simulation</a></li>
+<li><a href="/dewfpga/patch-notes/33/">#33 The chain reads every design file, not only the ones that hold a module, and a .* connection whose port and signal widths differ is named with the fix before either reader refuses it</a></li>
+<li><a href="/dewfpga/patch-notes/35/">#35 A register read before its first reset: dewfpga sim starts it where the board starts it, and the netlist keeps the state codes the student wrote</a></li>
+</ul>
+<h2 id="clean">What does <code>dewfpga clean</code> do?</h2>
+<p>The help text above lists it with <code>dewfpga sim</code>.</p>
+<h3>What does the guide say?</h3>
+<ul>
+<li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>), <code>sim</code> leaves <code>&lt;top&gt;_sim</code>, <code>&lt;top&gt;_sim.out</code> and <code>&lt;top&gt;.vcd</code>, <code>flash</code> leaves <code>&lt;top&gt;_flash.out</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
+</ul>
+<p class="mute small">From section 2, <a href="/dewfpga/docs/one-line-install/">How do you install it in one line?</a>.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/cli/run/">dewfpga run</a><br>
+next: <a href="/dewfpga/cli/bit/">dewfpga bit</a><br>
+Every command: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a> · <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a> · <a href="/dewfpga/cli/sim/#clean"><code>dewfpga clean</code></a> · <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/cli/new/"><code>dewfpga new</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a> · <a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

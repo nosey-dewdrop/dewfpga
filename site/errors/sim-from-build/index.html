@@ -65,6 +65,10 @@ design.sv:2: ERROR [iverilog-refused]: iverilog cannot compile this code (its me
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Nothing: the note says what ran. To make iverilog read the source itself, rewrite the construct it names (<code>unique if</code> as a plain <code>if</code>, a struct as separate signals, a copy of an array as a loop).</p>
 <pre data-copy="1"><code>dewfpga sim</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/12b_struct_assign_pattern/">named assignment pattern &#x27;{hi: x, lo: y} and &#x27;{default: 0}</a></li>

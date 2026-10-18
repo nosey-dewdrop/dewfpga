@@ -41,6 +41,12 @@ SevSeg_4digit.sv:58: note [explicit-port]: declared the port and connected its n
 <p>Verilog-2001 lets a port list name a port with an expression: <code>.dp(\&lt;const0&gt; )</code> is a port called <code>dp</code> whose inside is the net <code>\&lt;const0&gt;</code>. Vivado writes its netlists that way for an output it drives with a constant, and builds them. yosys' own reader stops at the <code>.</code> with <code>syntax error, unexpected TOK_ID, expecting '.'</code>.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Nothing to do: the build writes <code>dp</code> in the port list and <code>output dp; assign dp = \&lt;const0&gt; ;</code> in place of <code>output \&lt;const0&gt; ;</code>, on the same lines. The port and its value are the same; the decimal point stays off as Vivado builds it.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/run/"><code>dewfpga run</code></a></li>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

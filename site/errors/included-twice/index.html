@@ -39,6 +39,10 @@
 <p>iverilog reads the files in one stream: the design's files first (every .sv and .v of the folder, a package file before the files that use it), then the testbench. A package file the testbench <code>includes is read a second time there, and a package declared twice is a syntax error to iverilog (measured: </code>./pkg.sv:1: syntax error<code>, </code>I give up.<code>). The same happens when the design </code>includes pkg.sv and the testbench <code>includes it too. The build never reads the testbench, so what it </code>includes does not change which files the build is given.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Delete the <code>include line from the testbench. The package is already in the simulation through the design, read before the testbench, so </code>cfg_pkg::MAGIC<code> in the testbench resolves without it. A header of macros (</code>defs.svh<code>with only</code>define lines) may stay included in both: it declares nothing twice, and this check names only a file the design's list holds, or a package file the design `includes.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

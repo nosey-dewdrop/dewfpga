@@ -54,6 +54,10 @@ ERROR [board-not-found]: board not found by openFPGALoader: it could not open th
 <p>If no matching device is listed, check the connection. If macOS lists Digilent but <code>openFPGALoader --scan-usb</code> sees no devices, investigate USB access in the environment running the programmer. Do not infer that the cable is faulty or reinstall the toolchain from this message alone. Physical connection, programmer access, successful programming and correct circuit behavior are separate checks.</p>
 <p>The design lives in the FPGA's SRAM, so after a power cycle the board is blank again and you flash once more; that is normal, not this error.</p>
 <p>Section 2 of the guide: <a href="/dewfpga/docs/#2-how-do-you-install-it-in-one-line">How do you install it in one line?</a></p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

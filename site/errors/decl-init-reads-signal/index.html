@@ -41,6 +41,11 @@
 <p>A wire is a continuous assignment; a register is loaded in an always block:</p>
 <pre data-copy="1"><code>logic [3:0] sum;
 assign sum = sw[3:0] + sw[7:4];</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/37b_decl_init_expr/">a variable declared with an initializer that reads inputs: logic [3:0] sum = sw[3:0] + sw[7:4]; (meant as an adder)</a></li>

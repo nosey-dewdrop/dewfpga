@@ -44,6 +44,10 @@ yosys-slang: design.sv:4:21: error: use of undeclared identifier &#39;summ&#39;;
 <p>Fix the spelling, or declare the signal:</p>
 <pre data-copy="1"><code>assign led[3:0] = sum;</code></pre>
 <p>For a typedef in another file: <code>`include</code> that file as the first line of the file that uses the type, or put the typedef in a package and <code>import</code> it where it is used. A typedef in its own <code>types.sv</code> next to the design needs neither: that file is read first.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/22b_interface_own_file/">an interface declared in its own file (sum_if.sv), generic interface ports</a></li>

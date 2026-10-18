@@ -43,6 +43,10 @@ blink.sv:10: ERROR [port-without-pin]: led[15] has no pin in the XDC: no line na
 <p>Uncomment the line, with the name and index the design uses:</p>
 <pre data-copy="1"><code>set_property -dict { PACKAGE_PIN L1    IOSTANDARD LVCMOS33 } [get_ports {led[15]}]</code></pre>
 <p>Keep the declared port range and use its exact indices in the XDC; no scalar conversion or renumbering is needed.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

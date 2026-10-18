@@ -39,6 +39,11 @@
 <p>A backup (<code>design_old.sv</code>, <code>design copy.sv</code>) kept next to the design. Vivado projects list their sources, so a stray file does nothing there; the CLI reads every file of the folder.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>mkdir -p old &amp;&amp; mv design_old.sv old/</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/95b_module_in_two_files/">the same module defined in two files of the folder (design.sv and a backup design_old.sv), an older body in the backup</a></li>

@@ -41,6 +41,11 @@
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Name the ports like the board's (<code>input logic [1:0] sw</code>, <code>output logic [0:0] led</code>), or copy the course's master file next to the design and remove the <code>#</code> in front of the pins the design uses; the CLI takes <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder:</p>
 <pre data-copy="1"><code>cp ~/.dewfpga/templates/Basys3_Master.xdc . &amp;&amp; dewfpga bit</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+<li><a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

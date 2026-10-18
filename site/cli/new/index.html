@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>dewfpga new: create a starting project</title>
+<meta name="description" content="dewfpga new: create a starting project. dewfpga new blink gives the same blink.sv, blink_tb.sv and blink.xdc without the Makefile, and its tasks.json says dewfpga flash instead.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/cli/new/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dewfpga new: create a starting project">
+<meta property="og:description" content="dewfpga new: create a starting project. dewfpga new blink gives the same blink.sv, blink_tb.sv and blink.xdc without the Makefile, and its tasks.json says dewfpga flash instead.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/cli/new/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"dewfpga new","url":"https://nosey-dewdrop.github.io/dewfpga/cli/new/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">new</span>create a starting project</p>
+  <h1>dewfpga new</h1>
+<h2 id="help">What does its help text say?</h2>
+<pre><code>dewfpga new &lt;dir&gt;               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)</code></pre>
+<p class="mute small">From <code>dewfpga --help</code>, as <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/bin/dewfpga">bin/dewfpga</a> prints it.</p>
+<h2 id="readme">What does the README say?</h2>
+<p>Use a flat folder of <code>.sv</code>/<code>.v</code> modules (an <code>.xdc</code> only for ports without a board name), or run inside a Vivado project: its <code>.xpr</code> selects the enabled design, constraint and simulation files. Commands from a nested <code>.srcs</code> folder use the project root; outputs go there too. <code>dewfpga tops</code> lists top candidates without writing files. The project's selected top wins unless you name one: <code>dewfpga bit &lt;top&gt;</code>. In a flat folder, hierarchy and a unique matching <code>.xdc</code> select the top; ambiguous candidates require a choice. A filename alone does not select it. A testbench has no ports and instantiates the design; <code>$finish</code>/<code>$stop</code> in a design module is an error. A file that holds only a package, an interface or typedefs is read too, each after the files that declare a name it uses: a package before its users, a typedef file before the interface that uses the type (one that another file <code>includes is read through the </code>include, not twice). Example: <code>dewfpga new blink</code>.</p>
+<pre><code>dewfpga new &lt;dir&gt;                   blink example with a VS Code task (⌘⇧B = flash)</code></pre>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga#readme">the README</a>.</p>
+<h2 id="guide">What does the guide say?</h2>
+<pre><code>all good.
+
+Total: 217 s. Log: /Users/you/fpga/install.log
+Next:  dewfpga new blink &amp;&amp; cd blink &amp;&amp; dewfpga flash</code></pre>
+<pre class="bash"><code>dewfpga new blink    # prints: blink/ ready:  cd blink &amp;&amp; dewfpga flash    (VS Code: ⌘⇧B)
+cd blink
+dewfpga sim          # simulation
+dewfpga bit          # .sv -&gt; .bit
+dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is missing or older than the .sv</code></pre>
+<pre><code>dewfpga new &lt;dir&gt;                   blink example with a VS Code task (Cmd Shift B = flash)</code></pre>
+<p class="mute small">From section 2, <a href="/dewfpga/docs/one-line-install/">How do you install it in one line?</a>.</p>
+<p><code>dewfpga new blink</code> gives the same <code>blink.sv</code>, <code>blink_tb.sv</code> and <code>blink.xdc</code> without the Makefile, and its <code>tasks.json</code> says <code>dewfpga flash</code> instead.</p>
+<p class="mute small">From section 4, <a href="/dewfpga/docs/project-folder/">What is in the project folder?</a>.</p>
+<p>Open the Command Palette and use <strong>dewfpga: choose the top module</strong>. The chooser reads <code>dewfpga tops</code>, remembers the selection per project, and offers it again on the next build. The tasks use absolute file locations so compiler diagnostics can appear in Problems when the project lives under Vivado's <code>.srcs</code> tree. <code>dewfpga new</code> also includes project tasks; the Makefile-only download retains its <code>make</code> tasks.</p>
+<p class="mute small">From section 6, <a href="/dewfpga/docs/vs-code/">How do you set up VS Code?</a>.</p>
+<h2 id="agents">How does a coding agent call it?</h2>
+<table>
+<thead>
+<tr>
+<th>Tool</th>
+<th>Arguments</th>
+<th>Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>new</code></td>
+<td><code>name</code>, absolute <code>parent</code></td>
+<td>create a blink project; refuse an existing path</td>
+</tr>
+</tbody>
+</table>
+<p class="mute small">From the agent interface: <a href="/dewfpga/agents/json/">the machine-readable CLI</a> and <a href="/dewfpga/agents/mcp/">the MCP server</a>.</p>
+<h2 id="errors">Which errors can it stop with?</h2>
+<p class="mute small">1 codes in the error catalog.</p>
+<ul>
+<li><a href="/dewfpga/errors/folder-exists/">folder-exists</a>: The folder dewfpga new was told to create is already there; it never overwrites a design.</li>
+</ul>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/cli/tops/">dewfpga tops</a><br>
+next: <a href="/dewfpga/cli/uninstall/">dewfpga uninstall</a><br>
+Every command: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a> · <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a> · <a href="/dewfpga/cli/sim/#clean"><code>dewfpga clean</code></a> · <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/cli/new/"><code>dewfpga new</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a> · <a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

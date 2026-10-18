@@ -42,6 +42,10 @@ ERROR [timing-not-met]: timing not met: clk 498.01 MHz (PASS at 100.00 MHz), slo
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Register the intermediate results, or clock those registers on the port clock with an enable instead of on a derived clock:</p>
 <pre data-copy="1"><code>always_ff @(posedge clk) if (tick) count &lt;= count + 1;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/75_timing_not_met/">a design that misses 100 MHz: a 14-bit value turned into four registered decimal digits (a long divide chain)</a></li>

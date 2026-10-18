@@ -40,6 +40,10 @@ design.sv:3: ERROR [power-operator]: ** with a base that is a signal (sw ** 2): 
 <p>There is no general power circuit; Vivado builds <code>x ** 2</code> as a multiplier, yosys leaves the <code>$pow</code> cell unmapped.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>assign led = sw * sw;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/94_power_var_base/">a variable raised to a constant power: assign led = sw[7:0] ** 2;</a></li>

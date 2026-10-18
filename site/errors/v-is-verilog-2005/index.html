@@ -42,6 +42,10 @@ blink.v:8: ERROR [slang-refused]: use of undeclared identifier &#39;logic&#39; (
 <p>Vivado picks the language by the extension (UG901 Ch.10), and so does the CLI, so a <code>.v</code> behaves the same in both: <code>logic</code> is not a Verilog-2005 keyword.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>mv blink.v blink.sv</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

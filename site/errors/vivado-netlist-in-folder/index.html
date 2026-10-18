@@ -39,6 +39,11 @@
 <p>Vivado writes <code>&lt;top&gt;_func_synth.v</code> (<code>write_verilog -mode funcsim</code>, marked <code>NotValidForBitStream</code>) under the project's <code>.sim/</code> folder; a folder copied whole brings it along, and the CLI reads every <code>.v</code> in the folder.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>rm *_func_synth.v *_time_synth.v</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

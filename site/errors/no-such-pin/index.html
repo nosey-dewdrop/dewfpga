@@ -46,6 +46,10 @@ blink.xdc:5: ERROR [no-such-pin]: w5 is written in small letters, and the chip&#
 <p>Copy the port's line from the course's <code>Basys3_Master.xdc</code>; its pins are the board's wiring:</p>
 <pre data-copy="1"><code>set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]</code></pre>
 <p>For a pin written in small letters, write it in capitals. A failed build leaves no <code>.bit</code>, <code>.fasm</code> or <code>.frames</code> behind, so <code>dewfpga flash</code> after it builds again and stops at the same line; it never programs the old design.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

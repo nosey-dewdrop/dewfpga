@@ -45,6 +45,10 @@ design.sv:3 and design.sv:4: ERROR [two-always-drivers]: cnt is written from two
 <pre data-copy="1"><code>always_ff @(posedge clk)
   if (btnC) cnt &lt;= &#39;0;
   else cnt &lt;= cnt + 1;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/05_two_block_driver/">one reg written from two always blocks on different edges (posedge btnU / posedge btnC)</a></li>

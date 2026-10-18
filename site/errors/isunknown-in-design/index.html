@@ -40,6 +40,10 @@
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Move the check to the testbench:</p>
 <pre data-copy="1"><code>if ($isunknown(led)) $error(&quot;led is x&quot;);</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/59_isunknown/">$isunknown(sw) in a design (a real signal is never x, so it is 0)</a></li>

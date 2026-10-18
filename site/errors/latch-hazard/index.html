@@ -51,6 +51,10 @@ endmodule</code></pre>
 <pre data-copy="1"><code>always_ff @(posedge clk)
   if (s &lt; sw) led &lt;= {15&#39;b0, (sw &lt; 16&#39;d1791)};</code></pre>
 <p>Keep <code>always_latch</code> only when the gate is held steady while the data changes (a bus-hold or an address latch with a setup time its driver respects): then the warning tells you what the design counts on.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/101_always_latch/">always_latch if (sw[1]) q = sw[0]; (a latch on purpose, sw[1] its gate), read by yosys&#x27; own reader</a></li>

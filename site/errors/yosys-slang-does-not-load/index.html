@@ -41,6 +41,10 @@ ERROR [yosys-slang-does-not-load]: /Users/you/fpga/yosys-slang/build/slang.so wa
 <p>yosys-slang is a shared library that links against yosys' own headers and ABI; a new yosys from brew changes them, and the plugin fails to load. Without it, a design that yosys' own reader refuses (interfaces, unpacked arrays, foreach ...) stops with <a href="/dewfpga/errors/second-reader-missing/">second-reader-missing</a>.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>dewfpga install</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/check/"><code>dewfpga check</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

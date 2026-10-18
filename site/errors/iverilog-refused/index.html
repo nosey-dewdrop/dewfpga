@@ -45,6 +45,10 @@ design.sv:4: ERROR [iverilog-refused]: iverilog cannot compile this code (its me
 <p>Read iverilog's first line and fix that; run again. <code>sorry:</code> lines name constructs iverilog lacks; the <a href="/dewfpga/docs/#8-what-can-it-not-do">guide's section 8</a> lists them.</p>
 <pre data-copy="1"><code>dewfpga sim</code></pre>
 <p>Since #28, when the line iverilog names is in a design file (not the testbench), <code>dewfpga sim</code> goes on: it builds the design the way <code>dewfpga bit</code> reads it and simulates that, with a <a href="/dewfpga/errors/sim-from-build/">note [sim-from-build]</a>. This error then comes only when the build refuses the design too (the build's own coded line is above it), or when the testbench is what iverilog cannot compile.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/39_undeclared_name/">a typo: an undeclared name on the right of an assign (summ for sum)</a></li>

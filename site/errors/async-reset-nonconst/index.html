@@ -45,6 +45,10 @@ design.sv:3: ERROR [async-reset-nonconst]: this always_ff has an asynchronous re
   if (btn) q &lt;= &#39;0;
   else if (load) q &lt;= sw;
   else q &lt;= q + 1;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/03_async_reset_nonconst/">always_ff @(posedge clk or posedge btnC) if (btnC) q &lt;= sw[3:0]; (async load from a signal)</a></li>

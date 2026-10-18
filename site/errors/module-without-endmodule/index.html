@@ -40,6 +40,12 @@
 <p>A module runs from <code>module</code> to <code>endmodule</code>. With the last word misspelled (<code>endmodulek</code>) or missing, the module has no end, so the modules it instantiates look like nothing uses them. Before this check the CLI said <code>two-tops</code> and named the wrong modules.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Write <code>endmodule</code> on the line the message names. When no word there looks like it, end the module before the next <code>module</code> line.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/run/"><code>dewfpga run</code></a></li>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

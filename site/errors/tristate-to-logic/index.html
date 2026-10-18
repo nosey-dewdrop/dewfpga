@@ -43,6 +43,10 @@ design.sv:3 and design.sv:4: warning [tristate-to-logic]: bus has two tri-state 
 <p><code>assign bus = en_a ? a : 'z; assign bus = en_b ? b : 'z;</code> in one module describes a shared bus. A 7-series chip has tri-state buffers on its pins only, so Vivado rewrites the two drivers as logic (UG901 Ch.5 Tristates), and synth_xilinx does the same (<code>tribuf -logic</code>). The simulation shows z with no driver enabled and x with both; the board shows a value. (A z driver behind a submodule port is kept as a cell nextpnr cannot place: <a href="/dewfpga/errors/internal-tristate/">internal-tristate</a>.)</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>assign bus = sel ? b : a;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

@@ -40,6 +40,10 @@
 <p>The XDC check reads <code>[get_ports {name}]</code> and <code>[get_ports {name[i]}]</code>, one port per line, the form the course file uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

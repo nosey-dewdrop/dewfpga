@@ -44,6 +44,10 @@ ERROR: Cell &#39;clk&#39; cannot be bound to bel &#39;IOB_X0Y3/IOB33/PAD&#39; si
 <p>Give each port its own pin, from the course's <code>Basys3_Master.xdc</code>:</p>
 <pre data-copy="1"><code>set_property -dict { PACKAGE_PIN W5   IOSTANDARD LVCMOS33 } [get_ports clk]
 set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

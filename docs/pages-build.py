@@ -38,7 +38,7 @@ from nav import render  # noqa: E402
 SITE = Path("site")
 HOST = "https://nosey-dewdrop.github.io/dewfpga/"
 GITHUB = "https://github.com/nosey-dewdrop/dewfpga"
-TYPES = ["sv", "notes", "guide", "agents"]  # what a plain run builds
+TYPES = ["sv", "notes", "guide", "agents", "cli"]  # what a plain run builds
 THIN = 150  # words: a patch note shorter than this stays in the full list only
 
 NOTES_LEFT_OUT = {
@@ -67,8 +67,11 @@ GUIDE_SLUGS = {
 GUIDE_RELATED = {"7.1": "sv", "8": "sv"}
 # docs/agent-interface.md: its h1 and each `## ` part -> folder under site/agents/
 AGENT_SLUGS = {"Machine-readable CLI": "json", "MCP server": "mcp"}
-# the commands bin/dewfpga's help lists; a command named here has no page of its own
-CLI_NO_PAGE = {"--version": "one line", "mcp": "its page is the MCP server's, /agents/mcp/"}
+# the commands bin/dewfpga's help lists. A command with THIN words of its own text or more gets a
+# page; a shorter one is printed on the page of a command that shares its help entry (clean on
+# sim's). A command named here has no page of its own: its text is elsewhere, or there is none.
+CLI_ELSEWHERE = {"--version": "one line, nowhere else", "mcp": "the MCP server's page, /agents/mcp/",
+                 "vscode": "guide section 6, /docs/vs-code/, the same text in full"}
 
 ICON = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
@@ -350,14 +353,55 @@ def cmd_re(c):
     return re.compile(r"\bdewfpga " + re.escape(c) + r"(?![\w-])")
 
 
+_PLAN = {}
+
+
+def cli_plan(types):
+    """command -> (href, the command whose page prints it, or None for a page of another type),
+    in the help's order, the agent pages last"""
+    key = frozenset(types)
+    if key in _PLAN:
+        return _PLAN[key]
+    helps, plan = cli_help(), {}
+    if "cli" in types:
+        own = {c: cmd_own_words(c, types) for c in helps if c not in CLI_ELSEWHERE}
+        for c in helps:
+            if own.get(c, 0) >= THIN:
+                plan[c] = (f"/dewfpga/cli/{c}/", c)
+        for c in helps:
+            if c in own and own[c] < THIN:
+                host = next((x for x in helps if helps[x] == helps[c] and x in plan and plan[x][1] == x), None)
+                if host:
+                    plan[c] = (f"/dewfpga/cli/{host}/#{c}", host)
+        if "guide" in types and "vscode" in helps:
+            plan["vscode"] = (f"/dewfpga/docs/{GUIDE_SLUGS['6']}/", None)
+    out = {c: plan[c] for c in helps if c in plan}
+    if "agents" in types:
+        out["json"] = ("/dewfpga/agents/json/", None)
+        out["mcp"] = ("/dewfpga/agents/mcp/", None)
+    _PLAN[key] = out
+    return out
+
+
 def cli_cmds(types):
-    """the commands with a page (cli) and the agent pages (agents), in the help's order"""
-    out = [c for c in cli_help() if c not in CLI_NO_PAGE] if "cli" in types else []
-    return out + (["json", "mcp"] if "agents" in types else [])
+    return list(cli_plan(types))
 
 
-def cmd_href(c):
-    return f"/dewfpga/agents/{c}/" if c in ("json", "mcp") else f"/dewfpga/cli/{c}/"
+def cmd_href(c, types=None):
+    return cli_plan(set(types or TYPES))[c][0]
+
+
+def cmd_sources(c, types):
+    """the README, guide and agent-interface blocks that name a command: [(origin, section, kind, text)]"""
+    out = [("readme", None, k, b) for k, b in cmd_blocks(c, "readme", Path("README.md").read_text(), types)]
+    secs = guide_sections()
+    out += [("guide", n, k, b) for n in secs for k, b in cmd_blocks(c, "guide", secs[n][2], types)]
+    out += [("agent", None, k, b) for k, b in cmd_blocks(c, "agent", Path("docs/agent-interface.md").read_text(), types)]
+    return out
+
+
+def cmd_own_words(c, types):
+    return sum(words(t) for t in dict.fromkeys([cli_help()[c]] + [b for *_, b in cmd_sources(c, types)]))
 
 
 def cmd_label(c):
@@ -376,10 +420,10 @@ def commands_in(text, types):
 
 
 def commands_line(text, types, what, own=None):
-    cs = [c for c in commands_in(text, types) if c != own]
+    cs = [c for c in commands_in(text, types) if cmd_href(c, types).split("#")[0] != own]
     if not cs:
         return None
-    return f"The commands {what} names: " + " · ".join(f"<a href=\"{cmd_href(c)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cs)
+    return f"The commands {what} names: " + " · ".join(f"<a href=\"{cmd_href(c, types)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cs)
 
 
 def error_commands(types):
@@ -673,6 +717,9 @@ def build_guide(types, written):
             nn, nf = pages[i + 1]
             nav.append(f"next: <a href=\"/dewfpga/docs/{nf}/\">{nn} {esc(secs[nn][1])}</a>")
         nav.append(f"<a href=\"/dewfpga/docs/#{ids[num]}\">This section in the whole guide</a>")
+        line = commands_line(md, types, "this section", own=f"/dewfpga/docs/{folder}/")
+        if line:
+            nav.append(line)
         if GUIDE_RELATED.get(num) == "sv" and "sv" in types:
             nav.append("Every SystemVerilog construct measured so far, next to what Vivado does: <a href=\"/dewfpga/sv/\">the probes, stage by stage</a>")
         p += ("<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "</p>\n"
@@ -791,7 +838,7 @@ def build_agents(types, written):
         p += errors_list(folder, types) + notes_list(folder, types)
         nav = [f"{'next' if j > i else 'previous'}: <a href=\"/dewfpga/agents/{f}/\">{esc(h)}</a>"
                for j, (f, h, _) in enumerate(parts) if j != i]
-        line = commands_line(body, types, "this page", own=folder)
+        line = commands_line(body, types, "this page", own=f"/dewfpga/agents/{folder}/")
         if line:
             nav.append(line)
         nav.append(f"From <a href=\"{GITHUB}/blob/main/docs/agent-interface.md\">docs/agent-interface.md</a>")
@@ -825,62 +872,72 @@ def cmd_blocks(cmd, origin, md, types):
     return out
 
 
+def cmd_section(cmd, types, skip=()):
+    """a command's README, guide and agent-interface text, each with where it comes from; blocks in
+    skip (already on the page) are left out"""
+    src = [x for x in cmd_sources(cmd, types) if x[3] not in skip]
+    out, ids, secs = "", guide_ids(), guide_sections()
+    rb = [b for o, _, _, b in src if o == "readme"]
+    if rb:
+        out += "<h3>What does the README say?</h3>\n" if skip else "<h2 id=\"readme\">What does the README say?</h2>\n"
+        out += pandoc(link_md("\n\n".join(rb), "readme", types))
+        out += f"<p class=\"mute small\">From <a href=\"{GITHUB}#readme\">the README</a>.</p>\n"
+    gs = [(n, b) for o, n, _, b in src if o == "guide"]
+    if gs:
+        out += "<h3>What does the guide say?</h3>\n" if skip else "<h2 id=\"guide\">What does the guide say?</h2>\n"
+        for n in dict.fromkeys(n for n, _ in gs):
+            out += pandoc(link_md("\n\n".join(b for m, b in gs if m == n), "guide", types))
+            out += (f"<p class=\"mute small\">From section {n}, <a href=\"{guide_link(ids[n], types)}\">"
+                    f"{esc(secs[n][1])}</a>.</p>\n")
+    ab = [b for o, _, _, b in src if o == "agent"]
+    if ab:
+        out += "<h3>How does a coding agent call it?</h3>\n" if skip else "<h2 id=\"agents\">How does a coding agent call it?</h2>\n"
+        out += pandoc(link_md("\n\n".join(ab), "agent", types))
+        if "agents" in types:
+            out += ("<p class=\"mute small\">From the agent interface: <a href=\"/dewfpga/agents/json/\">the machine-readable CLI</a>"
+                    " and <a href=\"/dewfpga/agents/mcp/\">the MCP server</a>.</p>\n")
+    return out.replace('<pre class="copy"><code>', '<pre data-copy="1"><code>'), [x[3] for x in src]
+
+
 def build_cli(types, written):
-    helps, lines, cmds = cli_help(), cli_lines(), [c for c in cli_cmds(types) if c not in ("json", "mcp")]
-    readme, agent = Path("README.md").read_text(), Path("docs/agent-interface.md").read_text()
-    secs = guide_sections()
+    helps, lines, plan = cli_help(), cli_lines(), cli_plan(types)
+    cmds = [c for c, (_, host) in plan.items() if host == c]
     for i, cmd in enumerate(cmds):
         url = f"{HOST}cli/{cmd}/"
         one = lines.get(cmd) or help_line(helps[cmd])
         title = f"dewfpga {cmd}: {one}"
-        rb = cmd_blocks(cmd, "readme", readme, types)
-        gk = [(n, k, b) for n in secs for k, b in cmd_blocks(cmd, "guide", secs[n][2], types)]
-        gb = [(n, b) for n, _, b in gk]
-        ab = cmd_blocks(cmd, "agent", agent, types)
-        own = words(helps[cmd]) + sum(words(b) for _, b in rb + ab) + sum(words(b) for _, b in gb)
-        if own < THIN:
-            sys.exit(f"cli: dewfpga {cmd} has {own} words of its own text; name it in CLI_NO_PAGE or give it more")
-        p_body = "<h2 id=\"help\">What does its help text say?</h2>\n"
-        p_body += f"<pre><code>{esc(helps[cmd], quote=False)}</code></pre>\n"
-        p_body += f"<p class=\"mute small\">From <code>dewfpga --help</code>, as <a href=\"{GITHUB}/blob/main/bin/dewfpga\">bin/dewfpga</a> prints it.</p>\n"
-        if rb:
-            p_body += "<h2 id=\"readme\">What does the README say?</h2>\n"
-            p_body += pandoc(link_md("\n\n".join(b for _, b in rb), "readme", types))
-            p_body += f"<p class=\"mute small\">From <a href=\"{GITHUB}#readme\">the README</a>.</p>\n"
-        if gb:
-            p_body += "<h2 id=\"guide\">What does the guide say?</h2>\n"
-            for n in dict.fromkeys(n for n, _ in gb):
-                p_body += pandoc(link_md("\n\n".join(b for m, b in gb if m == n), "guide", types))
-                ids = guide_ids()
-                p_body += (f"<p class=\"mute small\">From section {n}, <a href=\"{guide_link(ids[n], types)}\">"
-                           f"{esc(secs[n][1])}</a>.</p>\n")
-        if ab:
-            p_body += "<h2 id=\"agents\">How does a coding agent call it?</h2>\n"
-            p_body += pandoc(link_md("\n\n".join(b for _, b in ab), "agent", types))
-            if "agents" in types:
-                p_body += ("<p class=\"mute small\">From the agent interface: <a href=\"/dewfpga/agents/json/\">the machine-readable CLI</a>"
-                           " and <a href=\"/dewfpga/agents/mcp/\">the MCP server</a>.</p>\n")
-        p_body += errors_list(cmd, types) + notes_list(cmd, types)
-        p_body = p_body.replace('<pre class="copy"><code>', '<pre data-copy="1"><code>')
+        body = "<h2 id=\"help\">What does its help text say?</h2>\n"
+        body += f"<pre><code>{esc(helps[cmd], quote=False)}</code></pre>\n"
+        body += f"<p class=\"mute small\">From <code>dewfpga --help</code>, as <a href=\"{GITHUB}/blob/main/bin/dewfpga\">bin/dewfpga</a> prints it.</p>\n"
+        text, used = cmd_section(cmd, types)
+        body += text + errors_list(cmd, types) + notes_list(cmd, types)
+        for m in [c for c, (_, host) in plan.items() if host == cmd and c != cmd]:
+            body += f"<h2 id=\"{m}\">What does <code>dewfpga {esc(m)}</code> do?</h2>\n"
+            body += f"<p>The help text above lists it with <code>dewfpga {esc(cmd)}</code>.</p>\n"
+            text, _ = cmd_section(m, types, skip=set(used))
+            body += text + errors_list(m, types).replace("<h2 id=\"errors\">", f"<h3 id=\"{m}-errors\">").replace("</h2>", "</h3>", 1)
+        src = cmd_sources(cmd, types)
         said = re.compile(cmd_re(cmd).pattern + (r"|\bRun\b" if cmd == "run" else ""))
-        named = [x for kind, b in rb + [(k, b) for _, k, b in gk] if kind == "prose"
+        named = [x for o, _, kind, b in src if kind == "prose" and o != "agent"
                  for x in re.split(r"(?<=[.!?])\s+", plain(pandoc(b))) if said.search(x) and len(x) > 30]
         desc = summary(f"dewfpga {cmd}: {one}. " + (named[0] if named else ""), 230)
         p = head(title, desc, url, "c-cli", article(f"dewfpga {cmd}", url))
         p += "<main class=\"wrap docs\">\n"
         p += f"  <p class=\"eyebrow\"><a href=\"/dewfpga/cli/\">cli</a> · <span class=\"step\">{esc(cmd)}</span>{esc(one)}</p>\n"
-        p += f"  <h1>dewfpga {esc(cmd)}</h1>\n" + p_body
+        p += f"  <h1>dewfpga {esc(cmd)}</h1>\n" + body
         nav = []
         if i:
             nav.append(f"previous: <a href=\"/dewfpga/cli/{cmds[i - 1]}/\">dewfpga {esc(cmds[i - 1])}</a>")
         if i + 1 < len(cmds):
             nav.append(f"next: <a href=\"/dewfpga/cli/{cmds[i + 1]}/\">dewfpga {esc(cmds[i + 1])}</a>")
-        nav.append("Every command: " + " · ".join(f"<a href=\"{cmd_href(c)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cli_cmds(types)))
+        nav.append("Every command: " + " · ".join(f"<a href=\"{h}\"><code>{esc(cmd_label(c))}</code></a>" for c, (h, _) in plan.items()))
         p += "<hr>\n<p class=\"mute small\">" + "<br>\n".join(nav) + "</p>\n"
         p += "</main>\n" + FOOT.format(links='<a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a>', script=COPY_ALL)
         write(SITE / "cli" / cmd / "index.html", p)
         written.append((SITE / "cli" / cmd / "index.html", title, f"dewfpga {cmd}", desc))
-    return f"site/cli: {len(cmds)} command pages (none for {', '.join(CLI_NO_PAGE)})"
+    merged = [f"{c} on {h}'s" for c, (_, h) in plan.items() if h and h != c]
+    return (f"site/cli: {len(cmds)} command pages; " + (", ".join(merged) + " page; " if merged else "")
+            + "no page of their own: " + ", ".join(f"{c} ({why})" for c, why in CLI_ELSEWHERE.items()))
 
 
 CLI_HUB_BEGIN, CLI_HUB_END = "<!-- command pages (docs/pages-build.py) -->\n", "<!-- /command pages -->\n"
@@ -892,7 +949,7 @@ def cli_hub(types):
     page = path.read_text()
     cs = cli_cmds(types)
     block = (CLI_HUB_BEGIN + "  <p class=\"mute small\">On their own pages: "
-             + " · ".join(f"<a href=\"{cmd_href(c)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cs) + ".</p>\n"
+             + " · ".join(f"<a href=\"{cmd_href(c, types)}\"><code>{esc(cmd_label(c))}</code></a>" for c in cs) + ".</p>\n"
              + CLI_HUB_END) if cs else ""
     if CLI_HUB_BEGIN in page:
         i, j = page.index(CLI_HUB_BEGIN), page.index(CLI_HUB_END) + len(CLI_HUB_END)

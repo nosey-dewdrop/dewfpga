@@ -40,6 +40,10 @@ design.sv:3: ERROR [dual-edge]: this always block is sensitive to both edges of 
 <p>A 7-series flip-flop clocks on one edge. Dual-edge registers simulate fine and exist on no FPGA; Vivado refuses them too.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>always_ff @(posedge clk) cnt &lt;= cnt + 1;</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+</ul>
 <h2 id="which-probes-print-it">Which probes in test/sv print this code?</h2>
 <ul>
 <li><a href="/dewfpga/sv/04_dual_edge/">always @(posedge clk or negedge clk) cnt &lt;= cnt + 1;</a></li>

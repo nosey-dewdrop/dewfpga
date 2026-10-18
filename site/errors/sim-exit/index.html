@@ -42,6 +42,10 @@ ERROR [sim-exit]: the simulator stopped with exit 1 (its message is above: a $fa
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Fix what the <code>$fatal</code> line names in the design, or the check if its expectation is wrong; a check that should only be reported uses <code>$error</code> and lets the run end with <code>$finish</code>.</p>
 <pre data-copy="1"><code>if (led !== expected) $error(&quot;led is %h, expected %h&quot;, led, expected);</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">
