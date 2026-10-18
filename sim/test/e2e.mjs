@@ -23,9 +23,18 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 const errs = [];
 let pass = 0, fail = 0;
 const check = (name, ok, detail = '') => { if (ok) { pass++; console.log(`  PASS ${name}`); } else { fail++; console.log(`  FAIL ${name}  ${detail}`); } };
-page.on('pageerror', (e) => errs.push('pageerror: ' + e.message));
+// every console error fails the run; each carries the section it happened in (the last "== " line)
+let section = 'start';
+const log = console.log; console.log = (...a) => { if (typeof a[0] === 'string' && a[0].startsWith('== ')) section = a[0].slice(3); log(...a); };
+page.on('pageerror', (e) => errs.push(`[${section}] pageerror: ` + e.message));
 const dialogs = []; page.on('dialog', (d) => { dialogs.push(d.message()); d.accept(); });
-page.on('console', (m) => { if (m.type() === 'error') errs.push(m.type() + ': ' + m.text()); });
+page.on('console', (m) => { if (m.type() === 'error') errs.push(`[${section}] ` + m.type() + ': ' + m.text()); });
+// leave a page only when it has nothing in flight. A testbench page downloads yosys in the background
+// (64 MB, its warm-up request). CI's Linux WebKit twice logged "Fetch API cannot load .../yosys.core2-*.wasm
+// due to access control checks" (once the inlined core3/core4 data: module): yosys resources a worker was
+// still loading. The only yosys worker this file kills with no warm-up done is the one a navigation ends,
+// so the cancelled load is the likely source; the section tag above names it if it comes back.
+const settled = () => page.waitForFunction(() => window.dewfpga.pendingRequests === 0, null, { timeout: 180000 });
 const status = () => page.locator('#status').innerText();
 const waitStatus = (re, t = 180000) => page.waitForFunction((src) => new RegExp(src).test(document.querySelector('#status').textContent), re.source, { timeout: t });
 const ledClass = (i) => page.locator('#board .b-led').nth(i).getAttribute('class');
@@ -347,18 +356,18 @@ check('restored design: run open again', !(await runDisabled()) && !(await lintS
 
 console.log('== old links keep working');
 const oldHash = lz.compressToEncodedURIComponent(JSON.stringify({ sv: 'module top(input logic a, output logic b); assign b = a; endmodule', tb: 'module tb; initial begin $display("hello from an old link"); $finish; end endmodule' }));
-await page.goto(BASE + 'tb.html#' + oldHash);
+await settled(); await page.goto(BASE + 'tb.html#' + oldHash);
 await page.waitForTimeout(800);
 check('tb.html redirects to ?view=tb and keeps the hash', page.url().includes('?view=tb') && page.url().includes('#' + oldHash), page.url());
 await waitStatus(/compile \d+ ms|failed|stopped/, 120000);
 check('old {sv, tb} link: tb.sv came from the link', (await page.locator('#out').innerText()).includes('hello from an old link'), (await page.locator('#out').innerText()).split('\n')[0]);
-await page.goto(BASE + '?view=tb');
+await settled(); await page.goto(BASE + '?view=tb');
 await waitStatus(/compile \d+ ms|failed|stopped/, 120000);
 check('?view=tb boots straight into the testbench', await page.locator('#view-tb').getAttribute('class') === 'on');
 
 console.log('== #18 workspace: free names, content decides top and testbench');
 // start from an empty browser: the old-link workspace above was autosaved, and the pagehide flush would save it again
-await page.evaluate(() => { window.dewfpga.store.flush = () => {}; localStorage.clear(); });
+await settled(); await page.evaluate(() => { window.dewfpga.store.flush = () => {}; localStorage.clear(); });
 await page.goto(BASE); await waitStatus(/simulated clock|combinational|not running/, 120000);
 await page.evaluate(() => { const f = window.dewfpga.files; f.rename('design.sv', 'lab/counter_lab.sv'); f.rename('tb.sv', 'lab/sim/my_test.sv'); f.rename('basys3.xdc', 'lab/pins.xdc'); });
 check('free-names-content-top: tabs keep the names and paths', (await page.locator('#ftabs .ftab').allInnerTexts()).join(',') === 'lab/counter_lab.sv,lab/sim/my_test.sv,lab/pins.xdc', (await page.locator('#ftabs .ftab').allInnerTexts()).join(','));
@@ -416,7 +425,7 @@ await page.waitForTimeout(700);
 const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('dewfpga.workspace')));
 check('reload-restoresedit: dewfpga.workspace is v1 with every file and the choice', stored && stored.v === 1 && stored.files.length === 6 && stored.files.some((f) => f.path === 'lab/counter_lab.sv' && f.text.includes('reload-marker')) && stored.prefer && stored.prefer.xdc === 'lab/pins.xdc', JSON.stringify(stored && { v: stored.v, n: stored.files.length, prefer: stored.prefer }));
 const tabsBefore = (await page.locator('#ftabs .ftab').allInnerTexts()).join(',');
-await page.reload(); await waitStatus(/simulated clock|combinational|not running/, 120000);
+await settled(); await page.reload(); await waitStatus(/simulated clock|combinational|not running/, 120000);
 check('reload-restoresedit: names, text and active tab restored', tabsBefore.split(',').length === 6 && (await page.locator('#ftabs .ftab').allInnerTexts()).join(',') === tabsBefore && (await page.evaluate(() => window.dewfpga.files.text('lab/counter_lab.sv'))).includes('reload-marker'), (await page.locator('#ftabs .ftab').allInnerTexts()).join(','));
 check('reload-restoresedit: no save error shown', (await page.locator('#savestate').innerText()) === '');
 const quota = await page.evaluate(() => { const o = Storage.prototype.setItem; Storage.prototype.setItem = function () { const e = new Error('full'); e.name = 'QuotaExceededError'; throw e; }; window.dewfpga.files.set('rom.mem', '9\n'); window.dewfpga.store.flush(); const s = document.querySelector('#savestate').textContent; Storage.prototype.setItem = o; return s; });
@@ -485,7 +494,7 @@ const romBoard = await page.evaluate(() => {
 check('nested header and ROM: synthesized board reads all 16 addresses correctly', romBoard.length === 0, JSON.stringify(romBoard));
 await page.click('#view-tb'); await waitStatus(/compile \d+ ms|failed|stopped/, 120000);
 check('nested header and ROM: Icarus checks all 16 addresses', /PASS nested ROM all 16 addresses/.test(await page.locator('#out').innerText()), await page.locator('#out').innerText());
-await page.evaluate(() => { window.dewfpga.store.flush(); });
+await settled(); await page.evaluate(() => { window.dewfpga.store.flush(); });
 await page.reload(); await waitStatus(/compile \d+ ms|failed|stopped/, 120000);
 const restoredHeader = await page.evaluate(() => JSON.parse(localStorage.getItem('dewfpga.workspace')).files.find(f => f.path === 'inc/width.svh'));
 check('reload preserves imported CRLF header', restoredHeader.eol === '\r\n', JSON.stringify(restoredHeader));
