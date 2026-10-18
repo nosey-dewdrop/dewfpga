@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>Run builds every lab folder the folder command builds: dewfpga patch notes</title>
+<meta name="description" content="Measured on the students&#x27; own folders. 89 lab folders from 94 public CS223 repositories, each on a fresh copy: the folder command (dewfpga bit) against Run on the file a student opens (dewfpga run…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-builds-every-lab-folder/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Run builds every lab folder the folder command builds: dewfpga patch notes">
+<meta property="og:description" content="Measured on the students&#x27; own folders. 89 lab folders from 94 public CS223 repositories, each on a fresh copy: the folder command (dewfpga bit) against Run on the file a student opens (dewfpga run…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-builds-every-lab-folder/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Run builds every lab folder the folder command builds","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-builds-every-lab-folder/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">local candidate</span>15 October</p>
+  <h1>Run builds every lab folder the folder command builds</h1>
+<p><strong>Measured on the students' own folders.</strong> 89 lab folders from 94 public CS223 repositories, each on a fresh copy: the folder command (<code>dewfpga bit</code>) against Run on the file a student opens (<code>dewfpga run &lt;file&gt; --build-only</code>, the play button). Before this update the folder command built 13 and Run 2, and every one of the 13 failed on Run. Now Run builds 17: all 13, and 4 the folder command refuses for a reason that is not that design's.</p>
+<p><strong>Run reads the folder's pin file.</strong> Run used to take only <code>&lt;file&gt;.xdc</code> or the automatic pins, so a lab whose pins are in <code>constraints.xdc</code> or <code>Lab4Const.xdc</code>, for ports named <code>swIns</code>, <code>data</code> or <code>reset</code>, stopped at <code>No default Basys3 pin</code>. Now, as the folder command does, Run takes the one <code>.xdc</code> beside the top that pins the design's ports; one that pins none of them (another lab's) is passed over, and the automatic pins stay for a folder with no such file.</p>
+<p><strong>Run on a Vivado project's file builds the project.</strong> A file under <code>&lt;name&gt;.srcs/sources_1/new</code> has its pins in <code>constrs_1</code> and its file list in the <code>.xpr</code>. Run now builds it as the folder command reads the project: its enabled files, its top, its <code>.xdc</code>, and the outputs next to the <code>.xpr</code>. The project command names files from the project folder; Run writes each <code>file:line</code> and the log path out in full, so the editor underlines the right file.</p>
+<p>Of the 4 folders only Run builds, 2 hold a file the design does not use that the folder command stops on (a module defined in both a <code>.sv</code> and a <code>.v</code>; an old file that does not compile), and 2 have no <code>.xdc</code> and only board port names.</p>
+<p>Tests: two new checks. A folder with <code>constraints.xdc</code> for ports <code>a b y c</code> builds with that file, also beside another lab's <code>.xdc</code>, and a design with board port names and only another lab's <code>.xdc</code> gets the automatic pins. A copy of the Vivado project fixture builds from its source file, the <code>.bit</code> lands next to the <code>.xpr</code>, and an error is named with the source's full path and line. The full suite passed 343 of 343 with 19 known gaps; the SystemVerilog probes are unchanged (114 of 148 pass all four stages).</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/run-shows-its-error/">Run shows its error, reads the lab folder, and prints only what a student acts on</a><br>
+next: <a href="/dewfpga/patch-notes/course-netlist-modules/">The course&#x27;s ready netlist modules build</a><br>
+<a href="/dewfpga/patch-notes/">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

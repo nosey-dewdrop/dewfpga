@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#18, #21, #22 A workspace that keeps names, choices and edits; Board controls retain the state the student is holding; Explain slow counters and keep Max responsive: dewfpga patch notes</title>
+<meta name="description" content="A directory tree and freely named sources, headers, memory data and multiple XDC files replace the fixed-name workspace.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/18-21-22/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#18, #21, #22 A workspace that keeps names, choices and edits; Board controls retain the state the student is holding; Explain slow counters and keep Max responsive: dewfpga patch notes">
+<meta property="og:description" content="A directory tree and freely named sources, headers, memory data and multiple XDC files replace the fixed-name workspace.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/18-21-22/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#18, #21, #22 · A workspace that keeps names, choices and edits; Board controls retain the state the student is holding; Explain slow counters and keep Max responsive","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/18-21-22/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#18, #21, #22</span>3 October</p>
+  <h1>#18, #21, #22 · A workspace that keeps names, choices and edits; Board controls retain the state the student is holding; Explain slow counters and keep Max responsive</h1>
+<h2 id="18--a-workspace-that-keeps-names-choices-and-edits--3-october">#18 · A workspace that keeps names, choices and edits · 3 October</h2>
+<p>A directory tree and freely named sources, headers, memory data and multiple XDC files replace the fixed-name workspace. Top and testbench selection use source content; ambiguous choices are shown instead of guessed. Active XPR filesets exclude disabled/inactive files. A selected constraints file follows renames, including case-only renames, and a deleted selection does not transfer to a new file with the same name.</p>
+<p>Autosave preserves original BOM/CRLF bytes until a file is edited. Share links keep top/testbench/XDC choices, file roles, active file and bytes in a fresh browser profile; old links still load. A failed link offers ZIP export. Workspace unit checks passed <strong>69/0</strong>. Review found and fixed choice loss during rename and stale choice inheritance after deletion.</p>
+<h2 id="21--board-controls-retain-the-state-the-student-is-holding--3-october">#21 · Board controls retain the state the student is holding · 3 October</h2>
+<p>Switches and momentary buttons support pointer and keyboard input. Releasing one input method no longer releases a button still held by the other; focus loss releases held controls. Source and board hover links use the bound port/pin, without mistaking a helper-module port for the top-level output. Mobile tooltips stay inside the viewport. Failed runs retain POWER and clear DONE and outputs.</p>
+<p>Independent browser checks passed <strong>72/0</strong>. The expanded WebKit gate initially failed because its touch-hold test called Chromium-only CDP. Chromium still tests a trusted touch hold; WebKit tests the same handlers with explicitly labelled synthetic touch pointer events. This is not physical Safari/phone acceptance. Board pitch still limits mobile target width; LED changes are not announced by a screen reader.</p>
+<h2 id="22--explain-slow-counters-and-keep-max-responsive--3-october">#22 · Explain slow counters and keep Max responsive · 3 October</h2>
+<p>Detected divider bits and threshold comparisons explain why a 100 MHz design looks still at browser speed and suggest an explicit <code>SIM</code> divider. Closing the advice panel persists across reruns until the advice changes. Threshold comparisons, including strict versus inclusive bounds and mirrored operands, were corrected. Finite and Max clock modes both use a bounded per-frame work budget.</p>
+<p>The repeated two-counter experiment measured roughly <strong>5.8–5.9 thousand UI-driven DigitalJS cycles/s</strong>. Its isolated DigitalJS kernel reached <strong>12–13 thousand/s</strong>; a CXXRTL kernel compiled locally to WASM ran in Chromium at <strong>198–206 million/s</strong>, with <strong>14 output comparisons</strong>. This measures a precompiled browser kernel, not a dynamic browser C++ compiler or a general equivalence result. Divider advice was selected; down-counter hints remain absent and Max does not promise a physical 100 MHz rate.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/17/">#17 Browser compilation checks the design and clears failed runs</a><br>
+next: <a href="/dewfpga/patch-notes/19/">#19 Bring a lab folder and take it back to the CLI</a><br>
+<a href="/dewfpga/patch-notes/#18">These entries in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

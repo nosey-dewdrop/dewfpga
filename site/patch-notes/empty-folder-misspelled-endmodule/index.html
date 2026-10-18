@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>An empty folder in VS Code, and a misspelled endmodule: dewfpga patch notes</title>
+<meta name="description" content="An empty folder now writes its own design file. A student opened an empty lab1 folder in VS Code. Nothing in the window pointed at dewfpga, and the coding agent they asked did not know it, so the…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/empty-folder-misspelled-endmodule/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="An empty folder in VS Code, and a misspelled endmodule: dewfpga patch notes">
+<meta property="og:description" content="An empty folder now writes its own design file. A student opened an empty lab1 folder in VS Code. Nothing in the window pointed at dewfpga, and the coding agent they asked did not know it, so the…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/empty-folder-misspelled-endmodule/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"An empty folder in VS Code, and a misspelled endmodule","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/empty-folder-misspelled-endmodule/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">local candidate</span>14 October</p>
+  <h1>An empty folder in VS Code, and a misspelled endmodule</h1>
+<p><strong>An empty folder now writes its own design file.</strong> A student opened an empty <code>lab1</code> folder in VS Code. Nothing in the window pointed at dewfpga, and the coding agent they asked did not know it, so the student wrote a 10-line <code>.xdc</code> and a 22-line Makefile by hand next to the design. The same design, alone in a folder, builds to a bitstream in 4.6 seconds with no <code>.xdc</code> and no Makefile. Now an empty folder asks one question, <code>Create top.sv</code>. The button writes <code>top.sv</code> (16 switches to 16 LEDs, with the port names that need no pin file listed at the top), opens it under the Run button, and writes the agent notes beside it. A folder with files, a window with two folders, or a "Never" answer gets no question; an existing <code>top.sv</code> is never overwritten. The same action is the command <code>dewfpga: new Basys3 design in this folder (top.sv)</code>.</p>
+<p><strong>The agent notes start with the one-file path.</strong> <code>AGENTS.md</code> used to describe only the folder commands. Its first section now says one <code>.sv</code> is enough, names the automatic ports, and tells the agent never to ask for a Makefile, an <code>.xdc</code> or a build script, and never to install other FPGA tools. The file stays within its 60-line limit.</p>
+<p><strong>A misspelled <code>endmodule</code> is named with its line.</strong> <code>lab1_top.sv</code> ended in <code>endmodulek</code>. The source scan pairs each <code>module</code> with the next <code>endmodule</code>, so <code>lab1_top</code> dropped out, the two modules it instantiates looked unused, and the CLI said <code>two-tops</code> and suggested <code>full_adder</code> as the top. Now:</p>
+<pre><code>lab1_top.sv:27: ERROR [module-without-endmodule]: module lab1_top (lab1_top.sv:21) has no endmodule: line 27 reads endmodulek. Fix: write endmodule on line 27.</code></pre>
+<p>With no word like <code>endmodule</code> in the module, the message names the line where the next module starts. Single-file Run now prints the scan's message as it is, and its <code>two-tops</code> fix names <code>dewfpga run &lt;file&gt; --top NAME</code> instead of the folder command.</p>
+<p>Tests: three new single-file checks (misspelled, missing, a real two-top file) fail on the installed 1.2.0 and pass now. The scan raised no alarm on any of the 364 <code>.sv</code>/<code>.v</code> files in the repository. The VS Code extension suite passed 41/41; the new checks build the written <code>top.sv</code> with the real chain (32 ports, all pinned automatically). The full suite ran once: 340 passed, 3 failed, 19 known gaps unchanged. The three were closed and rerun: <code>AGENTS.md</code> had grown to 74 lines (limit 60), <code>site/llms.txt</code> lacked the new code, and the Python bytecode the tests left in <code>templates/__pycache__</code> held this machine's home path (the suite now writes no bytecode). The SystemVerilog probes are as on 8 October: 114 of 148 pass all four stages. Not tried: the button in a real VS Code window and programming the board with this change.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/own-project-editor-to-board/">Your own project, from editor to board</a><br>
+next: <a href="/dewfpga/patch-notes/run-shows-its-error/">Run shows its error, reads the lab folder, and prints only what a student acts on</a><br>
+<a href="/dewfpga/patch-notes/">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

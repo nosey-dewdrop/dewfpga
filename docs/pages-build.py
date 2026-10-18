@@ -18,9 +18,8 @@ the headings and the counts, all read from the same sources.
 
 What gets a page, and what does not:
   sv     every row of expect.tsv
-  notes  every numbered entry, and the unnumbered ones in NOTE_SLUGS, except NOTES_LEFT_OUT
-         (the CLI as a tool, its install and its agent interface: those pages wait; mail and
-         accounts: not launched) and entries under THIN words, which stay in the full list only
+  notes  every numbered entry, and the unnumbered ones in NOTE_SLUGS, of THIN words or more; the
+         shorter ones together on one page each group of NOTE_MERGE
   guide  every section of THIN words or more, except GUIDE_LEFT_OUT (sections 2, 6 and 7 are about
          the CLI and wait); a shorter subsection is printed on its parent's page
 
@@ -41,19 +40,24 @@ GITHUB = "https://github.com/nosey-dewdrop/dewfpga"
 TYPES = ["sv", "notes", "guide", "agents", "cli"]  # what a plain run builds
 THIN = 150  # words: a patch note shorter than this stays in the full list only
 
-NOTES_LEFT_OUT = {
-    1: "the CLI's uninstall and version", 6: "the CLI's own tests", 7: "the installer",
-    11: "the CLI's install steps", 13: "the VS Code integration", 14: "the CLI's --json results",
-    15: "the agent interface (MCP)", 16: "the agent experiment", 24: "newsletter, not launched",
-    25: "mail, not launched", 26: "accounts, not launched", 30: "the installer",
-}
+NOTES_LEFT_OUT = {}  # numbered entries that get no page: none
 # unnumbered entries that get a page: heading text -> folder
 NOTE_SLUGS = {
     "Unreleased: preserve vector indices in pin validation": "pin-validation-vector-indices",
+    "Unreleased: build without device-file output redirection": "build-without-device-file-redirection",
+    "Local candidate · Your own project, from editor to board · 8 October": "own-project-editor-to-board",
+    "Local candidate · An empty folder in VS Code, and a misspelled endmodule · 14 October": "empty-folder-misspelled-endmodule",
+    "Local candidate · Run shows its error, reads the lab folder, and prints only what a student acts on · 15 October": "run-shows-its-error",
+    "Local candidate · Run builds every lab folder the folder command builds · 15 October": "run-builds-every-lab-folder",
     "Local candidate · The course's ready netlist modules build · 15 October": "course-netlist-modules",
+    "Local candidate · The folder command needs no pin file for the board's port names · 15 October": "folder-command-no-pin-file",
 }
 # thin entries printed together on one page: folder -> their numbers or headings
-NOTE_MERGE = {}
+NOTE_MERGE = {
+    "18-21-22": [18, 21, 22],
+    "editor-tasks-and-programmer-access": ["Unreleased: editor tasks find the installed Homebrew tools",
+                                           "Unreleased: distinguish programmer access from macOS USB visibility"],
+}
 # guide sections. A section of THIN words or more gets its own page, in the folder named here; a
 # shorter subsection is printed on its parent's page; a shorter section is printed at the end of its
 # first subsection's page when that has one (7 on 7.1's), else it stays in the whole guide only.

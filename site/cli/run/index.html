@@ -50,6 +50,12 @@ dewfpga run ~/Desktop/my_design.sv --build-only  # no board needed</code></pre>
 <li><a href="/dewfpga/errors/explicit-port/">explicit-port</a>: Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port.</li>
 <li><a href="/dewfpga/errors/module-without-endmodule/">module-without-endmodule</a>: A module&#x27;s endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.</li>
 </ul>
+<h2 id="patch-notes">Which patch notes name it?</h2>
+<ul>
+<li><a href="/dewfpga/patch-notes/empty-folder-misspelled-endmodule/">An empty folder in VS Code, and a misspelled endmodule</a></li>
+<li><a href="/dewfpga/patch-notes/run-shows-its-error/">Run shows its error, reads the lab folder, and prints only what a student acts on</a></li>
+<li><a href="/dewfpga/patch-notes/run-builds-every-lab-folder/">Run builds every lab folder the folder command builds</a></li>
+</ul>
 <hr>
 <p class="mute small">previous: <a href="/dewfpga/cli/check/">dewfpga check</a><br>
 next: <a href="/dewfpga/cli/sim/">dewfpga sim</a><br>

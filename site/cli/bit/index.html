@@ -158,12 +158,14 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 <li><a href="/dewfpga/patch-notes/3/">#3 Silent wrongs stop the build</a></li>
 <li><a href="/dewfpga/patch-notes/4/">#4 What Vivado accepts compiles: yosys-slang as the second reader</a></li>
 <li><a href="/dewfpga/patch-notes/5/">#5 Every message in one shape, with its code and its page</a></li>
+<li><a href="/dewfpga/patch-notes/6/">#6 The CLI&#x27;s untested paths get checks, one number for the count, a test that reads the bitstream, the board test ready for the board</a></li>
 <li><a href="/dewfpga/patch-notes/28/">#28 dewfpga sim simulates what the build reads when iverilog refuses the design</a></li>
 <li><a href="/dewfpga/patch-notes/31/">#31 A random-design generator checks the SystemVerilog DDCA teaches against its own simulation</a></li>
 <li><a href="/dewfpga/patch-notes/32/">#32 A latch whose gate and data change together, and a unique casez whose items overlap: the chain names both before the board differs from the simulation</a></li>
 <li><a href="/dewfpga/patch-notes/33/">#33 The chain reads every design file, not only the ones that hold a module, and a .* connection whose port and signal widths differ is named with the fix before either reader refuses it</a></li>
 <li><a href="/dewfpga/patch-notes/34/">#34 The netlist the build writes starts every register as the bitstream does: a register without a start value at 0, a set or preset register at 1</a></li>
 <li><a href="/dewfpga/patch-notes/35/">#35 A register read before its first reset: dewfpga sim starts it where the board starts it, and the netlist keeps the state codes the student wrote</a></li>
+<li><a href="/dewfpga/patch-notes/run-builds-every-lab-folder/">Run builds every lab folder the folder command builds</a></li>
 </ul>
 <hr>
 <p class="mute small">previous: <a href="/dewfpga/cli/sim/">dewfpga sim</a><br>

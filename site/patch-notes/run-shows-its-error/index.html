@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>Run shows its error, reads the lab folder, and prints only what a student acts on: dewfpga patch notes</title>
+<meta name="description" content="A failed Run says why. The play button used to start dewfpga run as the terminal&#x27;s own process, so a failure reached the student as VS Code&#x27;s terminal process terminated with exit code: 1 and nothing…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-shows-its-error/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Run shows its error, reads the lab folder, and prints only what a student acts on: dewfpga patch notes">
+<meta property="og:description" content="A failed Run says why. The play button used to start dewfpga run as the terminal&#x27;s own process, so a failure reached the student as VS Code&#x27;s terminal process terminated with exit code: 1 and nothing…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-shows-its-error/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Run shows its error, reads the lab folder, and prints only what a student acts on","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-shows-its-error/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">local candidate</span>15 October</p>
+  <h1>Run shows its error, reads the lab folder, and prints only what a student acts on</h1>
+<p><strong>A failed Run says why.</strong> The play button used to start <code>dewfpga run</code> as the terminal's own process, so a failure reached the student as VS Code's <code>terminal process terminated with exit code: 1</code> and nothing else. That is what happened on a file that held a pasted terminal log instead of a design. Now the extension starts the command itself and keeps its output in a terminal that stays open. The first error is a notification (<code>lab1_top.sv:27: module lab1_top ... has no endmodule: line 27 reads endmodulek</code>), every <code>file:line</code> message is underlined in its file and listed in Problems, and a success says the file is on the Basys3.</p>
+<p><strong>Run reads the lab folder.</strong> A lab's top usually instantiates modules from the files beside it. Run used to read only the file it was started on and stopped at <code>unknown module 'full_adder'</code>. Now it reads the modules the file uses, transitively, from the other <code>.sv</code>/<code>.v</code> files of its folder, plus the package and interface files they name, and prints <code>Also reads: full_adder.sv</code>. Run on a submodule's file (<code>full_adder.sv</code>) builds the one top that uses it (<code>top: top, in top.sv</code>). A folder file the design does not use (an old try that does not compile, a testbench) is never read.</p>
+<p><strong>The output lost three lines nobody could act on.</strong> A design with no clock printed a <code>no-create-clock</code> note about <code>pins.xdc</code>, a file the student never wrote, and nextpnr's <code>Warning: No clocks found in design</code>. The note now prints only when the design has a clocked cell, and the warning is dropped like the <code>[current_design]</code> lines. Run's <code>full log:</code> path named a file in a deleted temporary folder; it now names the kept copy, also after a failed build. A scan message named the staged copy (<code>no design module in source.sv.</code>); it now names the student's file. Lab 1's Run output went from 8 lines to 6.</p>
+<p>Tests: the VS Code suite passed 42/42; its new check runs the real CLI on a misspelled <code>endmodule</code> and reads the notification, the underlined line (5) and the terminal text. Two new folder checks (a package, a submodule file, the top file, a testbench and a broken old try in one folder) build from either file, and the netlist gives the full adder's 8 rows right; a used sibling's error is named with its own file and line. Both fail on the installed 1.2.0. The pin checks (23) and the golden bitstream are unchanged. The full suite ran once on this candidate: 342 passed, 2 failed. One was this change: probe 97's block RAM is a clocked cell, and there nextpnr's <code>No clocks found</code> is the gap's own evidence, so the warning is now dropped only when the design has no clocked cell; the probe matches <code>expect.tsv</code> again (known gaps 19). The other was the personal-path check reading the <code>__pycache__</code> a direct test run leaves; that folder is never committed and is no longer scanned. The SystemVerilog probes are unchanged: 114 of 148 pass all four stages.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/empty-folder-misspelled-endmodule/">An empty folder in VS Code, and a misspelled endmodule</a><br>
+next: <a href="/dewfpga/patch-notes/run-builds-every-lab-folder/">Run builds every lab folder the folder command builds</a><br>
+<a href="/dewfpga/patch-notes/">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

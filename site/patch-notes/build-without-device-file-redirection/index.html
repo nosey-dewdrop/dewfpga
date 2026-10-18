@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>Build without device-file output redirection: dewfpga patch notes</title>
+<meta name="description" content="CLI simulation keeps stdout live and filters stderr from a temporary file after make returns, preserving its exit status. Editor diagnostics use a merged pipe for absolute paths.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/build-without-device-file-redirection/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Build without device-file output redirection: dewfpga patch notes">
+<meta property="og:description" content="CLI simulation keeps stdout live and filters stderr from a temporary file after make returns, preserving its exit status. Editor diagnostics use a merged pipe for absolute paths.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/build-without-device-file-redirection/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Build without device-file output redirection","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/build-without-device-file-redirection/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">unreleased</span></p>
+  <h1>Build without device-file output redirection</h1>
+<p>CLI simulation keeps stdout live and filters stderr from a temporary file after make returns, preserving its exit status. Editor diagnostics use a merged pipe for absolute paths. Frame conversion writes its normal output filename directly. This removes the /dev/fd and /dev/stdout dependency that prevented validation in restricted execution environments; no permissions were changed. Simulation stderr is now delivered when make completes, rather than streamed during execution.</p>
+<p>The installed editor task's command and environment were invoked on the nested multi-file Working Lab fixture. Simulation passed; build produced a 2.2 MB bitstream and passed timing. Programming reached openFPGALoader and returned board-not-found. This validates the command path, not a GUI keystroke or physical board behavior. Failing-testbench and simulation-timeout regressions both passed.</p>
+<p>Follow-up: probes 96 and 96b now pass all four stages through the unmodified probe runner and the actual CLI, without manually invoking intermediate stages. This closes their earlier restricted-environment validation gap, not physical board acceptance.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/editor-tasks-and-programmer-access/">Editor tasks find the installed Homebrew tools; Distinguish programmer access from macOS USB visibility</a><br>
+next: <a href="/dewfpga/patch-notes/own-project-editor-to-board/">Your own project, from editor to board</a><br>
+<a href="/dewfpga/patch-notes/">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

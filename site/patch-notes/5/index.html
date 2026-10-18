@@ -68,7 +68,7 @@ design.sv:3: ERROR [initial-from-signal]: `num = sw` here is a start value, not 
 <p><strong>Orchestration, for the record.</strong> 15 agents, 2 h 22 min, no agent died: 3 build (45, 35, 35 minutes), 1 integrator, 2 break rounds (student + regression reader), 3 fix agents, the judge, 3 integrations. The integrators committed in the main tree (four commits, squashed into this one). The judge's process notes, applied to the script: the diff is read against the update's base commit, not <code>HEAD</code> (the update may already be committed); the metric must reach the judge as a number, not as rows (the coded-line count over all 35 targets was lost between the integrator and the judge and was re-counted here); a message with a formula in it (<code>create_clock -period</code>) is checked against the number printed next to it.</p>
 <hr>
 <p class="mute small">previous: <a href="/dewfpga/patch-notes/4/">#4 What Vivado accepts compiles: yosys-slang as the second reader</a><br>
-next: <a href="/dewfpga/patch-notes/8/">#8 Browser tests and checks before publishing</a><br>
+next: <a href="/dewfpga/patch-notes/6/">#6 The CLI&#x27;s untested paths get checks, one number for the count, a test that reads the bitstream, the board test ready for the board</a><br>
 <a href="/dewfpga/patch-notes/#5">This entry in the full list</a><br>
 The commands this entry names: <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a><br>
 Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>

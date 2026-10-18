@@ -39,8 +39,8 @@
 <p>Root found a wrong interface output (<code>00Zz</code>) that the earlier direct-Yosys test did not cover. Flattening the actual worker netlist without scope-info cells fixed the DigitalJS boundary. Three actual worker netlists now pass their original native testbenches and <strong>576 DigitalJS output comparisons</strong>. The additional engine-isolation suite passed <strong>16 checks</strong>, including file collisions, a unit-scope enum, a user module named INV and four guard controls.</p>
 <p>The last compilation-decision audit covers <strong>133 cases: 124 matching decisions, 7 native-accept/browser-reject cases, 2 reverse differences and 0 infrastructure errors</strong>. The remaining rejects are unnamed instances, inherited procedural port direction, BUFG, MMCM, internal tristate, a netlist-form module and a bitstream cast. The two reverse differences are separate interface/package source files that the native CLI source selector omits; their browser behavior was tested above. These counts do not establish corpus-wide behavioral equivalence or hardware timing.</p>
 <hr>
-<p class="mute small">previous: <a href="/dewfpga/patch-notes/12/">#12 Vivado projects and editor tasks that preserve user files</a><br>
-next: <a href="/dewfpga/patch-notes/19/">#19 Bring a lab folder and take it back to the CLI</a><br>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/16/">#16 Project instructions and a measured repair experiment</a><br>
+next: <a href="/dewfpga/patch-notes/18-21-22/">#18, #21, #22 A workspace that keeps names, choices and edits; Board controls retain the state the student is holding; Explain slow counters and keep Max responsive</a><br>
 <a href="/dewfpga/patch-notes/#17">This entry in the full list</a><br>
 Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
 </main>

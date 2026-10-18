@@ -41,8 +41,8 @@
 <p>Focused checks before final acceptance: task writer <strong>69/0</strong>, companion <strong>35/0</strong>, Vivado <strong>82/0</strong>, setup <strong>89/0</strong>. An additional eight editor-boundary checks passed in a corrected isolated copy. The first full run caught two flat-folder compile-line regressions despite those focused results. They are retained in the test history; the corrected full run passed <strong>269, failed 0, with 52 known gaps</strong>, in 24 minutes 11 seconds, with the tested files unchanged. The command list contains <strong>325 available checks</strong>, not 325 executed successes. Real GUI and Basys3 acceptance remain unverified. Remote CI is pending for this integration.</p>
 <p>Release review then found the tracked-file package builder omitted the companion sources. The old archive now fails validation for all four missing files. The fixed archive builds a VSIX byte-identical to the source tree and runs <code>vscode --print</code>. Both assembled site variants pass: <strong>101 pages, 0 failures</strong> each. CI now builds the companion from the unpacked release, so source-only success cannot hide this omission.</p>
 <hr>
-<p class="mute small">previous: <a href="/dewfpga/patch-notes/10/">#10 Patch notes on the site and working navigation hit areas</a><br>
-next: <a href="/dewfpga/patch-notes/17/">#17 Browser compilation checks the design and clears failed runs</a><br>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/11/">#11 Five CLI steps and accurate Homebrew diagnosis</a><br>
+next: <a href="/dewfpga/patch-notes/13/">#13 Accurate lint severity and fresh waveforms</a><br>
 <a href="/dewfpga/patch-notes/#12">This entry in the full list</a><br>
 The commands this entry names: <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a><br>
 Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>

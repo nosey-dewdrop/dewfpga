@@ -414,13 +414,34 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/1/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/10/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/11/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/12/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/13/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/14/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/15/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/16/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/17/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/18-21-22/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/19/</loc>
@@ -435,6 +456,15 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/23/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/24/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/25/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/26/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/28/</loc>
   </url>
   <url>
@@ -442,6 +472,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/3/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/30/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/31/</loc>
@@ -465,16 +498,43 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/5/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/6/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/7/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/8/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/9/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/build-without-device-file-redirection/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/course-netlist-modules/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/editor-tasks-and-programmer-access/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/empty-folder-misspelled-endmodule/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/folder-command-no-pin-file/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/own-project-editor-to-board/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/pin-validation-vector-indices/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-builds-every-lab-folder/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/patch-notes/run-shows-its-error/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/sim/</loc>

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#24 Newsletter consent and working management links: dewfpga patch notes</title>
+<meta name="description" content="The optional newsletter page (not open yet) records a versioned consent request and queues a confirmation message. No account is required. Patch notes become eligible only after confirmation.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/24/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#24 Newsletter consent and working management links: dewfpga patch notes">
+<meta property="og:description" content="The optional newsletter page (not open yet) records a versioned consent request and queues a confirmation message. No account is required. Patch notes become eligible only after confirmation.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/24/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#24 · Newsletter consent and working management links","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/24/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#24</span>3 October</p>
+  <h1>#24 · Newsletter consent and working management links</h1>
+<p>The optional newsletter page (not open yet) records a versioned consent request and queues a confirmation message. No account is required. Patch notes become eligible only after confirmation. Confirmation and newsletter messages carry the actual unsubscribe token in their body and List-Unsubscribe header. Public configuration is empty by default, so collection stays disabled until the operator configures the existing project and completes the notice.</p>
+<p>A new consent generation now rotates its management token and clears the old account binding. Previously, an old mail link and linked account could continue to control fresh consent. A late completion for confirmation T1 can no longer mark a newer T2 request as mailed: the service RPC checks the token it actually sent. Cleanup also preserves a newly mailed link's 48-hour validity instead of removing it when an older pending request reaches seven days. Removal requires an operated cleanup; these thresholds are not an automatic deletion promise.</p>
+<p>The data and privacy draft (not open yet) separates application records from provider logs and identifies the controller, contact, processing and retention details still missing. It does not claim KVKK/GDPR compliance.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/23/">#23 Prepare simulator discovery and enforce its browser checks</a><br>
+next: <a href="/dewfpga/patch-notes/25/">#25 Mail attempts retain uncertainty and campaigns require an owner test</a><br>
+<a href="/dewfpga/patch-notes/#24">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#30 The install keeps only the chain that runs: about 0.25 GB on disk instead of 1.5: dewfpga patch notes</title>
+<meta name="description" content="What a clean install left behind. The install line said # ~4 min, 1.4 GB, once, and a clean install into an empty folder measured on 7 October was 1543 MB with 25 .git folders in it: nextpnr-xilinx…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/30/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#30 The install keeps only the chain that runs: about 0.25 GB on disk instead of 1.5: dewfpga patch notes">
+<meta property="og:description" content="What a clean install left behind. The install line said # ~4 min, 1.4 GB, once, and a clean install into an empty folder measured on 7 October was 1543 MB with 25 .git folders in it: nextpnr-xilinx…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/30/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#30 · The install keeps only the chain that runs: about 0.25 GB on disk instead of 1.5","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/30/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#30</span>7 October</p>
+  <h1>#30 · The install keeps only the chain that runs: about 0.25 GB on disk instead of 1.5</h1>
+<p><strong>What a clean install left behind.</strong> The install line said <code># ~4 min, 1.4 GB, once</code>, and a clean install into an empty folder measured on 7 October was 1543 MB with 25 <code>.git</code> folders in it: nextpnr-xilinx 1086 MB (its full prjxray-db submodule holds five FPGA families, 853 MB, the Basys3 reads one), prjxray 217 MB (ten submodules, four never built), yosys-slang 101 MB of sources around a 9 MB plugin, and every build tree. The chain that runs, the binary, the artix7 database, the chip database, the venv, <code>fasm2frames</code>, <code>xc7frames2bit</code> and <code>slang.so</code>, is 237 MB. The installer asked for 4 GB free: <code>the install needs 1.4 GB plus build scratch, at least 4 GB.</code></p>
+<p><strong>Now the install fetches less and removes what it built from.</strong> nextpnr-xilinx comes with the two submodules its chip-database exporter reads, prjxray-db as a partial clone of <code>artix7</code> alone; prjxray with the six submodules its cmake uses; the four it never builds (fasm, yosys, python-sdf-timing, display_port, 100 MB) are not fetched. After each build the sources and the build tree go, and the installer says what stays: <code>✓ prjxray pruned to xc7frames2bit, utils/ and the python package (2 MB)</code>, <code>✓ nextpnr-xilinx pruned to the binary and the artix7 database (86 MB)</code>, <code>✓ slang.so built, loads in Yosys 0.69+post (read_slang); sources removed (9 MB kept)</code>. Every step header carries the size so far (<code>[6] yosys-slang (SystemVerilog reader plugin, from source, ~3 min) (+218s, 246 MB)</code>), the last line is <code>Total: 415 s, ~/fpga: 255 MB.</code>, and the free-space check now asks for 2 GB: <code>the build peaks at about 850 MB (the install that stays is ~237 MB), so at least 2 GB are needed.</code> (the peak printed by the three clean installs of 7 October: 811, 833 and 834 MB, at the chip database step, when the sources, the build trees and the 268 MB <code>.bba</code> are all there at once). A second run skips every step by its stamp and the files it left, no git involved: <code>↷ nextpnr-xilinx @ 3fd7878 (binary + artix7 database) (already there, skipped)</code>, `↷ prjxray @ c9f02d8 (xc7frames2bit</p>
+<ul>
+<li>fasm2frames) (already there, skipped)<code>, </code>↷ slang.so @ 9676786 (built for Yosys 0.69+post) (already there, skipped)<code>, </code>Total: 3 s<code>. A chip database that went missing with the sources already pruned fetches and builds nextpnr-xilinx again, and prunes it again. An install interrupted during a build (Ctrl-C, sleep, a compiler error) is resumed by the next run with the checkout still there, and that run prunes it like a first run would (found by the independent review: the first version only pruned what the same run had fetched, so an interrupted install kept 637 MB and three </code>.git<code>for good). A</code>slang.so<code> built by hand with the manual's lines, which never write the installer's commit stamp, is load-tested, stamped and pinned instead of being cloned and compiled again (130 MB, 3 minutes); a hand checkout at another commit is named (</code>the checkout at ~/fpga/yosys-slang is at <commit>, not the pinned 9676786<code>) and the pinned plugin is built next to it. A Yosys upgrade still rebuilds the plugin in a side folder and replaces </code>slang.so<code> only once Yosys loads the new one. The manual's new section 3.7 lists what a by-hand chain can delete to land at the same size. The pages say the measured number (</code>about 0.3 GB on disk<code>, </code>237 MB measured on 7 October<code>), and that an install made before 7 October keeps its 1.5 GB until </code>dewfpga uninstall &amp;&amp; dewfpga install`.</li>
+</ul>
+<p><strong>Numbers.</strong> Clean install into an empty folder: 1543 MB → 237 MB in the closing run's second full run (the suite's <code>du</code> right after the install, log included; the first full run's <code>du</code> said 253 MB, and the integrator's install of the same morning measures 237 MB), <code>.git</code> folders 25 → 0, 415 s for the install, 3 s for the second run. The Homebrew side, which the pages' number never included, measured on this Mac: the eight packages the installer asks for are 237 MB (<a href="mailto:python@3.14">python@3.14</a> 87, cmake 71, yosys 50, eigen 11, openFPGALoader 10, Icarus Verilog 7, ninja and pkg-config under 1), and the 16 packages they pull in another 562 MB (boost 377, icu4c 84, tcl-tk 43, openssl 39). So a student's Mac gets about 0.25 GB in <code>~/fpga</code> and about 0.8 GB under Homebrew, plus the 51 MB agent SDK if they ask for it. The compiler did not change: the probe table of the closing run is byte-identical to #28-#29's (synthesis 108/133, all four stages 95/133, Vivado-supported probes passing all four stages 86/111, known gaps 25), and the fresh chain's blink <code>.fasm</code> equals the golden one.</p>
+<p><strong>Tests.</strong> Four new checks in the <code>FULL=1</code> section (listed checks 343 → 347): the clean install is under 1 GB (its MB printed under the PASS line), it leaves no <code>.git</code> at any depth, a second run skips every step in under 10 s with no <code> built</code> line, and <code>uninstall</code> removes the fresh folder whole. The size checks were run by the update's builder against the installer from before this update and fail there (1543 MB, 25 clones); against the new one they pass. The suite now also puts the tree's <code>.fpga_home</code> back after the clean install, which the install's step 7 overwrites. <code>shellcheck -S style</code> and <code>bash -n</code> on the new <code>install.sh</code> are clean. Not exercised end to end: the rebuild after a Yosys upgrade (same code path as the clean build, with the pruning after it) and a venv rebuilt after a Homebrew Python upgrade (prjxray keeps <code>setup.py</code> and <code>README.md</code> for that <code>pip install -e</code>).</p>
+<p><strong>Closing run (7 October, board unplugged).</strong> The first run: <code>passed 319, failed 1, known gaps 25</code>, and the one FAIL was not the product: <code>no personal paths</code> found <code>templates/__pycache__/mcp_setup.cpython-314.pyc</code>, left at 04:41 by a run of the MCP test without <code>-B</code> (its rollback test imports <code>mcp_setup.py</code>), carrying this Mac's home path, the same class of leftover #7's closing run hit. The test now sets <code>sys.dont_write_bytecode</code> like its two sibling suites, so a run without <code>-B</code> leaves nothing. The second run: <code>passed 320, failed 0, known gaps 25</code>, one PASS more than the first (the fixed check), its probe table byte-identical to the first run's and to #28-#29's. The clean install took 415 s in the first run (peak 811 MB) and printed a peak of 810 MB in the second; its second run took 3 s both times, and <code>find -name .git</code> over the live fresh folder the moment its last build ended found nothing (89 MB chipdb, 86 nextpnr-xilinx, 52 venv, 9 yosys-slang, 2 prjxray, 1 install.log: 237 MB). The clean install's <code>du</code> is the number above. The board check: <code>SKIP flash on the board: no board</code> (no FTDI device on the USB bus during either run). Mail suites: 9 suites, each exit 0 (activation SQL 142, SQL 187, mail flow 60, sender idempotency, lifecycle 112, usage 13, integration 8, pages 139, Chromium and WebKit 158; 0 failures). Site check: 112 pages, 2055 links, 0 failures.</p>
+<p><strong>Open.</strong></p>
+<ul>
+<li>An install from before 7 October keeps its clones (1.5 GB); the installer leaves it as it is, and the pages say the two commands that get the small one.</li>
+<li>The 51 MB for the optional agent SDK is the figure from before this update, not re-measured today (no <code>mcp-venv</code> on this Mac's <code>~/fpga</code>).</li>
+<li>The <code>.bit</code> of two installs differs by 2 bytes, the timestamp in its header; the frames are identical.</li>
+<li>On the skip path the installer trusts the stamps and does not load <code>slang.so</code> into Yosys again (<code>dewfpga check</code> does, every time it runs); a new pinned commit or a new <code>yosys -V</code> line still rebuilds.</li>
+<li>The rebuild's sources go to <code>~/fpga/yosys-slang/src.new</code>, inside the folder <code>uninstall</code> removes, so a rebuild that failed leaves nothing <code>uninstall</code> would miss.</li>
+<li>Every <code>install.sh</code> run links Homebrew's <code>bin/dewfpga</code> to the CLI that ran it and writes that tree's <code>.fpga_home</code>; the suite restores <code>.fpga_home</code>, the link is restored by hand after a run from a checkout.</li>
+<li>The three pruned checkouts' <code>.git</code> sat at depth 2, 4 and 4; the no-clone check looked two levels deep when the review read it and now looks at every depth (verified with <code>find</code> on both installs of 7 October: 0 and 25).</li>
+</ul>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/29/">#29 A failed build leaves no old bitstream, wrong pins are named, a quick save rebuilds</a><br>
+next: <a href="/dewfpga/patch-notes/31/">#31 A random-design generator checks the SystemVerilog DDCA teaches against its own simulation</a><br>
+<a href="/dewfpga/patch-notes/#30">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

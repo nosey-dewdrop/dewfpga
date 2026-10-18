@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#1 The CLI and the guide say the same thing: dewfpga patch notes</title>
+<meta name="description" content="dewfpga uninstall says what it removes, and removes only its own. It used to print removing: ~/fpga ~/.dewfpga &lt;link&gt; and then delete five entries inside ~/fpga, not the folder.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/1/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#1 The CLI and the guide say the same thing: dewfpga patch notes">
+<meta property="og:description" content="dewfpga uninstall says what it removes, and removes only its own. It used to print removing: ~/fpga ~/.dewfpga &lt;link&gt; and then delete five entries inside ~/fpga, not the folder.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/1/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#1 · The CLI and the guide say the same thing","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/1/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#1</span>24 September</p>
+  <h1>#1 · The CLI and the guide say the same thing</h1>
+<p><strong><code>dewfpga uninstall</code> says what it removes, and removes only its own.</strong> It used to print <code>removing: ~/fpga ~/.dewfpga &lt;link&gt;</code> and then delete five entries inside <code>~/fpga</code>, not the folder. It also deleted Homebrew's <code>dewfpga</code> link even when that link pointed to another copy of the CLI. Now it lists every path it deletes, touches the link only when the link points to itself, leaves anything else in <code>~/fpga</code> alone, and says <code>nothing to remove</code> when there is nothing. Tried on a fake install with a student project inside <code>~/fpga</code>: the project file survived, the real Homebrew link survived, a second run printed <code>nothing to remove</code>, and an empty folder was removed.</p>
+<p><strong>Version 1.2.0.</strong> The CLI had said 0.1.0 since 19 September. The patch number and <code>dewfpga --version</code> are now the same number.</p>
+<p><strong>The guide stopped contradicting itself.</strong></p>
+<ul>
+<li>Section 2 said two course-code problems "are handled for you". Only one is (the seven-segment port line); the others stop the build with the line and the fix.</li>
+<li>Section 7 said "one", then "two more", then listed six cases.</li>
+<li>Section 8 called it "the one case hit so far".</li>
+<li>The command list had no <code>--version</code>.</li>
+</ul>
+<p>Tried: writing the right count into section 7. Dropped it, because the list grows every time a new student repo turns up a new case. The text now says what each case does instead of how many there are. The HTML page and the PDF (12 pages) were rebuilt from the same source.</p>
+<p><strong>README.tr described rules that stopped being true on 21 September.</strong> It said the top module is chosen by its <code>.xdc</code> file, <code>sim</code> needs <code>&lt;top&gt;_tb.sv</code>, two <code>.sv</code> files in one folder is an error, and <code>dewfpga check</code> has six rows. The top now comes from the module hierarchy, the testbench is recognized by its content, file names are free, and <code>check</code> prints nine rows. README.tr is now a translation of the English README.</p>
+<p><strong>Disk space, measured.</strong></p>
+<ul>
+<li>After the one-line install, <code>~/fpga</code> holds 1.40 GB: nextpnr-xilinx 1.06 GB, prjxray 214 MB, the chip database 89 MB, the Python venv 52 MB.</li>
+<li>Homebrew packages add 235 MB.</li>
+<li>The home page said 1.76 GB, which is the by-hand path with full git clones.</li>
+<li>The home, why and Turkish pages now say 1.4 GB (1.76 GB by hand).</li>
+</ul>
+<p><strong>Tests.</strong> <code>test/run.sh</code>: 51 passed, 0 failed before the change (81 s) and 51 passed, 0 failed after. One test was renamed: "top found from xdc" is now "top found from the hierarchy", which is what it has checked since 21 September.</p>
+<p><strong>Not done here.</strong> The README still says "46 checks"; update #6 locks that number to the test suite.</p>
+<hr>
+<p class="mute small">next: <a href="/dewfpga/patch-notes/2/">#2 132 SystemVerilog probes run through the product, every stage checked</a><br>
+<a href="/dewfpga/patch-notes/#1">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

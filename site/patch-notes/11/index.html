@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#11 Five CLI steps and accurate Homebrew diagnosis: dewfpga patch notes</title>
+<meta name="description" content="The CLI page now explains the path from Homebrew to a blinking Basys3 in five steps. The guide relies on Homebrew&#x27;s normal Command Line Tools installation and retains the explicit xcode-select…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/11/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#11 Five CLI steps and accurate Homebrew diagnosis: dewfpga patch notes">
+<meta property="og:description" content="The CLI page now explains the path from Homebrew to a blinking Basys3 in five steps. The guide relies on Homebrew&#x27;s normal Command Line Tools installation and retains the explicit xcode-select…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/11/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#11 · Five CLI steps and accurate Homebrew diagnosis","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/11/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#11</span>3 October</p>
+  <h1>#11 · Five CLI steps and accurate Homebrew diagnosis</h1>
+<p>The CLI page now explains the path from Homebrew to a blinking Basys3 in five steps. The guide relies on Homebrew's normal Command Line Tools installation and retains the explicit <code>xcode-select</code> recovery command for a missing developer-tools check. Its top-module explanation now matches the CLI: hierarchy and a uniquely matching XDC can select a design; a file name alone does not silently select it. A design containing <code>$finish</code> is an error, not automatically a testbench. The existing standalone-package limitation is stated.</p>
+<p>Both the downloadable installer and <code>install.sh</code> distinguish a missing Homebrew installation, an Apple Silicon installation missing from PATH and an Intel Homebrew installation. They print the relevant next step before downloading the toolchain. An additional root check found that an Intel <code>brew</code> already on PATH bypassed the first implementation: that case now stops before executing it and explains the Apple Silicon path. Tests use executable sentinels to prove that none of those diagnostic branches invokes the discovered Homebrew binary.</p>
+<p>The final affected installer, security, static, privacy and documentation-count checks passed <strong>24, failed 0</strong>. <code>test/run.sh --list</code> now reports <strong>321 available checks</strong>; it is not a count of checks executed by that focused run. Independent review approved the original installer patch; the root's extra Intel-on-PATH cases passed for both entry points.</p>
+<p>At 320 pixels, the toolchain table previously widened the page to 384 pixels. It now scrolls inside its own wrapper, and the page stays 320 pixels wide. Chromium checks at 320, 390 and 1366 pixels find all five steps with no page overflow. Wrapping the unchanged desktop table produces <strong>0 pixel differences</strong> and identical table geometry in a controlled before/after capture. These are browser measurements, not physical-phone or board tests. The final commit's full CI remains a separate acceptance check.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/10/">#10 Patch notes on the site and working navigation hit areas</a><br>
+next: <a href="/dewfpga/patch-notes/12/">#12 Vivado projects and editor tasks that preserve user files</a><br>
+<a href="/dewfpga/patch-notes/#11">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

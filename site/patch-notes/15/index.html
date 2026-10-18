@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#15 MCP tools backed by the checked CLI: dewfpga patch notes</title>
+<meta name="description" content="dewfpga mcp exposes check, new, sim, bit, flash and explain_error over stdio. Build tools return the CLI&#x27;s structured result; protocol stdout stays clean. The offline catalog ships in the release.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/15/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#15 MCP tools backed by the checked CLI: dewfpga patch notes">
+<meta property="og:description" content="dewfpga mcp exposes check, new, sim, bit, flash and explain_error over stdio. Build tools return the CLI&#x27;s structured result; protocol stdout stays clean. The offline catalog ships in the release.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/15/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#15 · MCP tools backed by the checked CLI","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/15/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#15</span>3 October</p>
+  <h1>#15 · MCP tools backed by the checked CLI</h1>
+<p><code>dewfpga mcp</code> exposes <code>check</code>, <code>new</code>, <code>sim</code>, <code>bit</code>, <code>flash</code> and <code>explain_error</code> over stdio. Build tools return the CLI's structured result; protocol stdout stays clean. The offline catalog ships in the release. Installation creates a pinned, optional SDK environment with staged replacement and ownership-aware removal. No client configuration is registered automatically.</p>
+<p>Independent review reproduced unbounded output buffering, contradictory JSON accepted as success, cancellation leaving another process session alive, a missing ownership marker during environment creation, and uninstall racing an active install. The corrected server bounds capture, validates schema/type/status agreement and tracks observed descendant groups. Root integration also refuses the entire CLI uninstall before removing toolchain files while the SDK lock is held.</p>
+<p>The root's SDK-backed suite passed <strong>24 tests, 0 failures, 0 skips</strong>, including the real JSON CLI, protocol discovery, cancellation and the uninstall lock. The combined installer/uninstaller, JSON, MCP and static checks passed <strong>40/0</strong> before the extra CLI lock case was added; that case separately passed. Independent review also built and removed the real pinned SDK in a temporary FPGA_HOME, with foreign files retained. The unpacked release also served real SDK calls for new, sim and offline error explanation; check correctly reported its temporary home had no toolchain. Both site bundles passed <strong>104 pages, 0 failures</strong>. Remote CI requires the SDK instead of accepting skipped protocol tests. The first CI failed in the installer; the correction below passed remote CI. No physical board was programmed.</p>
+<p>Process-tree cleanup depends on <code>ps</code>. A daemon that reparents before observation and PID reuse remain limitations. Tool annotations describe effects; they are not an authorization enforcement mechanism. Clients must obtain user authorization for flash.</p>
+<h4 id="15-integration-correction--3-october">#15 integration correction · 3 October</h4>
+<p>The first remote CI run failed before verification: the optional MCP installation used an undefined <code>HERE</code> variable. Installation now resolves its repository path once before using it. The new offline whole-installer tests reproduce that failure with MCP enabled and check success, optional helper failure, and explicit skipping (<strong>3/3 passed</strong> after correction, <strong>2/3 failed</strong> before). The repeated-install test also checks exit status, and ShellCheck checks unassigned uppercase variables.</p>
+<p>The combined #14–#16 local run exposed a second regression: without Python on PATH, the new MCP removal hook prevented removal of a CLI-only installation. That path works again; existing SDK or lock entries cause an explicit refusal that preserves all files when ownership cannot be checked. Tests cover both an SDK directory and a dangling lock symlink.</p>
+<p>The initial full run was <strong>272 passed, 1 failed, 52 known gaps</strong>, with unchanged tested sources. After both corrections, the targeted static, installer, SDK-backed MCP and editor suites passed <strong>6 top-level checks, 0 failures</strong>. The corrected combined local tree (also containing pending #16 guidance) passed <strong>273/0 with 52 known gaps</strong> in 18 minutes; tested source hashes were unchanged. Remote CI for the correction passed, including clean macOS installation, the full suite and Ubuntu browser tests. The earlier failed runs remain recorded as failures.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/14/">#14 Machine-readable CLI results</a><br>
+next: <a href="/dewfpga/patch-notes/16/">#16 Project instructions and a measured repair experiment</a><br>
+<a href="/dewfpga/patch-notes/#15">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

@@ -40,7 +40,7 @@
 <p><strong>Numbers.</strong> Vivado-supported probes passing all four stages: 59/111 → 86/111; all four stages 64/133 → 95/133; synthesis 108/133 → 108/133. Known gaps: 52 → 25. Silent wrongs (bitstream built, netlist check fails): 3 → 3, the same rows (<code>35</code>, <code>74</code>, <code>97</code>). Closed in simulation: 31 probes (27 of them Vivado-supported). Not closed: <code>35</code> (no simulation model of MMCME2_BASE in yosys' cell library), <code>51c</code> (the 2-D typedef scan stops before iverilog), <code>60</code> (a <code>ref</code> argument, refused on purpose). Blink's simulation is byte-identical and as fast as before; a design on the second path takes about 3 s instead of failing.</p>
 <p><strong>Tests.</strong> 6 new checks; each turns red when its rule is removed: the second path passes an interface design; a <code>ref</code> design is refused, not passed; a testbench iverilog cannot read keeps the old error; a design both readers refuse prints both; a testbench that sets parameters gets the new error at its line; blink's output is unchanged.</p>
 <hr>
-<p class="mute small">previous: <a href="/dewfpga/patch-notes/23/">#23 Prepare simulator discovery and enforce its browser checks</a><br>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/26/">#26 Optional accounts with local session handling and scoped deletion</a><br>
 next: <a href="/dewfpga/patch-notes/29/">#29 A failed build leaves no old bitstream, wrong pins are named, a quick save rebuilds</a><br>
 <a href="/dewfpga/patch-notes/#28">This entry in the full list</a><br>
 The commands this entry names: <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a><br>

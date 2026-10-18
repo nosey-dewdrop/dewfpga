@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>Your own project, from editor to board: dewfpga patch notes</title>
+<meta name="description" content="The short CLI guide now starts with the user&#x27;s own design and pin file, followed by dewfpga flash, which builds and loads the board. VS Code&#x27;s task setup and run action are explicit.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/own-project-editor-to-board/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Your own project, from editor to board: dewfpga patch notes">
+<meta property="og:description" content="The short CLI guide now starts with the user&#x27;s own design and pin file, followed by dewfpga flash, which builds and loads the board. VS Code&#x27;s task setup and run action are explicit.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/own-project-editor-to-board/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"Your own project, from editor to board","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/own-project-editor-to-board/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">local candidate</span>8 October</p>
+  <h1>Your own project, from editor to board</h1>
+<p>The short CLI guide now starts with the user's own design and pin file, followed by <code>dewfpga flash</code>, which builds and loads the board. VS Code's task setup and run action are explicit. Local testbench simulation and browser simulation have their own paths; neither is presented as a prerequisite for programming the board. The English and Turkish README introductions follow the same route. Desktop and mobile layout checks passed, and the source-site check found no broken links across 118 pages. These are local changes, not a published installation test.</p>
+<p>The browser simulator previously discarded the source numbering of ports. Correct pin files for ascending, nonzero and negative ranges could be rejected or connected to the wrong internal bit. The candidate keeps source indices through pin binding, board labels and code-to-board hover. Its focused regression uses a new circuit with renamed ports, a separately computed truth table, actual switch clicks and LED rendering. Both Chromium and WebKit passed the focused checks; changing XOR to AND changes the displayed result, and missing or conflicting pins stop the run. The existing Chromium board checks also passed. The native reader's <code>single_bit_vector</code> net attribute is now preserved too: a known <code>[0:0]</code> port requires <code>[0]</code>, and the bare-name negative control passes. The slang reader omits that attribute; unmarked width-one ports retain the browser's existing bare-name / <code>[0]</code> compatibility, so this is not a claim of universal pin-alias parity. Full-suite closure is recorded below; physical LED observation remains pending. A separate own-project SRAM upload completed successfully.</p>
+<p>Separately, three small projects outside the lab corpus express the same function with a <code>for</code> loop, a statically bounded <code>while</code> loop and a reduction expression. Each passed CLI simulation, bitstream generation and the generated netlist's independent 16-row truth table; their source files were unchanged. This proves these examples, not all SystemVerilog. Two previously recorded random designs reproduced behavior mismatches even though the measurement runner exited successfully. Focused fixes now pass: repeated products retain both terms, and an unwritten register is initialized before optimization can erase it. Six arithmetic circuits and four startup circuits match independently computed expectations in RTL simulation and synthesized netlists. The original failing designs also match after the fixes. The earlier #35 assessment that both remaining cases were unrelated to startup was incorrect for seed 214. DSP multipliers remain; surrounding adders and registers use more LUT/FF resources. These checks do not constitute physical arithmetic measurements or a new full random-design campaign.</p>
+<p>The CLI now compiles compatibility-normalized copies instead of rewriting the user's saved source. Inherited port directions and unnamed instances continue to build; successful and failing builds preserve source bytes, diagnostics retain the original file and line, and editing a source or included header changes the next result. The direct Makefile path is covered by an actual forced compile as well.</p>
+<p>An updated build recipe or checker now invalidates cached simulation and synthesis outputs. Previously, the fixed chain could call a known-wrong old bitstream “up to date.” The regression preserves file timestamps while changing tool content, then checks both the necessary rebuild and subsequent cache reuse.</p>
+<p>A module header may import packages before its port list. Those import semicolons previously made the scanner classify a real design as a testbench and select its child as top. The CLI now finds the intended design and preserves original line locations through normalization. The browser's own-project acceptance uses this form rather than changing the user's code into an easier example.</p>
+<p>The complete Chromium suite passed in 359.7 seconds with unchanged source hashes, including the new own-project journey and one-bit-vector negative check. Import exclusion notices now remain visible after the automatic compile. The full WebKit attempt reached a new test assumption: WebKit does not deliver hidden <code>.Xil</code> files to the application. The test now checks the actual FileList; the corrected journey and the remaining hardware-validation stage passed separately. Earlier passing stages were not unnecessarily repeated.</p>
+<p>The complete CLI run recorded 332 passes, eight failures and 21 known gaps. The original failure record is retained. Targeted follow-ups closed all eight failures: old PATH/normalizer test doubles, a missing test SDK, an equivalence reader that needed the same lexical source preparation and language mode as the product, and outdated probe expectations. The equivalence check still compares RTL with a separately synthesized netlist; all 54 controls passed, including 27 deliberately wrong netlists that were still rejected. The full 148-row record plus six targeted replacement rows has 129 ordinary outcomes and 19 known gaps, with 114 passing all four stages. This is a reconciled record, not a second full run. Probe 98 still has only its netlist testbench check because its independent equivalence bench cannot compile. Missing MMCM/BRAM models and a warned latch race remain explicit limits.</p>
+<p>The final package was installed in an isolated directory and built the actual browser-downloaded project. Real Basys3 SRAM programming passed, including restoring the own-project parity circuit after the suite's blink checks. Physical LED observation and an actual VS Code GUI run remain unverified; an isolated extension and task installation is not substituted for that GUI observation. Nothing here claims a published deployment or universal SystemVerilog support.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/build-without-device-file-redirection/">Build without device-file output redirection</a><br>
+next: <a href="/dewfpga/patch-notes/empty-folder-misspelled-endmodule/">An empty folder in VS Code, and a misspelled endmodule</a><br>
+<a href="/dewfpga/patch-notes/">This entry in the full list</a><br>
+The commands this entry names: <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

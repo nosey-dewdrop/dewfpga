@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>#7 Safer installation and reproducible simulator distribution: dewfpga patch notes</title>
+<meta name="description" content="The installer checks the destination before replacing it. HOME, its parents and aliases, the filesystem root, Git checkouts, unreadable directories and unrelated nonempty folders are refused.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/patch-notes/7/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="#7 Safer installation and reproducible simulator distribution: dewfpga patch notes">
+<meta property="og:description" content="The installer checks the destination before replacing it. HOME, its parents and aliases, the filesystem root, Git checkouts, unreadable directories and unrelated nonempty folders are refused.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/patch-notes/7/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"#7 · Safer installation and reproducible simulator distribution","url":"https://nosey-dewdrop.github.io/dewfpga/patch-notes/7/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/" aria-current="page">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/patch-notes/">patch notes</a> · <span class="step">#7</span>3 October</p>
+  <h1>#7 · Safer installation and reproducible simulator distribution</h1>
+<p><strong>The installer checks the destination before replacing it.</strong> HOME, its parents and aliases, the filesystem root, Git checkouts, unreadable directories and unrelated nonempty folders are refused. An update reserves a private backup beside the destination and restores the previous installation if moving the new copy fails. If restoration or cleanup is blocked, the error names the retained backup. A failed first installation removes its partial copy when possible.</p>
+<p><strong>Uninstall checks and removes the same physical directory.</strong> A path containing a symbolic link followed by <code>..</code> previously passed a check of one directory and removed entries in another. The reproduced scratch-HOME case now exits with <code>ERROR [fpga-home-unsafe]</code> and keeps both the home files and the decoy directory. <code>CDPATH</code> no longer redirects a relative installation path.</p>
+<p><strong>Only tracked files enter the release package and static site.</strong> <code>scripts/package.py</code> stages tracked package inputs and rejects symbolic links. CI and the mirror copy tracked site and project-template files. The mirror refuses uncommitted tracked changes and untracked files in Vite's public directory, including ignored dotfiles. Its temporary Vercel state is removed on failure as well as success. Fixtures proved an untracked template file entered the old npm package and is excluded by the new packaging command.</p>
+<p><strong>The simulator ships its license files.</strong> Its footer links to the actual MIT license, Icarus GPL text and generated third-party notices in the built distribution. The inventory identifies JointJS as MPL-2.0 and distinguishes installed dependencies from confirmed bundled code. The Icarus recipe pins a full source commit and applies the required JavaScript compatibility edit automatically. A clean rebuild with Emscripten 6.0.2-git reproduced all four shipped files byte-for-byte; <code>node sim/src/tb/wasm/build/smoke.mjs</code> checks compilation, includes, counter output, plusargs, VCD output and rejection of invalid source. Hashes and commands are in the build README.</p>
+<p><strong>Validation and limits.</strong> The first full local run passed 258 checks, failed 0, with 52 known compiler gaps. After the additional security fixes, the second full run passed 262 and failed 1: the personal-path scan found a local Python bytecode cache. All 133 probe outcomes were unchanged (108 synthesize, 64 pass all four stages, 59/111 Vivado-supported probes pass all four). After removing that cache and isolating two new uninstall tests from the real Homebrew link, the affected security, static, count and privacy checks passed <strong>35, failed 0</strong>. The verification intentionally pointed the real CLI link at the tested checkout and confirmed it survived. <code>--list</code> reports 319 available checks; that is not the number executed on this machine. A builder's initial mutation claim was rejected because its fixture setup was absent; the independent corrected run passed 15 on the original and failed the intended check on the mutant. A physical Basys3 test, this commit's remote CI and deployment are not claimed by these local results.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/patch-notes/6/">#6 The CLI&#x27;s untested paths get checks, one number for the count, a test that reads the bitstream, the board test ready for the board</a><br>
+next: <a href="/dewfpga/patch-notes/8/">#8 Browser tests and checks before publishing</a><br>
+<a href="/dewfpga/patch-notes/#7">This entry in the full list</a><br>
+Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/patch-notes/">all patch notes</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>
