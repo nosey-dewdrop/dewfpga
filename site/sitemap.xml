@@ -37,7 +37,13 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/docs/limits/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/docs/one-line-install/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/docs/project-folder/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/docs/vs-code/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/docs/yosys-slang/</loc>

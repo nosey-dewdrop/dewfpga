@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>How do you install it in one line? CS223 on a Mac without Vivado, section 2</title>
+<meta name="description" content="3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of compiling), 1.4…">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/one-line-install/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How do you install it in one line? CS223 on a Mac without Vivado, section 2">
+<meta property="og:description" content="3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of compiling), 1.4…">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/one-line-install/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"How do you install it in one line?","url":"https://nosey-dewdrop.github.io/dewfpga/docs/one-line-install/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/docs/">the guide</a> · <span class="step">2</span>How do you run CS223 labs on a Mac without Vivado?</p>
+  <h1>How do you install it in one line?</h1>
+<pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash</code></pre>
+<p>3 min 37 s to 4 min 17 s over three runs on the tested machine, plus about 4 minutes for the yosys-slang step added on 27 September (measured on its own: 70 s of clone, 2 min 53 s of compiling), 1.4 GB downloaded, about 0.3 GB kept on disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB), about 1 GB while it builds, the installer asks for 2 GB free; on slow wifi it takes longer, and it prints progress the whole time. It never asks for a password. It puts the <code>dewfpga</code> command into <code>~/.dewfpga</code> (its sha256 is compared with <code>nosey-dewdrop.github.io/dewfpga/dewfpga.tgz.sha256</code>, so a broken download stops here), links it into Homebrew's bin, installs Yosys, openFPGALoader, Icarus Verilog and the build tools of section 3.1 through Homebrew, and builds nextpnr-xilinx, prjxray and the yosys-slang plugin (section 3.6) into <code>~/fpga</code> at the three commits in section 9. Nothing touches your system Python. The last lines it prints:</p>
+<pre><code>all good.
+
+Total: 217 s. Log: /Users/you/fpga/install.log
+Next:  dewfpga new blink &amp;&amp; cd blink &amp;&amp; dewfpga flash</code></pre>
+<p>To read the script before running it:</p>
+<pre class="bash"><code>curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install -o install.sh
+code install.sh      # read it, then:
+bash install.sh</code></pre>
+<p>Check that every piece is there:</p>
+<pre class="bash"><code>dewfpga check</code></pre>
+<pre><code>dewfpga check  (FPGA_HOME=/Users/you/fpga)
+  ✓ yosys            /opt/homebrew/bin/yosys
+  ✓ yosys-slang      /Users/you/fpga/yosys-slang/build/slang.so
+  ✓ iverilog         /opt/homebrew/bin/iverilog
+  ✓ openFPGALoader   /opt/homebrew/bin/openFPGALoader
+  ✓ nextpnr-xilinx   /Users/you/fpga/nextpnr-xilinx/build/nextpnr-xilinx
+  ✓ xc7frames2bit    /Users/you/fpga/prjxray/build/tools/xc7frames2bit
+  ✓ fasm2frames      /Users/you/fpga/prjxray/utils/fasm2frames.py
+  ✓ chipdb           /Users/you/fpga/chipdb/xc7a35t.bin
+  ✓ venv             /Users/you/fpga/venv/bin/python
+  ✓ python pkgs      fasm prjxray pyyaml textx simplejson intervaltree
+all good.</code></pre>
+<p>A red <code>✗</code> names the missing piece: run the curl line again (it is the same as <code>dewfpga install</code>), it skips what is done. <code>dewfpga: command not found</code> has two causes: the Homebrew "Next steps" lines from section 1 were not pasted (the installer says so, <code>Homebrew is installed (...) but not on your PATH</code>, and prints the line to paste), or the installer stopped before its last line; scroll up to the first <code>ERROR:</code> line and look it up on the errors page.</p>
+<p>Now plug the Basys3 into the Mac with the USB cable (the PROG port, next to the power switch) and flip the power switch on. Make the example project and flash it:</p>
+<pre class="bash"><code>dewfpga new blink    # prints: blink/ ready:  cd blink &amp;&amp; dewfpga flash    (VS Code: ⌘⇧B)
+cd blink
+dewfpga sim          # simulation
+dewfpga bit          # .sv -&gt; .bit
+dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is missing or older than the .sv</code></pre>
+<p>What each one prints when it works. <code>dewfpga sim</code>:</p>
+<pre><code>VCD info: dumpfile blink.vcd opened for output.
+PASS: 3 checks (see the waveform for the toggle)
+blink_tb.sv:35: $finish called at 200000 (1ps)</code></pre>
+<p><code>dewfpga bit</code>, three lines: the pin check, place and route, the bitstream. The full place-and-route log is in <code>blink.log</code>.</p>
+<pre><code>xdc ok: 33 ports, all mapped.
+pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
+blink.bit  2.2 MB</code></pre>
+<p><code>dewfpga flash</code>:</p>
+<pre><code>Jtag frequency : requested 6.00MHz    -&gt; real 6.00MHz
+Open file DONE
+Parse file DONE
+load program
+Load SRAM: [==================================================] 100.00%
+
+Done
+Shift IR 35
+ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
+<p><code>done 1</code> means the chip accepted the design. Flip switch 0 up (SW0, the rightmost of the 16 switches): LED 15 (LD15, leftmost) lights and LED 0 (LD0, rightmost, just above SW0) blinks once a second. The design lives in SRAM, so a power cycle clears it; flash again.</p>
+<p>If it prints <code>ERROR: board not found. Is the USB (PROG port) plugged in and the power switch ON?</code> instead, the Mac does not see the board: power switch, PROG port, a charge-only cable, the adapter, or the JP2 jumper. The <a href="https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/">board not found</a> page goes through them in order.</p>
+<p>The rules <code>dewfpga</code> follows in a folder:</p>
+<ul>
+<li>Every <code>.sv</code> and <code>.v</code> in the folder is handed to the tools, so submodules can live in their own files, and a file can be named anything: <code>lab5.sv</code> may hold <code>module top_design</code>. A file that holds no module (a package, an interface, or typedefs at file scope, alone in their file) is read before the files that hold a module, each after the files that declare a name it uses (a package before the files that name it, a typedef file before the interface that uses the type; alphabetical order would hand <code>iface.sv</code> before <code>types.sv</code> and iverilog would stop at the first <code>nib_t</code>), and the files are one compilation unit for both readers, as Vivado reads the files of one library (UG901 Ch.10, Compilation Units). A file that another file <code>includes is read through the </code>include only (handing it too would declare the package twice). A testbench has no ports and instantiates the design. <code>$finish</code> or <code>$stop</code> in a design module is an error; keep them in the testbench.</li>
+<li>In a flat folder, hierarchy and a unique matching <code>.xdc</code> select the top. If several modules qualify, name one: <code>dewfpga bit lab4</code> (module or source filename). A module's own filename alone does not select it. <code>dewfpga tops</code> lists candidates without changing files.</li>
+<li>Inside a Vivado project, the <code>.xpr</code> chooses the enabled design, constraint and simulation sets and their top modules. A command inside its <code>.srcs</code> subfolders runs at the project root; outputs go beside the <code>.xpr</code>. Without an <code>.xpr</code>, a <code>.srcs</code> tree with <code>sources_1</code>, <code>constrs_1</code> and <code>sim_1</code> is supported. Missing design files stop the build; a problem confined to the simulation set stops <code>sim</code>. Multiple projects or ambiguous active sets produce an error. <code>.v</code> files retain Verilog-2005 keywords, and local include directories are passed to both readers. IP Catalog and Block Design generation are not supported.</li>
+<li>The pin file is <code>&lt;top&gt;.xdc</code>, or the only <code>.xdc</code> in the folder. Pins in it that the design does not use are ignored, so a fully uncommented <code>Basys3_Master.xdc</code> is fine.</li>
+<li><code>dewfpga sim</code> needs a testbench that instantiates the top; <code>&lt;top&gt;_tb.sv</code> is the usual name but any name works. <code>bit</code> and <code>flash</code> do not need one. A testbench that never reaches <code>$finish</code> is stopped after 120 s with an error; <code>SIM_TIMEOUT=600 dewfpga sim</code> waits longer. <code>$stop</code> ends the run like <code>$finish</code>. <code>flash</code> builds the <code>.bit</code> first if it is missing or older than the sources, so <code>dewfpga flash</code> alone is enough.</li>
+<li>Code that Vivado lets through and Yosys refuses: the course's <code>SevSeg_4digit.sv</code> port line (<code>output [6:0]seg, logic dp</code>) gets its direction written in by <code>bit</code>, with a note naming the line. Some other cases stop with the line and the fix, such as an instance without a name (<code>clk_div(clk, out);</code>) or a latch in an <code>always_comb</code>. Others stop with no line, or with advice that does not fit, and some build a bitstream that does not do what the code says, with no error. Section 7 lists what the course's files and old student repos hit; section 8 links the full measurement.</li>
+<li><code>dewfpga bit</code> writes no bitstream when timing is not met, and synthesis failures remove the previous <code>.bit</code>. A failure during XDC validation can still leave an old <code>.bit</code> on disk; a file being present does not prove that the latest build succeeded. Without a <code>create_clock</code> in the XDC every clock is checked at 100 MHz, a divided one too, which Vivado does not time; a multiplier that Yosys puts in a DSP48E1 with a register inside is not timed at all (nextpnr-xilinx). When nothing changed, <code>bit</code> prints one line saying so. <code>$display</code> in synthesizable code is dropped, as Vivado does. <code>dewfpga sim</code> exits with an error when the testbench prints <code>$error</code> or <code>$fatal</code>, so a red run is visible.</li>
+<li><code>bit</code> leaves its working files next to the sources (<code>.json</code>, <code>.fasm</code>, <code>.frames</code>, <code>.log</code>, <code>_routed.json</code>), <code>sim</code> leaves <code>&lt;top&gt;_sim</code>, <code>&lt;top&gt;_sim.out</code> and <code>&lt;top&gt;.vcd</code>, <code>flash</code> leaves <code>&lt;top&gt;_flash.out</code>. <code>dewfpga clean</code> removes all of them and the <code>.bit</code>; the <code>.sv</code> and <code>.xdc</code> stay. Run it before you hand a lab in.</li>
+</ul>
+<pre><code>dewfpga install                     install the toolchain (safe to re-run)
+dewfpga check                       is every piece in place
+dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
+dewfpga tops                        list top candidates without writing files
+dewfpga vscode [--remove]           set up or remove the editor integration
+dewfpga new &lt;dir&gt;                   blink example with a VS Code task (Cmd Shift B = flash)
+dewfpga uninstall                   remove what install built in ~/fpga, the CLI and its link;
+                                    your files in ~/fpga and the brew packages stay
+dewfpga --version</code></pre>
+<p>Continue with <a href="/dewfpga/docs/your-own-lab/">section 5</a>.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/docs/before-you-start/">1 What do you need before you start?</a><br>
+next: <a href="/dewfpga/docs/build-by-hand/">3 How do you build the chain by hand?</a><br>
+<a href="/dewfpga/docs/#2-how-do-you-install-it-in-one-line">This section in the whole guide</a></p>
+<p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

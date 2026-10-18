@@ -49,8 +49,14 @@
 <li>A file Vivado wrote after synthesis (<code>\&lt;const0&gt;</code>, <code>keep_hierarchy</code>) copied in as if it were source: the build stops, names the file and says to delete it. The same check also stops the course's netlist-form modules above, and a module with UG901's own <code>(* keep_hierarchy = "yes" *)</code> attribute.</li>
 </ul>
 <p>What else was tried: four modules from old student repos, together in one design. An FSM with <code>typedef enum</code>, a 16x8 RAM, a debouncer and the seven-segment driver above: 136 LUTs, 48 flip-flops, timing passes at 154.70 MHz against the 100 MHz clock, bitstream in 4.5 seconds. Language features in those files that both Icarus (<code>sim</code>) and Yosys (<code>bit</code>) accepted: <code>parameter</code>, <code>generate</code>, <code>struct packed</code>, <code>$clog2</code>, <code>unique case</code>, packed arrays, <code>interface</code> with <code>modport</code> (Icarus 13 accepts one only while no module port is typed with it; a port like <code>sum_if.prod bus</code> fails <code>sim</code> and builds in <code>bit</code>). A submodule file named differently from its module, Turkish characters in comments, and spaces in the folder path went through too. A file saved as "UTF-8 with BOM" stops the build, with the command that removes the mark. That is four files, not the whole course.</p>
+<h2 id="7-which-errors-does-the-cli-stop-with-and-what-do-they-mean">7. Which errors does the CLI stop with, and what do they mean?</h2>
+<p>When <code>sim</code>, <code>bit</code> or <code>flash</code> stops, it prints one message in one format:</p>
+<pre><code>blink.sv:12: ERROR [code]: what is wrong, in one line
+  Fix: what to change
+  https://nosey-dewdrop.github.io/dewfpga/errors/code/</code></pre>
+<p><code>blink.sv:12</code> is the line in your file, not in a copy the tool made. <code>code</code> names the entry in the error catalog; the page behind the address holds what you saw, why it happens, the fix and an example line. Warnings and notes carry the same code in the same brackets, without the stop. The catalog, every code on one page: <a href="https://nosey-dewdrop.github.io/dewfpga/errors/">Which error did you get?</a> It is generated from one file, <code>docs/errors.md</code>, by <code>docs/errors-build.sh</code>.</p>
 <hr>
-<p class="mute small">previous: <a href="/dewfpga/docs/your-own-lab/">5 How do you use it for your own lab?</a><br>
+<p class="mute small">previous: <a href="/dewfpga/docs/vs-code/">6 How do you set up VS Code?</a><br>
 next: <a href="/dewfpga/docs/limits/">8 What can it not do?</a><br>
 <a href="/dewfpga/docs/#71-which-course-file-breaks">This section in the whole guide</a><br>
 Every SystemVerilog construct measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the probes, stage by stage</a></p>

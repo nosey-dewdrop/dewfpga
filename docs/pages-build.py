@@ -55,12 +55,13 @@ NOTE_SLUGS = {
 # thin entries printed together on one page: folder -> their numbers or headings
 NOTE_MERGE = {}
 # guide sections. A section of THIN words or more gets its own page, in the folder named here; a
-# shorter subsection is printed on its parent's page, a shorter section stays in the whole guide only.
-GUIDE_LEFT_OUT = {"2": "the one-line install", "6": "VS Code, set up by the CLI", "7": "the CLI's messages"}
+# shorter subsection is printed on its parent's page; a shorter section is printed at the end of its
+# first subsection's page when that has one (7 on 7.1's), else it stays in the whole guide only.
+GUIDE_LEFT_OUT = {}
 GUIDE_SLUGS = {
-    "1": "before-you-start", "3": "build-by-hand", "3.1": "homebrew-packages", "3.2": "python-venv",
+    "1": "before-you-start", "2": "one-line-install", "3": "build-by-hand", "3.1": "homebrew-packages", "3.2": "python-venv",
     "3.3": "nextpnr-xilinx", "3.4": "chip-database", "3.5": "prjxray", "3.6": "yosys-slang",
-    "3.7": "after-the-builds", "4": "project-folder", "5": "your-own-lab", "7.1": "course-files-that-break",
+    "3.7": "after-the-builds", "4": "project-folder", "5": "your-own-lab", "6": "vs-code", "7": "cli-errors", "7.1": "course-files-that-break",
     "8": "limits", "9": "tested-versions",
 }
 GUIDE_RELATED = {"7.1": "sv", "8": "sv"}
@@ -332,8 +333,17 @@ def cmd_words(line):
 
 def cli_lines():
     """the one-line description of each command on the cli page (site/cli/index.html, its command list)"""
-    page = html.unescape((SITE / "cli/index.html").read_text())
+    page = html.unescape(re.sub(r"<[^>]+>", "", (SITE / "cli/index.html").read_text()))
     return {m.group(1): m.group(2).strip() for m in re.finditer(r"^dewfpga (\S+)(?: \S+)?\s{2,}(.+)$", page, re.M)}
+
+
+def help_line(entry):
+    """what the help says a command does: its description column and the lines under it, up to the
+    first '(', '.' or ':'"""
+    first, *rest = entry.split("\n")
+    cols = re.split(r"\s{2,}", first.strip(), maxsplit=1)
+    text = " ".join([cols[1] if len(cols) > 1 else ""] + [l.strip() for l in rest]).strip()
+    return re.split(r"\s*\(|\.(?=\s|$)|:\s", text, maxsplit=1)[0].strip().rstrip(",")
 
 
 def cmd_re(c):
@@ -606,6 +616,10 @@ def guide_pages(secs):
         if n not in GUIDE_SLUGS:
             sys.exit(f"docs/manual-setup.md: section {n} has {THIN} words or more; give it a folder in GUIDE_SLUGS")
     folded = {n: parent(n) for n in secs if n not in own and parent(n) in own}
+    for n in secs:   # a short section whose first subsection has a page: printed at that page's end
+        kids = [k for k in secs if parent(k) == n]
+        if n not in own and n not in GUIDE_LEFT_OUT and kids and kids[0] in own:
+            folded[n] = kids[0]
     return [(n, GUIDE_SLUGS[n]) for n in own], folded
 
 
@@ -632,6 +646,8 @@ def build_guide(types, written):
             elif n in slug:   # its own page: the heading, its first sentence and the link
                 first = re.split(r"(?<=\.)\s", secs[n][2].strip(), maxsplit=1)[0]
                 md += f"\n\n## {n} {secs[n][1]}\n\n{first} On its own page: [{n} {secs[n][1]}](/dewfpga/docs/{slug[n]}/)."
+        for n in [n for n in secs if folded.get(n) == num and n == num.split(".")[0]]:
+            md += f"\n\n## {n}. {secs[n][1]}\n\n{secs[n][2]}"
         md = re.sub(r"\]\(#([^)]+)\)", lambda m: f"]({anchor_href(m.group(1))})", md)
         bodyhtml = pandoc(md, "gfm-tex_math_dollars")
         bodyhtml = bodyhtml.replace('<pre class="copy"><code>', '<pre data-copy="1"><code>')
@@ -666,7 +682,7 @@ def build_guide(types, written):
         written.append((SITE / "docs" / folder / "index.html", title, heading, desc))
     stale = sorted(d.name for d in (SITE / "docs").iterdir() if d.is_dir() and d.name not in set(slug.values()))
     return (f"site/docs: {len(pages)} section pages; on their parent's page: {' '.join(folded)}; "
-            f"left out: {' '.join(sorted(GUIDE_LEFT_OUT))} (the CLI)"
+            f"left out: {' '.join(sorted(GUIDE_LEFT_OUT)) or 'none'}"
             + "".join(f"; {n} under {THIN} words" for n in secs if n not in GUIDE_LEFT_OUT and n not in slug and n not in folded)
             + (f"; folders without a section: {' '.join(stale)}" if stale else ""))
 
@@ -675,11 +691,18 @@ def guide_contents():
     """the whole guide's contents list links each section that has a page; docs/build.sh calls this"""
     path = SITE / "docs/index.html"
     page, ids, slug = path.read_text(), guide_ids(), dict(guide_pages(guide_sections())[0])
+    folded = guide_pages(guide_sections())[1]
     for num, hid in ids.items():
-        if num in slug:
+        if num in folded and "." not in num:
+            href, label = f"/dewfpga/docs/{slug[folded[num]]}/#{hid}", f"on the {folded[num]} page"
+        elif num in slug:
+            href, label = f"/dewfpga/docs/{slug[num]}/", "its own page"
+        else:
+            continue
+        if True:
             # grey on the page, hidden in the PDF (docs/pdf.sh hides .mute); [^<]* keeps a second run from adding it twice
             li = re.compile(r'(<li><a href="#' + re.escape(hid) + r'">[^<]*</a>)(</li>)')
-            page = li.sub(lambda m: m.group(1) + f'<span class="mute"> · <a href="/dewfpga/docs/{slug[num]}/">its own page</a></span>' + m.group(2), page, count=1)
+            page = li.sub(lambda m: m.group(1) + f'<span class="mute"> · <a href="{href}">{label}</a></span>' + m.group(2), page, count=1)
     write(path, page)
 
 
@@ -808,12 +831,13 @@ def build_cli(types, written):
     secs = guide_sections()
     for i, cmd in enumerate(cmds):
         url = f"{HOST}cli/{cmd}/"
-        one = lines.get(cmd) or re.split(r"\s{2,}", helps[cmd].split("\n")[0].strip(), maxsplit=1)[-1]
+        one = lines.get(cmd) or help_line(helps[cmd])
         title = f"dewfpga {cmd}: {one}"
         rb = cmd_blocks(cmd, "readme", readme, types)
-        gb = [(n, b) for n in secs for b in cmd_blocks(cmd, "guide", secs[n][2], types)]
+        gk = [(n, k, b) for n in secs for k, b in cmd_blocks(cmd, "guide", secs[n][2], types)]
+        gb = [(n, b) for n, _, b in gk]
         ab = cmd_blocks(cmd, "agent", agent, types)
-        own = words(helps[cmd]) + sum(words(b) for _, b in rb + ab) + sum(words(b[1]) for _, b in gb)
+        own = words(helps[cmd]) + sum(words(b) for _, b in rb + ab) + sum(words(b) for _, b in gb)
         if own < THIN:
             sys.exit(f"cli: dewfpga {cmd} has {own} words of its own text; name it in CLI_NO_PAGE or give it more")
         p_body = "<h2 id=\"help\">What does its help text say?</h2>\n"
@@ -838,8 +862,10 @@ def build_cli(types, written):
                            " and <a href=\"/dewfpga/agents/mcp/\">the MCP server</a>.</p>\n")
         p_body += errors_list(cmd, types) + notes_list(cmd, types)
         p_body = p_body.replace('<pre class="copy"><code>', '<pre data-copy="1"><code>')
-        firsts = [plain(m) for m in re.findall(r"<p>(.*?)</p>", p_body, re.S)[:1]]
-        desc = summary(f"dewfpga {cmd}: {one}. " + (firsts[0] if firsts else ""))
+        said = re.compile(cmd_re(cmd).pattern + (r"|\bRun\b" if cmd == "run" else ""))
+        named = [x for kind, b in rb + [(k, b) for _, k, b in gk] if kind == "prose"
+                 for x in re.split(r"(?<=[.!?])\s+", plain(pandoc(b))) if said.search(x) and len(x) > 30]
+        desc = summary(f"dewfpga {cmd}: {one}. " + (named[0] if named else ""), 230)
         p = head(title, desc, url, "c-cli", article(f"dewfpga {cmd}", url))
         p += "<main class=\"wrap docs\">\n"
         p += f"  <p class=\"eyebrow\"><a href=\"/dewfpga/cli/\">cli</a> · <span class=\"step\">{esc(cmd)}</span>{esc(one)}</p>\n"

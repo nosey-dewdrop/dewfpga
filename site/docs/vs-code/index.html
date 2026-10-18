@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>How do you set up VS Code? CS223 on a Mac without Vivado, section 6</title>
+<meta name="description" content="Run dewfpga vscode to install the companion extension and user tasks in supported local VS Code profiles.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/docs/vs-code/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="How do you set up VS Code? CS223 on a Mac without Vivado, section 6">
+<meta property="og:description" content="Run dewfpga vscode to install the companion extension and user tasks in supported local VS Code profiles.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/docs/vs-code/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"How do you set up VS Code?","url":"https://nosey-dewdrop.github.io/dewfpga/docs/vs-code/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/docs/">the guide</a> · <span class="step">6</span>How do you run CS223 labs on a Mac without Vivado?</p>
+  <h1>How do you set up VS Code?</h1>
+<p>Run <code>dewfpga vscode</code> to install the companion extension and user tasks in supported local VS Code profiles. Existing JSONC comments, unrelated tasks and shortcuts are preserved. <code>dewfpga vscode --remove</code> removes only unchanged entries recorded as dewfpga's; user edits stay. A missing editor or optional setup failure does not prevent terminal use.</p>
+<p>Open the Command Palette and use <strong>dewfpga: choose the top module</strong>. The chooser reads <code>dewfpga tops</code>, remembers the selection per project, and offers it again on the next build. The tasks use absolute file locations so compiler diagnostics can appear in Problems when the project lives under Vivado's <code>.srcs</code> tree. <code>dewfpga new</code> also includes project tasks; the Makefile-only download retains its <code>make</code> tasks.</p>
+<p>For linting, install <code>mshr-h.veriloghdl</code>, then explicitly run <strong>dewfpga: use the dewfpga iverilog lint shim</strong>. It changes Icarus's constant-select “sorry” diagnostic to a warning; syntax errors stay errors. <strong>dewfpga: stop using the dewfpga iverilog lint shim</strong> restores the previous setting if it has not been edited since setup. Workspace overrides take precedence. After a successful simulation, the companion can open a new or changed VCD in the project root. An unchanged old waveform is not opened. Nested and absolute dumpfile locations are not discovered automatically.</p>
+<p>The command and filesystem behavior is tested in isolated profiles. Real VS Code GUI acceptance remains a separate manual check.</p>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/docs/your-own-lab/">5 How do you use it for your own lab?</a><br>
+next: <a href="/dewfpga/docs/course-files-that-break/">7.1 Which course file breaks?</a><br>
+<a href="/dewfpga/docs/#6-how-do-you-set-up-vs-code">This section in the whole guide</a></p>
+<p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/docs/">the whole guide</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>
