@@ -1,5 +1,22 @@
 # dewfpga
 
+## Talimatların kapsamı — 19 Ekim 2026
+
+Yeni görevde önce kullanıcının güncel isteğini ve kabul koşulunu esas al.
+Aşağıdaki tarihli oturum devirleri geçmiş görev bağlamıdır; bu görev yeniden
+istenmedikçe model seçimi, orkestratör rolü, eski açık iş listesi ve iki tur sınırı
+yeni göreve otomatik taşınmaz. Kalıcı gizlilik, tasarım, günlük, git ve yayın
+yetkisi kuralları geçerliliğini korur. Bu ayrım merge veya yayın izni vermez.
+
+Aralıklı test hatasında önce başarısız ortamı (OS, mimari, tarayıcı ve kilitli
+bağımlılık sürümü) eşleştir. Uygulama, test sürücüsü ve bağımlılığı küçük bir
+örnekle ayır; timeout mesajını kök neden sayma. İşlem gerçekleştiği hâlde test
+bekliyorsa olay/dinleyici sırasını ve bekleyen promise'i trace ile doğrula.
+Yeni kanıt üretmeyen tekrar yerine hipotezi veya ölçümü değiştir.
+Başarısız ve başarılı koşuların kanıtını ayrı sakla; kabul sayısını baştan
+belirle. Aynı düzeltmeye ait küçük regresyon testi ile tam akışın sonuçlarını
+ayrı raporla. Farklı belirtileri tek çözümle kapanmış sayma.
+
 ## Güncel ürün koşusu — 8 Ekim 2026
 
 Bu oturumda kullanıcının son talimatı: lablarla sınırlanmayan kendi SystemVerilog
