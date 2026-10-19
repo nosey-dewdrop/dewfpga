@@ -22,6 +22,15 @@ use `BROWSER=webkit npm test` for WebKit. Install the selected Playwright browse
 (`npx playwright install chromium` or `npx playwright install webkit`). CI runs both.
 `E2E_OUT` selects the screenshot directory. `test/README.md` describes the test scope.
 
+`npm test` and `npm run e2e` first apply `scripts/patch-playwright.mjs` to the locked
+Playwright 1.58.1 installation. Its directory-upload listener must be registered
+before sending files: Linux WebKit can otherwise emit `input` before Playwright
+starts listening, leaving a successful upload waiting until the test times out.
+The patch checks the version and exact source, and must be reviewed on upgrades.
+For direct `node test/...` runs after a fresh install, run the patch script first.
+`test/folder-upload.mjs` checks 100 repeated native folder selections, including
+relative paths, file contents and exactly one change event per selection.
+
 `node test/probe-behavior.mjs` and `node test/engine-isolation.mjs` additionally require
 native Yosys and Icarus: they test actual browser worker netlists under their original
 testbenches and compare outputs in DigitalJS. macOS CI runs them. The 133-case

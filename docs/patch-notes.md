@@ -4918,3 +4918,19 @@ since last night.
 Tests: the two checks that expected the stop for board names now expect the build, its pins, `up to date`
 and `clean`; a new check keeps the stop and the named ports for `a b y`. On the corpus, the folder command now builds 24
 of the 89 folders (22 before): the 2 new ones have no `.xdc` and only board port names. SUITE_C6
+
+### Test infrastructure · Linux WebKit folder upload · 19 October
+
+A folder import could finish in the simulator while Playwright's `setInputFiles`
+waited until its timeout. A minimal Linux x86_64 reproduction, without the simulator
+or dialogs, showed the same failure. The protocol log sent `DOM.setInputFiles`
+before the command installing Playwright's `input` listener; both `input` and
+`change` arrived, but the late listener waited for an event that had already fired.
+
+The test setup now applies a version- and source-checked patch to Playwright 1.58.1:
+register the listener, retain its promise, then upload and await that promise. It
+releases the temporary handle afterward. No product behavior, timeout or assertion
+is relaxed. The full browser suite includes 100 real directory selections checking
+paths, contents and change counts. Locally the patched Linux x86_64 WebKit passed
+1,000 selections, and macOS Chromium passed 100. Full CI acceptance is tracked
+separately; these focused checks do not establish five consecutive full-suite runs.
