@@ -1,5 +1,9 @@
 name: webkit regression
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths: [.github/workflows/webkit-regression.yml]
 
 jobs:
   consecutive-webkit:
