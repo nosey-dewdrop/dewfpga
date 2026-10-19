@@ -34,16 +34,6 @@ page.on('console', (m) => { if (m.type() === 'error') errs.push(`[${section}] ` 
 // due to access control checks" (once the inlined core3/core4 data: module): yosys resources a worker was
 // still loading. The only yosys worker this file kills with no warm-up done is the one a navigation ends,
 // so the cancelled load is the likely source; the section tag above names it if it comes back.
-// open a folder through the picker. The import asks window.confirm before it replaces a non-empty
-// workspace; a native dialog that opens while setInputFiles is still in flight left that call hanging in
-// CI's WebKit for its full 30 s although the import itself went through (the failure screenshot shows the
-// folder's five files loaded). confirm is answered yes in the page for this one call, and what it asked is
-// kept for the checks, as the native dialog handler keeps it
-const pickFolder = async (dir) => {
-  await page.evaluate(() => { const native = window.confirm; window.__asked = window.__asked || [];
-    window.confirm = (m) => { window.__asked.push(m); window.confirm = native; return true; }; });
-  await page.setInputFiles('#folder-input', dir);
-};
 const settled = () => page.waitForFunction(() => window.dewfpga.pendingRequests === 0, null, { timeout: 180000 });
 const status = () => page.locator('#status').innerText();
 const waitStatus = (re, t = 180000) => page.waitForFunction((src) => new RegExp(src).test(document.querySelector('#status').textContent), re.source, { timeout: t });
@@ -447,9 +437,8 @@ for (const [p, s] of Object.entries({ 'src/top_mod.sv': 'module top_mod(input lo
 fs.copyFileSync(new URL('../../templates/blink.xdc', import.meta.url), path.join(fix, 'top_mod.xdc'));
 fs.mkdirSync(path.join(fix, '.Xil'), { recursive: true }); fs.writeFileSync(path.join(fix, '.Xil/junk.sv'), 'module junk; endmodule'); fs.writeFileSync(path.join(fix, 'notes.txt'), 'ignored');
 const fixtureBytes = Object.fromEntries(['src/top_mod.sv', 'sim/top_mod_tb.sv', 'inc/defs.svh', 'data/rom.mem', 'top_mod.xdc'].map((p) => [p, fs.readFileSync(path.join(fix, p)).toString('hex')]));
-await pickFolder(fix);
+await page.setInputFiles('#folder-input', fix);
 await page.waitForTimeout(500);
-dialogs.push(...await page.evaluate(() => window.__asked.splice(0)));
 check('dropfolderpaths: confirmation asked before replacing a non-empty workspace', dialogs.some((m) => /replace the 6 files/.test(m)), dialogs.join(' | '));
 await waitStatus(/combinational|simulated clock|not running/, 120000);
 check('dropfolderpaths: relative paths kept, root folder stripped, .Xil and .txt skipped', (await page.locator('#ftabs .ftab').allInnerTexts()).sort().join(',') === 'data/rom.mem,inc/defs.svh,sim/top_mod_tb.sv,src/top_mod.sv,top_mod.xdc', (await page.locator('#ftabs .ftab').allInnerTexts()).join(','));
@@ -461,8 +450,7 @@ check('drop: an invalid file rejects the whole drop, workspace untouched, outlin
 check('drop: the rejection names the bad path, not a read failure', /\.\.\/evil\.sv: a path may not contain/.test(dropRes.why) && !/could not be read|does not exist/i.test(dropRes.why + dropRes.status), JSON.stringify(dropRes));
 const dropOk = await page.evaluate(async () => { const dt = new DataTransfer(); dt.items.add(new File(['module a(input x, output y); assign y = x; endmodule'], 'a.sv')); dt.items.add(new File(['module a_tb; a u(.x(1), .y()); endmodule'], 'a_tb.sv')); document.querySelector('.right').dispatchEvent(new DragEvent('drop', { dataTransfer: dt, bubbles: true })); await new Promise((r) => setTimeout(r, 300)); return [...document.querySelectorAll('#ftabs .ftab')].map((b) => b.textContent).join(','); });
 check('drop: valid files replace the workspace after confirmation', dropOk === 'a.sv,a_tb.sv' && dialogs.length >= 2, dropOk);
-await pickFolder(fix); await waitStatus(/combinational|simulated clock|not running/, 120000);
-dialogs.push(...await page.evaluate(() => window.__asked.splice(0)));
+await page.setInputFiles('#folder-input', fix); await waitStatus(/combinational|simulated clock|not running/, 120000);
 
 console.log('== #19 export: zip-CLIroundtrip');
 const [dl] = await Promise.all([page.waitForEvent('download'), page.click('#download')]);
