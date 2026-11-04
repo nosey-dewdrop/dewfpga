@@ -72,7 +72,8 @@ footer.wrap a:hover{color:#f4f4f4}
 footer.wrap .more{display:flex;gap:26px;flex-wrap:wrap}
 @media (max-width:1199px){nav.top{padding:0 32px}footer.wrap{padding-left:32px;padding-right:32px}}
 @media (max-width:719px){
-  nav.top{height:56px;gap:15px;padding:0 16px}
+  /* a font wider than the mac's (a linux machine's) wraps the row instead of pushing it past the screen */
+  nav.top{height:auto;min-height:56px;flex-wrap:wrap;row-gap:0;gap:0 15px;padding:0 16px}
   nav.top a{font-size:15px;padding:14px 7px;margin:-14px -7px}
   nav.top a.brand{font-size:17px}
   footer.wrap{padding:72px 16px 48px}
