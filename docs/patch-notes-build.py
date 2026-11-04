@@ -50,6 +50,9 @@ index = (f'<p class="docbar"><span>{len(entries)} updates</span><a href="#latest
 body = re.sub(r"(</h1>\n)", lambda m: m.group(1) + index, body, count=1)
 date_meta = f',"dateModified":"{date}"' if date else ""
 
+sys.path.insert(0, "docs")
+from nav import footer  # noqa: E402
+FOOTER = footer("en")
 page = f'''<!doctype html>
 <html lang="en">
 <head>
@@ -80,11 +83,7 @@ page = f'''<!doctype html>
 {body}<hr>
 <p class="mute small">Stuck on an error? <a href="/dewfpga/errors/">Every error from this setup, filed under the exact line it printed.</a></p>
 </main>
-<footer class="wrap">
-  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
-  <span><a href="/dewfpga/docs/">the guide</a> · <a href="/dewfpga/">home</a></span>
-</footer>
-<script>document.querySelectorAll("main pre").forEach(function(p){{p.setAttribute("data-copy","1")}})</script>
+{FOOTER}<script>document.querySelectorAll("main pre").forEach(function(p){{p.setAttribute("data-copy","1")}})</script>
 </body>
 </html>
 '''

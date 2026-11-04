@@ -100,7 +100,7 @@ rest = "\n".join(pre[j:]).strip("\n") + "\n"
 # the nav comes from one source, docs/nav.py
 sys.dont_write_bytecode = True
 sys.path.insert(0, "docs")
-from nav import render
+from nav import render, footer
 NAV = render("en", "c-err")
 ICON = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
@@ -126,14 +126,7 @@ def head(title, desc, ogtitle, url, ld=None):
         s += "<script type=\"application/ld+json\">" + json.dumps(ld, ensure_ascii=False, separators=(",", ":")) + "</script>\n"
     return s + "</head>\n<body>\n" + NAV + "\n"
 
-FOOT = """
-<footer class="wrap">
-  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
-  <span><a href="{back}">{label}</a></span>
-</footer>
-</body>
-</html>
-"""
+FOOT = "\n" + footer("en").replace("{", "{{").replace("}", "}}") + "</body>\n</html>\n"
 
 # the probes in test/sv whose recorded result (expect.tsv, the today column) prints a code; each has
 # a page from docs/pages-build.py, and the code's page lists them

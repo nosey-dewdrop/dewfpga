@@ -32,7 +32,7 @@ from pathlib import Path
 os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.dont_write_bytecode = True
 sys.path.insert(0, "docs")
-from nav import render  # noqa: E402
+from nav import render, footer  # noqa: E402
 
 SITE = Path("site")
 HOST = "https://nosey-dewdrop.github.io/dewfpga/"
@@ -81,14 +81,8 @@ ICON = """<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
 """
-FOOT = """
-<footer class="wrap">
-  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
-  <span>{links}</span>
-</footer>
-{script}</body>
-</html>
-"""
+# the footer is docs/nav.py's, the same on every page; {links} is left from the per-page footers
+FOOT = "\n" + footer("en").replace("{", "{{").replace("}", "}}") + "{script}</body>\n</html>\n"
 COPY_ALL = '<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>\n'
 esc = html.escape
 # a heading that starts like a question must end with "?" (test/site-check.py); a probe's construct
@@ -633,7 +627,7 @@ def build_notes(types, written):
         desc = summary(plain(bodyhtml if len(group) == 1 else re.sub(r"<h2.*?</h2>", "", bodyhtml)))
         h1 = f"{label} · {ptitle}" if nums else ptitle
         dates = " · ".join(dict.fromkeys(e[4] for e in group if e[4]))
-        p = head(page_title, desc, url, "c-notes", article(h1, url))
+        p = head(page_title, desc, url, None, article(h1, url))
         p += "<main class=\"wrap docs\">\n"
         p += (f"  <p class=\"eyebrow\"><a href=\"/dewfpga/patch-notes/\">patch notes</a> · <span class=\"step\">{esc(label)}</span>"
               f"{esc(dates)}</p>\n")
@@ -721,7 +715,7 @@ def build_guide(types, written):
             title = f"{heading} · {parent} CS223 on a Mac, section {num}"
         else:
             title = f"{heading} CS223 on a Mac without Vivado, section {num}"
-        p = head(title, desc, url, None, article(heading, url))
+        p = head(title, desc, url, "c-docs", article(heading, url))
         p += "<main class=\"wrap docs\">\n"
         p += (f"  <p class=\"eyebrow\"><a href=\"/dewfpga/docs/\">the guide</a> · <span class=\"step\">{num}</span>"
               f"{esc(shown_parent or 'How do you run CS223 labs on a Mac without Vivado?')}</p>\n")

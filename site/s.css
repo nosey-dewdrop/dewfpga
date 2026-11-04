@@ -1,353 +1,166 @@
-/* dewfpga — the Canva shell, rebuilt in CSS.
-   Every number here was measured from the design read through the Canva API
-   (1366x768 artboard) and from a 2752px export, not guessed.
+/* dewfpga: one type system for every page.
 
-   FONT CONVENTION — settled, do not change it again.
-   The design's display face is a Canva font that cannot be licensed for the
-   web. It was identified by pulling the woff Canva serves on the published
-   site and comparing glyphs against every OFL pixel face:
+   The mac's own letters: sf pro for words, sf mono for commands, code and the drawings.
+   Four sizes (28, 20, 17, 15) and two weights. Text is white or grey; colour belongs to
+   things on the bench: the blue of a link, the amber of a prompt and a copy button, the green
+   of a signal at 1, the red of the seven segment display. No gradient, no glow, no underline.
 
-     headings  Silkscreen  — same thin stroke, open counters, wide setting.
-                             Caps only, which is fine: the headings are caps.
-     wordmark  VT323       — Silkscreen draws no lowercase, and the wordmark
-                             is lowercase "dewfpga". VT323 matches it exactly.
-     body      Poppins     — single-storey "a", real italics (not synthesised).
-
-   Two pixel faces, one job each, because no single OFL font covers both the
-   caps headings and the lowercase wordmark. All three are OFL on Google Fonts. */
-@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=VT323&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;1,600;1,700&family=JetBrains+Mono:wght@400;500&display=swap');
+   The page frame is the home's: up to 1680 px, a 40 px gutter (32 under 1200, 16 on a phone).
+   A page of text keeps its line to a reading measure and starts at the gutter, under the
+   wordmark; tables and code may run wider. The nav and the footer are generated: docs/nav.css,
+   copied below by docs/nav.py. The home's own drawings and layout are in site/home.css. */
 
 :root{
   color-scheme:dark;
-  --bg:#171717;        /* measured: the artboard background */
-  --fg:#ffffff;
-  --mute:#b4b4b4;
-  --line:#333333;
-  --code:#101010;
-  --accent:#7edaf2;    /* measured: h1 fill */
-  --brand:#f5e5e8;     /* measured: the wordmark */
-  --split-a:#ff00ff;   /* measured: the magenta half of the split */
-  --split-b:#00ffff;   /* measured: the cyan half */
-  /* the chips are gradients on the artboard, sampled across each one
-     on the 2x export — nine stops per chip, three rows deep */
-  --chip-blue:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
-  --chip-lilac:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%);
-  --chip-pink:linear-gradient(90deg,#dcccea 0%,#bfe1f2 50%,#dcccea 100%);
-  --chip-sim:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%);
-  --chip-flat:#c5ddf7;
-  --display:'Silkscreen',ui-monospace,Menlo,monospace;
-  --wordmark:'VT323',ui-monospace,Menlo,monospace;
-  --body:'Poppins',-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
-  --mono:'JetBrains Mono',ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --bg:#171717;
+  --ink:#f4f4f4; --text:#dcdcdc; --grey:#a8a8a8; --quiet:#8c8c8c;
+  --line:#2c2c2c; --code:#111111;
+  --link:#7cc8e4; --cmd:#f0c060; --wave:#00e600; --led:#79f293; --seg:#ff5a4a;
+  --accent:var(--link);
+  --body:-apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Helvetica Neue",sans-serif;
+  --display:var(--body);
+  --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+  --t1:28px; --t2:20px; --t3:17px; --t4:15px;
+  --gut:40px; --max:1680px; --measure:860px;
 }
+@media (max-width:1199px){:root{--gut:32px}}
+@media (max-width:719px){:root{--gut:16px}}
 
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
-body{margin:0;background:var(--bg);color:var(--fg);max-width:100vw;
-  font:400 16.5px/1.5 var(--body);overflow-x:hidden;
-  -webkit-font-smoothing:antialiased}
-
-/* the artboard is 1366 wide with a 48px gutter; the measure is held there */
-.wrap{max-width:1366px;margin:0 auto;padding:0 32px}
-
-/* the reading column: the sheet is 1366 wide, a line of prose is not.
-   Held to ~68 characters, which is where the eye still finds the next
-   line without hunting. Tables, code and the artboard keep full width. */
-
-a{color:var(--accent);text-decoration:underline;
-  text-decoration-thickness:1px;text-underline-offset:3px}
-a:hover{text-decoration-thickness:2px}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text);max-width:100vw;
+  font:400 var(--t3)/1.6 var(--body);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:var(--link);text-decoration:none;transition:color .15s}
+a:hover{color:var(--ink)}
 p,ul,ol,table,pre,dl{margin:0 0 1rem}
-
-/* the column is centred in the sheet, not pinned to the left: a held
-   measure with all the slack on one side reads as a mistake. */
-main.wrap,.docs{display:flow-root}
-main.wrap>*,.docs>*{max-width:calc(980*var(--u));margin-left:auto;margin-right:auto}
 li{margin:.35rem 0}
-.mute{color:var(--mute)}
-small,.small{font-size:.87rem}
+.mute{color:var(--grey)}
+small,.small{font-size:var(--t4)}
 hr{border:0;border-top:1px solid var(--line);margin:2.6rem 0}
-:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+:focus-visible{outline:1px solid var(--grey);outline-offset:3px;border-radius:2px}
+.a11y{position:absolute;width:1px;height:1px;overflow:hidden;
+  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
 
-/* ---------- the artboard ----------
-   The shell is not a re-drawing of the Canva page; it IS the Canva page.
-   The 1366x768 artboard was exported at 2x and cut in two: a nav strip
-   (y 0..160) that every page carries, and a hero strip (y 160..740) that
-   only the front page carries. Transparent <a> boxes sit on top of the
-   six chips at their measured coordinates, so the pixels are Canva's and
-   only the clicking is ours. Nothing here re-draws a glyph, so no font
-   substitution and no double rotation can shift anything.
-
-   --u is one artboard unit: 1px at 1366 and wider, shrinking with the
-   viewport below that, so the whole shell scales as one piece. */
-/* --u itself is declared in the nav block below (docs/nav.css), which
-   the simulator's stylesheet shares. */
-
-.wrap{max-width:calc(1366*var(--u));margin:0 auto;padding:0 calc(64*var(--u));
-  width:100%;box-sizing:border-box}
-@media (max-width:820px){.wrap{padding:0 22px}}
-/* the artboard strips ignore the gutter: they are the full sheet */
+/* the frame, the same as the nav's */
+.wrap{width:100%;max-width:var(--max);margin:0 auto;padding:0 var(--gut)}
 
 /* ---------- nav (generated) ----------
    Copied from docs/nav.css by docs/nav.py. Edit docs/nav.css, run python3 docs/nav.py;
    a change made here is overwritten. */
-/* The nav strip, one source for site/s.css and sim/src/style.css.
+/* The nav strip and the footer, one source for site/s.css and sim/src/style.css.
    docs/nav.py copies this file into both, between the "nav (generated)" markers;
    edit here, then run `python3 docs/nav.py`. A change made in a copy is overwritten.
 
-   The artboard unit. The Canva sheet is 1366 units wide; one unit is one
-   pixel until the window is narrower than the sheet, then the sheet scales
-   with the window. 100% of the html box reaches the window's right edge;
-   100% of the root box does not. */
-:root{--u:1px}
-@media (max-width:1366px){:root{--u:calc(100% / 1366)}}
-html{width:100%}
-
-/* The strip is the artboard's own top 160 units. The hit boxes, measured
-   off the 2x export, in artboard units:
-     wordmark  x 48   .. 209.5
-     why       x 247.3, errors 356.8, github 466.3   w 92.5
-     cli       x 936.2, docs   1045.7, simulator 1155.2 (w 104.9)
-     all chips y 76.5 .. 129.5
-   Only the boxes are code; the chip art underneath is the export. */
-nav.top{position:relative;width:calc(1366*var(--u));max-width:100%;
-  margin:0 auto;aspect-ratio:1366/160;display:block;container-type:inline-size;
-  background:url(/dewfpga/art/nav.png) center/100% 100% no-repeat}
-/* Inside the strip the unit is a length (1/1366 of the strip's width), not
-   a percentage: a percentage in top/height resolves against the strip's
-   160-unit height, which put every box 6 units tall at y 9 on windows up to
-   1366 wide. cqw is Chrome 105, Safari 16, Firefox 110. */
-nav.top a{--u:calc(100cqw / 1366);
-  position:absolute;top:calc(76.5*var(--u));height:calc(53*var(--u));
-  border-radius:calc(11*var(--u));
-  /* the label is in the artwork underneath; this keeps it for readers */
-  font-size:0;color:transparent;-webkit-text-fill-color:transparent;
-  text-decoration:none;
-  transition:filter .12s ease,transform .12s ease}
-nav.top a.brand{top:calc(80*var(--u));left:calc(48*var(--u));
-  width:calc(161.5*var(--u));height:calc(45*var(--u));border-radius:calc(4*var(--u))}
-nav.top a.c-why{left:calc(247.3*var(--u));width:calc(92.5*var(--u))}
-nav.top a.c-err{left:calc(356.8*var(--u));width:calc(92.5*var(--u))}
-nav.top a.c-github{left:calc(466.3*var(--u));width:calc(92.5*var(--u))}
-nav.top a.c-cli{left:calc(936.2*var(--u));width:calc(92.5*var(--u))}
-nav.top a.c-docs{left:calc(1045.7*var(--u));width:calc(92.5*var(--u))}
-nav.top a.c-sim{left:calc(1155.2*var(--u));width:calc(104.9*var(--u))}
-/* The seventh chip is not in the export: it sits in the strip's empty centre
-   (x 558.8 .. 936.2; the box is 120 wide so the longer label fits) and is drawn here with the artboard's blue gradient,
-   its 11-unit radius and its bold black label; the six exported chips do not
-   move. If the export gains the chip, drop this block and its label rules. */
-nav.top a.c-notes{left:calc(687.5*var(--u));width:calc(120*var(--u));
-  display:inline-flex;align-items:center;justify-content:center;
-  background:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
-  font:700 calc(16.5*var(--u))/1 var(--body);letter-spacing:-.01em;white-space:nowrap;
-  color:#000;-webkit-text-fill-color:#000}
-/* a chip lifts on hover; the artwork is what lifts, nothing is repainted */
-nav.top a:hover{filter:brightness(1.08);transform:translateY(calc(-2*var(--u)))}
-/* the artboard marks no active chip, so neither do we */
-nav.top a:focus-visible{outline:calc(2*var(--u)) solid var(--accent);
-  outline-offset:calc(2*var(--u))}
-
-/* A phone gets the strip's seven chips as text, in the shell's own faces and
-   chip gradients, 44 px tall: the artwork's labels would be too small to
-   read or tap. The gradients are the artboard's chips, sampled across each
-   one on the 2x export. Nothing in this block reaches a screen wider than
-   700 px; the desktop strip is untouched. */
-@media (max-width:700px){
-  nav.top{--nav-chip-blue:linear-gradient(90deg,#c2e0f5 0%,#c9d9f9 50%,#c1dff4 100%);
-    --nav-chip-lilac:linear-gradient(90deg,#e2c2f4 0%,#d1d3ff 50%,#e2c2f4 100%);
-    --nav-chip-sim:linear-gradient(90deg,#cdd5fc 0%,#bfe2f3 45%,#addcb3 100%);
-    --nav-brand:#f5e5e8}
-  /* the artboard's two groups of three, one group per row, then the simulator across the last row */
-  nav.top{width:100%;aspect-ratio:auto;background:none;display:grid;
-    grid-template-columns:repeat(3,1fr);gap:10px 8px;padding:16px 16px 4px}
-  /* [class] matches the per-chip desktop rules' specificity, so width and offsets reset here */
-  nav.top a,nav.top a[class]{position:static;left:auto;top:auto;width:auto;height:44px;display:inline-flex;align-items:center;
-    justify-content:center;padding:0 10px;border-radius:12px;font:700 .92rem/1 var(--body);
-    color:#000;-webkit-text-fill-color:#000;background:var(--nav-chip-blue)}
-  nav.top a.brand{grid-column:1/-1;justify-content:flex-start;width:100%;height:auto;padding:0 2px 4px;border-radius:0;background:none;
-    font:400 2.3rem/1 var(--wordmark);letter-spacing:.04em;
-    color:var(--nav-brand);-webkit-text-fill-color:var(--nav-brand)}
-  nav.top a.c-github,nav.top a.c-docs{background:var(--nav-chip-lilac)}
-  nav.top a.c-sim{background:var(--nav-chip-sim);grid-column:1/-1}
-  nav.top a.c-notes{letter-spacing:-.01em;white-space:nowrap}
-  nav.top a:hover{transform:none}
+   The mac's own letters, sf pro, at the site's four sizes; grey that turns blue under the
+   pointer, white for the page you are on; no underline. Every link is a comfortable target:
+   the padding grows the box, not the layout. The values are written out, not taken from the
+   page's variables, so the simulator's stylesheet gets the same strip. */
+nav.top{box-sizing:border-box;display:flex;align-items:center;gap:30px;width:100%;max-width:1680px;
+  height:68px;margin:0 auto;padding:0 40px;position:relative;z-index:5;
+  font:400 17px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Helvetica Neue",sans-serif;
+  -webkit-font-smoothing:antialiased}
+nav.top a{color:#a8a8a8;text-decoration:none;transition:color .15s;padding:12px 4px;margin:-12px -4px;border-radius:2px}
+nav.top a.brand{margin-right:auto;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#f4f4f4}
+nav.top a:hover{color:#7cc8e4}
+nav.top a[aria-current]{color:#f4f4f4}
+nav.top a:focus-visible{outline:1px solid #a8a8a8;outline-offset:3px}
+footer.wrap{box-sizing:border-box;display:flex;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;
+  width:100%;max-width:1680px;margin:0 auto;padding:96px 40px 48px;border:0;
+  font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Helvetica Neue",sans-serif;color:#8c8c8c}
+footer.wrap a{color:#7cc8e4;text-decoration:none;transition:color .15s;padding:10px 0;margin:-10px 0}
+footer.wrap a:hover{color:#f4f4f4}
+footer.wrap .more{display:flex;gap:26px;flex-wrap:wrap}
+@media (max-width:1199px){nav.top{padding:0 32px}footer.wrap{padding-left:32px;padding-right:32px}}
+@media (max-width:719px){
+  nav.top{height:56px;gap:15px;padding:0 16px}
+  nav.top a{font-size:15px;padding:14px 7px;margin:-14px -7px}
+  nav.top a.brand{font-size:17px}
+  footer.wrap{padding:72px 16px 40px;flex-direction:column}
 }
 /* ---------- /nav (generated) ---------- */
 
-/* A phone gets the same artboard, not a re-drawing of it. The strip and
-   the scene keep their 1366-unit geometry and scale down together, so the
-   chips stay on the chips and nothing can drift. The type inside the art
-   gets small on a narrow screen — that is the design, shown whole, and it
-   is what "the same on every page" actually costs. */
+/* ---------- a page of text ----------
+   The line is held to a reading measure and starts under the wordmark. */
+main.wrap{display:flow-root;padding-top:48px}
+main.wrap>*{max-width:var(--measure)}
+main.wrap>pre,main.wrap>.tablewrap,main.wrap>table,main.wrap>.nums,main.wrap>.cli-tools{max-width:min(100%,1160px)}
 
-/* ---------- the hero ----------
-   The rest of the artboard, as one image: headline, stickers and copy,
-   exactly as Canva drew them. The real text is underneath it for search
-   engines and screen readers, hidden from sight but not from them. */
-.hero-art{position:relative;width:calc(1366*var(--u));max-width:100%;
-  margin:0 auto;aspect-ratio:1366/580;display:block;
-  background:url(/dewfpga/art/hero.png) center/100% 100% no-repeat}
-.a11y{position:absolute;width:1px;height:1px;overflow:hidden;
-  clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
-/* ---------- display type ----------
-   Used by every page but the front one, where the headline is artwork.
-   Measured: 73.33 units, #7edaf2, line-height .92, ls -0.015em, and a
-   whole-unit RGB split so a pixel face never blurs at its edges. */
-h1,h2,h3{font-weight:400;line-height:1.2;margin:0}
-h1{font-family:var(--display);font-size:clamp(1.6rem,2.9vw,2.5rem);
-  line-height:1.0;letter-spacing:-.015em;color:var(--accent);
-  margin:calc(52*var(--u)) 0 calc(18*var(--u));
-  text-shadow:2px 0 0 var(--split-a),-2px 0 0 var(--split-b)}
-h2{font-family:var(--display);
-  font-size:clamp(1.3rem,2.05vw,1.78rem);line-height:1.3;letter-spacing:-.01em;
-  color:var(--fg);margin:2.6rem 0 .7rem}
-h3{font-family:var(--body);font-weight:600;font-size:1.08rem;
-  margin:1.9rem 0 .45rem;color:var(--fg)}
-h1.mono{font-family:var(--mono);font-size:clamp(1.05rem,1.9vw,1.32rem);
-  font-weight:500;line-height:1.45;letter-spacing:0;text-shadow:none;
-  color:#f0c8dc;background:var(--code);border:1px solid var(--line);
-  border-radius:9px;padding:15px 18px;word-break:break-word}
-
-.lead{font-family:var(--body);font-style:italic;font-weight:700;
-  font-size:clamp(1.05rem,1.46vw,1.28rem);line-height:1.34;
-  color:var(--fg);margin:0 0 1.4rem}
-.sub{font-size:clamp(.92rem,1.12vw,1.05rem);line-height:1.45;
-  letter-spacing:.015em;color:var(--mute);margin:0 0 1.15rem}
-.eyebrow{color:var(--mute);font-size:.9rem;margin:2.6rem 0 -1rem}
+h1,h2,h3{color:var(--ink);font-family:var(--body);font-weight:600;margin:0;text-shadow:none}
+h1{font-size:var(--t1);line-height:1.22;letter-spacing:-.012em;margin:24px 0 18px}
+h2{font-size:var(--t2);line-height:1.3;margin:2.6rem 0 .7rem}
+h3{font-size:var(--t3);line-height:1.4;margin:1.9rem 0 .45rem}
+h1.mono{font-family:var(--mono);font-size:var(--t2);font-weight:400;line-height:1.45;
+  color:var(--ink);background:none;border:0;padding:0;word-break:break-word}
+.lead{font-size:var(--t2);font-weight:600;line-height:1.35;color:var(--ink);margin:0 0 1.2rem}
+.sub{color:var(--grey);margin:0 0 1.15rem}
+.eyebrow{color:var(--grey);font-size:var(--t4);margin:1.6rem 0 -.6rem}
 .eyebrow a{color:inherit}
-
-/* Keep the Canva stickers; editable product copy covers the old text areas. */
-.hero-product{container-type:inline-size}
-.hero-product h1{position:absolute;left:19%;top:3%;width:63%;height:27%;
-  margin:0;padding:1% 0;background:var(--bg);text-align:center;
-  font-size:4.1cqw;line-height:1.15;display:flex;flex-direction:column;justify-content:center}
-.hero-product .hero-message{position:absolute;left:26.5%;top:37%;width:44%;min-height:46%;
-  padding:.5%;background:var(--bg)}
-.hero-product .lead{font-size:2.4cqw;line-height:1.3;margin:0 0 1.4cqw}
-.hero-product .sub{font-size:1.45cqw;line-height:1.5;margin:0 0 1.3cqw}
-.hero-actions{font-size:1.4cqw;margin:0;display:flex;gap:1.5em;flex-wrap:wrap}
-.hero-actions a:first-child{font-weight:700;color:var(--accent)}
-@media(max-width:720px){
-  .hero-product{background:none;aspect-ratio:auto;padding:30px 22px 10px}
-  .hero-product h1{position:static;width:auto;height:auto;padding:0;text-align:left;
-    font-size:clamp(1.65rem,6vw,2.5rem);line-height:1.12;display:block;margin:0 0 1.25rem}
-  .hero-product .hero-message{position:static;width:auto;min-height:0;padding:0}
-  .hero-product .lead{font-size:1.2rem;margin:0 0 1rem}
-  .hero-product .sub{font-size:1rem;margin:0 0 1rem}
-  .hero-actions{font-size:1rem;gap:.7em 1.5em}
-}
-
-/* ---------- entrance ----------
-   The two strips fade up once, a beat apart, and then nothing on the page
-   moves again. Anyone who asks for less motion gets it already in place. */
-@keyframes rise{from{opacity:0;transform:translateY(calc(14*var(--u)))}
-                to{opacity:1;transform:none}}
-nav.top{animation:rise .5s cubic-bezier(.22,.7,.3,1) both}
-.hero-art{animation:rise .6s cubic-bezier(.22,.7,.3,1) both;animation-delay:.12s}
-@media (prefers-reduced-motion:reduce){
-  nav.top,.hero-art{animation:none}
-  html{scroll-behavior:auto}
-}
+.eyebrow a:hover{color:var(--ink)}
 
 /* ---------- code ---------- */
-pre,code,kbd{font-family:var(--mono)}
-pre{background:var(--code);border:1px solid #4d4d4d;border-radius:9px;
-  max-width:100%;width:100%;box-sizing:border-box;
-  padding:18px 20px;overflow-x:auto;font-size:.85rem;line-height:1.62;
-  position:relative}
-pre code{background:none;padding:0;font-size:inherit;color:#d6e9ef}
-code{background:var(--code);padding:.12em .38em;border-radius:5px;
-  font-size:.88em;color:#d6e9ef}
-pre .c{color:#8f8f8f}
-pre .p{color:#afddbc}
-.copy{position:absolute;top:10px;right:10px;font:inherit;font-size:.72rem;
-  font-family:var(--body);font-weight:600;
-  color:var(--mute);background:var(--bg);border:1px solid var(--line);
-  border-radius:7px;padding:3px 9px;cursor:pointer}
-.copy:hover{color:var(--accent);border-color:var(--accent)}
+pre,code,kbd{font-family:var(--mono);font-variant-ligatures:none}
+main.wrap pre{background:var(--code);border:0;border-radius:6px;width:100%;
+  padding:18px 20px;overflow-x:auto;font-size:var(--t4);line-height:1.6;position:relative;color:#e4e4e4}
+main.wrap pre code{background:none;padding:0;font-size:inherit;color:inherit}
+main.wrap code{background:var(--code);padding:.1em .35em;border-radius:4px;font-size:.88em;color:var(--ink)}
+main.wrap pre .c{color:var(--quiet)}
+main.wrap pre .p{color:var(--cmd)}
+/* the copy button s.js puts on a block of code: amber, as on the home's terminals */
+main.wrap .copy{position:absolute;top:8px;right:8px;font:400 var(--t4)/1 var(--body);
+  color:var(--cmd);background:var(--code);border:0;border-radius:4px;padding:8px 10px;cursor:pointer}
+main.wrap .copy:hover{color:var(--ink)}
 
-/* ---------- tables ----------
-   A table sits in the same column as the prose above it, or the page
-   reads as two documents side by side. */
-.tablewrap{overflow-x:auto;margin:0 auto 1.15rem;max-width:calc(980*var(--u))}
-table{border-collapse:collapse;width:100%;font-size:.95rem}
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto;margin:0 0 1.15rem}
+table{border-collapse:collapse;width:100%;font-size:var(--t4)}
 .cli-tools{margin-bottom:1rem}
 .cli-tools table{margin-bottom:0}
-td,th{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line);
-  vertical-align:top}
-th{font-weight:700;color:var(--mute);font-size:.8rem;letter-spacing:.02em}
+td,th{text-align:left;padding:9px 16px 9px 0;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--grey);font-size:var(--t4)}
 
 /* ---------- blocks ---------- */
-.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-  gap:20px 26px;margin:1.8rem 0 1.3rem}
-.nums b{display:block;font-family:var(--display);font-weight:400;
-  font-size:1.65rem;letter-spacing:-.01em;color:var(--fg);line-height:1.2}
-.nums span{color:var(--mute);font-size:.9rem;line-height:1.4;display:block;
-  margin-top:4px}
-.cta{border-left:3px solid var(--accent);padding:6px 0 6px 20px;margin:1.8rem 0}
-.cta a.big{font-size:1.28rem;font-weight:700;text-decoration:none}
-.cta a.big:hover{text-decoration:underline}
-.cta p{margin:.35rem 0 0;color:var(--mute)}
+.nums{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:20px 26px;margin:1.8rem 0 1.3rem}
+.nums b{display:block;font-weight:600;font-size:var(--t1);color:var(--ink);line-height:1.2}
+.nums span{color:var(--grey);font-size:var(--t4);line-height:1.4;display:block;margin-top:4px}
+.cta{padding:6px 0;margin:1.8rem 0}
+.cta a.big{font-size:var(--t2);font-weight:600}
+.cta p{margin:.35rem 0 0;color:var(--grey)}
 ol.walls{padding-left:1.4rem}
 ol.walls li{margin:.75rem 0}
-ol.walls li b{font-weight:700;color:var(--fg)}
+ol.walls li b{font-weight:600;color:var(--ink)}
 .err{margin:1.5rem 0;padding-bottom:1.3rem;border-bottom:1px solid var(--line)}
 .err:last-of-type{border:0}
-.err .step{display:inline-flex;align-items:center;height:30px;padding:0 13px;
-  border-radius:8px;font-size:.7rem;font-weight:700;letter-spacing:.05em;
-  text-transform:uppercase;color:#000;background:var(--chip-flat);
-  margin-right:12px;vertical-align:2px}
-.err a.title{font-family:var(--mono);font-size:.93rem;word-break:break-word}
-.err p{margin:.45rem 0 0;color:var(--mute)}
+.err .step,.eyebrow .step{display:inline;padding:0;margin-right:.6em;font-size:var(--t4);font-weight:600;
+  color:var(--cmd);background:none;text-transform:none;letter-spacing:0}
+.err a.title{font-family:var(--mono);font-size:var(--t4);word-break:break-word}
+.err p{margin:.45rem 0 0;color:var(--grey)}
 dl.kv{display:grid;grid-template-columns:max-content 1fr;gap:8px 22px}
-dl.kv dt{color:var(--mute)}
+dl.kv dt{color:var(--grey)}
 dl.kv dd{margin:0}
 .soonlist{list-style:none;padding:0}
-.soonlist li{display:flex;gap:14px;align-items:baseline;color:var(--mute);
-  margin:.55rem 0;flex-wrap:wrap}
-.soonlist li b{color:var(--fg);font-weight:700;min-width:9.5rem}
-.soonlist li i{font-style:normal;font-size:.7rem;color:var(--accent);
-  border:1px solid currentColor;border-radius:99px;padding:1px 9px}
+.soonlist li{display:flex;gap:14px;align-items:baseline;color:var(--grey);margin:.55rem 0;flex-wrap:wrap}
+.soonlist li b{color:var(--ink);font-weight:600;min-width:9.5rem}
+.soonlist li i{font-style:normal;font-size:var(--t4);color:var(--cmd)}
 
-/* ---------- docs ---------- */
+/* ---------- the guide ---------- */
 .docs h2{margin-top:3.2rem}
 .docs h2+p{margin-top:.6rem}
 .docs img,main.wrap img{max-width:100%;height:auto}
 .docs .toc ul{padding-left:1.2rem}
-.docs blockquote{margin:0 0 1.15rem;padding-left:16px;
-  border-left:3px solid var(--line);color:var(--mute)}
-.docbar{display:flex;gap:20px;flex-wrap:wrap;font-size:.88rem;
-  color:var(--mute);margin:-.2rem 0 1.6rem}
-.docbar a{color:inherit}
-
-/* ---------- footer ---------- */
-footer{margin:4.5rem 0 3.4rem;padding-top:1.4rem;border-top:1px solid var(--line);
-  color:var(--mute);font-size:.88rem;display:flex;justify-content:space-between;
-  gap:14px;flex-wrap:wrap}
-footer a{color:inherit}
+.docs blockquote{margin:0 0 1.15rem;padding-left:16px;border-left:2px solid var(--line);color:var(--grey)}
+.docbar{display:flex;gap:20px;flex-wrap:wrap;font-size:var(--t4);color:var(--grey);margin:-.2rem 0 1.6rem}
+.docbar a{color:var(--link)}
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
 
-@media (max-width:820px){
-  .wrap{padding:0 22px}
-  h1{text-shadow:1px 0 0 var(--split-a),-1px 0 0 var(--split-b)}
-  .lead,.sub{max-width:none}
-  footer{flex-direction:column}
-}
-
-/* ---------- phones ----------
-   The nav's phone layout (the six chips as text) is in the nav block above,
-   from docs/nav.css. The rest of the page follows here. */
-@media (max-width:700px){
-  /* the 980-unit reading column is a desktop measure; on a phone it is the whole width */
-  main.wrap>*,.docs>*,.tablewrap{max-width:none}
-  code{overflow-wrap:anywhere}
-  pre[data-copy]{padding-top:46px}
-  .copy{min-height:36px;padding:6px 12px;font-size:.8rem}
-  .err .step,.eyebrow .step{font-size:.78rem}
+/* ---------- phones ---------- */
+@media (max-width:719px){
+  main.wrap{padding-top:28px}
+  h1.mono{font-size:var(--t3)}
+  main.wrap>*,.tablewrap{max-width:none}
+  main.wrap code{overflow-wrap:anywhere}
+  main.wrap pre[data-copy]{padding-top:48px}
   .nums{grid-template-columns:1fr 1fr}
   dl.kv{grid-template-columns:1fr}
   dl.kv dt{margin-top:.5rem}
 }
-/* the eyebrow's step chip needs the same breath as the one in the error list */
-.eyebrow .step{margin-right:.45em}
