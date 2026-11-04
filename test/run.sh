@@ -367,6 +367,14 @@ sim_file_path() {
     && cd "$T" && ! "$CLI" sim rtb/tb/decoder2to4_tb.sv > out 2>&1 && grep -qF 'ERROR [run-inside-the-folder]: rtb/tb/decoder2to4_tb.sv is a path, and dewfpga works on the .sv files in the current folder (and a testbench in its tb/ or sim/ folder). Fix: run it inside the folder that holds the .sv files:  cd "rtb/tb" && dewfpga sim decoder2to4_tb.sv' out
 }
 check "sim takes the testbench's file, ./x_tb.sv, \$PWD/x_tb.sv or tb/x_tb.sv; bit on a testbench file names its design; another folder's file gets the cd" sim_file_path
+# run --sim printed argparse's 'usage: run_file.py ... error: unrecognized arguments', a file the student never typed
+run_bad_option() {
+    run_testbench_file && cd "$T/rtb" && { "$CLI" run decoder2to4.sv --sim > out 2>&1; [ $? = 2 ]; } && ! grep -q 'run_file.py\|usage:' out \
+    && grep -qF 'ERROR [unknown-option]: unknown option: --sim. Fix: dewfpga run <file.sv> [--build-only] [--top NAME] [--xdc FILE]  (dewfpga run --help says what each does). To simulate a testbench, run it in its folder:  dewfpga sim <testbench>.' out \
+    && { "$CLI" run > out 2>&1; [ $? = 2 ]; } && grep -q '^ERROR \[unknown-option\]: dewfpga run needs the file to run\. Fix: dewfpga run <file.sv>' out \
+    && "$CLI" run --help > out 2>&1 && grep -q '^usage: dewfpga run ' out
+}
+check "run --sim, run with no file -> the CLI's unknown-option line with the command that works, not argparse's run_file.py usage" run_bad_option
 # eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
 # "the course file": one message per cause names every port, and the file by its name; commented-out lines likewise
 pins_grouped() {
