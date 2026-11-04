@@ -280,7 +280,7 @@ Run the pin check before nextpnr. `check_xdc.py` compares the ports of your synt
 ```
 ERROR: these ports have NO pin in the XDC (blink):
    - led[15]
-   -> the port names in the module must match the names in the XDC (the course file uses
+   -> the port names in the module must match the names in the XDC (Digilent's Basys3_Master.xdc uses
       clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an). Rename the port in the module,
       or change the name inside [get_ports ...] on that line of the XDC.
       A line that still starts with # is commented out and does not count.
@@ -821,7 +821,7 @@ dewfpga bit counter
 
 ## top-is-a-testbench
 step: bit
-source: dewfpga sim / bit, the source scan before the tools run
+source: dewfpga bit / flash, or dewfpga run on a testbench file, the source scan before the tools run
 title: blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink.
 summary: The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.
 date: 2026-09-27
@@ -830,14 +830,28 @@ date: 2026-09-27
 blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink. https://nosey-dewdrop.github.io/dewfpga/errors/top-is-a-testbench/
 ```
 
+`dewfpga run` on a testbench file says the same, with the design's file:
+
+```
+decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), and Run builds a design for the board: a testbench has no pins to put on it. Fix: run the design it tests:  dewfpga run decoder2to4.sv   (its simulation:  dewfpga sim decoder2to4_tb). https://nosey-dewdrop.github.io/dewfpga/errors/top-is-a-testbench/
+```
+
 ## Why does it happen?
 
-A module without ports has nothing to connect to a pin; the CLI treats it as a testbench for the design it instantiates.
+A module without ports has nothing to connect to a pin; the CLI treats it as a testbench for the design it instantiates. A bitstream is built from the design, and the testbench is what `dewfpga sim` runs.
 
 ## What is the fix?
 
+Build the design, by its module or its file:
+
 ```copy
 dewfpga bit blink
+```
+
+Simulate the testbench:
+
+```copy
+dewfpga sim blink_tb
 ```
 
 ## no-such-module
@@ -1010,16 +1024,17 @@ title: blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: th
 summary: A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs.
 date: 2026-09-27
 
-One line per port, the first twelve; the file:line is the commented-out XDC line, or the port's declaration when no XDC line names it. Examples:
+One line per cause: a single port gets its own line, several ports with the same cause one line that names them all. The file:line is the commented-out XDC line (the first one), or the port's declaration when no XDC line names it. Examples:
 
 ```
 blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]). https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
 blink.sv:10: ERROR [port-without-pin]: led[15] has no pin in the XDC: no line names it (the XDC has lines for led with other indices, none for led[15]). Fix: add a line for led[15] to the XDC (copy a led line, change the index and the pin), or make the port narrower. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
+adder.sv:1: ERROR [port-without-pin]: 8 ports of adder have no pin in the XDC: no line names them (Digilent's Basys3_Master.xdc, the Basys3's pin file, names the board's ports clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an): a[0], a[1], b[0], b[1], cin, cout, s[0], s[1]. Fix: rename the ports in the module to names the XDC has, or change the names inside [get_ports ...] on their lines of the XDC (a line that starts with # is commented out and does not count). https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
 ```
 
 ## Why does it happen?
 
-The course's `Basys3_Master.xdc` ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (`LED`, `leds`) matches nothing. Single-bit vectors and nonzero-based ranges retain their declared indices: `[0:0]` uses `led[0]`, and `[4:1]` uses `led[1]` through `led[4]`.
+Digilent's `Basys3_Master.xdc`, the Basys3's pin file (the one a lab folder usually holds), ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (`LED`, `leds`) matches nothing. Single-bit vectors and nonzero-based ranges retain their declared indices: `[0:0]` uses `led[0]`, and `[4:1]` uses `led[1]` through `led[4]`.
 
 ## What is the fix?
 
@@ -1113,7 +1128,7 @@ blink.xdc:43: warning [xdc-get-ports-form]: `get_ports {led[*]}` is a wildcard: 
 
 ## Why does it happen?
 
-The XDC check reads `[get_ports {name}]` and `[get_ports {name[i]}]`, one port per line, the form the course file uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.
+The XDC check reads `[get_ports {name}]` and `[get_ports {name[i]}]`, one port per line, the form Digilent's Basys3_Master.xdc uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.
 
 ## What is the fix?
 
@@ -1167,7 +1182,7 @@ A syntax error, an undeclared name (`summ` above: a typo of `sum`), or a constru
 
 ## What is the fix?
 
-Read iverilog's first line and fix that; run again. `sorry:` lines name constructs iverilog lacks; the [guide's section 8](/dewfpga/docs/#8-what-can-it-not-do) lists them.
+Read iverilog's first line and fix that; run again. When that line is a syntax error and the line of code above it ends a statement without its `;`, the error names that line instead and says so: a parser reports a missing `;` where the next statement starts. `sorry:` lines name constructs iverilog lacks; the [guide's section 8](/dewfpga/docs/#8-what-can-it-not-do) lists them.
 
 ```copy
 dewfpga sim
@@ -1387,21 +1402,21 @@ dewfpga sim tb_mux8
 ## testbench-without-design
 step: sim
 source: dewfpga sim
-title: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.
-summary: The testbench named on the command line does not instantiate any design module of the folder.
+title: andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test.
+summary: The testbench does not instantiate any design module of the folder, so it would pass whatever the design does.
 date: 2026-11-04
 
 ```
-tb.sv:1: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test. Fix: instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder. https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/
+andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test: run as it is, it shows only its own signals (x where nothing drives them) and passes whatever the design does. Fix: instantiate andgate in it (andgate dut(.sw(sw), .led(led));). https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/
 ```
 
 ## Why does it happen?
 
-A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the design's file is elsewhere, or the instance names a module that does not exist under that name.
+A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the instance was never written, the design's file is elsewhere, or the instance names a module that does not exist under that name. Run as it is, the testbench would show only its own signals (x where nothing drives them) and pass whatever the design does, so `dewfpga sim` stops, whether the testbench was named or is the only one in the folder.
 
 ## What is the fix?
 
-Put the design's `.sv` next to the testbench, or fix the module name in the instance.
+Instantiate the design in the testbench, with its ports connected (the error writes the line for the design it found), put the design's `.sv` next to the testbench, or fix the module name in the instance.
 
 ## bad-sim-time
 step: sim

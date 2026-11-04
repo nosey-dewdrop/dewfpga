@@ -154,7 +154,7 @@
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/top-is-a-testbench/">blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink.</a>
-    <p>dewfpga sim / bit, the source scan before the tools run. The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</p>
+    <p>dewfpga bit / flash, or dewfpga run on a testbench file, the source scan before the tools run. The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</p>
   </div>
   <div class="err">
     <span class="step">bit</span><a class="title" href="/dewfpga/errors/no-such-module/">ERROR [no-such-module]: no module named nope in blink.sv blink_tb.sv; the modules here: blink. Fix: name one of them, or the file that holds it:  dewfpga bit blink</a>
@@ -233,8 +233,8 @@
     <p>dewfpga sim. The folder has more than one testbench and more than one design top; name the testbench to run.</p>
   </div>
   <div class="err">
-    <span class="step">sim</span><a class="title" href="/dewfpga/errors/testbench-without-design/">ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.</a>
-    <p>dewfpga sim. The testbench named on the command line does not instantiate any design module of the folder.</p>
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/testbench-without-design/">andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test.</a>
+    <p>dewfpga sim. The testbench does not instantiate any design module of the folder, so it would pass whatever the design does.</p>
   </div>
   <div class="err">
     <span class="step">sim</span><a class="title" href="/dewfpga/errors/bad-sim-time/">ERROR [bad-sim-time]: SIM_TIME=ten is not a time. Fix: a number with a unit, as Vivado&#x27;s run takes it:  SIM_TIME=10us dewfpga sim  (ns, us, ms; a bare number is ns).</a>

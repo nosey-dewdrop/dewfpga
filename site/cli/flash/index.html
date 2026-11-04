@@ -87,13 +87,14 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 </table>
 <p class="mute small">From the agent interface: <a href="/dewfpga/agents/json/">the machine-readable CLI</a> and <a href="/dewfpga/agents/mcp/">the MCP server</a>.</p>
 <h2 id="errors">Which errors can it stop with?</h2>
-<p class="mute small">6 codes in the error catalog.</p>
+<p class="mute small">7 codes in the error catalog.</p>
 <ul>
 <li><a href="/dewfpga/errors/board-not-found/">board-not-found</a>: The programmer could not open the Basys3 USB interface. Check physical connection and, if macOS sees the device, the programming process&#x27;s USB access.</li>
 <li><a href="/dewfpga/errors/unknown-option/">unknown-option</a>: A word starting with - after the command, or an argument after install: the commands take a module or file name at most, install takes nothing.</li>
 <li><a href="/dewfpga/errors/no-xdc-file/">no-xdc-file</a>: The folder has no .xdc and some ports have names the board does not use, so nothing says which pin they go to; ports with the board&#x27;s names get their pins without a file.</li>
 <li><a href="/dewfpga/errors/two-xdc-files/">two-xdc-files</a>: Several .xdc files in the folder and none named after the top module; the CLI does not guess which one is the pin file.</li>
 <li><a href="/dewfpga/errors/toolchain-not-installed/">toolchain-not-installed</a>: nextpnr-xilinx, the chip database or another tool is not under FPGA_HOME; the build needs all of them.</li>
+<li><a href="/dewfpga/errors/top-is-a-testbench/">top-is-a-testbench</a>: The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</li>
 <li><a href="/dewfpga/errors/openfpgaloader-failed/">openfpgaloader-failed</a>: The board was found, and programming still failed; openFPGALoader&#x27;s own lines above say why.</li>
 </ul>
 <h2 id="patch-notes">Which patch notes name it?</h2>

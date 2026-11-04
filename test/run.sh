@@ -314,8 +314,8 @@ check "sim: a design iverilog refuses (unique if) runs on the design as the buil
 ref_design() { mkdir -p "$1" && printf 'module top(input logic [15:0] sw, output logic [15:0] led);\n  function automatic void inc(ref logic [3:0] x); x = x + 4'"'"'d1; endfunction\n  logic [3:0] v;\n  always_comb begin v = sw[3:0]; inc(v); led = {12'"'"'d0, v}; end\nendmodule\n' > "$1/top.sv" \
     && printf 'module top_tb;\n  logic [15:0] sw = 0; logic [15:0] led;\n  top dut(.sw(sw), .led(led));\n  initial begin #1 $display("PASS: 0 checks"); $finish; end\nendmodule\n' > "$1/top_tb.sv" && sed 's/blink/top/' "$ROOT/templates/blink.xdc" > "$1/top.xdc"; }
 check "sim: a design the build refuses (ref argument) is refused by sim too: the build's coded line, then iverilog's, no PASS" "ref_design '$T/ref' && cd '$T/ref' && ! '$CLI' sim >out 2>&1 && grep -q '^top.sv:2: sorry: Reference ports not supported yet.' out && grep -q '^top.sv:2: ERROR \[ref-argument\]: function inc takes an argument by reference (ref logic \[3:0\] x)' out && grep -q '^top.sv:2: ERROR \[iverilog-refused\]: iverilog cannot compile this code (its message is above), and the build refuses the design too (its lines are above). Fix: fix the first line it names' out && ! grep -q '^PASS' out && ! grep -q 'sim-from-build' out && [ ! -e top_sim ] && [ ! -e top_sim.elab ] && [ ! -e top.json ]"
-check "sim: a testbench iverilog refuses keeps iverilog's verdict as it was: no note, no build" "mkdir -p '$T/tbr' && cp '$ROOT/templates/blink.sv' '$ROOT/templates/blink.xdc' '$T/tbr/' && sed 's/[\$]finish;/\$finish/' '$ROOT/templates/blink_tb.sv' > '$T/tbr/blink_tb.sv' && cd '$T/tbr' && ! '$CLI' sim >out 2>&1 && grep -q '^blink_tb.sv:36: syntax error' out && grep -q '^blink_tb.sv:36: ERROR \[iverilog-refused\]: iverilog cannot compile this code (its message is above). Fix: fix the first line it names; the errors after the first often follow from it. https://' out && ! grep -qE 'sim-from-build|build refuses|read-with-slang' out && [ ! -e blink.json ] && [ ! -e blink.il ] && [ ! -e blink_sim.elab ]"
-check "sim: a design both readers refuse (a missing ;) prints the build's coded line and iverilog's" "mkdir -p '$T/twor' && cp '$ROOT/test/agent/fixtures/syntax.sv' '$ROOT/test/agent/fixtures/syntax_tb.sv' '$T/twor/' && cd '$T/twor' && ! '$CLI' sim >out 2>&1 && grep -q '^syntax.sv:3: syntax error' out && grep -q \"^yosys' reader:\" out && grep -q '^  syntax.sv:3: ERROR: syntax error' out && grep -q '^syntax.sv:2: ERROR \[slang-refused\]: expected .;. (yosys-slang, the second reader' out && grep -q '^syntax.sv:3: ERROR \[iverilog-refused\]: iverilog cannot compile this code (its message is above), and the build refuses the design too (its lines are above)' out && ! grep -q 'sim-from-build' out && [ ! -e syntax_sim ]"
+check "sim: a testbench iverilog refuses keeps iverilog's verdict as it was: no note, no build" "mkdir -p '$T/tbr' && cp '$ROOT/templates/blink.sv' '$ROOT/templates/blink.xdc' '$T/tbr/' && sed 's/[\$]finish;/\$finish/' '$ROOT/templates/blink_tb.sv' > '$T/tbr/blink_tb.sv' && cd '$T/tbr' && ! '$CLI' sim >out 2>&1 && grep -q '^blink_tb.sv:36: syntax error' out && grep -q '^blink_tb.sv:35: ERROR \[iverilog-refused\]: iverilog cannot compile this code (its message is above). Fix: end blink_tb.sv:35 with ; (iverilog names blink_tb.sv:36, the line after it: a missing ; is reported where the next statement starts), then fix what is left. https://' out && ! grep -qE 'sim-from-build|build refuses|read-with-slang' out && [ ! -e blink.json ] && [ ! -e blink.il ] && [ ! -e blink_sim.elab ]"
+check "sim: a design both readers refuse (a missing ;) prints the build's coded line and iverilog's" "mkdir -p '$T/twor' && cp '$ROOT/test/agent/fixtures/syntax.sv' '$ROOT/test/agent/fixtures/syntax_tb.sv' '$T/twor/' && cd '$T/twor' && ! '$CLI' sim >out 2>&1 && grep -q '^syntax.sv:3: syntax error' out && grep -q \"^yosys' reader:\" out && grep -q '^  syntax.sv:3: ERROR: syntax error' out && grep -q '^syntax.sv:2: ERROR \[slang-refused\]: expected .;. (yosys-slang, the second reader' out && grep -q '^syntax.sv:2: ERROR \[iverilog-refused\]: iverilog cannot compile this code (its message is above), and the build refuses the design too (its lines are above)\. Fix: end syntax.sv:2 with ; (iverilog names syntax.sv:3, the line after it' out && ! grep -q 'sim-from-build' out && [ ! -e syntax_sim ]"
 # a testbench that sets top's parameters (#(.W(2))) on a design iverilog refuses: the build keeps the defaults, so the
 # second path cannot apply them; sim says so at the testbench's line (the review found iverilog-refused blaming it)
 # shellcheck disable=SC2016   # $error, $display and $finish are Verilog
@@ -329,6 +329,99 @@ blink_sim_plain() {
     && [ ! -e blink.json ] && [ ! -e blink.il ] && [ ! -e blink_sim.elab ]
 }
 check "sim: blink is iverilog's alone: the same four lines and the waveform line, no note, no build started" blink_sim_plain
+# the only testbench here never instantiates the design (a usability test wrote one): run alone it printed led=x and
+# passed, by name, by the design's name and with no name. It is stopped all three ways, and the fix writes the instance
+# shellcheck disable=SC2016   # $display and $finish are Verilog
+tb_without_design() {
+    rm -rf "$T/twd" && mkdir -p "$T/twd" && cd "$T/twd" \
+    && printf 'module andgate(input logic [15:0] sw, output logic [15:0] led);\n  assign led = {15'"'"'d0, sw[0] & sw[1]};\nendmodule\n' > andgate.sv \
+    && printf 'module andgate_tb;\n  logic [15:0] sw; logic [15:0] led;\n  initial begin sw = 3; #1; $display("led=%%b", led); $finish; end\nendmodule\n' > andgate_tb.sv \
+    && for a in "" andgate andgate_tb; do
+           ! "$CLI" sim $a > out 2>&1 || return 1
+           grep -q '^andgate_tb.sv:1: ERROR \[testbench-without-design\]: andgate_tb instantiates no design module of these files, so it has nothing to test: .* Fix: instantiate andgate in it (andgate dut(.sw(sw), .led(led));)' out && ! grep -q 'led=' out || return 1
+       done
+}
+check "sim: the only testbench instantiates no design -> testbench-without-design with no name, the design's name or its own, never a pass" tb_without_design
+# dewfpga run on a testbench file said to put the design in a .sv file in this folder, which it was: it names the
+# design's file for run and the testbench for sim, from the folder and from elsewhere (then with full paths)
+# shellcheck disable=SC2016   # $display and $finish are Verilog
+run_testbench_file() {
+    rm -rf "$T/rtb" && mkdir -p "$T/rtb" && cd "$T/rtb" \
+    && printf 'module decoder2to4(input logic [1:0] a, output logic [3:0] y);\n  assign y = 4'"'"'b0001 << a;\nendmodule\n' > decoder2to4.sv \
+    && printf 'module decoder2to4_tb;\n  logic [1:0] a; logic [3:0] y;\n  decoder2to4 dut(.a(a), .y(y));\n  initial begin a = 1; #1 $display("%%b", y); $finish; end\nendmodule\n' > decoder2to4_tb.sv \
+    && ! "$CLI" run decoder2to4_tb.sv --build-only > out 2>&1 && ! grep -q 'no-design-module' out \
+    && grep -qF "$PWD/decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), and Run builds a design for the board" out \
+    && grep -qF 'Fix: run the design it tests:  dewfpga run decoder2to4.sv   (its simulation:  dewfpga sim decoder2to4_tb).' out \
+    && cd "$T" && ! "$CLI" run "$T/rtb/decoder2to4_tb.sv" --build-only > rtb/out2 2>&1 \
+    && grep -qF "dewfpga run $(cd rtb && pwd -P)/decoder2to4.sv   (its simulation:  cd $(cd rtb && pwd -P) && dewfpga sim decoder2to4_tb)" rtb/out2
+}
+check "run on a testbench file -> top-is-a-testbench naming the design's file to run and the testbench to sim, not no-design-module" run_testbench_file
+# run takes a path and sim refused one: sim takes the testbench's file as it takes its name (./x_tb.sv, $PWD/x_tb.sv,
+# x_tb.sv, tb/x_tb.sv), bit names the design a testbench file tests, and a file of another folder gets the cd command
+sim_file_path() {
+    run_testbench_file && cd "$T/rtb" && local n && for n in ./decoder2to4_tb.sv "$PWD/decoder2to4_tb.sv" decoder2to4_tb.sv; do
+        "$CLI" sim "$n" > out 2>&1 && grep -qx '0010' out || return 1
+    done \
+    && ! "$CLI" bit decoder2to4_tb.sv > out 2>&1 && grep -qF 'decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), not a design. Fix: name the design it tests instead:  dewfpga bit decoder2to4  (or simulate the testbench:  dewfpga sim decoder2to4_tb).' out \
+    && mkdir tb && mv decoder2to4_tb.sv tb/ && "$CLI" sim tb/decoder2to4_tb.sv > out 2>&1 && grep -qx '0010' out \
+    && cd "$T" && ! "$CLI" sim rtb/tb/decoder2to4_tb.sv > out 2>&1 && grep -qF 'ERROR [run-inside-the-folder]: rtb/tb/decoder2to4_tb.sv is a path, and dewfpga works on the .sv files in the current folder (and a testbench in its tb/ or sim/ folder). Fix: run it inside the folder that holds the .sv files:  cd "rtb/tb" && dewfpga sim decoder2to4_tb.sv' out
+}
+check "sim takes the testbench's file, ./x_tb.sv, \$PWD/x_tb.sv or tb/x_tb.sv; bit on a testbench file names its design; another folder's file gets the cd" sim_file_path
+# run --sim printed argparse's 'usage: run_file.py ... error: unrecognized arguments', a file the student never typed
+run_bad_option() {
+    run_testbench_file && cd "$T/rtb" && { "$CLI" run decoder2to4.sv --sim > out 2>&1; [ $? = 2 ]; } && ! grep -q 'run_file.py\|usage:' out \
+    && grep -qF 'ERROR [unknown-option]: unknown option: --sim. Fix: dewfpga run <file.sv> [--build-only] [--top NAME] [--xdc FILE]  (dewfpga run --help says what each does). To simulate a testbench, run it in its folder:  dewfpga sim <testbench>.' out \
+    && { "$CLI" run > out 2>&1; [ $? = 2 ]; } && grep -q '^ERROR \[unknown-option\]: dewfpga run needs the file to run\. Fix: dewfpga run <file.sv>' out \
+    && "$CLI" run --help > out 2>&1 && grep -q '^usage: dewfpga run ' out
+}
+check "run --sim, run with no file -> the CLI's unknown-option line with the command that works, not argparse's run_file.py usage" run_bad_option
+# <command> --help was an unknown option, or ran the command (new --help made a folder named --help, check checked):
+# it prints that command's lines of the help and exits 0, -h too, wherever it sits on the line. (install, uninstall and
+# vscode are left out here: before this they ran.)
+cmd_help_each() {
+    rm -rf "$T/hlp" && mkdir -p "$T/hlp" && cd "$T/hlp" && local c && for c in sim bit flash clean tops wave new check mcp; do
+        "$CLI" "$c" --help > "$T/hlp.out" 2>&1 && "$CLI" "$c" x -h > "$T/hlp.out2" 2>&1 && cmp -s "$T/hlp.out" "$T/hlp.out2" || return 1
+        head -1 "$T/hlp.out" | grep -qE "^  dewfpga ([a-z]+ \| )*$c( |$)" && tail -1 "$T/hlp.out" | grep -qx 'dewfpga --help lists every command.' && ! grep -q 'ERROR' "$T/hlp.out" || return 1
+    done && [ -z "$(ls -A)" ] && "$CLI" sim --help | grep -q 'dewfpga sim \[top|testbench\] --wave'
+}
+check "<command> --help (or -h) prints that command's help, exit 0, runs nothing" cmd_help_each
+# run printed make's "make: *** [flash] Error 1" under its clean board-not-found line; an openFPGALoader that answers as
+# it does with no board plugged in (so the test never programs a real one)
+run_no_board() {
+    rm -rf "$T/rnb" && mkdir -p "$T/rnb/bin" && cd "$T/rnb" && cp "$ROOT/templates/blink.sv" . \
+    && printf '#!/bin/sh\necho "unable to open ftdi device: -3 (device not found)"\necho "JTAG init failed with: unable to open ftdi device"\nexit 1\n' > bin/openFPGALoader && chmod +x bin/openFPGALoader \
+    && ! PATH="$T/rnb/bin:$PATH" "$CLI" run blink.sv > out 2>&1 && grep -q '^ERROR \[board-not-found\]: board not found by openFPGALoader' out \
+    && ! grep -q '^make' out && [ "$(tail -1 out | cut -c1-26)" = 'ERROR [board-not-found]: b' ]
+}
+check "run with no board -> the board-not-found line last, no make trailer" run_no_board
+# a ; missing at the end of line 2 is a syntax error on line 3 for both parsers: the coded line names line 2, and the
+# readers' lines say the line before has no ;, for bit and run (with and without the second reader) and for sim
+# shellcheck disable=SC2016   # $finish is Verilog
+missing_semicolon() {
+    rm -rf "$T/msc" && mkdir -p "$T/msc" && cd "$T/msc" \
+    && printf 'module top(input logic [15:0] sw, output logic [15:0] led);\n  assign led = sw\nendmodule\n' > top.sv \
+    && ! "$CLI" bit > out 2>&1 && grep -qxF '  top.sv:2 does not end with ;, and a parser names the line after a missing ; (top.sv:3)' out \
+    && ! SLANG="$T/none/slang.so" "$CLI" bit > out 2>&1 && grep -qxF '  top.sv:2 does not end with ;, and a parser names the line after a missing ; (top.sv:3)' out \
+    && ! "$CLI" run top.sv --build-only > out 2>&1 && grep -qF "$PWD/top.sv:2 does not end with ;" out \
+    && printf 'module top_tb; logic [15:0] sw = 0; wire [15:0] led; top dut(.sw(sw), .led(led)); initial begin #1 $finish; end endmodule\n' > top_tb.sv \
+    && ! "$CLI" sim > out 2>&1 && grep -qF 'top.sv:2: ERROR [iverilog-refused]: ' out && grep -qF 'Fix: end top.sv:2 with ; (iverilog names top.sv:3, the line after it: a missing ; is reported where the next statement starts), then fix what is left.' out \
+    && printf 'module top(input logic [15:0] sw, output logic [15:0] led);\n  always_comb\n    led = sw +;\nendmodule\n' > top.sv \
+    && ! "$CLI" bit > out 2>&1 && ! grep -q 'does not end with ;' out \
+    && printf 'interface i;\n  logic a;\nendinterface\nmodule m(i.x bus);\nendmodule\n' > e.sv && [ -z "$(python3 "$ROOT/templates/check_xdc.py" --line-before e.sv:4)" ] \
+    && printf 'module m;\n  initial begin\n    fork\n    join\n  end\nendmodule\n' > e.sv && [ -z "$(python3 "$ROOT/templates/check_xdc.py" --line-before e.sv:5)" ]
+}
+check "a ; missing at the end of line 2 -> the messages name line 2 (the parsers say line 3), not after a header line" missing_semicolon
+# eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
+# "the course file": one message per cause names every port, and the file by its name; commented-out lines likewise
+pins_grouped() {
+    rm -rf "$T/pgr" && mkdir -p "$T/pgr" && cd "$T/pgr" && cp "$ROOT/templates/Basys3_Master.xdc" . \
+    && printf 'module adder(input logic [1:0] a, b, input logic cin, output logic [1:0] s, output logic cout);\n  assign {cout, s} = a + b + cin;\nendmodule\n' > adder.sv \
+    && ! "$CLI" bit > out 2>&1 && [ "$(grep -c 'port-without-pin' out)" = 1 ] && ! grep -q 'course' out \
+    && grep -qF "adder.sv:1: ERROR [port-without-pin]: 8 ports of adder have no pin in the XDC: no line names them (Digilent's Basys3_Master.xdc, the Basys3's pin file, names the board's ports clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an): a[0], a[1], b[0], b[1], cin, cout, s[0], s[1]. Fix: rename the ports" out \
+    && cp "$ROOT/templates/blink.sv" . && rm adder.sv && ! "$CLI" bit > out 2>&1 && [ "$(grep -c 'port-without-pin' out)" = 1 ] \
+    && grep -qF 'Basys3_Master.xdc:7: ERROR [port-without-pin]: 33 ports of blink have no pin in the XDC: the lines that name them start with # (commented out), so they do not count: clk (line 7), led[0] (line 31),' out
+}
+check "ports without a pin -> one port-without-pin line per cause naming every port, the pin file by its name" pins_grouped
 # two clocks: a divided clock the student named (slow) clocks a counter; the pnr line reports each clock by name
 two_clocks() {
     mkdir -p "$T/2c" && cd "$T/2c" && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic slow = 0; always_ff @(posedge clk) slow <= ~slow;\n  logic [15:0] c = 0; always_ff @(posedge slow) c <= c + sw;\n  assign led = c;\nendmodule\n' > top.sv \

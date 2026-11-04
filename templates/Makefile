@@ -204,8 +204,11 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  if [ -n "$$snote" ]; then iverilog -g2012 $(WAVESEL)$(if $(filter 1,$(TBONLY)), -s dewfpga_start) $(INC) -o $@ $(WAVEV) $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
 	  if [ -z "$$snote" ]; then iverilog -g2012 $(WAVESEL) $(INC) -o $@ $(WAVEV) $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv $(WAVEV); \
 	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
-	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); ipw=""; [ $$rc -ne 0 ] || ipw=$$(awk '$(IPW_SIM_AWK)' $(TOP)_sim.err); rm -f $(TOP)_sim.err; \
-	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
+	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); ipw=""; [ $$rc -ne 0 ] || ipw=$$(awk '$(IPW_SIM_AWK)' $(TOP)_sim.err); \
+	  fx="fix the first line it names; the errors after the first often follow from it"; py="$(PY)"; [ -x "$$py" ] || py=python3; \
+	  if [ -n "$$at" ] && grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | grep -q ': syntax error$$'; then b=$$("$$py" "$(CHECKER)" --line-before "$$at" 2>/dev/null); \
+	    if [ -n "$$b" ]; then fx="end $$b with ; (iverilog names $$at, the line after it: a missing ; is reported where the next statement starts), then fix what is left"; at=$$b; fi; fi; rm -f $(TOP)_sim.err; \
+	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: $$fx. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
 	  if [ $$rc -eq 0 ]; then [ -n "$$ipw" ] || exit 0; rm -f $@; [ -s $(TOP).il ] || rm -f $(TOP).json; \
 	    $(MAKE) -s -f $(firstword $(MAKEFILE_LIST)) $(TOP).json 2>&1 | sed -E '/^make(\[[0-9]+\])?: \*\*\* \[[^]]*\] Error [0-9]+$$/d' > $(TOP)_sim.bld; \
 	    if grep -q '\[implicit-port-width\]' $(TOP)_sim.bld; then cat $(TOP)_sim.bld >&2; else echo "$$ipw" >&2; fi; rm -f $(TOP)_sim.bld; exit 1; fi; indesign=0; [ -z "$$at" ] || case " $(SRCS) " in *" $${at%:*} "*) indesign=1 ;; esac; \
@@ -653,10 +656,12 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	  | awk -v rd=verilog -v ifi="$$ifi" -v ifp="$$ifp" -v il=$(TOP).il -v ylog=$(TOP).yosys.log '$(YOSYS_AWK)' > $(TOP).rv.out || rc=$$?; \
 	  if [ $$rc -eq 0 ]; then cat $(TOP).rv.out; rm -f $(TOP).rv.out $(TOP).yosys.log; exit 0; fi; \
 	  crash=$$(grep -oE '(Segmentation fault|Abort trap|Bus error|Illegal instruction)(: [0-9]+)?' $(TOP).rv.out | head -1); \
+	  semi() { s=$$(grep -m1 -oE '^[^ ]+:[0-9]+: ERROR: ?syntax error' $(TOP).rv.out | sed -E 's/: ERROR: ?syntax error$$//'); b=""; py="$(PY)"; [ -x "$$py" ] || py=python3; \
+	    [ -z "$$s" ] || b=$$("$$py" "$(CHECKER)" --line-before "$$s" 2>/dev/null); [ -z "$$b" ] || echo "  $$b does not end with ;, and a parser names the line after a missing ; ($$s)"; }; \
 	  crashmsg() { rl=$$(grep -nE '(^|[^A-Za-z0-9_.])[0-9]+(\.[0-9]+)?[eE][-+]?[0-9]+|[^A-Za-z0-9_.][0-9]+\.[0-9]+([^0-9.]|$$)' $(SRCS) /dev/null | head -1); at=$$(echo "$$rl" | cut -d: -f1,2); \
 	    if [ -n "$$at" ]; then echo "$$at: ERROR [yosys-crashed]: yosys' own reader crashed ($$crash) without a message, and this line holds a real number ($$(echo "$$rl" | cut -d: -f3- | grep -oE '[0-9]+(\.[0-9]+)?[eE][-+]?[0-9]+|[0-9]+\.[0-9]+' | head -1)): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000). $(URL)yosys-crashed/"; \
 	    else echo "ERROR [yosys-crashed]: yosys' own reader crashed ($$crash) without a message. Fix: take the design apart until the crash goes away, and report that code (github.com/nosey-dewdrop/dewfpga/issues). $(URL)yosys-crashed/"; fi; }; \
-	  if [ ! -f "$(SLANG)" ]; then if [ -n "$$crash" ]; then crashmsg; else cat $(TOP).rv.out; fi; \
+	  if [ ! -f "$(SLANG)" ]; then if [ -n "$$crash" ]; then crashmsg; else cat $(TOP).rv.out; semi; fi; \
 	    if [ -n "$$crash" ] || grep -qE '^[^ ]+:[0-9]+: ERROR:|\[hierarchical-name\]|\[interface-member\]|\[packed-typedef-2d\]' $(TOP).rv.out; then \
 	      echo "note [second-reader-missing]: yosys' own reader refused this code, and yosys-slang, the second reader (it reads the SystemVerilog Vivado accepts: interfaces, unpacked arrays, foreach, break, enum methods first/last ...), is not installed: $(SLANG) not found. Fix: run  dewfpga install  (it builds that reader, ~3 min), then build again. $(URL)second-reader-missing/"; fi; \
 	    rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
@@ -673,7 +678,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	  if grep -qE '^(ERROR: (Design elaboration failed|Feature unimplemented)|[^ ]+:[0-9]+:[0-9]+: (error|fatal error):)' $(TOP).slang.log; then \
 	    coded=0; if [ -n "$$crash" ]; then crashmsg; coded=1; \
 	    elif grep -q 'ERROR \[' $(TOP).rv.out; then grep 'ERROR' $(TOP).rv.out; coded=1; \
-	    else echo "yosys' reader:"; { grep 'ERROR' $(TOP).rv.out || tail -1 $(TOP).rv.out; } | sed 's/^/  /'; fi; \
+	    else echo "yosys' reader:"; { grep 'ERROR' $(TOP).rv.out || tail -1 $(TOP).rv.out; } | sed 's/^/  /'; semi; fi; \
 	    if echo " $(SRCS) " | grep -q '\.v '; then echo "note [v-is-verilog-2005]: a .v file is read as Verilog-2005 by both readers, as Vivado reads it (UG901 Ch.10): SystemVerilog (logic, always_ff, always_comb, enum ...) belongs in a .sv file. Fix: if your .v file holds SystemVerilog, rename it to .sv. $(URL)v-is-verilog-2005/"; fi; \
 	    awk -v coded=$$coded '$(FMT_AWK) $(IPW_AWK) \
 	         function ipwbits(t,  a, b) { if (match(t, /\[[0-9]+:[0-9]+\]/)) { t=substr(t,RSTART+1,RLENGTH-2); a=t; sub(/:.*/,"",a); b=t; sub(/.*:/,"",b); return (a+0 > b+0 ? a-b : b-a) + 1 } if (t ~ /^(int|integer)$$/) return 32; if (t == "shortint") return 16; if (t == "longint") return 64; if (t == "byte") return 8; if (t ~ /^(bit|logic|reg)$$/) return 1; return "" } \

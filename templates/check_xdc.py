@@ -269,15 +269,19 @@ def _split_commas(s):
 def _port_names(body):
     """The names of a module's ports, from its header: ANSI (`input logic [3:0] a`), Verilog-1995 (`a, b`) or
     explicit (`.dp(...)`)."""
+    return set(_ports_in_order(body))
+
+def _ports_in_order(body):
+    """The same names, in the order the header lists them."""
     head = _header_view(body).split(";", 1)[0]
     pl = _port_list(head)
-    if not pl: return set()
+    if not pl: return []
     words = {"input", "output", "inout", "logic", "wire", "reg", "bit", "signed", "unsigned", "var", "tri", "integer"}
-    names = set()
+    names = []
     for item in _split_commas(head[pl[0]:pl[1]]):
         m = re.match(r"\s*\.\s*([A-Za-z_]\w*)", item)
         ids = [m.group(1)] if m else [i for i in re.findall(r"[A-Za-z_]\w*", re.sub(r"\[[^\]]*\]|=.*", " ", item)) if i not in words]
-        if ids: names.add(ids[-1])
+        if ids and ids[-1] not in names: names.append(ids[-1])
     return names
 
 def xdc_ports(xdc):
@@ -688,6 +692,19 @@ def needed(clicked, siblings):
         for p in ups: seen.add(p); out |= above(p, seen)
         return out
     start = [n for n in design if mods[n]["file"] == clicked]
+    tbs = [n for n in order if mods[n]["file"] == clicked and mods[n]["tb"]]
+    if not start and tbs:
+        # a testbench file: Run builds a design for the board, so it names the design the testbench tests, and sim
+        here = lambda f: os.path.dirname(os.path.abspath(f)) == os.getcwd()
+        rel = lambda f: os.path.basename(f) if here(f) else os.path.abspath(f)
+        duts = [c for c in inst[tbs[0]] if c in mods and not mods[c]["tb"]]
+        sim = f"dewfpga sim {tbs[0]}" if here(clicked) else f"cd {os.path.dirname(os.path.abspath(clicked))} && dewfpga sim {tbs[0]}"
+        what = (f"run the design it tests:  dewfpga run {rel(mods[duts[0]]['file'])}   (" if duts
+                else f"run the file that holds the design ({tbs[0]} instantiates none of this folder's), ")
+        print("ERROR=" + msg("ERROR", "top-is-a-testbench", f"{os.path.basename(clicked)} holds a testbench ({tbs[0]}, a module without "
+                             "ports), and Run builds a design for the board: a testbench has no pins to put on it.",
+                             what + f"its simulation:  {sim}" + (")" if duts else "") + ".", f"{clicked}:{mods[tbs[0]]['line']}"))
+        return 0
     tops = set().union(*(above(n, {n}) for n in start)) if start else set()
     top = ""
     if start and not any(mods[n]["file"] == clicked for n in tops) and len(tops) == 1:
@@ -802,6 +819,25 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
     # line (dewfpga sim tb_mux8), or the only one there is when the designs alone do not name one top (a lab file
     # with three tops and a testbench file with one testbench per part). Its design module is the top.
     chosen_tb = None; tbwhy = ""
+    # a file named on the line (dewfpga sim decoder2to4_tb.sv, or tb/lab_tb.sv): its testbenches, the ones nothing
+    # instantiates. For sim one of them is the start, as its name would be; for bit, the design it tests is meant
+    used = set().union(*inst.values()) if inst else set()
+    unext = lambda f: re.sub(r"\.(sv|v|SV|V)$", "", f)
+    tbfile = [] if not want or want in mods else [n for n in order if mods[n]["tb"] and n not in used
+              and unext(want) in (unext(mods[n]["file"]), unext(os.path.basename(mods[n]["file"])))]
+    if tbfile and any(unext(want) in (unext(mods[n]["file"]), unext(os.path.basename(mods[n]["file"]))) for n in design):
+        tbfile = []
+    if cmd == "sim" and len(tbfile) > 1:
+        return stop("two-testbenches", f"{len(tbfile)} testbenches in {want} and nothing says which one to run: {listed(tbfile)}.",
+                    f"name the one to run:  dewfpga sim {tbfile[0]}", where(tbfile[0]))
+    if cmd == "sim" and tbfile:
+        chosen_tb = tbfile[0]
+    elif tbfile:
+        duts = [n for n in design if n in inst[tbfile[0]]]
+        return stop("top-is-a-testbench", f"{want} holds a testbench ({tbfile[0]}, a module without ports), not a design.",
+                    f"name the design it tests instead:  dewfpga {cmd} {duts[0]}  (or simulate the testbench:  dewfpga sim {tbfile[0]})." if duts
+                    else f"name a design module instead:  dewfpga {cmd} {design[0]}." if design
+                    else "put the design (a module with ports) in a .sv file in this folder.", where(tbfile[0]))
     if cmd == "sim" and want and want in mods and mods[want]["tb"]:
         chosen_tb = want
     elif cmd == "sim" and not want and len(roots) != 1 and design:
@@ -810,11 +846,19 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
         elif len(tbroots) > 1:
             return stop("two-testbenches", f"{len(tbroots)} testbenches here and nothing says which one to run: {listed(tbroots)}.",
                         f"name the one to run:  dewfpga sim {tbroots[0]}", where(tbroots[0]))
+    # a testbench that instantiates no design runs alone: it prints its own signals (x where nothing drives them) and
+    # passes whatever the design does, so it never runs. The fix names the design and its ports when there is one
+    def no_design(tb, dut=None):
+        dut = dut or (roots[0] if len(roots) == 1 else None)
+        inst_line = f"{dut} dut(" + ", ".join(f".{p}({p})" for p in _ports_in_order(mods[dut]["body"])) + ");" if dut else ""
+        return stop("testbench-without-design", f"{tb} instantiates no design module of these files, so it has nothing to test: run as it is, "
+                    "it shows only its own signals (x where nothing drives them) and passes whatever the design does.",
+                    f"instantiate {dut} in it ({inst_line})." if dut
+                    else "instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder.", where(tb))
     if chosen_tb:
         duts = [n for n in design if n in inst[chosen_tb]]
         if not duts:
-            return stop("testbench-without-design", f"{chosen_tb} instantiates no design module of these files, so it has nothing to test.",
-                        "instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder.", where(chosen_tb))
+            return no_design(chosen_tb)
         top = next((n for n in duts if n in roots), duts[0])
         tbwhy = f"testbench: {chosen_tb}" + (f", {tbwhy}" if tbwhy else "") + f" (it tests {top})"
     elif want:
@@ -847,7 +891,12 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
         else: return stop("two-tops", f"{len(roots)} modules could be the top (nothing instantiates them): {listed(roots)}.",
                           f"name it:  dewfpga {cmd} {roots[0]}", where(roots[0]))
     tbs = [n for n in order if mods[n]["tb"]]
-    tb_for = [chosen_tb] if chosen_tb else [n for n in tbs if top in inst[n]] or ([tbs[0]] if len(tbs) == 1 else [])
+    # the only testbench stands in for one that names the top only when it tests a design of these files (a part
+    # of the top, say); one that instantiates none tests nothing, and sim stops at it
+    tests = lambda n: any(c in mods and not mods[c]["tb"] for c in inst[n])
+    tb_for = [chosen_tb] if chosen_tb else [n for n in tbs if top in inst[n]] or ([tbs[0]] if len(tbs) == 1 and tests(tbs[0]) else [])
+    if cmd == "sim" and not tb_for and len(tbs) == 1:
+        return no_design(tbs[0], top)
     if cmd == "sim" and not chosen_tb and len(tb_for) > 1:
         tbwhy = f"testbench: {tb_for[0]} (more test {top} here: {', '.join(tb_for[1:])}; dewfpga sim {tb_for[1]} runs that one)"
     print("TOP=" + top)
@@ -997,6 +1046,30 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--list-tops":
 if len(sys.argv) >= 3 and sys.argv[1] == "--xdc-for":
     # --xdc-for "<port> <port> ..." <file.xdc>...
     sys.exit(xdc_for(sys.argv[2].split(), sys.argv[3:]))
+# a statement that runs on into the next line: what a parser names as the line after a missing ; (assign y = a
+# with no ; is "line 3: syntax error, unexpected endmodule"). A header that ends its line (if (a), always_ff @(...),
+# else, begin) opens a statement that goes on below; always_ff @(posedge clk) q <= d runs on without its ;
+_GOES_ON = re.compile(r"^\s*(?:(?:module|interface|package|program|class|function|task|generate|`\w+)\b"
+                      r"|(?:else|always_comb|always|initial|final|begin|fork|do|forever|unique|priority)\s*$"
+                      r"|(?:(?:else\s+)?if|for|foreach|while|repeat|case[xz]?|(?:unique\s+|priority\s+)?case[xz]?|always(?:_ff|_latch)?\s*@)\s*\(.*\)\s*$)")
+def line_before(where):
+    """`--line-before <file>:<line>`: prints <file>:<n> when the last line of code above <line> ends a statement
+    without its ; (a name, a number, ) or ] last, and no header word first), the line a missing ; is on when a
+    parser names <line>; prints nothing otherwise."""
+    m = re.fullmatch(r"(.+):(\d+)", where)
+    if not m: return 0
+    try: lines = open(m.group(1), encoding="utf-8", errors="replace").read().split("\n")
+    except OSError: return 0
+    for n in range(int(m.group(2)) - 1, 0, -1):
+        code = re.sub(r"/\*.*?\*/", " ", re.sub(r"//.*", "", lines[n - 1] if n <= len(lines) else "")).rstrip()
+        if not code.strip(): continue
+        if re.search(r"[\w)\]'\"]$", code) and not _GOES_ON.match(code) \
+           and not re.search(r"\b(begin|end\w*|else|default|fork|join(_any|_none)?)$", code):
+            print(f"{m.group(1)}:{n}")
+        return 0
+    return 0
+if len(sys.argv) == 3 and sys.argv[1] == "--line-before":
+    sys.exit(line_before(sys.argv[2]))
 if len(sys.argv) >= 3 and sys.argv[1] == "--needed":
     # --needed <clicked file> <the other .sv/.v files of its folder>...
     sys.exit(needed(sys.argv[2], sys.argv[3:]))
@@ -1101,33 +1174,47 @@ extra   = sorted(xdc_ports - ports, key=by_index)   # in the XDC, not in the cod
 for ln, t in forms:
     kind = "a wildcard" if re.search(r"[*?]", t) else ("an option (-regexp, -filter ...)" if re.search(r"get_ports\s+-", t) else "a list of several ports")
     print(msg("warning", "xdc-get-ports-form", f"`{t}` is {kind}: Vivado expands it, and this check does not read that form yet, so the ports it names count as unpinned here.",
-              "write one line per port with its full name, as the course's Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}]",
+              "write one line per port with its full name, as Digilent's Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}]",
               loc=f"{xf}:{ln}"))
 
 xdc_base = {q.split("[")[0] for q in xdc_ports}
 if missing:
-    # Missing names, missing indices and commented-out pin assignments.
+    # Missing names, missing indices and commented-out pin assignments: one message per cause, naming every port it
+    # holds (eight ports without a line were eight copies of the same long message), at the first one's line
     xdc_lower = {q.lower(): q for q in xdc_ports}
-    shown = 0
+    groups = {}
     for p in missing:
         b = p.split("[")[0]
-        if p in cline:
-            text = f"{p} has no pin in the XDC: the line that names it starts with # (commented out), so it does not count."
-            fix = f"remove the # at the start of that line (the same name, the index the design uses: {p})."
-        elif b in xdc_base:
-            text = f"{p} has no pin in the XDC: no line names it (the XDC has lines for {b} with other indices, none for {p})."
-            fix = f"add a line for {p} to the XDC (copy a {b} line, change the index and the pin), or make the port narrower."
+        near = xdc_lower.get(p.lower())
+        key = ("commented",) if p in cline else ("indices", b) if b in xdc_base else ("case", p) if near else ("noline",)
+        groups.setdefault(key, []).append(p)
+    def names(ps, lines=False):
+        shown = [f"{p} (line {cline[p]})" if lines else p for p in ps[:16]]
+        return ", ".join(shown) + (f" and {len(ps) - 16} more" if len(ps) > 16 else "")
+    for key, ps in groups.items():
+        one, p, b = len(ps) == 1, ps[0], ps[0].split("[")[0]
+        if key[0] == "commented":
+            text = (f"{p} has no pin in the XDC: the line that names it starts with # (commented out), so it does not count." if one else
+                    f"{len(ps)} ports of {tname} have no pin in the XDC: the lines that name them start with # (commented out), so they do not count: {names(ps, True)}.")
+            fix = (f"remove the # at the start of that line (the same name, the index the design uses: {p})." if one else
+                   "remove the # at the start of each of those lines (the same names, the indices the design uses).")
+        elif key[0] == "indices":
+            text = (f"{p} has no pin in the XDC: no line names it (the XDC has lines for {b} with other indices, none for {p})." if one else
+                    f"{len(ps)} bits of {b} have no pin in the XDC: no line names them (the XDC has lines for {b} with other indices): {names(ps)}.")
+            fix = (f"add a line for {p} to the XDC (copy a {b} line, change the index and the pin), or make the port narrower." if one else
+                   f"add a line for each to the XDC (copy a {b} line, change the index and the pin), or make the port narrower.")
+        elif key[0] == "case":
+            near = xdc_lower[p.lower()]
+            text = f"{p} has no pin in the XDC: no line names it (the XDC has '{near}': same name, different case)."
+            fix = f"rename the port in the module to {near.split('[')[0]}, or the name inside [get_ports ...] on the XDC line to {b}."
         else:
-            near = xdc_lower.get(p.lower())
-            text = f"{p} has no pin in the XDC: no line names it" + (f" (the XDC has '{near}': same name, different case)." if near else " (the course file uses clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an).")
-            fix = (f"rename the port in the module to {near.split('[')[0]}, or the name inside [get_ports ...] on the XDC line to {p.split('[')[0]}." if near
-                   else "rename the port in the module to a name the XDC has, or change the name inside [get_ports ...] on its line of the XDC (a line that starts with # is commented out and does not count).")
-        loc = f"{xf}:{cline[p]}" if p in cline else where(p)
-        print(msg("ERROR", "port-without-pin", text, fix, loc=loc))
-        shown += 1
-        if shown == 12 and len(missing) > 14:
-            print(msg("ERROR", "port-without-pin", f"... and {len(missing) - shown} more ports of {tname} with no pin in the XDC (the same problem): {', '.join(missing[shown:])}.", "the same fix for each."))
-            break
+            board = " (Digilent's Basys3_Master.xdc, the Basys3's pin file, names the board's ports clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an)"
+            text = (f"{p} has no pin in the XDC: no line names it{board}." if one else
+                    f"{len(ps)} ports of {tname} have no pin in the XDC: no line names them{board}: {names(ps)}.")
+            fix = (("rename the port in the module to a name the XDC has, or change the name inside [get_ports ...] on its line of the XDC"
+                    if one else "rename the ports in the module to names the XDC has, or change the names inside [get_ports ...] on their lines of the XDC")
+                   + " (a line that starts with # is commented out and does not count).")
+        print(msg("ERROR", "port-without-pin", text, fix, loc=f"{xf}:{cline[p]}" if p in cline else where(p)))
     sys.exit(1)
 no_iostd = sorted(p for p in ports if p in has_pin and p not in has_iostd)
 for p in no_iostd:
@@ -1160,7 +1247,7 @@ if pins_csv and os.path.isfile(pins_csv):
         pin = pin_of[p]
         if pin in chip: continue
         bad_pins += 1
-        on = f" (the course's Basys3_Master.xdc puts {p} on {master[p]})" if p in master else ""
+        on = f" (Digilent's Basys3_Master.xdc puts {p} on {master[p]})" if p in master else ""
         if pin.upper() in chip:
             text = f"{pin} is written in small letters, and the chip's pin names are capitals ({pin.upper()}): nextpnr reads {pin} as a pin the chip does not have, so {p} would have no pin."
             fix = f"write  PACKAGE_PIN {pin.upper()}  on this line."
@@ -1176,7 +1263,7 @@ for pin, ps in sorted(users.items(), key=lambda kv: xline[kv[1][0]]):
     bad_pins += 1
     where_ = " and ".join(f"{q} ({xf}:{xline[q]})" for q in ps)
     print(msg("ERROR", "pin-used-twice", f"pin {pin} is given to {len(ps)} ports, {where_}: one pin takes one port, so nextpnr would stop here.",
-              f"give each port its own pin: copy their lines from the course's Basys3_Master.xdc (" + ", ".join(f"{q} is on {master_pins().get(q, '?')}" for q in ps) + ").",
+              f"give each port its own pin: copy their lines from Digilent's Basys3_Master.xdc (" + ", ".join(f"{q} is on {master_pins().get(q, '?')}" for q in ps) + ").",
               loc=f"{xf}:{xline[ps[-1]]}"))
 if bad_pins: sys.exit(1)
 # pins in the XDC that the design does not use are fine (nextpnr ignores them); a whole

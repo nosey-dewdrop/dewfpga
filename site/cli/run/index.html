@@ -48,10 +48,11 @@ dewfpga run ~/Desktop/my_design.sv --build-only  # no board needed</code></pre>
 <p>The testbench needs nothing added, as in Vivado: no <code>$dumpfile</code>, no <code>$dumpvars</code>, no <code>$finish</code>. <code>dewfpga sim</code> records every signal under the testbench into <code>&lt;testbench&gt;.vcd</code> (a testbench that calls <code>$dumpvars</code> itself keeps its own file). Testbenches may sit in a <code>tb/</code> or <code>sim/</code> folder beside the design, several in one file; each run starts at one of them (<code>dewfpga tops --sim</code> lists them). A testbench with a free-running clock and no <code>$finish</code> stops at 1000 ns, where Vivado's Run Simulation stops (<code>SIM_TIME=10us</code> runs it longer). Files without a <code>`timescale</code> get Vivado's 1ns/1ps. A testbench that reports errors still opens: the waveform is where the wrong value is found. A run that stops at a compile error opens nothing. <code>--wave --no-open</code> writes what the viewer would get and opens nothing.</p>
 <p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga#readme">the README</a>.</p>
 <h2 id="errors">Which errors can it stop with?</h2>
-<p class="mute small">2 codes in the error catalog.</p>
+<p class="mute small">3 codes in the error catalog.</p>
 <ul>
 <li><a href="/dewfpga/errors/explicit-port/">explicit-port</a>: Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port.</li>
 <li><a href="/dewfpga/errors/module-without-endmodule/">module-without-endmodule</a>: A module&#x27;s endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.</li>
+<li><a href="/dewfpga/errors/top-is-a-testbench/">top-is-a-testbench</a>: The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</li>
 </ul>
 <h2 id="patch-notes">Which patch notes name it?</h2>
 <ul>

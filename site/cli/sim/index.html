@@ -89,7 +89,7 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 </table>
 <p class="mute small">From the agent interface: <a href="/dewfpga/agents/json/">the machine-readable CLI</a> and <a href="/dewfpga/agents/mcp/">the MCP server</a>.</p>
 <h2 id="errors">Which errors can it stop with?</h2>
-<p class="mute small">38 codes in the error catalog.</p>
+<p class="mute small">37 codes in the error catalog.</p>
 <ul>
 <li><a href="/dewfpga/errors/unknown-option/">unknown-option</a>: A word starting with - after the command, or an argument after install: the commands take a module or file name at most, install takes nothing.</li>
 <li><a href="/dewfpga/errors/no-source-file/">no-source-file</a>: The current folder holds no .sv or .v file; dewfpga works on the files in the folder you run it in.</li>
@@ -101,7 +101,6 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 <li><a href="/dewfpga/errors/explicit-port/">explicit-port</a>: Not an error: a port list in Vivado&#x27;s netlist form names a port with an expression, .dp(\&lt;const0&gt; ), which Vivado builds and yosys&#x27; reader does not; the copy the tools read writes it as a plain port.</li>
 <li><a href="/dewfpga/errors/module-without-endmodule/">module-without-endmodule</a>: A module&#x27;s endmodule is missing or misspelled, so the module never ends; the scan stops here instead of naming the wrong top.</li>
 <li><a href="/dewfpga/errors/two-tops/">two-tops</a>: Two or more design modules that nothing instantiates; the CLI does not pick one by file name (Lab 4 folders name the file after the wrong one).</li>
-<li><a href="/dewfpga/errors/top-is-a-testbench/">top-is-a-testbench</a>: The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.</li>
 <li><a href="/dewfpga/errors/no-such-module/">no-such-module</a>: The name on the command line is neither a module nor a file of this folder.</li>
 <li><a href="/dewfpga/errors/no-design-module/">no-design-module</a>: Every module in the folder has no ports; there is nothing to build.</li>
 <li><a href="/dewfpga/errors/module-defined-twice/">module-defined-twice</a>: Two files in the folder declare the same module; the tools would take the last one read, so a backup could be built instead of the design.</li>
@@ -116,7 +115,7 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 <li><a href="/dewfpga/errors/sim-timeout/">sim-timeout</a>: The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</li>
 <li><a href="/dewfpga/errors/sim-run-time/">sim-run-time</a>: A testbench with a free-running clock and no $finish runs 1000 ns, as in Vivado; SIM_TIME runs it longer.</li>
 <li><a href="/dewfpga/errors/two-testbenches/">two-testbenches</a>: The folder has more than one testbench and more than one design top; name the testbench to run.</li>
-<li><a href="/dewfpga/errors/testbench-without-design/">testbench-without-design</a>: The testbench named on the command line does not instantiate any design module of the folder.</li>
+<li><a href="/dewfpga/errors/testbench-without-design/">testbench-without-design</a>: The testbench does not instantiate any design module of the folder, so it would pass whatever the design does.</li>
 <li><a href="/dewfpga/errors/bad-sim-time/">bad-sim-time</a>: SIM_TIME must be a number with an optional unit (ns, us, ms, s, ps).</li>
 <li><a href="/dewfpga/errors/wave-viewer-missing/">wave-viewer-missing</a>: dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.</li>
 <li><a href="/dewfpga/errors/waveform-unreadable/">waveform-unreadable</a>: The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.</li>

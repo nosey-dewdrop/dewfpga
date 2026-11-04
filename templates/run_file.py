@@ -27,6 +27,18 @@ def fail(message):
     raise ValueError(message)
 
 
+class Args(argparse.ArgumentParser):
+    """dewfpga run's options: a wrong one is answered in the CLI's format, with the line that works (argparse's own
+    `usage: run_file.py ... error:` named a file the student never typed)."""
+    def error(self, message):
+        m = re.match(r"unrecognized arguments: (.*)", message)
+        what = f"unknown option: {m.group(1)}" if m else message.replace("the following arguments are required: file", "dewfpga run needs the file to run")
+        sim = " To simulate a testbench, run it in its folder:  dewfpga sim <testbench>." if m and "--sim" in m.group(1).split() else ""
+        print(f"ERROR [unknown-option]: {what}. Fix: dewfpga run <file.sv> [--build-only] [--top NAME] [--xdc FILE]  (dewfpga run --help says what each does)."
+              + sim + " https://nosey-dewdrop.github.io/dewfpga/errors/unknown-option/", file=sys.stderr)
+        sys.exit(2)
+
+
 def auto_xdc(module):
     """Use elaborated ports, including parameters and original range offsets."""
     master = {}
@@ -145,7 +157,7 @@ def run_project(source, root, build_only):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Run a saved .sv/.v file on Basys3; no project folder or XDC needed for standard IO.")
+    parser = Args(prog="dewfpga run", description="Run a saved .sv/.v file on Basys3; no project folder or XDC needed for standard IO.")
     parser.add_argument("file", type=Path)
     parser.add_argument("--build-only", action="store_true", help="compile without programming USB")
     parser.add_argument("--top", help="top module when the file contains multiple independent designs")
@@ -173,6 +185,10 @@ def main():
                               and not p.name.startswith(".") and p.is_file() and p != source)
             found = subprocess.run([sys.executable, str(HERE / "check_xdc.py"), "--needed", str(source)]
                                    + [str(p) for p in siblings], capture_output=True, text=True)
+            stop = [v for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "ERROR"]
+            if stop:
+                print(stop[0], file=sys.stderr)
+                sys.exit(1)
             uses = [Path(v) for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "FILE"]
             walked = next((v for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "TOP"), "")
             staged_names, mapping = stage_source(source, work, [p for p in uses if p != source])
@@ -182,11 +198,14 @@ def main():
                 for local, original in sorted(mapping.items(), key=lambda pair: -len(pair[0])):
                     text = re.sub(r"(?<![\w/])" + re.escape(local) + r"(?=[:\s'\"\),;]|\.(?:\s|$)|$)", lambda _: original, text)
                 return text
+            # make's own "make: *** [flash] Error 1" adds nothing to the message the recipe printed (the CLI drops it too)
+            trailer = re.compile(r"^make(\[\d+\])?: \*\*\* \[[^]]*\] Error \d+$")
             def execute(command):
                 with subprocess.Popen(command, cwd=work, env=env, stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT, text=True, errors="replace") as child:
                     for line in child.stdout:
-                        print(mapped(line), end="", flush=True)
+                        if not trailer.match(line.rstrip("\n")):
+                            print(mapped(line), end="", flush=True)
                     rc = child.wait()
                 if rc:
                     raise subprocess.CalledProcessError(rc, command)

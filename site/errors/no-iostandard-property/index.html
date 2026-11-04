@@ -46,7 +46,7 @@
 <p>Run the pin check before nextpnr. <code>check_xdc.py</code> compares the ports of your synthesized design with the <code>.xdc</code> and names the real mistake.</p>
 <pre><code>ERROR: these ports have NO pin in the XDC (blink):
    - led[15]
-   -&gt; the port names in the module must match the names in the XDC (the course file uses
+   -&gt; the port names in the module must match the names in the XDC (Digilent&#39;s Basys3_Master.xdc uses
       clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an). Rename the port in the module,
       or change the name inside [get_ports ...] on that line of the XDC.
       A line that still starts with # is commented out and does not count.</code></pre>

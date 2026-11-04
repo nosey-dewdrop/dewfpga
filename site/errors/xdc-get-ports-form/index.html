@@ -39,7 +39,7 @@
 <p>A warning: the build goes on. If a port gets its pin only through that form, <a href="/dewfpga/errors/port-without-pin/">port-without-pin</a> follows.</p>
 <pre><code>blink.xdc:43: warning [xdc-get-ports-form]: `get_ports {led[*]}` is a wildcard: Vivado expands it, and this check does not read that form yet, so the ports it names count as unpinned here. Fix: write one line per port with its full name, as the course&#39;s Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}] https://nosey-dewdrop.github.io/dewfpga/errors/xdc-get-ports-form/</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
-<p>The XDC check reads <code>[get_ports {name}]</code> and <code>[get_ports {name[i]}]</code>, one port per line, the form the course file uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.</p>
+<p>The XDC check reads <code>[get_ports {name}]</code> and <code>[get_ports {name[i]}]</code>, one port per line, the form Digilent's Basys3_Master.xdc uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <pre data-copy="1"><code>set_property -dict { PACKAGE_PIN U16  IOSTANDARD LVCMOS33 } [get_ports {led[0]}]</code></pre>
 <h2 id="which-command-prints-it">Which command prints it?</h2>
