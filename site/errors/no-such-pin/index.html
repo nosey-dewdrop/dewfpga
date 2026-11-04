@@ -13,7 +13,11 @@
 <meta property="og:description" content="A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/no-such-pin/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="blink.xdc:5: ERROR [no-such-pin]: ZZ99 is not an I/O pin of the Basys3&#x27;s chip (xc7a35tcpg236; a pin is a letter and a number, in capitals: W5, U16, V17), so clk would have no pin and nextpnr would stop here. Fix: write the pin clk is wired to on this line (the course&#x27;s Basys3_Master.xdc puts clk on W5): copy its line from Basys3_Master.xdc, or take the pin from the board&#x27;s schematic. (fix, macOS)">
+<meta name="twitter:description" content="A PACKAGE_PIN in the XDC names a pin the chip does not have: a typo, a pin of another board, a power pin, or a pin written in small letters (w5). How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

@@ -13,7 +13,11 @@
 <meta property="og:description" content="Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:3: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by yosys&#x27; own reader, written back as Verilog (top_sim.elab) and compiled with the testbench and yosys&#x27; models of the Xilinx cells. What differs: a # delay in the design is gone, an `ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. (fix, macOS)">
+<meta name="twitter:description" content="Not an error: iverilog refused a construct in the design, so the testbench ran against the design as the build elaborates it, read by the reader the note names. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

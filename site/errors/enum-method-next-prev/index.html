@@ -13,7 +13,11 @@
 <meta property="og:description" content="The enum methods next() and prev(); neither reader builds them, Vivado does. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/enum-method-next-prev/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:5: ERROR [enum-method-next-prev]: s.next() is an enum method that steps through the values (next/prev): yosys does not build enum methods, and yosys-slang builds first()/last() only; Vivado builds next/prev (UG901 Ch.10 Table 27). Fix: write the step out as a case on s, in the order the enum lists its values (with IDLE, RUN, DONE: case (s) IDLE: s &lt;= RUN; RUN: s &lt;= DONE; DONE: s &lt;= IDLE; endcase). (fix, macOS)">
+<meta name="twitter:description" content="The enum methods next() and prev(); neither reader builds them, Vivado does. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

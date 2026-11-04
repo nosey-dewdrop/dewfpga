@@ -13,7 +13,11 @@
 <meta property="og:description" content="Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="note [sim-starts-as-board]: 3 registers without a start value start as the board does, not at x: a at 4&#x27;b0101 and b at 4&#x27;b1010 (their reset values), c at 0 (no reset). Vivado&#x27;s simulator shows x there until the first reset; a start value in the declaration (logic [3:0] c = 0;) is honoured by every tool (UG901 v2022.2 Ch.4 p.79). (fix, macOS)">
+<meta name="twitter:description" content="Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

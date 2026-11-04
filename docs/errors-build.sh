@@ -121,7 +121,11 @@ def head(title, desc, ogtitle, url, ld=None):
          f"<meta property=\"og:description\" content=\"{esc(desc)}\">\n"
          f"<meta property=\"og:url\" content=\"{url}\">\n"
          "<meta property=\"og:image\" content=\"https://nosey-dewdrop.github.io/dewfpga/og.png\">\n"
-         "<meta name=\"twitter:card\" content=\"summary_large_image\">\n" + ICON)
+         "<meta property=\"og:site_name\" content=\"dewfpga\">\n"
+         "<meta name=\"twitter:card\" content=\"summary_large_image\">\n"
+         f"<meta name=\"twitter:title\" content=\"{esc(ogtitle)}\">\n"
+         f"<meta name=\"twitter:description\" content=\"{esc(desc)}\">\n"
+         "<meta name=\"twitter:image\" content=\"https://nosey-dewdrop.github.io/dewfpga/og.png\">\n" + ICON)
     if ld:
         s += "<script type=\"application/ld+json\">" + json.dumps(ld, ensure_ascii=False, separators=(",", ":")) + "</script>\n"
     return s + "</head>\n<body>\n" + NAV + "\n"

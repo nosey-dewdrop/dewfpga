@@ -13,7 +13,11 @@
 <meta property="og:description" content="Two items of a unique casez (or casex) can match the same value; the simulator takes the first, the hardware ORs both, so the board would not do what the simulation showed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/unique-case-overlap/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:5: ERROR [unique-case-overlap]: the items 4&#x27;b10?? (design.sv:4) and 4&#x27;b??11 (design.sv:5) of this unique casez both match 4&#x27;b1011, and unique promises that only one item can match: the simulation takes the first item (iverilog ignores unique), and the hardware, built as parallel logic the way Vivado builds a unique case (UG901 Ch.10, parallel_case), ORs the two items&#x27; values, so the board would not do what the simulation showed. Fix: make the items disjoint (4&#x27;b10?? and 4&#x27;b0?11), write priority casez when the first match should win, or drop unique. (fix, macOS)">
+<meta name="twitter:description" content="Two items of a unique casez (or casex) can match the same value; the simulator takes the first, the hardware ORs both, so the board would not do what the simulation showed. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

@@ -13,7 +13,11 @@
 <meta property="og:description" content="The block has a clock and an asynchronous reset in its sensitivity list, but the first if tests the reset ORed with another signal. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-not-alone/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:3: ERROR [async-reset-not-alone]: this always block is sensitive to two edges (@(posedge clk, posedge btnC)), so one of them is an asynchronous reset, but its first if does not test that reset alone (a reset ORed with a synchronous clear: if (rst || clear)), so neither reader can tell the reset from the clock. Fix: test the reset alone first and put the synchronous clear in the else:  if (btnC) q &lt;= 0; else if (clear) q &lt;= 0; else q &lt;= q + 1; (fix, macOS)">
+<meta name="twitter:description" content="The block has a clock and an asynchronous reset in its sensitivity list, but the first if tests the reset ORed with another signal. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

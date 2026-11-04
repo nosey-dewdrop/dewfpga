@@ -13,7 +13,11 @@
 <meta property="og:description" content="The ** operator with a variable base; yosys builds only constant powers and 2 ** n. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/power-operator/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:3: ERROR [power-operator]: ** with a base that is a signal (sw ** 2): yosys builds ** only for a constant base and exponent, or 2 ** n, and leaves this one as a $pow cell nextpnr has nothing to place on. Not a size problem. Fix: write the multiplication out (sw * sw), a table (case), or 1 &lt;&lt; n for a power of two. (fix, macOS)">
+<meta name="twitter:description" content="The ** operator with a variable base; yosys builds only constant powers and 2 ** n. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

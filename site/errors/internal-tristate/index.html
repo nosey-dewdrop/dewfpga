@@ -13,7 +13,11 @@
 <meta property="og:description" content="A z driven onto an internal signal or a submodule port; the chip&#x27;s tri-state buffers sit on pins only, and yosys keeps the buffer as a cell nextpnr cannot place. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/internal-tristate/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:2: ERROR [internal-tristate]: a tri-state driver (a z, at design.sv:2) on a signal that is not an inout pin of the top module: the chip has tri-state buffers on its pins only. Vivado converts such a driver to logic (UG901 Ch.5 Tristates); yosys keeps it as a $_TBUF_ cell, and nextpnr has nothing to place it on. Not a size problem. Fix: select with a mux instead:  assign bus = sel ? b : a;  and keep z for an inout pin only. (fix, macOS)">
+<meta name="twitter:description" content="A z driven onto an internal signal or a submodule port; the chip&#x27;s tri-state buffers sit on pins only, and yosys keeps the buffer as a cell nextpnr cannot place. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

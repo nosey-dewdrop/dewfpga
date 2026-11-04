@@ -13,7 +13,11 @@
 <meta property="og:description" content="The sensitivity list names one edge of the reset and the first if tests the other level, so the reset edge lands in the else branch, which loads a signal. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-polarity/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:3: ERROR [async-reset-polarity]: this always_ff is sensitive to posedge btnC, but its first if tests !btnC, so the reset branch runs while btnC is low and on btnC&#x27;s rising edge the block takes the else branch, which loads q from sw: no flip-flop on the chip loads a signal on its reset edge (yosys emulates it with FFs and a mux, so the board would not do what the simulation showed). Fix: test btnC at the level its edge leaves it:  if (btnC) q &lt;= 0; else ...;  or keep if (!btnC) and write negedge btnC in the sensitivity list. (fix, macOS)">
+<meta name="twitter:description" content="The sensitivity list names one edge of the reset and the first if tests the other level, so the reset edge lands in the else branch, which loads a signal. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

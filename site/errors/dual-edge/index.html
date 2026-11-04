@@ -13,7 +13,11 @@
 <meta property="og:description" content="One always block clocked on posedge and negedge of the same clock; the chip&#x27;s flip-flops have one clock edge. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/dual-edge/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:3: ERROR [dual-edge]: this always block is sensitive to both edges of clk (@(posedge clk or negedge clk)), so cnt would change on every edge: no flip-flop on the chip does that, and neither reader builds it. Fix: clock the block on one edge (always_ff @(posedge clk)); for twice the rate use a faster clock (the Basys3&#x27;s is 100 MHz) or count on both phases with two registers. (fix, macOS)">
+<meta name="twitter:description" content="One always block clocked on posedge and negedge of the same clock; the chip&#x27;s flip-flops have one clock edge. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

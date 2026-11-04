@@ -13,7 +13,11 @@
 <meta property="og:description" content="The file starts with the three invisible bytes EF BB BF that Notepad and some editors write; yosys reads them as a token it does not know. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/utf8-bom/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="blink.sv:1: ERROR [utf8-bom]: blink.sv starts with a byte-order mark (saved as &#x27;UTF-8 with BOM&#x27;), and yosys stops at its first token. Fix: save it as plain UTF-8, or remove it:  LC_ALL=C sed -i &#x27;&#x27; $&#x27;1s/^\xEF\xBB\xBF//&#x27; blink.sv (fix, macOS)">
+<meta name="twitter:description" content="The file starts with the three invisible bytes EF BB BF that Notepad and some editors write; yosys reads them as a token it does not know. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>

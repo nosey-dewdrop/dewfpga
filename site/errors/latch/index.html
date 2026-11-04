@@ -13,7 +13,11 @@
 <meta property="og:description" content="A combinational block leaves a signal unassigned on some path, so it has to remember its value: a latch, built as Vivado builds it, with the same warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/latch/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:site_name" content="dewfpga">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="design.sv:3: warning [latch]: latch inferred for q (an if without else in always_comb): q keeps its value when no branch assigns it; Vivado builds the latch too, with the same warning (UG901 Ch.5 Latches). Fix: if you meant a register, write always_ff with a clock; if a latch, always_latch; if neither, give q a value on every path (an else branch, or a default at the top of the block). (fix, macOS)">
+<meta name="twitter:description" content="A combinational block leaves a signal unassigned on some path, so it has to remember its value: a latch, built as Vivado builds it, with the same warning. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
