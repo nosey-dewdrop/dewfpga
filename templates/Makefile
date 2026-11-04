@@ -542,7 +542,8 @@ PKG_AWK = $(FMT_AWK) $(STRIP_AWK) \
 # runs on its output, through the same checks. When both refuse, the student sees yosys' ERROR line and slang's
 # diagnostic (file:line:col, the source line and the caret; slang prints it only into the -l log under -q).
 # When slang.so is not installed and yosys' refusal is one slang may resolve (a parser error, file:line: ERROR:,
-# or one of the three checks), a note names the missing reader and the install step, so the student knows the
+# with or without the space after it: 0.70 prints 'top.sv:3: ERROR:Identifier `\arr' does map to an unexpanded
+# memory!', 0.69 'ERROR: Identifier', or one of the three checks), a note names the missing reader and the install step, so the student knows the
 # build stopped short of the second reader. slang's own wording is kept, except the enum methods next()/prev()
 # ("unsupported system task 'next'": slang builds first()/last() only), which get the student's line and the fix.
 # yosys-slang reads the files as one compilation unit (--single-unit), as yosys' own reader does (one read_verilog of
@@ -656,7 +657,7 @@ $(TOP).json: $(SRCS) $(SRC_DEPS) $(TOP).deps
 	    if [ -n "$$at" ]; then echo "$$at: ERROR [yosys-crashed]: yosys' own reader crashed ($$crash) without a message, and this line holds a real number ($$(echo "$$rl" | cut -d: -f3- | grep -oE '[0-9]+(\.[0-9]+)?[eE][-+]?[0-9]+|[0-9]+\.[0-9]+' | head -1)): a real value in a parameter (localparam MAX = 1e1) is a known cause. Fix: write the value as an integer (10, 50_000_000). $(URL)yosys-crashed/"; \
 	    else echo "ERROR [yosys-crashed]: yosys' own reader crashed ($$crash) without a message. Fix: take the design apart until the crash goes away, and report that code (github.com/nosey-dewdrop/dewfpga/issues). $(URL)yosys-crashed/"; fi; }; \
 	  if [ ! -f "$(SLANG)" ]; then if [ -n "$$crash" ]; then crashmsg; else cat $(TOP).rv.out; fi; \
-	    if [ -n "$$crash" ] || grep -qE '^[^ ]+:[0-9]+: ERROR: |\[hierarchical-name\]|\[interface-member\]|\[packed-typedef-2d\]' $(TOP).rv.out; then \
+	    if [ -n "$$crash" ] || grep -qE '^[^ ]+:[0-9]+: ERROR:|\[hierarchical-name\]|\[interface-member\]|\[packed-typedef-2d\]' $(TOP).rv.out; then \
 	      echo "note [second-reader-missing]: yosys' own reader refused this code, and yosys-slang, the second reader (it reads the SystemVerilog Vivado accepts: interfaces, unpacked arrays, foreach, break, enum methods first/last ...), is not installed: $(SLANG) not found. Fix: run  dewfpga install  (it builds that reader, ~3 min), then build again. $(URL)second-reader-missing/"; fi; \
 	    rm -f $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
 	  if grep -qE '\[(empty-module|always-and-assign|two-always-drivers|two-assign-drivers|multiple-drivers|implicit-port-width)\]' $(TOP).rv.out; then cat $(TOP).rv.out; rm -f $@ $(TOP).rv.out $(TOP).yosys.log; exit $$rc; fi; \
