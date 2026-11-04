@@ -13,7 +13,7 @@ import hashlib, html, json, os, subprocess, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 HERE = os.path.dirname(os.path.abspath(__file__))
-JS = ["engine.js", "models.js", "content.js", "b.js", "flow.js", "board.js", "pcb.js", "page.js"]
+JS = ["engine.js", "models.js", "content.js", "b.js", "flow.js", "board.js", "pcb.js", "vis.js", "page.js"]
 BASE = "https://nosey-dewdrop.github.io/dewfpga/"
 
 STR = {
@@ -69,6 +69,7 @@ STR = {
                 "both": "surfer and the browser",
             },
             "copy": ["copy", "done", "copied", "select"], "digit": "digit",
+            "note": "the page of the error iverilog-refused, with its fix",
         },
         "ld_description": "A command-line toolchain for macOS on Apple Silicon that simulates SystemVerilog, opens the waveform in Surfer or the browser, builds the bitstream and flashes a Digilent Basys 3, without Vivado.",
     },
@@ -124,6 +125,7 @@ STR = {
                 "both": "surfer ve tarayıcı",
             },
             "copy": ["kopya", "tamam", "kopyalandı", "seç"], "digit": "hane",
+            "note": "iverilog-refused hatasının sayfası, çözümüyle",
         },
         "ld_description": "Apple Silicon macOS için bir komut satırı araç zinciri: SystemVerilog'u simüle eder, dalga formunu Surfer'da ya da tarayıcıda açar, bitstream'i üretir ve Vivado olmadan bir Digilent Basys 3'e yükler.",
     },

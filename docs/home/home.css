@@ -13,6 +13,7 @@
   --ink: #f4f4f4; --grey: #a8a8a8; --quiet: #8c8c8c;
   --fg: #ffffff; --mute: #e4e4e4; --dim: #b2b2b2; --faint: #767676;
   --accent: #f1a2c4; --led: #79f293; --wave: #00e600; --seg: #ff5a4a; --seg-off: #4f3532; --prompt: #f1a2c4; --copy: #aa87d4; --link: #b4d0e7; --trace: #4c4c4c;
+  --vk: #aa87d4; --vt: #b4d0e7; --vc: #ffeb3b;
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, monospace;
   --t1: 28px; --t2: 20px; --t3: 17px; --t4: 15px;
@@ -31,6 +32,7 @@ pre { margin: 0; white-space: pre; }
 pre b { font-weight: 400; }
 .i { color: var(--fg); } .m { color: var(--mute); } .d { color: var(--dim); } .f { color: var(--faint); }
 .a { color: var(--accent); } .w { color: var(--wave); } .l { color: var(--led); } .s { color: var(--seg); } .u { color: var(--seg-off); } .p { color: var(--prompt); } .t { color: var(--trace); }
+.vk { color: var(--vk); } .vt { color: var(--vt); } .vc { color: var(--vc); } .vh { color: var(--link); }
 /* site/s.css sets margins and colours for pages of text; the home sets its own */
 h1, h2, h3, p, pre { margin: 0; }
 h3 { font: inherit; color: inherit; line-height: inherit; }
@@ -70,6 +72,17 @@ body.home footer.wrap a:hover { color: var(--ink); }
 .steps button { all: unset; cursor: pointer; color: var(--quiet); transition: color .15s; padding: 10px 4px; margin: -10px -4px; }
 .steps button:hover { color: var(--grey); }
 .steps button.on { color: var(--ink); }
+/* each step in its own colour as the scroll comes to it: write in the editor's purple, simulate
+   in the prompt's pink, waveform in the wave window's green, flash in the done led's */
+.steps button.on[data-go="0"] { color: var(--vk); }
+.steps button.on[data-go="1"] { color: var(--prompt); }
+.steps button.on[data-go="2"] { color: var(--wave); }
+.steps button.on[data-go="3"] { color: var(--led); }
+/* the pictures beside the flow (docs/home/vis.js) */
+#vis .vis { position: absolute; display: block; }
+#vis pre { position: relative; color: var(--dim); user-select: none; -webkit-user-select: none; }
+#vis .bk { position: absolute; background: #000; }
+#vis a.vis:hover pre .vh, #vis a.vis:focus-visible pre .vh { color: var(--ink); }
 .steps button:focus-visible { outline: 1px solid var(--grey); outline-offset: -2px; }
 /* the caption of the step on screen; the others stay readable for search and screen readers */
 .cap:not(.on) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -51,6 +51,10 @@ function boot() {
   const stepBtns = [...caps.querySelectorAll('.steps button')], capEls = [...caps.querySelectorAll('.cap')];
   const nav = document.querySelector('nav.top');
   const hcli = document.getElementById('hcli'), cliHome = document.querySelector('#cli .cli-cols');
+  const visRoot = document.createElement('div');
+  visRoot.id = 'vis';
+  stage.appendChild(visRoot);
+  const vis = startVis(visRoot);
   const H0 = window.HOME || {};
   let M = null, lastP = -1, lastK = -1, t0 = performance.now(), heroMode = true;
 
@@ -145,6 +149,7 @@ function boot() {
     }
     placeCaps();
     placeCli();
+    placeVis();
     // the board: as wide as its column, drawn finer than the desk
     const bwrap = document.querySelector('#board .wrap'), bcs = getComputedStyle(bwrap);
     const inner = bwrap.clientWidth - parseFloat(bcs.paddingLeft) - parseFloat(bcs.paddingRight);
@@ -211,6 +216,53 @@ function boot() {
     cliHome.parentNode.insertBefore(hcli, cliHome);
   }
 
+  // the pictures beside the flow: under the caption of their step, down to whatever the drawing
+  // puts below it in the caption's column, each in its own step's frames; none on a phone
+  function placeVis() {
+    if (M.mobile || reduce()) {
+      vis.hide();
+      return;
+    }
+    // the drawing's top, after the hero's cli may have moved it down
+    const W = innerWidth, x = M.capsLeft, w = W - M.gut - x, top = M.top + (M.drop || 0);
+    const col0 = Math.floor((x - M.left) / M.cw), col1 = Math.ceil((W - M.gut - M.left) / M.cw);
+    const was = capEls.map(c => c.classList.contains('on'));
+    const regions = VIS.map(v => {
+      // the caption of the step this picture belongs to, placed as placeCaps places it
+      const si = FLOW_STEPS.findIndex(([a, b]) => v.span[0] + 0.02 >= a && v.span[0] + 0.02 < b);
+      capEls.forEach((c, k) => c.classList.toggle('on', k === si));
+      const h = caps.getBoundingClientRect().height;
+      const mid = top + M.preH * 0.42 - h / 2;
+      const ctop = Math.max(M.navH, Math.min(mid, (M.capsFloor || 1e9) - h));
+      const y = ctop + h + 30;
+      // the first inked row below it in the caption's column, over the picture's frames
+      let floor = Math.min(innerHeight - 12, top + M.preH);
+      for (const f of [0, 0.25, 0.5, 0.75, 1]) {
+        const p = v.span[0] + (Math.min(v.span[1], 1) - v.span[0]) * f;
+        const g = makeGrid(M.spec.cols, M.spec.rows);
+        frameFlow(g, p, false, M.spec, M.K);
+        const r0 = Math.max(0, Math.floor((y - top) / M.lh));
+        for (let row = r0; row < g.rows; row++) {
+          let ink = false;
+          for (let c = Math.max(0, col0); c < Math.min(g.cols, col1); c++) {
+            if (g.ch[row * g.cols + c] !== ' ') {
+              ink = true;
+              break;
+            }
+          }
+          if (ink) {
+            floor = Math.min(floor, top + row * M.lh - 18);
+            break;
+          }
+        }
+      }
+      return floor - y > 60 ? { x, y, w, h: floor - y } : null;
+    });
+    capEls.forEach((c, k) => c.classList.toggle('on', was[k]));
+    placeCaps();
+    vis.size(regions, M.adv);
+  }
+
   // the caption block sits in the middle of the frame's height, or under the drawing on a phone
   function placeCaps() {
     if (!M || M.mobile) {
@@ -260,6 +312,7 @@ function boot() {
     hero.style.visibility = heroO < 0.01 ? 'hidden' : 'visible';
     caps.style.opacity = Math.min(1, capO).toFixed(3);
     caps.style.visibility = capO < 0.01 ? 'hidden' : 'visible';
+    return Math.min(1, capO);
   }
 
   // on the home the nav's cli and docs lead to the home's own sections, the pages are one link further
@@ -335,6 +388,7 @@ function boot() {
           lastP = 0;
           fades(0);
           setStep(-1);
+          vis.draw(0, null, 0);
         }
       } else if (Math.abs(p - lastP) > 0.0003 || heroMode) {
         heroMode = false;
@@ -342,7 +396,8 @@ function boot() {
         lastP = p;
         const s = drawFlow(p);
         setStep(s.step);
-        fades(p);
+        const capO = fades(p);
+        vis.draw(p, s, M.mobile ? 0 : capO);
       }
     }
     requestAnimationFrame(tick);

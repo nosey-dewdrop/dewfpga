@@ -3,6 +3,9 @@
 // crosses the cell, faces filled back to front, and a camera that projects cm to cells.
 
 const INK = 1, MUTE = 2, DIM = 3, ACC = 4, FAINT = 5, LED = 6, SEG = 7, SEGOFF = 8, PROMPTC = 9, TRACE = 10, WAVE = 11;
+// the pictures around the stage add a few: a keyword and a type in an editor, the yellow cursor of
+// the wave window, a link
+const KWD = 12, TYP = 13, CURS = 14, LINKC = 15;
 
 function makeGrid(cols, rows) {
   const n = cols * rows;
@@ -373,7 +376,7 @@ function ellipse(rx, rz, n) {
 }
 
 // *-*-*-*-*-*-*-*-*-*-*-* output *-*-*-*-*-*-*-*-*-*-*-*
-const CLS = ['', 'i', 'm', 'd', 'a', 'f', 'l', 's', 'u', 'p', 't', 'w'];
+const CLS = ['', 'i', 'm', 'd', 'a', 'f', 'l', 's', 'u', 'p', 't', 'w', 'vk', 'vt', 'vc', 'vh'];
 
 function toHTML(g) {
   const out = [];
