@@ -1131,33 +1131,47 @@ extra   = sorted(xdc_ports - ports, key=by_index)   # in the XDC, not in the cod
 for ln, t in forms:
     kind = "a wildcard" if re.search(r"[*?]", t) else ("an option (-regexp, -filter ...)" if re.search(r"get_ports\s+-", t) else "a list of several ports")
     print(msg("warning", "xdc-get-ports-form", f"`{t}` is {kind}: Vivado expands it, and this check does not read that form yet, so the ports it names count as unpinned here.",
-              "write one line per port with its full name, as the course's Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}]",
+              "write one line per port with its full name, as Digilent's Basys3_Master.xdc does:  set_property -dict { PACKAGE_PIN V17  IOSTANDARD LVCMOS33 } [get_ports {sw[0]}]",
               loc=f"{xf}:{ln}"))
 
 xdc_base = {q.split("[")[0] for q in xdc_ports}
 if missing:
-    # Missing names, missing indices and commented-out pin assignments.
+    # Missing names, missing indices and commented-out pin assignments: one message per cause, naming every port it
+    # holds (eight ports without a line were eight copies of the same long message), at the first one's line
     xdc_lower = {q.lower(): q for q in xdc_ports}
-    shown = 0
+    groups = {}
     for p in missing:
         b = p.split("[")[0]
-        if p in cline:
-            text = f"{p} has no pin in the XDC: the line that names it starts with # (commented out), so it does not count."
-            fix = f"remove the # at the start of that line (the same name, the index the design uses: {p})."
-        elif b in xdc_base:
-            text = f"{p} has no pin in the XDC: no line names it (the XDC has lines for {b} with other indices, none for {p})."
-            fix = f"add a line for {p} to the XDC (copy a {b} line, change the index and the pin), or make the port narrower."
+        near = xdc_lower.get(p.lower())
+        key = ("commented",) if p in cline else ("indices", b) if b in xdc_base else ("case", p) if near else ("noline",)
+        groups.setdefault(key, []).append(p)
+    def names(ps, lines=False):
+        shown = [f"{p} (line {cline[p]})" if lines else p for p in ps[:16]]
+        return ", ".join(shown) + (f" and {len(ps) - 16} more" if len(ps) > 16 else "")
+    for key, ps in groups.items():
+        one, p, b = len(ps) == 1, ps[0], ps[0].split("[")[0]
+        if key[0] == "commented":
+            text = (f"{p} has no pin in the XDC: the line that names it starts with # (commented out), so it does not count." if one else
+                    f"{len(ps)} ports of {tname} have no pin in the XDC: the lines that name them start with # (commented out), so they do not count: {names(ps, True)}.")
+            fix = (f"remove the # at the start of that line (the same name, the index the design uses: {p})." if one else
+                   "remove the # at the start of each of those lines (the same names, the indices the design uses).")
+        elif key[0] == "indices":
+            text = (f"{p} has no pin in the XDC: no line names it (the XDC has lines for {b} with other indices, none for {p})." if one else
+                    f"{len(ps)} bits of {b} have no pin in the XDC: no line names them (the XDC has lines for {b} with other indices): {names(ps)}.")
+            fix = (f"add a line for {p} to the XDC (copy a {b} line, change the index and the pin), or make the port narrower." if one else
+                   f"add a line for each to the XDC (copy a {b} line, change the index and the pin), or make the port narrower.")
+        elif key[0] == "case":
+            near = xdc_lower[p.lower()]
+            text = f"{p} has no pin in the XDC: no line names it (the XDC has '{near}': same name, different case)."
+            fix = f"rename the port in the module to {near.split('[')[0]}, or the name inside [get_ports ...] on the XDC line to {b}."
         else:
-            near = xdc_lower.get(p.lower())
-            text = f"{p} has no pin in the XDC: no line names it" + (f" (the XDC has '{near}': same name, different case)." if near else " (the course file uses clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an).")
-            fix = (f"rename the port in the module to {near.split('[')[0]}, or the name inside [get_ports ...] on the XDC line to {p.split('[')[0]}." if near
-                   else "rename the port in the module to a name the XDC has, or change the name inside [get_ports ...] on its line of the XDC (a line that starts with # is commented out and does not count).")
-        loc = f"{xf}:{cline[p]}" if p in cline else where(p)
-        print(msg("ERROR", "port-without-pin", text, fix, loc=loc))
-        shown += 1
-        if shown == 12 and len(missing) > 14:
-            print(msg("ERROR", "port-without-pin", f"... and {len(missing) - shown} more ports of {tname} with no pin in the XDC (the same problem): {', '.join(missing[shown:])}.", "the same fix for each."))
-            break
+            board = " (Digilent's Basys3_Master.xdc, the Basys3's pin file, names the board's ports clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an)"
+            text = (f"{p} has no pin in the XDC: no line names it{board}." if one else
+                    f"{len(ps)} ports of {tname} have no pin in the XDC: no line names them{board}: {names(ps)}.")
+            fix = (("rename the port in the module to a name the XDC has, or change the name inside [get_ports ...] on its line of the XDC"
+                    if one else "rename the ports in the module to names the XDC has, or change the names inside [get_ports ...] on their lines of the XDC")
+                   + " (a line that starts with # is commented out and does not count).")
+        print(msg("ERROR", "port-without-pin", text, fix, loc=f"{xf}:{cline[p]}" if p in cline else where(p)))
     sys.exit(1)
 no_iostd = sorted(p for p in ports if p in has_pin and p not in has_iostd)
 for p in no_iostd:
@@ -1190,7 +1204,7 @@ if pins_csv and os.path.isfile(pins_csv):
         pin = pin_of[p]
         if pin in chip: continue
         bad_pins += 1
-        on = f" (the course's Basys3_Master.xdc puts {p} on {master[p]})" if p in master else ""
+        on = f" (Digilent's Basys3_Master.xdc puts {p} on {master[p]})" if p in master else ""
         if pin.upper() in chip:
             text = f"{pin} is written in small letters, and the chip's pin names are capitals ({pin.upper()}): nextpnr reads {pin} as a pin the chip does not have, so {p} would have no pin."
             fix = f"write  PACKAGE_PIN {pin.upper()}  on this line."
@@ -1206,7 +1220,7 @@ for pin, ps in sorted(users.items(), key=lambda kv: xline[kv[1][0]]):
     bad_pins += 1
     where_ = " and ".join(f"{q} ({xf}:{xline[q]})" for q in ps)
     print(msg("ERROR", "pin-used-twice", f"pin {pin} is given to {len(ps)} ports, {where_}: one pin takes one port, so nextpnr would stop here.",
-              f"give each port its own pin: copy their lines from the course's Basys3_Master.xdc (" + ", ".join(f"{q} is on {master_pins().get(q, '?')}" for q in ps) + ").",
+              f"give each port its own pin: copy their lines from Digilent's Basys3_Master.xdc (" + ", ".join(f"{q} is on {master_pins().get(q, '?')}" for q in ps) + ").",
               loc=f"{xf}:{xline[ps[-1]]}"))
 if bad_pins: sys.exit(1)
 # pins in the XDC that the design does not use are fine (nextpnr ignores them); a whole

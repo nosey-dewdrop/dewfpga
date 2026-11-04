@@ -280,7 +280,7 @@ Run the pin check before nextpnr. `check_xdc.py` compares the ports of your synt
 ```
 ERROR: these ports have NO pin in the XDC (blink):
    - led[15]
-   -> the port names in the module must match the names in the XDC (the course file uses
+   -> the port names in the module must match the names in the XDC (Digilent's Basys3_Master.xdc uses
       clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an). Rename the port in the module,
       or change the name inside [get_ports ...] on that line of the XDC.
       A line that still starts with # is commented out and does not count.
@@ -1024,16 +1024,17 @@ title: blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: th
 summary: A port of the top module has no PACKAGE_PIN line in the XDC: the line is commented out, the index is missing, the name differs.
 date: 2026-09-27
 
-One line per port, the first twelve; the file:line is the commented-out XDC line, or the port's declaration when no XDC line names it. Examples:
+One line per cause: a single port gets its own line, several ports with the same cause one line that names them all. The file:line is the commented-out XDC line (the first one), or the port's declaration when no XDC line names it. Examples:
 
 ```
 blink.xdc:42: ERROR [port-without-pin]: led[15] has no pin in the XDC: the line that names it starts with # (commented out), so it does not count. Fix: remove the # at the start of that line (the same name, the index the design uses: led[15]). https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
 blink.sv:10: ERROR [port-without-pin]: led[15] has no pin in the XDC: no line names it (the XDC has lines for led with other indices, none for led[15]). Fix: add a line for led[15] to the XDC (copy a led line, change the index and the pin), or make the port narrower. https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
+adder.sv:1: ERROR [port-without-pin]: 8 ports of adder have no pin in the XDC: no line names them (Digilent's Basys3_Master.xdc, the Basys3's pin file, names the board's ports clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an): a[0], a[1], b[0], b[1], cin, cout, s[0], s[1]. Fix: rename the ports in the module to names the XDC has, or change the names inside [get_ports ...] on their lines of the XDC (a line that starts with # is commented out and does not count). https://nosey-dewdrop.github.io/dewfpga/errors/port-without-pin/
 ```
 
 ## Why does it happen?
 
-The course's `Basys3_Master.xdc` ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (`LED`, `leds`) matches nothing. Single-bit vectors and nonzero-based ranges retain their declared indices: `[0:0]` uses `led[0]`, and `[4:1]` uses `led[1]` through `led[4]`.
+Digilent's `Basys3_Master.xdc`, the Basys3's pin file (the one a lab folder usually holds), ships with every pin commented out; each port of the design needs its line uncommented, with the same name and index. A port named otherwise (`LED`, `leds`) matches nothing. Single-bit vectors and nonzero-based ranges retain their declared indices: `[0:0]` uses `led[0]`, and `[4:1]` uses `led[1]` through `led[4]`.
 
 ## What is the fix?
 
@@ -1127,7 +1128,7 @@ blink.xdc:43: warning [xdc-get-ports-form]: `get_ports {led[*]}` is a wildcard: 
 
 ## Why does it happen?
 
-The XDC check reads `[get_ports {name}]` and `[get_ports {name[i]}]`, one port per line, the form the course file uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.
+The XDC check reads `[get_ports {name}]` and `[get_ports {name[i]}]`, one port per line, the form Digilent's Basys3_Master.xdc uses. Wildcards and lists are Tcl that Vivado evaluates; this check does not.
 
 ## What is the fix?
 

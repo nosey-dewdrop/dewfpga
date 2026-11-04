@@ -356,6 +356,17 @@ run_testbench_file() {
     && grep -qF "dewfpga run $(cd rtb && pwd -P)/decoder2to4.sv   (its simulation:  cd $(cd rtb && pwd -P) && dewfpga sim decoder2to4_tb)" rtb/out2
 }
 check "run on a testbench file -> top-is-a-testbench naming the design's file to run and the testbench to sim, not no-design-module" run_testbench_file
+# eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
+# "the course file": one message per cause names every port, and the file by its name; commented-out lines likewise
+pins_grouped() {
+    rm -rf "$T/pgr" && mkdir -p "$T/pgr" && cd "$T/pgr" && cp "$ROOT/templates/Basys3_Master.xdc" . \
+    && printf 'module adder(input logic [1:0] a, b, input logic cin, output logic [1:0] s, output logic cout);\n  assign {cout, s} = a + b + cin;\nendmodule\n' > adder.sv \
+    && ! "$CLI" bit > out 2>&1 && [ "$(grep -c 'port-without-pin' out)" = 1 ] && ! grep -q 'course' out \
+    && grep -qF "adder.sv:1: ERROR [port-without-pin]: 8 ports of adder have no pin in the XDC: no line names them (Digilent's Basys3_Master.xdc, the Basys3's pin file, names the board's ports clk, sw, led, btnC btnU btnL btnR btnD, seg, dp, an): a[0], a[1], b[0], b[1], cin, cout, s[0], s[1]. Fix: rename the ports" out \
+    && cp "$ROOT/templates/blink.sv" . && rm adder.sv && ! "$CLI" bit > out 2>&1 && [ "$(grep -c 'port-without-pin' out)" = 1 ] \
+    && grep -qF 'Basys3_Master.xdc:7: ERROR [port-without-pin]: 33 ports of blink have no pin in the XDC: the lines that name them start with # (commented out), so they do not count: clk (line 7), led[0] (line 31),' out
+}
+check "ports without a pin -> one port-without-pin line per cause naming every port, the pin file by its name" pins_grouped
 # two clocks: a divided clock the student named (slow) clocks a counter; the pnr line reports each clock by name
 two_clocks() {
     mkdir -p "$T/2c" && cd "$T/2c" && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic slow = 0; always_ff @(posedge clk) slow <= ~slow;\n  logic [15:0] c = 0; always_ff @(posedge slow) c <= c + sw;\n  assign led = c;\nendmodule\n' > top.sv \
