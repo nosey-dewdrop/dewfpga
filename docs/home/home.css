@@ -82,6 +82,8 @@ body.home footer.wrap a:hover { color: var(--ink); }
 #vis .vis { position: absolute; display: block; }
 #vis pre { position: relative; color: var(--dim); user-select: none; -webkit-user-select: none; }
 #vis .bk { position: absolute; background: #000; }
+/* the two in the sections (docs/home/side.js) */
+pre.side { position: absolute; color: var(--dim); pointer-events: none; z-index: 1; user-select: none; -webkit-user-select: none; }
 #vis a.vis:hover pre .vh, #vis a.vis:focus-visible pre .vh { color: var(--ink); }
 .steps button:focus-visible { outline: 1px solid var(--grey); outline-offset: -2px; }
 /* the caption of the step on screen; the others stay readable for search and screen readers */

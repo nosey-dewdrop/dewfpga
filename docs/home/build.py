@@ -13,7 +13,7 @@ import hashlib, html, json, os, subprocess, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 HERE = os.path.dirname(os.path.abspath(__file__))
-JS = ["engine.js", "models.js", "content.js", "b.js", "flow.js", "board.js", "pcb.js", "vis.js", "page.js"]
+JS = ["engine.js", "models.js", "content.js", "b.js", "flow.js", "board.js", "pcb.js", "vis.js", "side.js", "page.js"]
 BASE = "https://nosey-dewdrop.github.io/dewfpga/"
 
 STR = {

@@ -55,6 +55,42 @@ function boot() {
   visRoot.id = 'vis';
   stage.appendChild(visRoot);
   const vis = startVis(visRoot);
+  // the rooms of the two pictures in the sections, in each section's own frame
+  const secRoom = (sec, f) => () => {
+    const sr = sec.getBoundingClientRect(), r = f(sr);
+    return r && r.w > 0 && r.h > 0 ? { x: r.x - sr.left, y: r.y - sr.top, w: r.w, h: r.h } : null;
+  };
+  const cliSec = document.getElementById('cli'), boardSec = document.getElementById('board');
+  const side = startSide({
+    reduce,
+    // beside the cli's line, over the second column of windows, under the heading
+    size: { root: cliSec, room: secRoom(cliSec, () => {
+      if (innerWidth < 1200) {
+        return null;
+      }
+      const head = cliSec.querySelector('.head').getBoundingClientRect(), line = cliSec.querySelector('.line');
+      const rg = document.createRange();
+      rg.selectNodeContents(line);
+      const textR = Math.max(...[...rg.getClientRects()].map(q => q.right));
+      const col2 = cliSec.querySelectorAll('.cli-col')[1], h3 = col2 && col2.querySelector('h3');
+      if (!h3) {
+        return null;
+      }
+      const c2 = col2.getBoundingClientRect(), wrapR = cliSec.querySelector('.wrap').getBoundingClientRect();
+      const x = Math.max(textR + 56, c2.left), right = wrapR.right - parseFloat(getComputedStyle(cliSec.querySelector('.wrap')).paddingRight);
+      const below = hcli.closest('#cli') ? hcli.getBoundingClientRect().top : h3.getBoundingClientRect().top;
+      return { x, y: head.bottom + 14, w: right - x, h: Math.min(below, h3.getBoundingClientRect().top) - 14 - head.bottom - 14 };
+    }) },
+    // above the board, right of the cable that leaves its prog port
+    flash: { root: boardSec, room: secRoom(boardSec, sr => {
+      if (innerWidth < 1200) {
+        return null;
+      }
+      const bw = boardSec.querySelector('.boardwrap').getBoundingClientRect();
+      const x = bw.left + bw.width * 0.22;
+      return { x, y: sr.top + 18, w: bw.right - x, h: bw.top - 8 - sr.top - 18 };
+    }) },
+  });
   const H0 = window.HOME || {};
   let M = null, lastP = -1, lastK = -1, t0 = performance.now(), heroMode = true;
 
@@ -168,6 +204,7 @@ function boot() {
     if (mobile) {
       scroller.scrollLeft = (scroller.scrollWidth - scroller.clientWidth) / 2;
     }
+    side.size(adv);
     lastP = -1;
     lastK = -1;
     if (reduce()) {
