@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>dewfpga wave: run the testbench, open its waveform in the browser</title>
+<meta name="description" content="dewfpga wave: run the testbench, open its waveform in the browser. dewfpga sim --wave runs the testbench, then opens what it recorded in Surfer, which dewfpga install puts in.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/cli/wave/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="dewfpga wave: run the testbench, open its waveform in the browser">
+<meta property="og:description" content="dewfpga wave: run the testbench, open its waveform in the browser. dewfpga sim --wave runs the testbench, then opens what it recorded in Surfer, which dewfpga install puts in.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/cli/wave/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"dewfpga wave","url":"https://nosey-dewdrop.github.io/dewfpga/cli/wave/","author":{"@type":"Person","name":"Damla Su Bilge"},"inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/" aria-current="page">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap docs">
+  <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">wave</span>run the testbench, open its waveform in the browser</p>
+  <h1>dewfpga wave</h1>
+<h2 id="help">What does its help text say?</h2>
+<pre><code>dewfpga wave [top|testbench|file.vcd] [--no-open]
+                                 run the simulation and open its waveform in the browser, Vivado's wave window
+                                 (sim records every signal; a .vcd given by name is opened as it is);
+                                 dewfpga sim [top|testbench] --wave[=surfer|browser|both] [--no-open] opens it in
+                                 Surfer (--wave), the browser page or both; --no-open writes it and opens nothing</code></pre>
+<p class="mute small">From <code>dewfpga --help</code>, as <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/bin/dewfpga">bin/dewfpga</a> prints it.</p>
+<h2 id="readme">What does the README say?</h2>
+<p><code>dewfpga sim --wave</code> runs the testbench, then opens what it recorded in <a href="https://surfer-project.org/">Surfer</a>, which <code>dewfpga install</code> puts in. <code>--wave=browser</code> opens it in a page in the browser instead, Vivado's wave window without Vivado, and <code>--wave=both</code> opens both. Both start with the testbench's own signals, the design under it to expand; the testbench's checking (an <code>errors</code> counter, <code>exp_*</code> and <code>expected*</code> values, the variable a <code>for (int i ...)</code> declares) is left out of that first view.</p>
+<pre><code>dewfpga sim --wave                  # the folder&#39;s one testbench, in Surfer
+dewfpga sim tb_mux8 --wave=browser  # a testbench by name (or the design it tests: mux8), in the browser
+dewfpga sim top_mux --wave=both     # Surfer and the browser
+dewfpga wave tb_mux8.vcd            # a recording that is already there, in the browser</code></pre>
+<p>The last line of <code>dewfpga sim top_mux --wave</code> says what was simulated, with what, and where it opened: <code>waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0</code>.</p>
+<p>The testbench needs nothing added, as in Vivado: no <code>$dumpfile</code>, no <code>$dumpvars</code>, no <code>$finish</code>. <code>dewfpga sim</code> records every signal under the testbench into <code>&lt;testbench&gt;.vcd</code> (a testbench that calls <code>$dumpvars</code> itself keeps its own file). Testbenches may sit in a <code>tb/</code> or <code>sim/</code> folder beside the design, several in one file; each run starts at one of them (<code>dewfpga tops --sim</code> lists them). A testbench with a free-running clock and no <code>$finish</code> stops at 1000 ns, where Vivado's Run Simulation stops (<code>SIM_TIME=10us</code> runs it longer). Files without a <code>`timescale</code> get Vivado's 1ns/1ps. A testbench that reports errors still opens: the waveform is where the wrong value is found. A run that stops at a compile error opens nothing. <code>--wave --no-open</code> writes what the viewer would get and opens nothing.</p>
+<pre><code>dewfpga sim --wave[=browser|both]   simulate, then open the waveform in Surfer, the browser, or both
+dewfpga wave [tb|file.vcd]          simulate if needed, then open the waveform in the browser</code></pre>
+<p class="mute small">From <a href="https://github.com/nosey-dewdrop/dewfpga#readme">the README</a>.</p>
+<h2 id="errors">Which errors can it stop with?</h2>
+<p class="mute small">5 codes in the error catalog.</p>
+<ul>
+<li><a href="/dewfpga/errors/no-waveform/">no-waveform</a>: dewfpga wave was given a .vcd that is not there, or the simulation wrote none.</li>
+<li><a href="/dewfpga/errors/waveform-too-large/">waveform-too-large</a>: The .vcd is too large for the browser page; record a shorter run or fewer signals.</li>
+<li><a href="/dewfpga/errors/waveform-not-opened/">waveform-not-opened</a>: The page was written, but there is no command to open it in a browser here.</li>
+<li><a href="/dewfpga/errors/wave-viewer-missing/">wave-viewer-missing</a>: dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.</li>
+<li><a href="/dewfpga/errors/waveform-unreadable/">waveform-unreadable</a>: The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.</li>
+</ul>
+<hr>
+<p class="mute small">previous: <a href="/dewfpga/cli/tops/">dewfpga tops</a><br>
+next: <a href="/dewfpga/cli/new/">dewfpga new</a><br>
+Every command: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a> · <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a> · <a href="/dewfpga/cli/sim/#clean"><code>dewfpga clean</code></a> · <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/cli/wave/"><code>dewfpga wave</code></a> · <a href="/dewfpga/cli/new/"><code>dewfpga new</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a> · <a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a></p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/cli/">the cli</a> · <a href="/dewfpga/">home</a></span>
+</footer>
+<script>document.querySelectorAll("main pre").forEach(function(p){p.setAttribute("data-copy","1")})</script>
+</body>
+</html>

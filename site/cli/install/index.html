@@ -6,11 +6,11 @@
 <meta name="author" content="Damla Su Bilge">
 <link rel="author" href="https://noseydewdrop.com">
 <title>dewfpga install: install the toolchain into ~/fpga</title>
-<meta name="description" content="dewfpga install: install the toolchain into ~/fpga. It puts the CLI in ~/.dewfpga (sha256 compared with dewfpga.tgz.sha256, an integrity check, not a signature), links dewfpga into Homebrew&#x27;s bin and runs dewfpga install.">
+<meta name="description" content="dewfpga install: install the toolchain into ~/fpga. dewfpga sim --wave runs the testbench, then opens what it recorded in Surfer, which dewfpga install puts in.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/cli/install/">
 <meta property="og:type" content="article">
 <meta property="og:title" content="dewfpga install: install the toolchain into ~/fpga">
-<meta property="og:description" content="dewfpga install: install the toolchain into ~/fpga. It puts the CLI in ~/.dewfpga (sha256 compared with dewfpga.tgz.sha256, an integrity check, not a signature), links dewfpga into Homebrew&#x27;s bin and runs dewfpga install.">
+<meta property="og:description" content="dewfpga install: install the toolchain into ~/fpga. dewfpga sim --wave runs the testbench, then opens what it recorded in Surfer, which dewfpga install puts in.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/cli/install/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -38,6 +38,7 @@
 <pre><code>dewfpga install                 install the toolchain into ~/fpga (safe to re-run)</code></pre>
 <p class="mute small">From <code>dewfpga --help</code>, as <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/bin/dewfpga">bin/dewfpga</a> prints it.</p>
 <h2 id="readme">What does the README say?</h2>
+<p><code>dewfpga sim --wave</code> runs the testbench, then opens what it recorded in <a href="https://surfer-project.org/">Surfer</a>, which <code>dewfpga install</code> puts in. <code>--wave=browser</code> opens it in a page in the browser instead, Vivado's wave window without Vivado, and <code>--wave=both</code> opens both. Both start with the testbench's own signals, the design under it to expand; the testbench's checking (an <code>errors</code> counter, <code>exp_*</code> and <code>expected*</code> values, the variable a <code>for (int i ...)</code> declares) is left out of that first view.</p>
 <p>It puts the CLI in <code>~/.dewfpga</code> (sha256 compared with <code>dewfpga.tgz.sha256</code>, an integrity check, not a signature), links <code>dewfpga</code> into Homebrew's bin and runs <code>dewfpga install</code>. Re-run the same line to update; <code>dewfpga uninstall</code> removes what the installer built in <code>~/fpga</code> (nextpnr-xilinx, prjxray, chipdb, venv, the log), <code>~/.dewfpga</code> and the link, and leaves anything else in <code>~/fpga</code>. Requirements: macOS on Apple Silicon and Homebrew. The builds also need Apple's Command Line Tools (git, make, clang); the Homebrew installer puts them in when they are missing, and both installers check and print the one line to run if either is missing or Homebrew is off the PATH. Switching to the npm package later: remove <code>$(brew --prefix)/bin/dewfpga</code> first, npm wants that path. An install made before 7 October 2026 keeps its clones (1.5 GB, 1543 MB measured on 7 October) and is left as it is; <code>dewfpga uninstall &amp;&amp; dewfpga install</code> gets the small one.</p>
 <pre><code>dewfpga install                     install the toolchain (safe to re-run)</code></pre>
 <p><code>dewfpga install</code> also builds an optional, isolated MCP SDK. Connect an MCP client to <code>dewfpga mcp</code>; <a href="/dewfpga/agents/mcp/">setup and tool arguments</a>.</p>
@@ -66,7 +67,7 @@
 </ul>
 <hr>
 <p class="mute small">next: <a href="/dewfpga/cli/check/">dewfpga check</a><br>
-Every command: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a> · <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a> · <a href="/dewfpga/cli/sim/#clean"><code>dewfpga clean</code></a> · <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/cli/new/"><code>dewfpga new</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a> · <a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a></p>
+Every command: <a href="/dewfpga/cli/install/"><code>dewfpga install</code></a> · <a href="/dewfpga/cli/check/"><code>dewfpga check</code></a> · <a href="/dewfpga/cli/run/"><code>dewfpga run</code></a> · <a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a> · <a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a> · <a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a> · <a href="/dewfpga/cli/sim/#clean"><code>dewfpga clean</code></a> · <a href="/dewfpga/cli/tops/"><code>dewfpga tops</code></a> · <a href="/dewfpga/cli/wave/"><code>dewfpga wave</code></a> · <a href="/dewfpga/cli/new/"><code>dewfpga new</code></a> · <a href="/dewfpga/cli/uninstall/"><code>dewfpga uninstall</code></a> · <a href="/dewfpga/docs/vs-code/"><code>dewfpga vscode</code></a> · <a href="/dewfpga/agents/json/"><code>dewfpga … --json</code></a> · <a href="/dewfpga/agents/mcp/"><code>dewfpga mcp</code></a></p>
 </main>
 
 <footer class="wrap">

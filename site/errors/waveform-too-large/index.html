@@ -39,6 +39,10 @@
 <p>The waveform page carries the whole .vcd. dewfpga sim stops its own recording at 64 MB; a testbench that calls <code>$dumpvars</code> itself and runs for a long time (a counter to 50 million) writes much more.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
 <p>Simulate a shorter time (<code>SIM_TIME=2us dewfpga sim</code>), shrink the count in simulation, or record fewer signals: <code>$dumpvars(1, tb)</code> records the testbench's own signals only. Without the testbench's <code>$dumpvars</code>, dewfpga records the run itself, up to 64 MB. Surfer reads a file of any size: <code>dewfpga sim --wave</code> opens it there.</p>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/wave/"><code>dewfpga wave</code></a></li>
+</ul>
 </main>
 
 <footer class="wrap">

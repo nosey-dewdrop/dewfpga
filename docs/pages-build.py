@@ -355,8 +355,19 @@ def help_line(entry):
     return re.split(r"\s*\(|\.(?=\s|$)|:\s", text, maxsplit=1)[0].strip().rstrip(",")
 
 
+# a flag that does a command's job from another command names that command too: dewfpga sim --wave is dewfpga wave's
+CMD_FLAGS = {"wave": "--wave"}
+
+
 def cmd_re(c):
-    return re.compile(r"\bdewfpga " + re.escape(c) + r"(?![\w-])")
+    flag = r"|(?<![\w-])" + re.escape(CMD_FLAGS[c]) + r"(?![\w-])" if c in CMD_FLAGS else ""
+    return re.compile(r"\bdewfpga " + re.escape(c) + r"(?![\w-])" + flag)
+
+
+def cmd_named(c, words):
+    """a line of a command list is c's: its words hold c, or c's flag (--wave, --wave=browser)"""
+    f = CMD_FLAGS.get(c)
+    return c in words or bool(f and any(w == f or w.startswith(f + "=") for w in words))
 
 
 _PLAN = {}
@@ -864,7 +875,7 @@ def cmd_blocks(cmd, origin, md, types):
         if kind == "head":
             continue
         if kind == "code" and lines and all(l.startswith(("dewfpga ", " ")) for l in lines):
-            hit = [l for l in lines if l.startswith("dewfpga ") and cmd in cmd_words(l[len("dewfpga "):])]
+            hit = [l for l in lines if l.startswith("dewfpga ") and cmd_named(cmd, cmd_words(l[len("dewfpga "):]))]
             if hit:
                 out.append(("code", "```\n" + "\n".join(hit) + "\n```"))
             continue

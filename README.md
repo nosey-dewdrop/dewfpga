@@ -66,7 +66,7 @@ Example: `dewfpga new blink`.
 ## Waveforms
 
 `dewfpga sim --wave` runs the testbench, then opens what it recorded in
-[Surfer](https://surfer-project.org/) (`brew install surfer`). `--wave=browser` opens it in a
+[Surfer](https://surfer-project.org/), which `dewfpga install` puts in. `--wave=browser` opens it in a
 page in the browser instead, Vivado's wave window without Vivado, and `--wave=both` opens both.
 Both start with the testbench's own signals, the design under it to expand; the testbench's
 checking (an `errors` counter, `exp_*` and `expected*` values, the variable a `for (int i ...)` declares) is left
@@ -79,11 +79,8 @@ dewfpga sim top_mux --wave=both     # Surfer and the browser
 dewfpga wave tb_mux8.vcd            # a recording that is already there, in the browser
 ```
 
-The last line says what was simulated, with what, and where it opened:
-
-```
-waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
-```
+The last line of `dewfpga sim top_mux --wave` says what was simulated, with what, and where it
+opened: `waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0`.
 
 The testbench needs nothing added, as in Vivado: no `$dumpfile`, no `$dumpvars`, no `$finish`.
 `dewfpga sim` records every signal under the testbench into `<testbench>.vcd` (a testbench that
@@ -92,8 +89,8 @@ beside the design, several in one file; each run starts at one of them (`dewfpga
 lists them). A testbench with a free-running clock and no `$finish` stops at 1000 ns, where
 Vivado's Run Simulation stops (`SIM_TIME=10us` runs it longer). Files without a `` `timescale ``
 get Vivado's 1ns/1ps. A testbench that reports errors still opens: the waveform is where the
-wrong value is found. A run that stops at a compile error opens nothing. `--no-open` writes what
-the viewer would get and opens nothing.
+wrong value is found. A run that stops at a compile error opens nothing. `--wave --no-open` writes
+what the viewer would get and opens nothing.
 
 ## Install
 

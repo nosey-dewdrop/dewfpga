@@ -55,6 +55,16 @@ Shift IR 35
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <p class="mute small">Yukarıdaki, 8 GB'lık M2'mde blink örneğinin gerçek çıktısı. Son satırdaki <code>done 1</code>, çipin tasarımı kabul ettiği anlamına geliyor; o an LED 0 yanıp sönmeye başlıyor. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Zincir diskte yaklaşık 0.3 GB yer kaplıyor (7 Ekim'de ölçülen 237 MB; isteğe bağlı ajan SDK'sı 51 MB ekler; elle kurarsan kılavuzdaki listeyi silene kadar 1.76 GB), Vivado 50 ila 100 GB istiyor.</p>
 
+  <h2 id="waveform">Dalga formunu nasıl görürsün?</h2>
+  <p><code>dewfpga sim</code>'e <code>--wave</code> ekle. Testbench'i çalıştırır, kaydettiğini <a href="https://surfer-project.org/" hreflang="en">Surfer</a>'da açar; Surfer'ı <code>dewfpga install</code> kuruyor. <code>--wave=browser</code> aynı kaydı tarayıcında bir sayfada açar: Vivado'nun Run Simulation'dan sonra açtığı dalga penceresine benzer. İkisi de testbench'in kendi sinyalleriyle başlar, altındaki tasarım açılmaya hazır durur; testbench'in hata sayacı ve beklenen değerleri ilk görünüme girmez. Testbench'e <code>$dumpvars</code> yazman gerekmez. Son satır neyin simüle ettiğini ve nerede açıldığını söyler.</p>
+<pre><code><span class="p">$</span> dewfpga sim tb_room_monitor --wave
+waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
+<span class="p">$</span> dewfpga sim top_monitor --wave=browser
+PASS: top_monitor, 4096 input cases, 0 errors
+waveform: top_monitor_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in the browser: …/dewfpga-wave/top_monitor_tb-f47701db.html</code></pre>
+  <p><a href="/dewfpga/art/wave-room-monitor.png"><img src="/dewfpga/art/wave-room-monitor.png" width="1366" height="520" loading="lazy" alt="tb_room_monitor için dewfpga'nın tarayıcıdaki dalga formu sayfası: Scope panelinde tasarımın modülleri, dalga penceresinde lamps, alarm, en, room ve sensor; room 3 ve en 1 iken alarm yanıp sönüyor."></a></p>
+  <p class="mute small">Bir CS223 lab 2 klasöründeki <code>tb_room_monitor</code>'ün tarayıcı sayfası, koşunun kaydettiği <code>.vcd</code>'den, 2.814–2.943 ns aralığına yakınlaştırılmış: room 3 seçili, <code>alarm</code> sensor 3'ü izliyor. <a href="/dewfpga/cli/wave/" hreflang="en">Bütün dalga formu seçenekleri.</a></p>
+
   <h2>Nasıl çalışıyor?</h2>
   <p>Kendi tasarımını kaynak kodundan karta taşımak farklı araçların sırayla çalışmasını gerektiriyor. Burada her işi ayrı bir açık kaynak araç yapıyor, bir de bir kez üretilen chip database var; küçük bir Makefile hepsini sırayla çalıştırıyor.</p>
   <table>
@@ -74,7 +84,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <h2 id="limits">Neyi yapamıyor?</h2>
   <ul>
     <li>Vivado'nun IP Catalog'undan hiçbir şey çalışmıyor: Block Design, MicroBlaze, AXI, Clocking Wizard, hazır BRAM, VGA ve UART blokları yok. İhtiyacın olan işlevi kendi sentezlenebilir kodunla yazabilirsin; hazır üretici IP bloğunu içe aktarmak ayrı bir yetenek.</li>
-    <li>Mac'teki zincirde dalga formu görüntüleyici, şematik ya da çip içi debugger yok: <code>dewfpga sim</code> bir <code>.vcd</code> dosyası bırakıp duruyor. Dalga formuna bakmak istersen <a href="/dewfpga/sim/?view=tb" hreflang="en">tarayıcıdaki testbench çalıştırıcıyı</a> kullan.</li>
+    <li>Mac'teki zincirde şematik ya da çip içi debugger yok. Dalga formu Surfer'da ya da tarayıcı sayfasında açılıyor: <a href="#waveform">nasıl</a>.</li>
     <li>Vivado'nun derlediği bazı SystemVerilog yapıları burada derlenmiyor, bazıları da hata vermeden yanlış bitstream üretiyor. Şimdiye kadar ölçtüğüm yapılar, Vivado'nun ne yaptığıyla yan yana: <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/test/sv/expect.tsv" hreflang="en">liste</a>.</li>
     <li>Sadece Basys3 (XC7A35T) ve sadece Apple Silicon denendi. Intel Mac, Linux ve başka kartlar için bir şey diyemem.</li>
     <li>Bu araçlar resmi değil, AMD'nin yaptığı ya da desteklediği şeyler değil. Lab demosundan önce tasarımını bir kez okuldaki bilgisayarda Vivado'da açmanı öneririm.</li>

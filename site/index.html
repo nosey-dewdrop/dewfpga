@@ -68,6 +68,16 @@ Shift IR 35
 ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking. 4.6 seconds from <code>.sv</code> to <code>.bit</code>. The chain takes about 0.3 GB of disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB; 1.76 GB if you build it by hand, until you delete what the manual lists); Vivado asks for 50 to 100 GB.</p>
 </details>
+  <h2 id="waveform">How do you see the waveform?</h2>
+  <p>Add <code>--wave</code> to <code>dewfpga sim</code>. It runs the testbench, then opens what it recorded in <a href="https://surfer-project.org/">Surfer</a>, which <code>dewfpga install</code> puts in. <code>--wave=browser</code> opens the same recording in a page in your browser instead, a wave window like the one Vivado opens after Run Simulation. Both start with the testbench's own signals and the design under it to expand; the testbench's errors counter and expected values stay out of the first view. The testbench needs no <code>$dumpvars</code>. The last line says what simulated it and where it opened.</p>
+<pre><code><span class="p">$</span> dewfpga sim tb_room_monitor --wave
+waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
+<span class="p">$</span> dewfpga sim top_monitor --wave=browser
+PASS: top_monitor, 4096 input cases, 0 errors
+waveform: top_monitor_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in the browser: …/dewfpga-wave/top_monitor_tb-f47701db.html</code></pre>
+  <p><a href="/dewfpga/art/wave-room-monitor.png"><img src="/dewfpga/art/wave-room-monitor.png" width="1366" height="520" loading="lazy" alt="dewfpga's waveform page in the browser for tb_room_monitor: the Scope pane lists the design's instances, the wave window shows lamps, alarm, en, room and sensor, and alarm pulses while room is 3 and en is 1."></a></p>
+  <p class="mute small">The browser page for <code>tb_room_monitor</code> of a CS223 lab 2 folder, from the <code>.vcd</code> its run recorded, zoomed to 2,814–2,943 ns: room 3 is selected and <code>alarm</code> follows sensor 3. <a href="/dewfpga/cli/wave/">Every waveform option.</a></p>
+
   <h2>How does it work?</h2>
   <p>Taking a design from source code to the board involves five jobs. One open-source tool does each job here, plus a chip database generated once, and a small Makefile runs them in order.</p>
   <table>
@@ -87,7 +97,7 @@ ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
   <h2 id="limits">What can it not do?</h2>
   <ul>
     <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. Write your own synthesizable logic for the functions you need; importing a vendor IP block is a separate capability.</li>
-    <li>On the Mac chain there is no waveform viewer, schematic or in-chip debugger: <code>dewfpga sim</code> writes a <code>.vcd</code> file and stops there. The <a href="/dewfpga/sim/?view=tb">testbench runner in the browser</a> draws the waveform instead.</li>
+    <li>On the Mac chain there is no schematic or in-chip debugger. The waveform opens in Surfer or in the browser page: <a href="#waveform">how</a>.</li>
     <li>Some SystemVerilog that Vivado compiles is refused here, and some builds a wrong bitstream with no error. The constructs measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the list</a>.</li>
     <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
     <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#8-what-can-it-not-do">The limits, in detail.</a></li>

@@ -65,7 +65,7 @@ kullanan interface'ten önce (başka bir dosyanın `include ettiği dosya o `inc
 ## Dalga formları
 
 `dewfpga sim --wave` testbench'i çalıştırır, kaydettiğini [Surfer](https://surfer-project.org/)'da
-açar (`brew install surfer`). `--wave=browser` onun yerine tarayıcıda bir sayfada açar (Vivado'suz
+açar; Surfer'ı `dewfpga install` kurar. `--wave=browser` onun yerine tarayıcıda bir sayfada açar (Vivado'suz
 Vivado dalga penceresi), `--wave=both` ikisini de açar. İkisi de testbench'in kendi sinyalleriyle
 başlar, altındaki tasarım açılmaya hazır durur; testbench'in kontrol değişkenleri (`errors` sayacı,
 `exp_*` ve `expected*` değerleri, bir `for (int i ...)` başlığının tanımladığı değişken) bu ilk görünüme alınmaz.
@@ -77,11 +77,8 @@ dewfpga sim top_mux --wave=both     # Surfer ve tarayıcı
 dewfpga wave tb_mux8.vcd            # zaten olan bir kayıt, tarayıcıda
 ```
 
-Son satır neyin, neyle simüle edildiğini ve nerede açıldığını söyler:
-
-```
-waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
-```
+`dewfpga sim top_mux --wave` çıktısının son satırı neyin, neyle simüle edildiğini ve nerede açıldığını
+söyler: `waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0`.
 
 Testbench'e Vivado'daki gibi bir şey eklemen gerekmez: `$dumpfile`, `$dumpvars`, `$finish` yok.
 `dewfpga sim` testbench'in altındaki her sinyali `<testbench>.vcd` dosyasına kaydeder (`$dumpvars`'ı
@@ -90,7 +87,7 @@ kendisi çağıran testbench kendi dosyasını tutar). Testbench'ler tasarımın
 (`dewfpga tops --sim` listeler). Serbest çalışan saati olup `$finish`'i olmayan testbench, Vivado'nun
 Run Simulation'ının durduğu yerde, 1000 ns'de durur (`SIM_TIME=10us` daha uzun çalıştırır).
 `` `timescale `` taşımayan dosyalar Vivado'nun 1ns/1ps'ini alır. Hata bildiren testbench de açılır:
-yanlış değer dalga formunda bulunur. Derleme hatasında duran koşu hiçbir şey açmaz. `--no-open`
+yanlış değer dalga formunda bulunur. Derleme hatasında duran koşu hiçbir şey açmaz. `--wave --no-open`
 görüntüleyicinin alacağını yazar, hiçbir şey açmaz.
 
 ## Kurulum
