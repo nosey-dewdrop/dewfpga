@@ -183,30 +183,28 @@ function boot() {
       // in the stage's own frame, so a window resized further down the page measures the same
       const hb = () => hcli.getBoundingClientRect().bottom - stage.getBoundingClientRect().top;
       const n = hcli.children.length - 1;
-      // the words rise a few lines first (never under the nav), then the gap closes, then the
-      // lines come a little closer; the cable keeps at least 48px under the last command
-      const clear = Math.max(48, 5 * M.lh);
-      for (const up of [0, 2, 4, 6, 8]) {
-        const t = M.heroTop - up * M.lh;
-        if (t < M.navH + 8) {
-          break;
-        }
-        hero.style.top = t + 'px';
-        for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
-          hcli.style.lineHeight = lh;
-          hcli.style.removeProperty('--hg');
-          const spare = M.heroFloor - clear - hb();
-          const gap = Math.min(10, 10 + spare / n);
-          if (gap >= least) {
-            hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
-            if (lh === 1.3) {
-              hcli.style.removeProperty('line-height');
-            }
-            return;
+      // the words keep their place and their spacing; the drawing goes down instead, at most six
+      // lines, until the cable is 40px under the last command, and only then the gap closes up
+      const clear = 40;
+      hero.style.top = M.heroTop + 'px';
+      const down = Math.max(0, Math.min(Math.ceil(hb() + clear - M.heroFloor), Math.round(6 * M.lh)));
+      scene.style.top = (M.top + down) + 'px';
+      M.drop = down;
+      for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
+        hcli.style.lineHeight = lh;
+        hcli.style.removeProperty('--hg');
+        const spare = M.heroFloor + down - clear - hb();
+        const gap = Math.min(10, 10 + spare / n);
+        if (gap >= least) {
+          hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
+          if (lh === 1.3) {
+            hcli.style.removeProperty('line-height');
           }
+          return;
         }
       }
-      hero.style.top = M.heroTop + 'px';
+      scene.style.top = M.top + 'px';
+      M.drop = 0;
       hcli.style.removeProperty('line-height');
       hcli.style.removeProperty('--hg');
     }
@@ -219,7 +217,7 @@ function boot() {
       return;
     }
     const h = caps.getBoundingClientRect().height;
-    const mid = M.top + M.preH * 0.42 - h / 2;
+    const mid = M.top + (M.drop || 0) + M.preH * 0.42 - h / 2;
     caps.style.top = Math.max(M.navH, Math.min(mid, (M.capsFloor || 1e9) - h)) + 'px';
   }
 
