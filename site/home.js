@@ -2131,7 +2131,12 @@ function boot() {
     const cw = adv * fs, lh = fs * 1.16, preW = spec.cols * cw, preH = spec.rows * lh;
     // the scene sits in the middle of the height the nav leaves; a phone keeps it high,
     // its words go under it
-    const left = (W - preW) / 2, top = mobile ? navH : navH + Math.max(0, Math.round((H - navH - preH) / 2 - 6));
+    const left0 = (W - preW) / 2, top0 = mobile ? navH : navH + Math.max(0, Math.round((H - navH - preH) / 2 - 6));
+    // on a wider window the drawing sits a little left of and below the middle, so the cable
+    // keeps clear of the hero's lines; the words stay where the middle puts them
+    const dx = mobile ? 0 : Math.round(2 * cw);
+    const dy = mobile ? 0 : Math.max(0, Math.min(Math.round(2 * lh), H - (top0 + preH) - 2));
+    const left = left0 - dx, top = top0 + dy;
     scene.style.left = left + 'px';
     scene.style.top = top + 'px';
     const K = flowKeys(spec, mobile);
@@ -2152,11 +2157,11 @@ function boot() {
       // the laptop's right edge above the desk, and the top of what lies right of it
       const lapR = inkRight(g, 0, Math.round(spec.rows * 0.5), Math.round(spec.cols * 0.75));
       const x0 = lapR + 8, yTop = inkTop(g, x0);
-      hero.style.left = (left + x0 * cw) + 'px';
+      hero.style.left = (left0 + x0 * cw) + 'px';
       hero.style.width = Math.min(560, (spec.cols - x0 - 4) * cw) + 'px';
       hero.style.maxWidth = 'none';
-      hero.style.top = (top + Math.max(4, Math.round(spec.rows * 0.1)) * lh) + 'px';
-      hero.dataset.room = Math.round((yTop - spec.rows * 0.1) * lh);
+      hero.style.top = (top0 + Math.max(4, Math.round(spec.rows * 0.1)) * lh) + 'px';
+      hero.dataset.room = Math.round((yTop - spec.rows * 0.1) * lh + dy);
       M.heroFloor = top + yTop * lh;
       // the captions: right of the laptop at the seat and of the board at the end
       let right = 0;
@@ -2225,7 +2230,7 @@ function boot() {
       for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
         hcli.style.lineHeight = lh;
         hcli.style.removeProperty('--hg');
-        const spare = M.heroFloor - 16 - hb();
+        const spare = M.heroFloor - Math.max(24, 2 * M.lh) - hb();
         const gap = Math.min(10, 10 + spare / n);
         if (gap >= least) {
           hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
