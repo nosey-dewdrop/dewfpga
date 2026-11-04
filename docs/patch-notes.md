@@ -4918,3 +4918,41 @@ since last night.
 Tests: the two checks that expected the stop for board names now expect the build, its pins, `up to date`
 and `clean`; a new check keeps the stop and the named ports for `a b y`. On the corpus, the folder command now builds 24
 of the 89 folders (22 before): the 2 new ones have no `.xdc` and only board port names. SUITE_C6
+
+### Local candidate · `dewfpga sim --wave` opens the waveform in Surfer or the browser, and says what simulated it · 4 November
+
+**The waveform opens after the run.** `dewfpga sim --wave` opens it in Surfer, `--wave=browser` in the browser
+page (Vivado's wave window, the page `dewfpga wave` already wrote), `--wave=both` in both; `dewfpga wave
+<testbench|file.vcd>` still opens the page. Before, `dewfpga sim top_mux --wave` ran the simulation and dropped
+`--wave` without a word. The run ends with one line: `waveform: top_mux_tb.vcd, simulated by Icarus Verilog
+13.0 (stable), opened in Surfer 0.7.0`, the simulator's version read from `vvp -V`, Surfer's from
+`surfer --version`. Without Surfer, the command stops before it simulates (`wave-viewer-missing`, with the
+browser command as the other way). `dewfpga install` now installs Surfer from Homebrew (the `surfer`
+formula, 0.7.0 here) and `dewfpga check` has a row for it. `--no-open` writes what the viewer gets and opens
+nothing; every waveform check in `test/run.sh` uses it, so the suite opens no window.
+
+**Both viewers start with the same signals, by one rule.** The testbench's own signals, without its checking
+(`errors`, `error_count`, `checks`, `exp_*`, `expected*`) and without the variable a `for (int i ...)`
+declares; the design below it as folded groups in Surfer and in the Scope pane of the page. The rule lives in
+`templates/wave/wave.js`; Surfer's start commands (`templates/wave/surfer_wave.py`) read it from there. It
+applies at the testbench's level only: a design output named `error` was hidden from the page's Objects list
+before, and is shown now.
+
+**Three wrongs of the recording, fixed.** A run that stopped at a compile error reported the previous run's
+`.vcd` as its waveform, and opened it. `dewfpga sim | grep -q PASS` failed (exit 141, or a broken pipe error)
+at the waveform line printed after the reader had stopped. `dewfpga clean` left the `.vcd` dewfpga recorded
+(in a Vivado project, `tb.vcd`); it now removes it, never one the testbench writes itself.
+
+Tried on a copy of a CS223 lab 2 folder (two tops in one file, six testbenches in `tb/`): `dewfpga flash
+top_mux` (no board: `board-not-found`), `dewfpga sim top_mux --wave`, `dewfpga sim tb_mux2 --wave=browser`,
+`dewfpga sim top_mux --wave=browser`, `dewfpga sim tb_room_monitor --wave` and `dewfpga sim top_monitor
+--wave=browser` all did what they say; Surfer applied every start command, and the page, rendered headless,
+showed the same signals with no page error.
+
+Tests: `test/wave/test-wave.js` checks the first view of both viewers on one dump (the rule, case, a longer
+name, a design signal, the loop's scope, Surfer's groups and zoom); `test/run.sh` gained the `--wave` modes on
+the lab layout, the missing Surfer, the run after a compile error and Surfer's install and check row. Before
+(the branch this started from): 344 passed, 4 failed, 18 known gaps; the 4 were the missing error pages, `clean`
+in a Vivado project, the broken pipe above and probe 93, whose testbench `dewfpga sim` now runs as Vivado does
+(its rtl stage passes; `bit` still stops at `two-tops`, now counted as a known gap). After: 350 passed, 0
+failed, 19 known gaps (24 min on an M2 with 8 GB).
