@@ -356,6 +356,17 @@ run_testbench_file() {
     && grep -qF "dewfpga run $(cd rtb && pwd -P)/decoder2to4.sv   (its simulation:  cd $(cd rtb && pwd -P) && dewfpga sim decoder2to4_tb)" rtb/out2
 }
 check "run on a testbench file -> top-is-a-testbench naming the design's file to run and the testbench to sim, not no-design-module" run_testbench_file
+# run takes a path and sim refused one: sim takes the testbench's file as it takes its name (./x_tb.sv, $PWD/x_tb.sv,
+# x_tb.sv, tb/x_tb.sv), bit names the design a testbench file tests, and a file of another folder gets the cd command
+sim_file_path() {
+    run_testbench_file && cd "$T/rtb" && local n && for n in ./decoder2to4_tb.sv "$PWD/decoder2to4_tb.sv" decoder2to4_tb.sv; do
+        "$CLI" sim "$n" > out 2>&1 && grep -qx '0010' out || return 1
+    done \
+    && ! "$CLI" bit decoder2to4_tb.sv > out 2>&1 && grep -qF 'decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), not a design. Fix: name the design it tests instead:  dewfpga bit decoder2to4  (or simulate the testbench:  dewfpga sim decoder2to4_tb).' out \
+    && mkdir tb && mv decoder2to4_tb.sv tb/ && "$CLI" sim tb/decoder2to4_tb.sv > out 2>&1 && grep -qx '0010' out \
+    && cd "$T" && ! "$CLI" sim rtb/tb/decoder2to4_tb.sv > out 2>&1 && grep -qF 'ERROR [run-inside-the-folder]: rtb/tb/decoder2to4_tb.sv is a path, and dewfpga works on the .sv files in the current folder (and a testbench in its tb/ or sim/ folder). Fix: run it inside the folder that holds the .sv files:  cd "rtb/tb" && dewfpga sim decoder2to4_tb.sv' out
+}
+check "sim takes the testbench's file, ./x_tb.sv, \$PWD/x_tb.sv or tb/x_tb.sv; bit on a testbench file names its design; another folder's file gets the cd" sim_file_path
 # eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
 # "the course file": one message per cause names every port, and the file by its name; commented-out lines likewise
 pins_grouped() {

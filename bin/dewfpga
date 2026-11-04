@@ -323,7 +323,17 @@ cmd_build() {  # <target> [top]
     local target=$1 top=${2:-} xdc f
     case $top in -*) die unknown-option "unknown option: $top; dewfpga $target takes a module or a file name, nothing else. Fix: dewfpga $target [top]  (dewfpga --help lists the commands)." ;; esac
     top=${top#./}
-    [[ $top != */* ]] || die run-inside-the-folder "$top is a path, and dewfpga works on the .sv files in the current folder. Fix: run it inside the folder that holds the .sv files:  cd \"$(dirname "$top")\" && dewfpga $target $(basename "$top")"
+    # a path to a file of this folder is that file (./x.sv, $PWD/x.sv), and sim takes one of its tb/ or sim/ folder as
+    # it is written (collect reads them); a file anywhere else is that folder's to build, and the fix says how
+    if [[ $top = */* ]]; then
+        local d sub; d=$(cd "$(dirname "$top")" 2>/dev/null && pwd -P) || d=""
+        sub=$(printf '%s' "${top%%/*}" | tr '[:upper:]' '[:lower:]')
+        if [ -n "$d" ] && [ "$d" = "$(pwd -P)" ]; then top=${top##*/}
+        elif ! { [ "$target" = sim ] && [ -f "$top" ] && [[ $top != *..* && ${top#*/} != */* ]] \
+                 && case $sub in tb|tbs|test|tests|testbench|testbenches|sim|sims|sim_1|simulation) true ;; *) false ;; esac; }; then
+            die run-inside-the-folder "$top is a path, and dewfpga works on the .sv files in the current folder (and a testbench in its tb/ or sim/ folder). Fix: run it inside the folder that holds the .sv files:  cd \"$(dirname "$top")\" && dewfpga $target $(basename "$top")"
+        fi
+    fi
     collect "$target"
     local files=(${FILES[@]+"${FILES[@]}"}) xn="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
     # the project's top is the default; a module or file named on the command line wins

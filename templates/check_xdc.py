@@ -819,6 +819,25 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
     # line (dewfpga sim tb_mux8), or the only one there is when the designs alone do not name one top (a lab file
     # with three tops and a testbench file with one testbench per part). Its design module is the top.
     chosen_tb = None; tbwhy = ""
+    # a file named on the line (dewfpga sim decoder2to4_tb.sv, or tb/lab_tb.sv): its testbenches, the ones nothing
+    # instantiates. For sim one of them is the start, as its name would be; for bit, the design it tests is meant
+    used = set().union(*inst.values()) if inst else set()
+    unext = lambda f: re.sub(r"\.(sv|v|SV|V)$", "", f)
+    tbfile = [] if not want or want in mods else [n for n in order if mods[n]["tb"] and n not in used
+              and unext(want) in (unext(mods[n]["file"]), unext(os.path.basename(mods[n]["file"])))]
+    if tbfile and any(unext(want) in (unext(mods[n]["file"]), unext(os.path.basename(mods[n]["file"]))) for n in design):
+        tbfile = []
+    if cmd == "sim" and len(tbfile) > 1:
+        return stop("two-testbenches", f"{len(tbfile)} testbenches in {want} and nothing says which one to run: {listed(tbfile)}.",
+                    f"name the one to run:  dewfpga sim {tbfile[0]}", where(tbfile[0]))
+    if cmd == "sim" and tbfile:
+        chosen_tb = tbfile[0]
+    elif tbfile:
+        duts = [n for n in design if n in inst[tbfile[0]]]
+        return stop("top-is-a-testbench", f"{want} holds a testbench ({tbfile[0]}, a module without ports), not a design.",
+                    f"name the design it tests instead:  dewfpga {cmd} {duts[0]}  (or simulate the testbench:  dewfpga sim {tbfile[0]})." if duts
+                    else f"name a design module instead:  dewfpga {cmd} {design[0]}." if design
+                    else "put the design (a module with ports) in a .sv file in this folder.", where(tbfile[0]))
     if cmd == "sim" and want and want in mods and mods[want]["tb"]:
         chosen_tb = want
     elif cmd == "sim" and not want and len(roots) != 1 and design:
