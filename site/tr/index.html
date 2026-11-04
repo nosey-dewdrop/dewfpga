@@ -2,26 +2,79 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="author" content="Damla Su Bilge">
 <link rel="author" href="https://noseydewdrop.com">
-<title>dewfpga: kendi kodun, Mac'ten Basys3'e</title>
-<meta name="description" content="Apple Silicon Mac'ine bir kez kur, kendi editöründe SystemVerilog yaz ve Basys3'ünde çalıştır. Vivado veya sanal makine gerekmez.">
+<title>dewfpga · apple silicon mac&#x27;te systemverilog&#x27;dan basys 3&#x27;e, vivado olmadan</title>
+<meta name="description" content="apple silicon bir mac&#x27;te systemverilog yaz, simüle et, dalga formunu surfer&#x27;da ya da tarayıcıda aç ve digilent basys 3&#x27;e yükle. vivado yok, sanal makine yok, rosetta yok. ücretsiz ve mit lisanslı.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
 <link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
 <link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
 <link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#171717">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Kendi SystemVerilog kodun, Mac'ten Basys3'e">
-<meta property="og:description" content="Apple Silicon'da SystemVerilog'dan Basys3'e. Vivado yok, sanal makine yok. Adım adım rehber.">
+<meta property="og:site_name" content="dewfpga">
+<meta property="og:locale" content="tr_TR">
+<meta property="og:title" content="dewfpga · apple silicon mac&#x27;te systemverilog&#x27;dan basys 3&#x27;e, vivado olmadan">
+<meta property="og:description" content="apple silicon bir mac&#x27;te systemverilog yaz, simüle et, dalga formuna bak ve basys 3&#x27;e yükle. vivado yok, sanal makine yok. ücretsiz, mit.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/tr/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="ascii çizilmiş bir macbook dewfpga sim --wave çalıştırıyor, surfer dalga formunu çiziyor, yanında usb kablosunun ucunda bir basys 3 bekliyor">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="dewfpga · apple silicon mac&#x27;te systemverilog&#x27;dan basys 3&#x27;e, vivado olmadan">
+<meta name="twitter:description" content="apple silicon bir mac&#x27;te systemverilog yaz, simüle et, dalga formuna bak ve basys 3&#x27;e yükle. vivado yok, sanal makine yok. ücretsiz, mit.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:image:alt" content="ascii çizilmiş bir macbook dewfpga sim --wave çalıştırıyor, surfer dalga formunu çiziyor, yanında usb kablosunun ucunda bir basys 3 bekliyor">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
-<script defer src="/dewfpga/s.js"></script>
+<link rel="stylesheet" href="/dewfpga/home.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "dewfpga",
+  "description": "Apple Silicon macOS için bir komut satırı araç zinciri: SystemVerilog'u simüle eder, dalga formunu Surfer'da ya da tarayıcıda açar, bitstream'i üretir ve Vivado olmadan bir Digilent Basys 3'e yükler.",
+  "inLanguage": "tr",
+  "applicationCategory": "DeveloperApplication",
+  "applicationSubCategory": "FPGA toolchain",
+  "operatingSystem": "macOS on Apple Silicon (arm64)",
+  "processorRequirements": "arm64",
+  "softwareRequirements": "Homebrew; a Digilent Basys 3 (XC7A35T) to flash",
+  "featureList": [
+    "SystemVerilog simulation with Icarus Verilog",
+    "waveforms in Surfer or the browser",
+    "synthesis with Yosys",
+    "place and route with nextpnr-xilinx",
+    "bitstream with prjxray",
+    "programming with openFPGALoader"
+  ],
+  "fileSize": "about 0.3 GB installed",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "isAccessibleForFree": true,
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://nosey-dewdrop.github.io/dewfpga/tr/",
+  "downloadUrl": "https://nosey-dewdrop.github.io/dewfpga/install",
+  "installUrl": "https://nosey-dewdrop.github.io/dewfpga/docs/one-line-install/",
+  "image": "https://nosey-dewdrop.github.io/dewfpga/og.png",
+  "sameAs": [
+    "https://github.com/nosey-dewdrop/dewfpga"
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "Damla Su Bilge",
+    "url": "https://noseydewdrop.com"
+  }
+}
+</script>
 </head>
-<body>
+<body class="home">
 <nav class="top" aria-label="Site">
   <a class="brand" href="/dewfpga/tr/">dewfpga</a>
   <a class="c-cli" href="/dewfpga/cli/" hreflang="en">cli</a>
@@ -31,73 +84,112 @@
   <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga" hreflang="en">github</a>
 </nav>
 
-<main class="wrap">
-  <h1>Kendi kodun.<br>Kendi Basys3'ün.</h1>
-  <p class="lead">Apple Silicon Mac'ine bir kez kur. VS Code veya istediğin editörde kendi SystemVerilog devreni yaz, kaydet ve Basys3'ünde çalıştır.</p>
-  <p class="sub">Sanal makine yok, Rosetta yok.</p>
+<main>
+<div id="pcb" role="img" aria-label="bir pcb yolu basys 3&#x27;ten pmod konnektörüyle çıkıyor ve sayfa boyunca lab modüllerinin adını taşıyan küçük çiplerden, mux8, mux2, dec3, room_monitor, top_mux, mux4, dec2 ve top_decoder&#x27;dan geçip sondaki kahve fincanına varıyor"></div>
+<section id="how" aria-labelledby="how-h">
+  <div class="stage">
+    <pre id="scene" role="img" aria-label="masadaki bir macbook terminalinde dewfpga sim --wave çalıştırıyor, surfer tb_room_monitor&#x27;ün dalga formunu çiziyor, yanında usb kablosunda bir basys 3 bekliyor"></pre>
+    <div class="hero" id="hero">
+      <h1>apple silicon bir mac&#x27;te systemverilog yaz ve basys 3&#x27;e yükle</h1>
+      <p>vivado yok, sanal makine yok, rosetta yok</p>
+    </div>
+    <h2 id="how-h" class="sr">yaz, simüle et, dalga formu, yükle</h2>
+    <div class="caps" id="caps">
+      <div class="steps">
+        <button type="button" data-go="0">yaz</button>
+        <button type="button" data-go="1">simüle et</button>
+        <button type="button" data-go="2">dalga formu</button>
+        <button type="button" data-go="3">yükle</button>
+      </div>
+      <div class="cap" data-s="0"><h3 class="say">kendi editöründe yaz</h3><p class="out">cs223_lab2.sv</p></div>
+      <div class="cap" data-s="1"><h3 class="say">testbench&#x27;i çalıştır</h3><code class="cmd">dewfpga sim tb_room_monitor</code><p class="out">tb_room_monitor: 4096 cases, 0 errors</p></div>
+      <div class="cap" data-s="2"><h3 class="say">dalga formunu surfer&#x27;da aç</h3><code class="cmd">dewfpga sim tb_room_monitor --wave</code><p class="out">waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0</p></div>
+      <div class="cap" data-s="3"><h3 class="say">derle ve karta yükle</h3><code class="cmd">dewfpga flash top_monitor</code><p class="out">top_monitor.bit  2.2 MB</p><p class="note">8 gb&#x27;lık bir m2&#x27;de .sv&#x27;den .bit&#x27;e 4.1 sn</p></div>
+    </div>
+  </div>
+  <div id="stills" class="wrap"></div>
+</section>
 
-  <p><a href="/dewfpga/cli/"><b>Kısa kurulum ve çalıştırma rehberi</b></a>: istediğin yere bir <code>.sv</code> dosyası kaydet. VS Code’da açıp <b>▶ Run on Basys3</b> düğmesine bas; başka editörde <code>dewfpga run dosyam.sv</code> kullan. Standart kart pinleri otomatik: klasör veya pin dosyası hazırlaman gerekmez. Devrenin davranışını yazdığın kod belirler. Araçlar ve elle kurulum için <a href="/dewfpga/docs/">ayrıntılı dokümantasyon</a> var. Rehberler İngilizce.</p>
+<section id="board" class="sec" aria-labelledby="board-h">
+  <div class="wrap">
+    <div class="scroller" id="boardScroller">
+      <div class="boardwrap" id="boardWrap">
+        <pre id="boardPre" role="img" aria-label="yukarıdan bakılan bir digilent basys 3: ön kenarda on altı anahtar ve her birinin üstünde bir led, dört haneli yedi segment ekran, artı şeklinde beş düğme, ortada artix-7, iki yanda pmod konnektörleri, arkada vga, usb ve kablosu takılı prog portu"></pre>
+        <div class="layer" id="boardLayer" role="group" aria-label="basys 3&#x27;ün anahtarları, ledleri, haneleri ve düğmeleri"></div>
+      </div>
+    </div>
+    <div class="txt">
+      <h2 id="board-h">kart</h2>
+      <p class="line"><code>assign led = sw</code> çalıştıran bir basys 3. bir anahtarı çevir ya da bir lede tıkla.</p>
+<pre class="code">module top(input  logic [15:0] sw,
+           output logic [15:0] led,
+           output logic [6:0]  seg,
+           output logic [3:0]  an);
+    assign led = sw;
+<b class="f">    // 0 segmenti de haneyi de yakar</b>
+    assign seg = ~sw[6:0];
+    assign an  = ~sw[15:12];
+endmodule</pre>
+      <div class="read" aria-live="polite"><span>sw</span><code id="rSw"></code><span>led</span><code id="rLed" class="lw"></code><span>seg</span><code id="rSeg" class="ls"></code><span>an</span><code id="rAn" class="ls"></code></div>
+      <p class="note">sw, led, btn, seg, an ve clk pinlerini kendileri bulur, pin dosyası gerekmez</p>
+      <p class="swipe">her anahtar için kartı yana kaydır</p>
+    </div>
+  </div>
+</section>
 
-  <p class="mute">Kart yanında değil mi, hiçbir şey kurmak istemiyor musun? <a href="/dewfpga/sim/" hreflang="en">Basys3 simülatörü</a> tasarımını doğrudan tarayıcıda çalıştırıyor, switch'leri elle çeviriyorsun, LED'ler yanıyor. <a href="/dewfpga/sim/?view=tb" hreflang="en">Testbench çalıştırıcı</a> da testbench'ini koşup dalga formunu çiziyor. Şunlar için değil: Intel Mac, Vivado IP Catalog'undan herhangi bir şey, Vivado'nun kabul ettiği bazı SystemVerilog yapıları. <a href="#limits">Aşağıda hepsi yazıyor.</a></p>
+<section id="cli" class="sec" aria-labelledby="cli-h">
+  <div class="wrap">
+    <div class="head"><h2 id="cli-h">cli</h2><a class="more" href="/dewfpga/cli/" hreflang="en">her komut</a></div>
+    <p class="line">tek satırla kurulum, yaklaşık 4 dakika, diskte 0.3 gb. vivado 50 ile 100 gb ister.</p>
+    <div class="cli-cols">
+      <div class="cli-col">
+        <div class="grp"><h3>kurulum</h3><pre class="term" data-g="install"></pre></div>
+        <div class="grp"><h3>yaz</h3><pre class="term" data-g="write"></pre></div>
+        <div class="grp"><h3>simüle et</h3><pre class="term" data-g="simulate"></pre></div>
+      </div>
+      <div class="cli-col">
+        <div class="grp"><h3>dalga formu</h3><pre class="term" data-g="waveform"></pre></div>
+        <div class="grp"><h3>yükle</h3><pre class="term" data-g="flash"></pre></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<pre><code><span class="p">$</span> make sim
-PASS: 3 checks (see the waveform for the toggle)
-<span class="p">$</span> make bit
-xdc ok: 33 ports, all mapped.
-pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
-blink.bit  2.2 MB
-<span class="p">$</span> make flash
-Load SRAM: [==================================================] 100.00%
-Done
-Shift IR 35
-ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-  <p class="mute small">Yukarıdaki, 8 GB'lık M2'mde blink örneğinin gerçek çıktısı. Son satırdaki <code>done 1</code>, çipin tasarımı kabul ettiği anlamına geliyor; o an LED 0 yanıp sönmeye başlıyor. <code>.sv</code>'den <code>.bit</code>'e 4.6 saniye. Zincir diskte yaklaşık 0.3 GB yer kaplıyor (7 Ekim'de ölçülen 237 MB; isteğe bağlı ajan SDK'sı 51 MB ekler; elle kurarsan kılavuzdaki listeyi silene kadar 1.76 GB), Vivado 50 ila 100 GB istiyor.</p>
+<section id="docs" class="sec" aria-labelledby="docs-h">
+  <div class="wrap">
+    <div class="head"><h2 id="docs-h">rehber</h2><a class="more" href="/dewfpga/docs/" hreflang="en">rehberin tamamı</a></div>
+    <div class="docs-row">
+      <a class="paper" href="/dewfpga/docs/CS223_Mac_Setup.pdf" hreflang="en"><pre id="paper" role="img" aria-label="rehberin ilk sayfası, how do you run cs223 labs on a mac without vivado, dokuz bölümüyle"></pre><span>pdf olarak rehber</span></a>
+      <div class="docs-grid">
+        <div><h3><a href="/dewfpga/docs/before-you-start/" hreflang="en">başlamadan önce</a></h3><p>bir basys 3, micro usb kablosu, bir usb-c adaptör ve homebrew</p></div>
+        <div><h3><a href="/dewfpga/docs/one-line-install/" hreflang="en">tek satırla kurulum</a></h3><p>satır neyi nereye koyar, her parçayı görmek için dewfpga check</p></div>
+        <div><h3><a href="/dewfpga/docs/your-own-lab/" hreflang="en">kendi lab&#x27;ın</a></h3><p>.sv dosyaları ve .xdc bir klasörde, sonra dewfpga flash</p></div>
+        <div><h3><a href="/dewfpga/docs/vs-code/" hreflang="en">vs code</a></h3><p>editörde bir run on basys3 düğmesi</p></div>
+        <div><h3><a href="/dewfpga/errors/" hreflang="en">durursa</a></h3><p>yazdığı her hata, çözümüyle</p></div>
+        <div><h3><a href="/dewfpga/docs/limits/" hreflang="en">ne yapamaz?</a></h3><p>ip catalog yok, yalnız basys 3 ve apple silicon</p></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <h2 id="waveform">Dalga formunu nasıl görürsün?</h2>
-  <p><code>dewfpga sim</code>'e <code>--wave</code> ekle. Testbench'i çalıştırır, kaydettiğini <a href="https://surfer-project.org/" hreflang="en">Surfer</a>'da açar; Surfer'ı <code>dewfpga install</code> kuruyor. <code>--wave=browser</code> aynı kaydı tarayıcında bir sayfada açar: Vivado'nun Run Simulation'dan sonra açtığı dalga penceresine benzer. İkisi de testbench'in kendi sinyalleriyle başlar, altındaki tasarım açılmaya hazır durur; testbench'in hata sayacı ve beklenen değerleri ilk görünüme girmez. Testbench'e <code>$dumpvars</code> yazman gerekmez. Son satır neyin simüle ettiğini ve nerede açıldığını söyler.</p>
-<pre><code><span class="p">$</span> dewfpga sim tb_room_monitor --wave
-waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
-<span class="p">$</span> dewfpga sim top_monitor --wave=browser
-PASS: top_monitor, 4096 input cases, 0 errors
-waveform: top_monitor_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in the browser: …/dewfpga-wave/top_monitor_tb-f47701db.html</code></pre>
-  <p><a href="/dewfpga/art/wave-room-monitor.png"><img src="/dewfpga/art/wave-room-monitor.png" width="1366" height="520" loading="lazy" alt="tb_room_monitor için dewfpga'nın tarayıcıdaki dalga formu sayfası: Scope panelinde tasarımın modülleri, dalga penceresinde lamps, alarm, en, room ve sensor; room 3 ve en 1 iken alarm yanıp sönüyor."></a></p>
-  <p class="mute small">Bir CS223 lab 2 klasöründeki <code>tb_room_monitor</code>'ün tarayıcı sayfası, koşunun kaydettiği <code>.vcd</code>'den, 2.814–2.943 ns aralığına yakınlaştırılmış: room 3 seçili, <code>alarm</code> sensor 3'ü izliyor. <a href="/dewfpga/cli/wave/" hreflang="en">Bütün dalga formu seçenekleri.</a></p>
-
-  <h2>Nasıl çalışıyor?</h2>
-  <p>Kendi tasarımını kaynak kodundan karta taşımak farklı araçların sırayla çalışmasını gerektiriyor. Burada her işi ayrı bir açık kaynak araç yapıyor, bir de bir kez üretilen chip database var; küçük bir Makefile hepsini sırayla çalıştırıyor.</p>
-  <table>
-    <tr><th>aşama</th><th>araç</th></tr>
-    <tr><td>simülasyon</td><td>Icarus Verilog</td></tr>
-    <tr><td>sentez</td><td>Yosys</td></tr>
-    <tr><td>yerleştirme ve yönlendirme</td><td>nextpnr-xilinx, kaynaktan derleniyor</td></tr>
-    <tr><td>bitstream</td><td>prjxray <code>fasm2frames</code> + <code>xc7frames2bit</code></td></tr>
-    <tr><td>chip database</td><td>XC7A35T için bir kez üretiliyor</td></tr>
-    <tr><td>karta yükleme</td><td>openFPGALoader, USB üzerinden</td></tr>
-  </table>
-  <p>Yazdığın <code>.sv</code> ve <code>.xdc</code>, Vivado'ya vereceğin dosyaların aynısı. Dersin verdiği pin dosyaları da olduğu gibi çalışıyor; sadece kullandığın pinlerin başındaki <code>#</code>'i kaldırıyorsun.</p>
-
-  <h2>Neden böyle bir şey yaptım?</h2>
-  <p>Vivado'nun macOS sürümü yok, sanal makine de istemedim. Zinciri elle kurmak altı saatimi aldı; sebebi, hiçbiri tek yerde yazmayan altı duvardı. <a href="/dewfpga/why/" hreflang="en">Bu hizmetin ortaya çıkmasına neden olan kurulum sorunları burada</a> (İngilizce). Bir adım patlarsa en hızlı yol hata metnini aramak: <a href="/dewfpga/errors/" hreflang="en">kurulumda karşıma çıkan her hata, çözümüyle</a> (İngilizce).</p>
-
-  <h2 id="limits">Neyi yapamıyor?</h2>
-  <ul>
-    <li>Vivado'nun IP Catalog'undan hiçbir şey çalışmıyor: Block Design, MicroBlaze, AXI, Clocking Wizard, hazır BRAM, VGA ve UART blokları yok. İhtiyacın olan işlevi kendi sentezlenebilir kodunla yazabilirsin; hazır üretici IP bloğunu içe aktarmak ayrı bir yetenek.</li>
-    <li>Mac'teki zincirde şematik ya da çip içi debugger yok. Dalga formu Surfer'da ya da tarayıcı sayfasında açılıyor: <a href="#waveform">nasıl</a>.</li>
-    <li>Vivado'nun derlediği bazı SystemVerilog yapıları burada derlenmiyor, bazıları da hata vermeden yanlış bitstream üretiyor. Şimdiye kadar ölçtüğüm yapılar, Vivado'nun ne yaptığıyla yan yana: <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/test/sv/expect.tsv" hreflang="en">liste</a>.</li>
-    <li>Sadece Basys3 (XC7A35T) ve sadece Apple Silicon denendi. Intel Mac, Linux ve başka kartlar için bir şey diyemem.</li>
-    <li>Bu araçlar resmi değil, AMD'nin yaptığı ya da desteklediği şeyler değil. Lab demosundan önce tasarımını bir kez okuldaki bilgisayarda Vivado'da açmanı öneririm.</li>
-  </ul>
-
-  <h2>Sırada ne var?</h2>
-  <p>Tarayıcıda derleyici: hiçbir şey kurmadan SystemVerilog'dan Basys3 bitstream'ine. O henüz açık değil. <a href="/dewfpga/sim/" hreflang="en">Simülatör</a>, <a href="/dewfpga/sim/?view=tb" hreflang="en">testbench çalıştırıcı</a> ve <a href="/dewfpga/cli/" hreflang="en">komut satırı aracı</a> kullanıma açık.</p>
-
-  <h2>Kim yaptı?</h2>
-  <p>Damla Su Bilge, Bilkent CS. Buradaki her şeyi 19 Eylül 2026'da 8 GB RAM'li bir M2'de, macOS 15 ve elimdeki Basys3 ile çalıştırdım. Bir adım sende patlarsa terminalin son on satırını ve kaçıncı adımda olduğunu yaz: <a href="https://github.com/nosey-dewdrop/dewfpga/issues">GitHub'da issue</a> açabilirsin ya da <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a>'den ulaşabilirsin.</p>
+<section id="thanks" class="sec" aria-label="teşekkür">
+  <div class="wrap">
+<pre class="cup" id="cup" role="img" aria-label="bir fincan kahve">   ) )
+  ( (
+ .______.
+ |      |]
+ \      /
+  `----'</pre>
+    <p>dewfpga ücretsiz ve açık kaynak. teşekkür etmek istersen, <a href="https://buymeacoffee.com/damumya">bana bir kahve ısmarla</a></p>
+  </div>
+</section>
 </main>
 
 <footer class="wrap">
   <span>yapan damla su bilge · mit · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span class="more"><a href="/dewfpga/why/" hreflang="en">neden</a><a href="/dewfpga/patch-notes/" hreflang="en">yama notları</a><a href="/dewfpga/" hreflang="en">english</a></span>
 </footer>
+<script>window.HOME = {"alt": ["yakından laptop, cs223 lab 2'nin room_monitor modülü cs223_lab2.sv'ye yazılıyor", "terminal dewfpga sim tb_room_monitor çalıştırıyor, 4096 durum, 0 hata", "surfer tb_room_monitor.vcd'yi açıyor, dalga formu yeşil çiziliyor, en, room, sensor, alarm", "dewfpga flash top_monitor kartı yüklüyor, kamera kabloyu izleyip basys 3'e iniyor ve alarm ledi yanıyor"], "terms": {"install": "toolchain'i kur, aynı satır günceller de", "check": "her parça yerinde mi", "new": "vs code görevli blink örneği", "vscode": "editör entegrasyonunu kur", "sim": "testbench'leri çalıştırır", "waves": "simülasyonları tarayıcıda, dalga formu okuyan bir programda (surfer) ya da ikisinde birden açabilirsin", "tops": "top'lar için simülatör, surfer ile açılır", "tbs": "testbench'leri açar", "hw": "bunlar donanımın simülasyonları", "both": "surfer ve tarayıcı", "flash": "kodu fpga'ya yükler"}, "copy": ["kopya", "tamam", "kopyalandı", "seç"], "digit": "hane"};</script>
+<script defer src="/dewfpga/home.js"></script>
 </body>
 </html>

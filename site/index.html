@@ -2,31 +2,79 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="author" content="Damla Su Bilge">
 <link rel="author" href="https://noseydewdrop.com">
-<title>dewfpga: your SystemVerilog, from Mac to Basys3</title>
-<meta name="description" content="Install once, write your own SystemVerilog in your editor, and run it on a Digilent Basys3 from an Apple Silicon Mac. No Vivado or virtual machine.">
+<title>dewfpga · systemverilog to basys 3 on apple silicon, no vivado</title>
+<meta name="description" content="write systemverilog on an apple silicon mac, simulate it, open the waveform in surfer or the browser and flash a digilent basys 3. no vivado, no virtual machine, no rosetta. free and mit licensed.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/">
 <link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
 <link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
 <link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#171717">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Your SystemVerilog, from Mac to Basys3">
-<meta property="og:description" content="SystemVerilog to a Basys3 on Apple Silicon. No Vivado, no virtual machine. Step by step guide.">
+<meta property="og:site_name" content="dewfpga">
+<meta property="og:locale" content="en_US">
+<meta property="og:title" content="dewfpga · systemverilog to basys 3 on apple silicon, no vivado">
+<meta property="og:description" content="write systemverilog on an apple silicon mac, simulate it, see the waveform and flash a basys 3. no vivado, no virtual machine. free, mit.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="a macbook drawn in ascii runs dewfpga sim --wave and the waveform draws in surfer, a basys 3 waits beside it on its usb cable">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="dewfpga · systemverilog to basys 3 on apple silicon, no vivado">
+<meta name="twitter:description" content="write systemverilog on an apple silicon mac, simulate it, see the waveform and flash a basys 3. no vivado, no virtual machine. free, mit.">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:image:alt" content="a macbook drawn in ascii runs dewfpga sim --wave and the waveform draws in surfer, a basys 3 waits beside it on its usb cable">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
-<script defer src="/dewfpga/s.js"></script>
+<link rel="stylesheet" href="/dewfpga/home.css">
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","name":"dewfpga","url":"https://nosey-dewdrop.github.io/dewfpga/",
- "description":"Write your own SystemVerilog in your editor and run it on a Digilent Basys3 from an Apple Silicon Mac.",
- "author":{"@type":"Person","name":"Damla Su Bilge","url":"https://github.com/nosey-dewdrop"},"inLanguage":["en","tr"]}
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "dewfpga",
+  "description": "A command-line toolchain for macOS on Apple Silicon that simulates SystemVerilog, opens the waveform in Surfer or the browser, builds the bitstream and flashes a Digilent Basys 3, without Vivado.",
+  "inLanguage": "en",
+  "applicationCategory": "DeveloperApplication",
+  "applicationSubCategory": "FPGA toolchain",
+  "operatingSystem": "macOS on Apple Silicon (arm64)",
+  "processorRequirements": "arm64",
+  "softwareRequirements": "Homebrew; a Digilent Basys 3 (XC7A35T) to flash",
+  "featureList": [
+    "SystemVerilog simulation with Icarus Verilog",
+    "waveforms in Surfer or the browser",
+    "synthesis with Yosys",
+    "place and route with nextpnr-xilinx",
+    "bitstream with prjxray",
+    "programming with openFPGALoader"
+  ],
+  "fileSize": "about 0.3 GB installed",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "isAccessibleForFree": true,
+  "license": "https://opensource.org/licenses/MIT",
+  "url": "https://nosey-dewdrop.github.io/dewfpga/",
+  "downloadUrl": "https://nosey-dewdrop.github.io/dewfpga/install",
+  "installUrl": "https://nosey-dewdrop.github.io/dewfpga/docs/one-line-install/",
+  "image": "https://nosey-dewdrop.github.io/dewfpga/og.png",
+  "sameAs": [
+    "https://github.com/nosey-dewdrop/dewfpga"
+  ],
+  "author": {
+    "@type": "Person",
+    "name": "Damla Su Bilge",
+    "url": "https://noseydewdrop.com"
+  }
+}
 </script>
 </head>
-<body>
+<body class="home">
 <nav class="top" aria-label="Site">
   <a class="brand" href="/dewfpga/">dewfpga</a>
   <a class="c-cli" href="/dewfpga/cli/">cli</a>
@@ -36,83 +84,112 @@
   <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
 </nav>
 
-<section class="hero-art hero-product" aria-label="From your code to your board">
-  <h1>Your code. Your board.<br>From your Mac.</h1>
-  <div class="hero-message">
-    <p class="lead">Write SystemVerilog in your editor. Run your own circuit on a Basys3.</p>
-    <p class="sub">Install once on an Apple Silicon Mac. Free and open source. No Vivado or virtual machine.</p>
-    <p class="hero-actions"><a href="/dewfpga/cli/">Get started →</a> <a href="/dewfpga/sim/">Try the simulator</a></p>
+<main>
+<div id="pcb" role="img" aria-label="a pcb trace leaves the basys 3 through its pmod header and runs down the page through small chips named after the lab modules, mux8, mux2, dec3, room_monitor, top_mux, mux4, dec2 and top_decoder, to the coffee cup at the end"></div>
+<section id="how" aria-labelledby="how-h">
+  <div class="stage">
+    <pre id="scene" role="img" aria-label="a macbook on a desk runs dewfpga sim --wave in its terminal, surfer draws the waveform of tb_room_monitor, a basys 3 waits on a usb cable beside it"></pre>
+    <div class="hero" id="hero">
+      <h1>write systemverilog on an apple silicon mac and flash a basys 3</h1>
+      <p>no vivado, no virtual machine, no rosetta</p>
+    </div>
+    <h2 id="how-h" class="sr">write, simulate, waveform, flash</h2>
+    <div class="caps" id="caps">
+      <div class="steps">
+        <button type="button" data-go="0">write</button>
+        <button type="button" data-go="1">simulate</button>
+        <button type="button" data-go="2">waveform</button>
+        <button type="button" data-go="3">flash</button>
+      </div>
+      <div class="cap" data-s="0"><h3 class="say">write it in your own editor</h3><p class="out">cs223_lab2.sv</p></div>
+      <div class="cap" data-s="1"><h3 class="say">run the testbench</h3><code class="cmd">dewfpga sim tb_room_monitor</code><p class="out">tb_room_monitor: 4096 cases, 0 errors</p></div>
+      <div class="cap" data-s="2"><h3 class="say">open the waveform in surfer</h3><code class="cmd">dewfpga sim tb_room_monitor --wave</code><p class="out">waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0</p></div>
+      <div class="cap" data-s="3"><h3 class="say">build it and load the board</h3><code class="cmd">dewfpga flash top_monitor</code><p class="out">top_monitor.bit  2.2 MB</p><p class="note">4.1 s from .sv to .bit on an m2 with 8 gb</p></div>
+    </div>
+  </div>
+  <div id="stills" class="wrap"></div>
+</section>
+
+<section id="board" class="sec" aria-labelledby="board-h">
+  <div class="wrap">
+    <div class="scroller" id="boardScroller">
+      <div class="boardwrap" id="boardWrap">
+        <pre id="boardPre" role="img" aria-label="a digilent basys 3 seen from above: sixteen switches along the front edge with an led over each, the four digit seven segment display, five buttons in a cross, the artix-7 in the middle, the pmod headers on both sides, vga, usb and the prog port with its cable at the back"></pre>
+        <div class="layer" id="boardLayer" role="group" aria-label="switches, leds, digits and buttons of the basys 3"></div>
+      </div>
+    </div>
+    <div class="txt">
+      <h2 id="board-h">the board</h2>
+      <p class="line">a basys 3 running <code>assign led = sw</code>. flip a switch or click an led.</p>
+<pre class="code">module top(input  logic [15:0] sw,
+           output logic [15:0] led,
+           output logic [6:0]  seg,
+           output logic [3:0]  an);
+    assign led = sw;
+<b class="f">    // a 0 lights a segment and a digit</b>
+    assign seg = ~sw[6:0];
+    assign an  = ~sw[15:12];
+endmodule</pre>
+      <div class="read" aria-live="polite"><span>sw</span><code id="rSw"></code><span>led</span><code id="rLed" class="lw"></code><span>seg</span><code id="rSeg" class="ls"></code><span>an</span><code id="rAn" class="ls"></code></div>
+      <p class="note">sw, led, btn, seg, an and clk find their pins on their own, no pin file</p>
+      <p class="swipe">slide the board sideways for every switch</p>
+    </div>
   </div>
 </section>
 
-<main class="wrap">
+<section id="cli" class="sec" aria-labelledby="cli-h">
+  <div class="wrap">
+    <div class="head"><h2 id="cli-h">cli</h2><a class="more" href="/dewfpga/cli/">every command</a></div>
+    <p class="line">install in one line, about 4 minutes, 0.3 gb on disk. vivado asks for 50 to 100 gb.</p>
+    <div class="cli-cols">
+      <div class="cli-col">
+        <div class="grp"><h3>install</h3><pre class="term" data-g="install"></pre></div>
+        <div class="grp"><h3>write</h3><pre class="term" data-g="write"></pre></div>
+        <div class="grp"><h3>simulate</h3><pre class="term" data-g="simulate"></pre></div>
+      </div>
+      <div class="cli-col">
+        <div class="grp"><h3>waveform</h3><pre class="term" data-g="waveform"></pre></div>
+        <div class="grp"><h3>flash</h3><pre class="term" data-g="flash"></pre></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-  <p><a href="/dewfpga/cli/"><b>Install the chain and run your first design.</b></a> Save your own <code>.sv</code> file anywhere. Open it in VS Code and click <b>▶ Run on Basys3</b>, or use <code>dewfpga run file.sv</code> from another editor. Standard board pins are automatic; no project folder is needed. Your code determines the circuit.</p>
-  <p class="mute">The <a href="/dewfpga/docs/">full documentation</a> explains the tools, manual setup and hardware limits.</p>
-  <p class="mute">No board and no install? The <a href="/dewfpga/sim/">Basys3 simulator</a> runs your design in the browser, and the <a href="/dewfpga/sim/?view=tb">testbench runner</a> runs your testbench with a waveform. Not for: Intel Macs, anything from Vivado's IP Catalog, some SystemVerilog that Vivado accepts. <a href="#limits">Details below.</a></p>
+<section id="docs" class="sec" aria-labelledby="docs-h">
+  <div class="wrap">
+    <div class="head"><h2 id="docs-h">docs</h2><a class="more" href="/dewfpga/docs/">the whole guide</a></div>
+    <div class="docs-row">
+      <a class="paper" href="/dewfpga/docs/CS223_Mac_Setup.pdf"><pre id="paper" role="img" aria-label="the first page of the guide, how do you run cs223 labs on a mac without vivado, with its nine sections"></pre><span>the guide as a pdf</span></a>
+      <div class="docs-grid">
+        <div><h3><a href="/dewfpga/docs/before-you-start/">before you start</a></h3><p>a basys 3, its micro usb cable, a usb-c adapter and homebrew</p></div>
+        <div><h3><a href="/dewfpga/docs/one-line-install/">install in one line</a></h3><p>what the line puts where, and dewfpga check to see every piece</p></div>
+        <div><h3><a href="/dewfpga/docs/your-own-lab/">your own lab</a></h3><p>the .sv files and the .xdc in one folder, then dewfpga flash</p></div>
+        <div><h3><a href="/dewfpga/docs/vs-code/">vs code</a></h3><p>a run on basys3 button in the editor</p></div>
+        <div><h3><a href="/dewfpga/errors/">if it stops</a></h3><p>every error it prints, with the fix</p></div>
+        <div><h3><a href="/dewfpga/docs/limits/">what can it not do?</a></h3><p>no ip catalog, only the basys 3 and apple silicon</p></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-<details>
-  <summary>A recorded blink example from the manual setup</summary>
-<pre><code><span class="p">$</span> make sim
-PASS: 3 checks (see the waveform for the toggle)
-<span class="p">$</span> make bit
-xdc ok: 33 ports, all mapped.
-pnr ok: 73 LUT, 27 FF, 278.71 MHz (PASS at 100.00 MHz)   (full log: blink.log)
-blink.bit  2.2 MB
-<span class="p">$</span> make flash
-Load SRAM: [==================================================] 100.00%
-Done
-Shift IR 35
-ir: 1 isc_done 1 isc_ena 0 init 1 done 1</code></pre>
-  <p class="mute small">The blink example on a Basys3, from an M2 with 8 GB. <code>done 1</code> means the chip accepted the design, and LED 0 starts blinking. 4.6 seconds from <code>.sv</code> to <code>.bit</code>. The chain takes about 0.3 GB of disk (237 MB measured on 7 October; the optional agent SDK adds 51 MB; 1.76 GB if you build it by hand, until you delete what the manual lists); Vivado asks for 50 to 100 GB.</p>
-</details>
-  <h2 id="waveform">How do you see the waveform?</h2>
-  <p>Add <code>--wave</code> to <code>dewfpga sim</code>. It runs the testbench, then opens what it recorded in <a href="https://surfer-project.org/">Surfer</a>, which <code>dewfpga install</code> puts in. <code>--wave=browser</code> opens the same recording in a page in your browser instead, a wave window like the one Vivado opens after Run Simulation. Both start with the testbench's own signals and the design under it to expand; the testbench's errors counter and expected values stay out of the first view. The testbench needs no <code>$dumpvars</code>. The last line says what simulated it and where it opened.</p>
-<pre><code><span class="p">$</span> dewfpga sim tb_room_monitor --wave
-waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
-<span class="p">$</span> dewfpga sim top_monitor --wave=browser
-PASS: top_monitor, 4096 input cases, 0 errors
-waveform: top_monitor_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in the browser: …/dewfpga-wave/top_monitor_tb-f47701db.html</code></pre>
-  <p><a href="/dewfpga/art/wave-room-monitor.png"><img src="/dewfpga/art/wave-room-monitor.png" width="1366" height="520" loading="lazy" alt="dewfpga's waveform page in the browser for tb_room_monitor: the Scope pane lists the design's instances, the wave window shows lamps, alarm, en, room and sensor, and alarm pulses while room is 3 and en is 1."></a></p>
-  <p class="mute small">The browser page for <code>tb_room_monitor</code> of a CS223 lab 2 folder, from the <code>.vcd</code> its run recorded, zoomed to 2,814–2,943 ns: room 3 is selected and <code>alarm</code> follows sensor 3. <a href="/dewfpga/cli/wave/">Every waveform option.</a></p>
-
-  <h2>How does it work?</h2>
-  <p>Taking a design from source code to the board involves five jobs. One open-source tool does each job here, plus a chip database generated once, and a small Makefile runs them in order.</p>
-  <table>
-    <tr><th>stage</th><th>tool</th></tr>
-    <tr><td>simulation</td><td>Icarus Verilog</td></tr>
-    <tr><td>synthesis</td><td>Yosys</td></tr>
-    <tr><td>place and route</td><td>nextpnr-xilinx, built from source</td></tr>
-    <tr><td>bitstream</td><td>prjxray <code>fasm2frames</code> + <code>xc7frames2bit</code></td></tr>
-    <tr><td>chip database</td><td>generated once for the XC7A35T</td></tr>
-    <tr><td>programming</td><td>openFPGALoader over USB</td></tr>
-  </table>
-  <p>Your <code>.sv</code> and <code>.xdc</code> files are the same ones Vivado reads. Use a Basys3 pin file and enable the pins your design uses.</p>
-
-  <h2>Why does this exist?</h2>
-  <p>Vivado has no macOS build. Setting up the open-source chain by hand took six hours, because of six walls that nobody documents in one place. <a href="/dewfpga/why/">The setup problems that led to this service.</a> When a step fails, the error text is the fastest way in: <a href="/dewfpga/errors/">every error hit during this setup, with the fix</a>.</p>
-
-  <h2 id="limits">What can it not do?</h2>
-  <ul>
-    <li>Nothing from Vivado's IP Catalog: no Block Design, MicroBlaze, AXI, Clocking Wizard or the BRAM, VGA and UART cores. Write your own synthesizable logic for the functions you need; importing a vendor IP block is a separate capability.</li>
-    <li>On the Mac chain there is no schematic or in-chip debugger. The waveform opens in Surfer or in the browser page: <a href="#waveform">how</a>.</li>
-    <li>Some SystemVerilog that Vivado compiles is refused here, and some builds a wrong bitstream with no error. The constructs measured so far, next to what Vivado does: <a href="/dewfpga/sv/">the list</a>.</li>
-    <li>Only the Basys3 (XC7A35T), only Apple Silicon. Intel Macs, Linux and other boards are untested.</li>
-    <li>The tools are unofficial. AMD does not make or support them. <a href="/dewfpga/docs/#8-what-can-it-not-do">The limits, in detail.</a></li>
-  </ul>
-
-  <h2>What is coming?</h2>
-  <p>Available now: the <a href="/dewfpga/sim/">Basys3 simulator</a>, the <a href="/dewfpga/sim/?view=tb">testbench runner</a> and the <a href="/dewfpga/cli/">command-line tool</a>. Still in progress: compiling a Basys3 bitstream entirely in the browser. Use the command-line tool to build and program the real board.</p>
-
-  
-  <h2>Who made this?</h2>
-  <p>Damla Su Bilge, Bilkent CS. Everything here was run on 19 and 20 September 2026 on an M2 with 8 GB of RAM, macOS 15 and a Basys3. If a step fails for you, open an <a href="https://github.com/nosey-dewdrop/dewfpga/issues">issue</a> or write on <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">LinkedIn</a> with the last ten lines of the terminal and the step number.</p>
-
+<section id="thanks" class="sec" aria-label="thanks">
+  <div class="wrap">
+<pre class="cup" id="cup" role="img" aria-label="a cup of coffee">   ) )
+  ( (
+ .______.
+ |      |]
+ \      /
+  `----'</pre>
+    <p>dewfpga is free and open source. if you want to say thanks, <a href="https://buymeacoffee.com/damumya">buy me a coffee</a></p>
+  </div>
+</section>
 </main>
 
 <footer class="wrap">
   <span>built by damla su bilge · mit · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span class="more"><a href="/dewfpga/why/">why</a><a href="/dewfpga/patch-notes/">patch notes</a><a href="/dewfpga/tr/" hreflang="tr">türkçe</a></span>
 </footer>
+<script>window.HOME = {"alt": ["the laptop up close, the room_monitor module of cs223 lab 2 being typed into cs223_lab2.sv", "the terminal runs dewfpga sim tb_room_monitor, 4096 cases, 0 errors", "surfer opens tb_room_monitor.vcd and its waveform draws in green, en, room, sensor, alarm", "dewfpga flash top_monitor loads the board, the camera follows the cable to the basys 3 and its alarm led lights"], "terms": {"install": "install the toolchain, the same line updates it", "check": "is every piece in place", "new": "blink example with a vs code task", "vscode": "set up the editor integration", "sim": "runs the testbenches", "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both", "tops": "simulator for the tops, opens with surfer", "tbs": "opens testbenches", "hw": "these are the simulations of the hardware", "both": "surfer and the browser", "flash": "loads the code into the fpga"}, "copy": ["copy", "done", "copied", "select"], "digit": "digit"};</script>
+<script defer src="/dewfpga/home.js"></script>
 </body>
 </html>

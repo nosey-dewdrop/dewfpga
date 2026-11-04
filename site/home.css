@@ -1,0 +1,185 @@
+/* the home page: the stage, the board, the cli, the guide, the traces. site/s.css comes first
+   (the tokens, the nav and the footer, from docs/nav.css); this file is built from
+   docs/home/page.tmpl.html by docs/home/build.py. */
+/* *-*-*-*-*-*-*-*-*-*-*-* tokens *-*-*-*-*-*-*-*-*-*-*-* */
+/* the mac's own letters: sf pro for words, sf mono for commands and the drawings.
+   four sizes, two weights, lowercase. each colour is a thing on the bench: the green of a
+   signal at 1 (the wave window's own, and the leds), the red of the display, the amber of
+   the prompt, the blue of a link. no gradient, no glow. */
+:root {
+  color-scheme: dark;
+  --bg: #171717;
+  --ink: #f4f4f4; --grey: #a8a8a8; --quiet: #8c8c8c;
+  --fg: #ffffff; --mute: #e4e4e4; --dim: #b2b2b2; --faint: #767676;
+  --accent: #7edaf2; --led: #79f293; --wave: #00e600; --seg: #ff5a4a; --seg-off: #4f3532; --cmd: #f0c060; --link: #7cc8e4; --trace: #4c4c4c;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
+  --mono: "SF Mono", ui-monospace, Menlo, monospace;
+  --t1: 28px; --t2: 20px; --t3: 17px; --t4: 15px;
+  --gut: 40px; --max: 1680px; --navh: 68px; --gap: 120px;
+}
+@media (max-width: 1199px) { :root { --gut: 32px; } }
+@media (max-width: 719px) { :root { --gut: 16px; --navh: 56px; --gap: 80px; } }
+* { box-sizing: border-box; }
+html { background: var(--bg); scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 400 var(--t3)/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+a { color: inherit; text-decoration: none; }
+pre, code { font-family: var(--mono); font-variant-ligatures: none; }
+pre { margin: 0; white-space: pre; }
+pre b { font-weight: 400; }
+.i { color: var(--fg); } .m { color: var(--mute); } .d { color: var(--dim); } .f { color: var(--faint); }
+.a { color: var(--accent); } .w { color: var(--wave); } .l { color: var(--led); } .s { color: var(--seg); } .u { color: var(--seg-off); } .p { color: var(--cmd); } .t { color: var(--trace); }
+/* site/s.css sets margins and colours for pages of text; the home sets its own */
+h1, h2, h3, p, pre { margin: 0; }
+h3 { font: inherit; color: inherit; line-height: inherit; }
+:focus-visible { outline: 1px solid var(--grey); outline-offset: 3px; border-radius: 2px; }
+.wrap { width: 100%; max-width: var(--max); margin: 0 auto; padding: 0 var(--gut); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+main { position: relative; }
+
+/* *-*-*-*-*-*-*-*-*-*-*-* nav *-*-*-*-*-*-*-*-*-*-*-* */
+/* the shared nav (docs/nav.css) lies over the top of the stage */
+body.home nav.top { position: absolute; top: 0; left: 0; right: 0; }
+
+/* *-*-*-*-*-*-*-*-*-*-*-* how: the stage *-*-*-*-*-*-*-*-*-*-*-* */
+#how { position: relative; height: 600vh; }
+.stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; }
+#scene { position: absolute; color: var(--dim); overflow: hidden; user-select: none; -webkit-user-select: none; }
+.hero { position: absolute; max-width: 560px; }
+.hero h1 { font-size: var(--t1); line-height: 1.22; font-weight: 600; letter-spacing: -0.012em; color: var(--ink); }
+.hero p { margin-top: 12px; color: var(--grey); }
+.caps { position: absolute; }
+.steps { display: flex; gap: 26px; margin-bottom: 26px; }
+.steps button { all: unset; cursor: pointer; color: var(--quiet); transition: color .15s; padding: 10px 4px; margin: -10px -4px; }
+.steps button:hover { color: var(--grey); }
+.steps button.on { color: var(--ink); }
+.steps button:focus-visible { outline: 1px solid var(--grey); outline-offset: -2px; }
+/* the caption of the step on screen; the others stay readable for search and screen readers */
+.cap:not(.on) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.say { font-size: var(--t2); font-weight: 600; line-height: 1.3; color: var(--ink); }
+.cap .cmd { display: block; margin-top: 16px; font-size: var(--t4); color: var(--ink); }
+.cap .out { margin-top: 10px; font: var(--t4)/1.45 var(--mono); color: var(--quiet); }
+.cap .note { margin-top: 14px; font-size: var(--t4); color: var(--grey); }
+#stills { display: none; }
+
+/* *-*-*-*-*-*-*-*-*-*-*-* sections *-*-*-*-*-*-*-*-*-*-*-* */
+section.sec { padding: var(--gap) 0 0; position: relative; z-index: 1; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 24px; margin-bottom: 34px; }
+h2 { font-size: var(--t2); font-weight: 600; line-height: 1.5; color: var(--ink); }
+.more { color: var(--link); transition: color .15s; padding: 10px 0; margin: -10px 0; }
+.more:hover { color: var(--ink); }
+.more + .more { margin-left: 26px; }
+.line { color: var(--grey); }
+
+/* the board */
+#board .wrap { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 56px; align-items: center; }
+.scroller, #board .txt { min-width: 0; }
+.boardwrap { position: relative; justify-self: start; }
+#boardPre { color: var(--dim); user-select: none; -webkit-user-select: none; }
+.layer { position: absolute; inset: 0; }
+.layer button { all: unset; position: absolute; cursor: pointer; -webkit-tap-highlight-color: transparent; border-radius: 3px; }
+.layer button:hover { background: rgba(255, 255, 255, .04); }
+.layer button:focus-visible { outline: 1px solid var(--grey); outline-offset: 0; }
+.line code, .say code { font-size: var(--t4); color: var(--ink); }
+#board .txt .line { margin-top: 12px; }
+pre.code { margin-top: 26px; font-size: var(--t4); line-height: 1.55; color: var(--mute); white-space: pre; overflow-x: auto; }
+pre.code .f { color: var(--quiet); }
+.read { margin-top: 22px; display: grid; grid-template-columns: max-content max-content; column-gap: 16px; row-gap: 2px;
+  font: var(--t4)/1.55 var(--mono); }
+.read span { color: var(--quiet); }
+.read code { color: var(--ink); }
+.read code.lw { color: var(--led); }
+.read code.ls { color: var(--seg); }
+#board .note { margin-top: 22px; font-size: var(--t4); color: var(--quiet); }
+#board .swipe { display: none; }
+
+/* the cli: her guide, step by step, in drawn terminal windows */
+.cli-cols { margin-top: 36px; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 0 56px; align-items: start; }
+.cli-col { display: flex; flex-direction: column; gap: 34px; min-width: 0; }
+.cli-col + .cli-col { margin-top: 60px; }
+.grp h3 { color: var(--ink); margin-bottom: 8px; }
+pre.term { font-size: var(--t4); line-height: 1.3; color: var(--dim); }
+pre.term b { user-select: none; -webkit-user-select: none; }
+pre.term b.c { user-select: text; -webkit-user-select: text; color: var(--quiet); }
+pre.term code { color: var(--ink); }
+pre.term .copy { color: var(--cmd); display: inline-block; padding: 12px 8px; margin: -12px -8px; }
+pre.term .copy:hover, pre.term .copy.done { color: var(--ink); }
+.copy { all: unset; cursor: pointer; font-size: var(--t4); transition: color .15s; }
+.copy:focus-visible { outline: 1px solid var(--grey); outline-offset: -4px; }
+
+/* docs */
+.docs-row { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 72px; align-items: center; }
+.paper { display: block; }
+.paper pre { font-size: 13px; line-height: 1.3; color: var(--dim); }
+.paper span { display: block; margin-top: 10px; font-size: var(--t4); color: var(--link); transition: color .15s; }
+.paper:hover span { color: var(--ink); }
+.docs-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 36px 56px; }
+.docs-grid h3 a { display: inline-block; color: var(--link); transition: color .15s; padding: 6px 0; margin: -6px 0; }
+.docs-grid h3 a:hover { color: var(--ink); }
+.docs-grid p { margin-top: 6px; font-size: var(--t4); color: var(--grey); max-width: 34em; }
+
+/* thanks */
+#thanks .wrap { display: flex; align-items: center; gap: 28px; }
+.cup { font-size: 13px; line-height: 1.16; color: var(--dim); }
+#thanks p { color: var(--grey); }
+#thanks a { color: var(--link); transition: color .15s; padding: 8px 0; margin: -8px 0; }
+#thanks a:hover { color: var(--ink); }
+
+footer.wrap { position: relative; z-index: 1; }
+
+/* the traces: from the board's pmod down the page, through her lab's modules */
+#pcb { position: absolute; left: 0; top: 0; width: 100%; pointer-events: none; z-index: 0; }
+#pcb pre { position: absolute; color: var(--trace); user-select: none; -webkit-user-select: none; }
+#pcb .part { color: var(--dim); }
+#pcb .part .lab { color: var(--mute); transition: color .25s; }
+#pcb .part.hot .lab, #pcb .part.hot .pin { color: var(--led); }
+#pcb .pulse { position: absolute; color: var(--led); white-space: pre; }
+
+@media (max-width: 1199px) {
+  #board .wrap { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 40px; }
+  .docs-row { gap: 48px; }
+  .docs-grid { gap: 32px 32px; }
+  .cli-cols { grid-template-columns: 1fr; }
+  .cli-col + .cli-col { margin-top: 34px; }
+}
+@media (max-width: 899px) {
+  #board .wrap { grid-template-columns: 1fr; gap: 30px; }
+  .docs-row { grid-template-columns: 1fr; gap: 40px; }
+}
+@media (max-width: 719px) {
+  .hero h1 { font-size: var(--t2); line-height: 1.3; }
+  .hero p { margin-top: 6px; font-size: var(--t4); }
+  .steps { gap: 18px; margin-bottom: 14px; font-size: var(--t4); }
+  .steps button { padding: 14px 4px; margin: -14px -4px; }
+  .say { font-size: var(--t3); }
+  .cap .cmd { margin-top: 10px; }
+  .cap .out { margin-top: 6px; }
+  .docs-grid { grid-template-columns: 1fr; gap: 30px; }
+  .head { flex-wrap: wrap; row-gap: 6px; }
+  /* on a phone the board keeps a finger's width between two switches: it is drawn wider
+     than the screen and slides sideways */
+  .scroller { overflow-x: auto; overscroll-behavior-x: contain; width: calc(100% + 2 * var(--gut)); max-width: 100vw; margin-left: calc(-1 * var(--gut)); padding: 0 var(--gut);
+    scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .scroller::-webkit-scrollbar { display: none; }
+  #board .swipe { display: block; margin-top: 10px; font-size: var(--t4); color: var(--quiet); }
+  #thanks .wrap { align-items: flex-start; gap: 18px; }
+  .cup { font-size: 11px; }
+}
+
+/* *-*-*-*-*-*-*-*-*-*-*-* less motion: still pictures *-*-*-*-*-*-*-*-*-*-*-* */
+@media (prefers-reduced-motion: reduce) {
+  #how { height: auto; }
+  .stage .caps { display: none; }
+  #stills { display: block; }
+  #stills figure { margin: 0; padding: 56px 0 0; display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 56px; align-items: center; }
+  #stills .cap { position: static; width: auto; height: auto; overflow: visible; clip: auto; white-space: normal; }
+  #pcb .part .lab { transition: none; }
+}
+@media (prefers-reduced-motion: reduce) and (max-width: 719px) {
+  #stills figure { grid-template-columns: 1fr; gap: 16px; }
+}
+/* under 390 px the drawn guide page shrinks with the screen instead of running past it */
+@media (max-width: 389px) {
+  .paper pre { font-size: calc((100vw - 2 * var(--gut)) / 27.9); }
+}

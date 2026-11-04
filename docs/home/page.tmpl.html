@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<link rel="canonical" href="{{url}}">
+<link rel="alternate" hreflang="en" href="https://nosey-dewdrop.github.io/dewfpga/">
+<link rel="alternate" hreflang="tr" href="https://nosey-dewdrop.github.io/dewfpga/tr/">
+<link rel="alternate" hreflang="x-default" href="https://nosey-dewdrop.github.io/dewfpga/">
+<meta name="robots" content="index, follow">
+<meta name="theme-color" content="#171717">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="dewfpga">
+<meta property="og:locale" content="{{locale}}">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{og_description}}">
+<meta property="og:url" content="{{url}}">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="{{og_alt}}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{title}}">
+<meta name="twitter:description" content="{{og_description}}">
+<meta name="twitter:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:image:alt" content="{{og_alt}}">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<link rel="stylesheet" href="/dewfpga/home.css">
+<script type="application/ld+json">
+{{ld}}
+</script>
+</head>
+<body class="home">
+<nav class="top" aria-label="Site"><!-- filled by docs/nav.py --></nav>
+
+<main>
+<div id="pcb" role="img" aria-label="{{pcb_alt}}"></div>
+<section id="how" aria-labelledby="how-h">
+  <div class="stage">
+    <pre id="scene" role="img" aria-label="{{scene_alt}}"></pre>
+    <div class="hero" id="hero">
+      <h1>{{h1}}</h1>
+      <p>{{hero_p}}</p>
+    </div>
+    <h2 id="how-h" class="sr">{{how_h}}</h2>
+    <div class="caps" id="caps">
+      <div class="steps">
+        <button type="button" data-go="0">{{step0}}</button>
+        <button type="button" data-go="1">{{step1}}</button>
+        <button type="button" data-go="2">{{step2}}</button>
+        <button type="button" data-go="3">{{step3}}</button>
+      </div>
+      <div class="cap" data-s="0"><h3 class="say">{{say0}}</h3><p class="out">cs223_lab2.sv</p></div>
+      <div class="cap" data-s="1"><h3 class="say">{{say1}}</h3><code class="cmd">dewfpga sim tb_room_monitor</code><p class="out">tb_room_monitor: 4096 cases, 0 errors</p></div>
+      <div class="cap" data-s="2"><h3 class="say">{{say2}}</h3><code class="cmd">dewfpga sim tb_room_monitor --wave</code><p class="out">waveform: tb_room_monitor.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0</p></div>
+      <div class="cap" data-s="3"><h3 class="say">{{say3}}</h3><code class="cmd">dewfpga flash top_monitor</code><p class="out">top_monitor.bit  2.2 MB</p><p class="note">{{note3}}</p></div>
+    </div>
+  </div>
+  <div id="stills" class="wrap"></div>
+</section>
+
+<section id="board" class="sec" aria-labelledby="board-h">
+  <div class="wrap">
+    <div class="scroller" id="boardScroller">
+      <div class="boardwrap" id="boardWrap">
+        <pre id="boardPre" role="img" aria-label="{{board_alt}}"></pre>
+        <div class="layer" id="boardLayer" role="group" aria-label="{{board_group}}"></div>
+      </div>
+    </div>
+    <div class="txt">
+      <h2 id="board-h">{{board_h}}</h2>
+      <p class="line">{{board_line}}</p>
+<pre class="code">module top(input  logic [15:0] sw,
+           output logic [15:0] led,
+           output logic [6:0]  seg,
+           output logic [3:0]  an);
+    assign led = sw;
+<b class="f">    // {{board_comment}}</b>
+    assign seg = ~sw[6:0];
+    assign an  = ~sw[15:12];
+endmodule</pre>
+      <div class="read" aria-live="polite"><span>sw</span><code id="rSw"></code><span>led</span><code id="rLed" class="lw"></code><span>seg</span><code id="rSeg" class="ls"></code><span>an</span><code id="rAn" class="ls"></code></div>
+      <p class="note">{{board_note}}</p>
+      <p class="swipe">{{board_swipe}}</p>
+    </div>
+  </div>
+</section>
+
+<section id="cli" class="sec" aria-labelledby="cli-h">
+  <div class="wrap">
+    <div class="head"><h2 id="cli-h">cli</h2><a class="more" href="/dewfpga/cli/"{{hl}}>{{cli_more}}</a></div>
+    <p class="line">{{cli_line}}</p>
+    <div class="cli-cols">
+      <div class="cli-col">
+        <div class="grp"><h3>{{g_install}}</h3><pre class="term" data-g="install"></pre></div>
+        <div class="grp"><h3>{{step0}}</h3><pre class="term" data-g="write"></pre></div>
+        <div class="grp"><h3>{{step1}}</h3><pre class="term" data-g="simulate"></pre></div>
+      </div>
+      <div class="cli-col">
+        <div class="grp"><h3>{{step2}}</h3><pre class="term" data-g="waveform"></pre></div>
+        <div class="grp"><h3>{{step3}}</h3><pre class="term" data-g="flash"></pre></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="docs" class="sec" aria-labelledby="docs-h">
+  <div class="wrap">
+    <div class="head"><h2 id="docs-h">{{docs_h}}</h2><a class="more" href="/dewfpga/docs/"{{hl}}>{{docs_more}}</a></div>
+    <div class="docs-row">
+      <a class="paper" href="/dewfpga/docs/CS223_Mac_Setup.pdf"{{hl}}><pre id="paper" role="img" aria-label="{{paper_alt}}"></pre><span>{{paper_link}}</span></a>
+      <div class="docs-grid">
+        <div><h3><a href="/dewfpga/docs/before-you-start/"{{hl}}>{{d0}}</a></h3><p>{{d0p}}</p></div>
+        <div><h3><a href="/dewfpga/docs/one-line-install/"{{hl}}>{{d1}}</a></h3><p>{{d1p}}</p></div>
+        <div><h3><a href="/dewfpga/docs/your-own-lab/"{{hl}}>{{d2}}</a></h3><p>{{d2p}}</p></div>
+        <div><h3><a href="/dewfpga/docs/vs-code/"{{hl}}>{{d3}}</a></h3><p>{{d3p}}</p></div>
+        <div><h3><a href="/dewfpga/errors/"{{hl}}>{{d4}}</a></h3><p>{{d4p}}</p></div>
+        <div><h3><a href="/dewfpga/docs/limits/"{{hl}}>{{d5}}</a></h3><p>{{d5p}}</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="thanks" class="sec" aria-label="{{thanks_label}}">
+  <div class="wrap">
+<pre class="cup" id="cup" role="img" aria-label="{{cup_alt}}">   ) )
+  ( (
+ .______.
+ |      |]
+ \      /
+  `----'</pre>
+    <p>{{thanks}} <a href="https://buymeacoffee.com/damumya">{{coffee}}</a></p>
+  </div>
+</section>
+</main>
+
+<footer class="wrap"><!-- filled by docs/nav.py --></footer>
+<script>window.HOME = {{js}};</script>
+<script defer src="/dewfpga/home.js"></script>
+</body>
+</html>
