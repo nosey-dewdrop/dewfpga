@@ -1498,11 +1498,11 @@ ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot ope
 
 ## Why does it happen?
 
-`dewfpga sim --wave` (and `--wave=both`) open the waveform in [Surfer](https://surfer-project.org/), a waveform viewer that is installed on its own. dewfpga looks for it before the simulation runs, so nothing is simulated for a window that cannot open.
+`dewfpga sim --wave` (and `--wave=both`) open the waveform in [Surfer](https://surfer-project.org/), a waveform viewer from Homebrew. `dewfpga install` installs it since 4 November 2026; an install from before that has no Surfer, and `dewfpga check` shows its row as MISSING. dewfpga looks for it before the simulation runs, so nothing is simulated for a window that cannot open.
 
 ## What is the fix?
 
-Install Surfer, then run the same command again:
+Install Surfer (or run `dewfpga install` again, which adds it), then run the same command again:
 
 ```copy
 brew install surfer

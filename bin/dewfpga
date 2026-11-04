@@ -64,6 +64,7 @@ cmd_check() {
     elif yosys -m "$so" -p 'help read_slang' 2>&1 | grep '^ *read_slang \[' >/dev/null; then printf '  \033[32m✓\033[0m %-16s %s\n' yosys-slang "$so"
     else printf '  \033[31m✗\033[0m %-16s %s does not load in %s\n' yosys-slang "$so" "$(yosys -V 2>/dev/null | cut -d' ' -f1-2)"; fail=1; stale=1; fi
     row iverilog        iverilog                                         c
+    row surfer          surfer                                           c   # the waveform viewer: dewfpga sim --wave
     row openFPGALoader  openFPGALoader                                   c
     row nextpnr-xilinx  "$FPGA_HOME/nextpnr-xilinx/build/nextpnr-xilinx" x
     row xc7frames2bit   "$FPGA_HOME/prjxray/build/tools/xc7frames2bit"   x

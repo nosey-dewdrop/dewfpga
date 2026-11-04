@@ -124,8 +124,9 @@ clones (1.5 GB, 1543 MB measured on 7 October) and is left as it is; `dewfpga un
 | frames → .bit | prjxray `xc7frames2bit` | source |
 | chipdb XC7A35T | `bbaexport` + `bbasm` | generated (~90 MB) |
 | programming | openFPGALoader | brew |
+| waveform viewer | Surfer | brew |
 
-Vivado does five jobs in one window; five open-source tools do them here and `install.sh`
+Vivado does six jobs in one window; six open-source tools do them here and `install.sh`
 wires them together.
 
 ## Why a script?

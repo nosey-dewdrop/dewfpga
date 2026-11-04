@@ -114,6 +114,9 @@ check "MCP protocol and owned SDK setup" "python3 -B '$ROOT/test/agent/test-mcp.
 
 sec "== toolchain"
 check "check passes"          "'$CLI' check"
+# Surfer, the viewer dewfpga sim --wave opens, is one of install.sh's Homebrew packages, and check has a row for it: found
+# here, MISSING on a PATH without it (no install, no network)
+check "install.sh installs Surfer and check reports it, found or MISSING" "grep -qE '^BREW_PKGS=\\(.* surfer( |\\))' '$ROOT/install.sh' && '$CLI' check > '$T/chk' && grep -qE '✓.* surfer +/' '$T/chk' && { PATH=/usr/bin:/bin \"\$BASH\" '$CLI' check > '$T/chk' || true; } && grep -qE '✗.* surfer +MISSING' '$T/chk'"
 
 check "programmer errors distinguish failed access from OS visibility" "python3 '$ROOT/test/test-programming-diagnostics.py'"
 check "XDC scalar and vector ranges preserve pin names" "python3 '$ROOT/test/test-xdc-ranges.py'"

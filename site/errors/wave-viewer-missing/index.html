@@ -36,9 +36,9 @@
   <h1 class="mono">ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim tb_mux2 --wave=browser</h1>
 <pre><code>ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim tb_mux2 --wave=browser https://nosey-dewdrop.github.io/dewfpga/errors/wave-viewer-missing/</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
-<p><code>dewfpga sim --wave</code> (and <code>--wave=both</code>) open the waveform in <a href="https://surfer-project.org/">Surfer</a>, a waveform viewer that is installed on its own. dewfpga looks for it before the simulation runs, so nothing is simulated for a window that cannot open.</p>
+<p><code>dewfpga sim --wave</code> (and <code>--wave=both</code>) open the waveform in <a href="https://surfer-project.org/">Surfer</a>, a waveform viewer from Homebrew. <code>dewfpga install</code> installs it since 4 November 2026; an install from before that has no Surfer, and <code>dewfpga check</code> shows its row as MISSING. dewfpga looks for it before the simulation runs, so nothing is simulated for a window that cannot open.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
-<p>Install Surfer, then run the same command again:</p>
+<p>Install Surfer (or run <code>dewfpga install</code> again, which adds it), then run the same command again:</p>
 <pre data-copy="1"><code>brew install surfer</code></pre>
 <p>Or open the waveform in the browser page instead, which needs nothing installed:</p>
 <pre data-copy="1"><code>dewfpga sim --wave=browser</code></pre>

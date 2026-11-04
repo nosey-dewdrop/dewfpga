@@ -123,8 +123,9 @@ klonlarını (1.5 GB, 7 Ekim'de ölçülen 1543 MB) tutar ve olduğu gibi bırak
 | frames → .bit | prjxray `xc7frames2bit` | kaynaktan |
 | chipdb XC7A35T | `bbaexport` + `bbasm` | üretilir (~90 MB) |
 | karta yükleme | openFPGALoader | brew |
+| dalga formu görüntüleyici | Surfer | brew |
 
-Vivado beş işi tek pencerede yapıyor; burada beş açık kaynak araç yapıyor, `install.sh`
+Vivado altı işi tek pencerede yapıyor; burada altı açık kaynak araç yapıyor, `install.sh`
 bunları birbirine bağlıyor.
 
 ## Neden bir script?

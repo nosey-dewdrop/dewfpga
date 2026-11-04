@@ -34,8 +34,9 @@ PRJXRAY_SHA="c9f02d8576042325425824647ab5555b1bc77833"
 SLANG_URL="https://github.com/povik/yosys-slang.git"
 SLANG_SHA="96767863835f3c862cea9c63052b2ce9d0b55884"
 
-BREW_PKGS=(yosys openfpgaloader icarus-verilog cmake ninja eigen pkg-config python@3.14)
-# Versions that worked on 2026-09-19. Brew packages can't be pinned (tested with yosys 0.69, openFPGALoader 1.1.1, iverilog 13.0).
+BREW_PKGS=(yosys openfpgaloader icarus-verilog surfer cmake ninja eigen pkg-config python@3.14)
+# Versions that worked on 2026-09-19. Brew packages can't be pinned (tested with yosys 0.69, openFPGALoader 1.1.1, iverilog 13.0;
+# surfer 0.7.0, the waveform viewer dewfpga sim --wave opens, on 2026-11-04).
 PIP_PKGS=(fasm==0.0.2.post88 pyyaml==6.0.3 textx==4.4.0 simplejson==4.1.2 intervaltree==3.2.1 numpy==2.5.3 pyjson5==2.0.1)
 
 # ---------------------------------------------------------------- helpers
