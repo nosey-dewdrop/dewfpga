@@ -46,9 +46,6 @@
     <div class="hero" id="hero">
       <h1>{{h1}}</h1>
       <p>{{hero_p}}</p>
-      <div class="hcli" id="hcli">
-{{hcli}}
-      </div>
     </div>
     <h2 id="how-h" class="sr">{{how_h}}</h2>
     <div class="caps" id="caps">
@@ -98,6 +95,10 @@ endmodule</pre>
   <div class="wrap">
     <div class="head"><h2 id="cli-h">cli</h2><a class="more" href="/dewfpga/cli/"{{hl}}>{{cli_more}}</a></div>
     <p class="line">{{cli_line}}</p>
+    <!-- the page's script moves this block under the hero's lines when it fits there -->
+    <div class="hcli" id="hcli">
+{{hcli}}
+    </div>
     <div class="cli-cols">
       <div class="cli-col">
         <div class="grp"><h3>{{g_install}}</h3><pre class="term" data-g="install"></pre></div>

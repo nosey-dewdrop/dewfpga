@@ -3,15 +3,16 @@
    docs/home/page.tmpl.html by docs/home/build.py. */
 /* *-*-*-*-*-*-*-*-*-*-*-* tokens *-*-*-*-*-*-*-*-*-*-*-* */
 /* the mac's own letters: sf pro for words, sf mono for commands and the drawings.
-   four sizes, two weights, lowercase. each colour is a thing on the bench: the green of a
-   signal at 1 (the wave window's own, and the leds), the red of the display, the amber of
-   the prompt, the blue of a link. no gradient, no glow. */
+   four sizes, two weights, lowercase. the colours of the board are the board's: the green of
+   a signal at 1 (the wave window's own, and the leds), the red of the display. the words take
+   the three of her terminal: pink for the prompt, purple for copy, blue for a link; the
+   commands white, the comments grey. no gradient, no glow. */
 :root {
   color-scheme: dark;
   --bg: #171717;
   --ink: #f4f4f4; --grey: #a8a8a8; --quiet: #8c8c8c;
   --fg: #ffffff; --mute: #e4e4e4; --dim: #b2b2b2; --faint: #767676;
-  --accent: #7edaf2; --led: #79f293; --wave: #00e600; --seg: #ff5a4a; --seg-off: #4f3532; --cmd: #f0c060; --link: #7cc8e4; --trace: #4c4c4c;
+  --accent: #f1a2c4; --led: #79f293; --wave: #00e600; --seg: #ff5a4a; --seg-off: #4f3532; --prompt: #f1a2c4; --copy: #aa87d4; --link: #b4d0e7; --trace: #4c4c4c;
   --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, "Helvetica Neue", sans-serif;
   --mono: "SF Mono", ui-monospace, Menlo, monospace;
   --t1: 28px; --t2: 20px; --t3: 17px; --t4: 15px;
@@ -29,7 +30,7 @@ pre, code { font-family: var(--mono); font-variant-ligatures: none; }
 pre { margin: 0; white-space: pre; }
 pre b { font-weight: 400; }
 .i { color: var(--fg); } .m { color: var(--mute); } .d { color: var(--dim); } .f { color: var(--faint); }
-.a { color: var(--accent); } .w { color: var(--wave); } .l { color: var(--led); } .s { color: var(--seg); } .u { color: var(--seg-off); } .p { color: var(--cmd); } .t { color: var(--trace); }
+.a { color: var(--accent); } .w { color: var(--wave); } .l { color: var(--led); } .s { color: var(--seg); } .u { color: var(--seg-off); } .p { color: var(--prompt); } .t { color: var(--trace); }
 /* site/s.css sets margins and colours for pages of text; the home sets its own */
 h1, h2, h3, p, pre { margin: 0; }
 h3 { font: inherit; color: inherit; line-height: inherit; }
@@ -41,6 +42,9 @@ main { position: relative; }
 /* *-*-*-*-*-*-*-*-*-*-*-* nav *-*-*-*-*-*-*-*-*-*-*-* */
 /* the shared nav (docs/nav.css) lies over the top of the stage */
 body.home nav.top { position: absolute; top: 0; left: 0; right: 0; }
+/* the shared strip's blue is not this page's: its links take the page's blue */
+body.home nav.top a:hover, body.home footer.wrap a { color: var(--link); }
+body.home footer.wrap a:hover { color: var(--ink); }
 
 /* *-*-*-*-*-*-*-*-*-*-*-* how: the stage *-*-*-*-*-*-*-*-*-*-*-* */
 #how { position: relative; height: 600vh; }
@@ -58,7 +62,7 @@ body.home nav.top { position: absolute; top: 0; left: 0; right: 0; }
 .hcli .k { display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto; align-items: start; }
 .hcli code { color: var(--ink); overflow-wrap: anywhere; }
 .hcli code span { white-space: nowrap; }
-.hcli .copy { align-self: end; color: var(--cmd); padding: 10px 8px; margin: -10px -8px -10px calc(1ch - 8px); }
+.hcli .copy { align-self: end; color: var(--copy); padding: 10px 8px; margin: -10px -8px -10px calc(1ch - 8px); }
 .hcli .copy:hover, .hcli .copy.done { color: var(--ink); }
 #cli .hcli { margin: 34px 0 0; }
 .caps { position: absolute; }
@@ -115,7 +119,7 @@ pre.term { font-size: var(--t4); line-height: 1.3; color: var(--dim); }
 pre.term b { user-select: none; -webkit-user-select: none; }
 pre.term b.c { user-select: text; -webkit-user-select: text; color: var(--quiet); }
 pre.term code { color: var(--ink); }
-pre.term .copy { color: var(--cmd); display: inline-block; padding: 12px 8px; margin: -12px -8px; }
+pre.term .copy { color: var(--copy); display: inline-block; padding: 12px 8px; margin: -12px -8px; }
 pre.term .copy:hover, pre.term .copy.done { color: var(--ink); }
 .copy { all: unset; cursor: pointer; font-size: var(--t4); transition: color .15s; }
 .copy:focus-visible { outline: 1px solid var(--grey); outline-offset: -4px; }

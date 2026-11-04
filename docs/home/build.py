@@ -9,7 +9,7 @@ board, the traces, the page) and site/home.css, then runs docs/nav.py, which fil
 and the footer. The drawings are the same in both languages: what the laptop's screen shows
 is the real program's output, in English. The output is committed; a second run changes no
 byte. site/og.png is the hero, rendered at 1200x630 (scene b, the waveform drawn)."""
-import html, json, os, subprocess, sys
+import hashlib, html, json, os, subprocess, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +28,7 @@ STR = {
         "h1": "write systemverilog on an apple silicon mac and flash a basys 3",
         "hero_p": "no vivado, no virtual machine, no rosetta",
         "h_install": "install the toolchain, the same line updates it", "h_sim": "runs the testbench",
-        "h_wave": "opens the waveform in surfer", "h_browser": "or in the browser", "h_flash": "loads it onto the board",
+        "h_wave": "opens the waveform in surfer", "h_flash": "loads it onto the board",
         "copy": "copy",
         "how_h": "write, simulate, waveform, flash",
         "step0": "write", "step1": "simulate", "step2": "waveform", "step3": "flash",
@@ -65,7 +65,7 @@ STR = {
                 "check": "is every piece in place",
                 "new": "blink example with a vs code task", "vscode": "set up the editor integration",
                 "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both",
-                "tops": "simulator for the tops, opens with surfer", "tbs": "opens testbenches",
+                "tops": "simulator for the tops, opens with surfer", "browser": "or in the browser", "tbs": "opens testbenches",
                 "both": "surfer and the browser",
             },
             "copy": ["copy", "done", "copied", "select"], "digit": "digit",
@@ -83,7 +83,7 @@ STR = {
         "h1": "apple silicon bir mac'te systemverilog yaz ve basys 3'e yükle",
         "hero_p": "vivado yok, sanal makine yok, rosetta yok",
         "h_install": "toolchain'i kur, aynı satır günceller de", "h_sim": "testbench'i çalıştırır",
-        "h_wave": "dalga formunu surfer'da açar", "h_browser": "ya da tarayıcıda", "h_flash": "karta yükler",
+        "h_wave": "dalga formunu surfer'da açar", "h_flash": "karta yükler",
         "copy": "kopya",
         "how_h": "yaz, simüle et, dalga formu, yükle",
         "step0": "yaz", "step1": "simüle et", "step2": "dalga formu", "step3": "yükle",
@@ -120,7 +120,7 @@ STR = {
                 "check": "her parça yerinde mi",
                 "new": "vs code görevli blink örneği", "vscode": "editör entegrasyonunu kur",
                 "waves": "simülasyonları tarayıcıda, dalga formu okuyan bir programda (surfer) ya da ikisinde birden açabilirsin",
-                "tops": "top'lar için simülatör, surfer ile açılır", "tbs": "testbench'leri açar",
+                "tops": "top'lar için simülatör, surfer ile açılır", "browser": "ya da tarayıcıda", "tbs": "testbench'leri açar",
                 "both": "surfer ve tarayıcı",
             },
             "copy": ["kopya", "tamam", "kopyalandı", "seç"], "digit": "hane",
@@ -149,11 +149,11 @@ def ld(s):
     }, ensure_ascii=False, indent=2)
 
 
-# the hero's cli: the install line and the four commands of the flow, each under its comment.
+# the hero's cli: the install line and three commands of the flow, each under its comment.
 # a command breaks only between its words (and after the host of the install line), never at a hyphen
 HCLI = [("h_install", "curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"),
         ("h_sim", "dewfpga sim tb_room_monitor"), ("h_wave", "dewfpga sim tb_room_monitor --wave"),
-        ("h_browser", "dewfpga sim top_monitor --wave=browser"), ("h_flash", "dewfpga flash top_monitor")]
+        ("h_flash", "dewfpga flash top_monitor")]
 
 
 def hcli(s):
@@ -166,9 +166,13 @@ def hcli(s):
     return "\n".join(out)
 
 
-def page(lang):
+def page(lang, ver):
     s = STR[lang]
     t = open(os.path.join(HERE, "page.tmpl.html"), encoding="utf-8").read()
+    # the script and the styles carry a hash of their bytes, so a browser that kept the old
+    # ones does not run them under the new page
+    for name, h in ver.items():
+        t = t.replace('/dewfpga/' + name + '"', '/dewfpga/' + name + '?v=' + h + '"')
     # the attribute values are escaped; the few strings with markup in them are written as they are
     raw = {"board_line", "hl"}
     for k, v in s.items():
@@ -196,10 +200,12 @@ def write(path, text):
 def main():
     js = "// built by docs/home/build.py from docs/home/*.js; edit those, then run it\n" + \
         "\n".join(open(os.path.join(HERE, n), encoding="utf-8").read() for n in JS)
+    css = open(os.path.join(HERE, "home.css"), encoding="utf-8").read()
+    ver = {n: hashlib.sha256(b.encode()).hexdigest()[:10] for n, b in (("home.js", js), ("home.css", css))}
     print("site/home.js", write("site/home.js", js), "bytes")
-    print("site/home.css", write("site/home.css", open(os.path.join(HERE, "home.css"), encoding="utf-8").read()), "bytes")
-    print("site/index.html", write("site/index.html", page("en")), "bytes")
-    print("site/tr/index.html", write("site/tr/index.html", page("tr")), "bytes")
+    print("site/home.css", write("site/home.css", css), "bytes")
+    print("site/index.html", write("site/index.html", page("en", ver)), "bytes")
+    print("site/tr/index.html", write("site/tr/index.html", page("tr", ver)), "bytes")
     subprocess.run([sys.executable, os.path.join(ROOT, "docs", "nav.py")], check=True, cwd=ROOT)
 
 

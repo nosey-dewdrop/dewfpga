@@ -166,7 +166,9 @@ function boot() {
 
   // the cli under the hero's lines, when it fits between them and the drawing: the gap
   // between its commands closes up to a few pixels on a short window; where it still does not
-  // fit (a phone, a short or narrow window) it stands at the top of the cli section
+  // fit (a phone, a short or narrow window) it stays where the page has it, at the top of the
+  // cli section, so a page whose script has not run (or is an older copy) never lays it on the
+  // drawing
   function placeCli() {
     hero.appendChild(hcli);
     hcli.style.removeProperty('--hg');
@@ -179,7 +181,7 @@ function boot() {
       for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
         hcli.style.lineHeight = lh;
         hcli.style.removeProperty('--hg');
-        const spare = M.heroFloor - 10 - hb();
+        const spare = M.heroFloor - 16 - hb();
         const gap = Math.min(10, 10 + spare / n);
         if (gap >= least) {
           hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
@@ -359,7 +361,7 @@ const TERMS = (() => {
   const C = (window.HOME && window.HOME.terms) || {};
   const c = k => C[k] || k;
   return {
-    // the install line itself is in the hero, with the four commands of the flow
+    // the install line itself is in the hero, with three commands of the flow
     install: { title: '~ - zsh', lines: [
       ['#', c('check')], ['%', 'dewfpga check'],
     ] },
@@ -371,6 +373,7 @@ const TERMS = (() => {
     waveform: { title: 'lab2 - zsh', lines: [
       ['#', c('waves')], [],
       ['#', c('tops')], ['%', 'dewfpga sim top_mux --wave'], [],
+      ['#', c('browser')], ['%', 'dewfpga sim top_monitor --wave=browser'], [],
       ['#', c('tbs')], ['%', 'dewfpga sim tb_mux2 --wave=browser'], [],
       ['#', c('both')], ['%', 'dewfpga sim top_mux --wave=both'],
     ] },

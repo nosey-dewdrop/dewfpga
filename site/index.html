@@ -30,7 +30,7 @@
 <meta name="twitter:image:alt" content="a macbook drawn in ascii runs dewfpga sim --wave and the waveform draws in surfer, a basys 3 waits beside it on its usb cable">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
-<link rel="stylesheet" href="/dewfpga/home.css">
+<link rel="stylesheet" href="/dewfpga/home.css?v=9bb3a8df6a">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -92,13 +92,6 @@
     <div class="hero" id="hero">
       <h1>write systemverilog on an apple silicon mac and flash a basys 3</h1>
       <p>no vivado, no virtual machine, no rosetta</p>
-      <div class="hcli" id="hcli">
-        <div class="hc"><p class="c"># install the toolchain, the same line updates it</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>curl</span> <span>-fsSL</span> <span>https://nosey-dewdrop.github.io/</span><wbr><span>dewfpga/install</span> <span>|</span> <span>bash</span></code><button class="copy" type="button" data-cmd="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash">copy</button></div></div>
-        <div class="hc"><p class="c"># runs the testbench</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor">copy</button></div></div>
-        <div class="hc"><p class="c"># opens the waveform in surfer</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span> <span>--wave</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor --wave">copy</button></div></div>
-        <div class="hc"><p class="c"># or in the browser</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>top_monitor</span> <span>--wave=browser</span></code><button class="copy" type="button" data-cmd="dewfpga sim top_monitor --wave=browser">copy</button></div></div>
-        <div class="hc"><p class="c"># loads it onto the board</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>flash</span> <span>top_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga flash top_monitor">copy</button></div></div>
-      </div>
     </div>
     <h2 id="how-h" class="sr">write, simulate, waveform, flash</h2>
     <div class="caps" id="caps">
@@ -148,6 +141,13 @@ endmodule</pre>
   <div class="wrap">
     <div class="head"><h2 id="cli-h">cli</h2><a class="more" href="/dewfpga/cli/">every command</a></div>
     <p class="line">install in one line, about 4 minutes, 0.3 gb on disk. vivado asks for 50 to 100 gb.</p>
+    <!-- the page's script moves this block under the hero's lines when it fits there -->
+    <div class="hcli" id="hcli">
+        <div class="hc"><p class="c"># install the toolchain, the same line updates it</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>curl</span> <span>-fsSL</span> <span>https://nosey-dewdrop.github.io/</span><wbr><span>dewfpga/install</span> <span>|</span> <span>bash</span></code><button class="copy" type="button" data-cmd="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash">copy</button></div></div>
+        <div class="hc"><p class="c"># runs the testbench</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor">copy</button></div></div>
+        <div class="hc"><p class="c"># opens the waveform in surfer</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span> <span>--wave</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor --wave">copy</button></div></div>
+        <div class="hc"><p class="c"># loads it onto the board</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>flash</span> <span>top_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga flash top_monitor">copy</button></div></div>
+    </div>
     <div class="cli-cols">
       <div class="cli-col">
         <div class="grp"><h3>install</h3><pre class="term" data-g="install"></pre></div>
@@ -194,7 +194,7 @@ endmodule</pre>
   <span>built by damla su bilge · mit · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span class="more"><a href="/dewfpga/why/">why</a><a href="/dewfpga/patch-notes/">patch notes</a><a href="/dewfpga/tr/" hreflang="tr">türkçe</a></span>
 </footer>
-<script>window.HOME = {"alt": ["the laptop up close, the room_monitor module of cs223 lab 2 being typed into cs223_lab2.sv", "the terminal runs dewfpga sim tb_room_monitor, 4096 cases, 0 errors", "surfer opens tb_room_monitor.vcd and its waveform draws in green, en, room, sensor, alarm", "dewfpga flash top_monitor loads the board, the camera follows the cable to the basys 3 and its alarm led lights"], "terms": {"check": "is every piece in place", "new": "blink example with a vs code task", "vscode": "set up the editor integration", "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both", "tops": "simulator for the tops, opens with surfer", "tbs": "opens testbenches", "both": "surfer and the browser"}, "copy": ["copy", "done", "copied", "select"], "digit": "digit"};</script>
-<script defer src="/dewfpga/home.js"></script>
+<script>window.HOME = {"alt": ["the laptop up close, the room_monitor module of cs223 lab 2 being typed into cs223_lab2.sv", "the terminal runs dewfpga sim tb_room_monitor, 4096 cases, 0 errors", "surfer opens tb_room_monitor.vcd and its waveform draws in green, en, room, sensor, alarm", "dewfpga flash top_monitor loads the board, the camera follows the cable to the basys 3 and its alarm led lights"], "terms": {"check": "is every piece in place", "new": "blink example with a vs code task", "vscode": "set up the editor integration", "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both", "tops": "simulator for the tops, opens with surfer", "browser": "or in the browser", "tbs": "opens testbenches", "both": "surfer and the browser"}, "copy": ["copy", "done", "copied", "select"], "digit": "digit"};</script>
+<script defer src="/dewfpga/home.js?v=5d42889ef1"></script>
 </body>
 </html>
