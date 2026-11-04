@@ -2134,7 +2134,7 @@ function boot() {
     const left0 = (W - preW) / 2, top0 = mobile ? navH : navH + Math.max(0, Math.round((H - navH - preH) / 2 - 6));
     // on a wider window the drawing sits a little left of and below the middle, so the cable
     // keeps clear of the hero's lines; the words stay where the middle puts them
-    const dx = mobile ? 0 : Math.round(2 * cw);
+    const dx = mobile ? 0 : Math.round(6 * cw);
     const dy = mobile ? 0 : Math.max(0, Math.min(Math.round(2 * lh), H - (top0 + preH) - 2));
     const left = left0 - dx, top = top0 + dy;
     scene.style.left = left + 'px';
