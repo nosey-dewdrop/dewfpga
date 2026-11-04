@@ -2160,7 +2160,8 @@ function boot() {
       hero.style.left = (left0 + x0 * cw) + 'px';
       hero.style.width = Math.min(560, (spec.cols - x0 - 4) * cw) + 'px';
       hero.style.maxWidth = 'none';
-      hero.style.top = (top0 + Math.max(4, Math.round(spec.rows * 0.1)) * lh) + 'px';
+      M.heroTop = top0 + Math.max(4, Math.round(spec.rows * 0.1)) * lh;
+      hero.style.top = M.heroTop + 'px';
       hero.dataset.room = Math.round((yTop - spec.rows * 0.1) * lh + dy);
       M.heroFloor = top + yTop * lh;
       // the captions: right of the laptop at the seat and of the board at the end
@@ -2226,20 +2227,30 @@ function boot() {
       // in the stage's own frame, so a window resized further down the page measures the same
       const hb = () => hcli.getBoundingClientRect().bottom - stage.getBoundingClientRect().top;
       const n = hcli.children.length - 1;
-      // the gap closes first, then the lines come a little closer
-      for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
-        hcli.style.lineHeight = lh;
-        hcli.style.removeProperty('--hg');
-        const spare = M.heroFloor - Math.max(24, 2 * M.lh) - hb();
-        const gap = Math.min(10, 10 + spare / n);
-        if (gap >= least) {
-          hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
-          if (lh === 1.3) {
-            hcli.style.removeProperty('line-height');
+      // the words rise a few lines first (never under the nav), then the gap closes, then the
+      // lines come a little closer; the cable keeps at least 40px under the last command
+      const clear = Math.max(40, 4 * M.lh);
+      for (const up of [0, 2, 4, 6]) {
+        const t = M.heroTop - up * M.lh;
+        if (t < M.navH + 8) {
+          break;
+        }
+        hero.style.top = t + 'px';
+        for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
+          hcli.style.lineHeight = lh;
+          hcli.style.removeProperty('--hg');
+          const spare = M.heroFloor - clear - hb();
+          const gap = Math.min(10, 10 + spare / n);
+          if (gap >= least) {
+            hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
+            if (lh === 1.3) {
+              hcli.style.removeProperty('line-height');
+            }
+            return;
           }
-          return;
         }
       }
+      hero.style.top = M.heroTop + 'px';
       hcli.style.removeProperty('line-height');
       hcli.style.removeProperty('--hg');
     }
