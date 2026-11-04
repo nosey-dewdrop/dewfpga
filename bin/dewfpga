@@ -442,6 +442,28 @@ cmd_build() {  # <target> [top]
     fi
 }
 
+# dewfpga <command> --help (or -h): that command's lines of the help (the entry that names it, and one that names
+# `dewfpga <command> ...` in its text, as wave's names sim --wave), not an unknown option or a run of the command
+# (new --help made a folder named --help). run answers --help itself: its options are run_file.py's
+cmd_help() {
+    ( usage ) | awk -v c="$1" '
+        /^  dewfpga / { flush(); head = $0; body = $0; next }
+        head != "" && /^   / { body = body "\n" $0; next }
+        { flush() }
+        END { flush(); if (!n) exit 1; print "dewfpga --help lists every command." }
+        function flush(  first, w, k, hit) {
+            if (head == "") return
+            first = substr(head, 11); sub(/  .*/, "", first); sub(/[[<].*/, "", first)
+            k = split(first, w, /[ |]+/); hit = 0
+            for (i = 1; i <= k; i++) if (w[i] == c) hit = 1
+            if (hit || index(body, "dewfpga " c " ")) { print body; n++ }
+            head = ""; body = "" }'
+}
+case "${1:-}" in
+    install|check|sim|bit|flash|clean|tops|wave|new|uninstall|vscode|mcp)
+        for a in "${@:2}"; do case $a in -h|--help) cmd_help "$1"; exit 0 ;; esac; done ;;
+esac
+
 case "${1:-}" in
     run) shift; export FPGA_HOME; exec python3 "$HERE/templates/run_file.py" "$@" ;;
     install) [ $# -eq 1 ] || die unknown-option "dewfpga install takes no arguments. Fix: dewfpga install  (FPGA_HOME=/elsewhere dewfpga install to relocate)."; exec bash "$HERE/install.sh" ;;

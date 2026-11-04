@@ -375,6 +375,16 @@ run_bad_option() {
     && "$CLI" run --help > out 2>&1 && grep -q '^usage: dewfpga run ' out
 }
 check "run --sim, run with no file -> the CLI's unknown-option line with the command that works, not argparse's run_file.py usage" run_bad_option
+# <command> --help was an unknown option, or ran the command (new --help made a folder named --help, check checked):
+# it prints that command's lines of the help and exits 0, -h too, wherever it sits on the line. (install, uninstall and
+# vscode are left out here: before this they ran.)
+cmd_help_each() {
+    rm -rf "$T/hlp" && mkdir -p "$T/hlp" && cd "$T/hlp" && local c && for c in sim bit flash clean tops wave new check mcp; do
+        "$CLI" "$c" --help > "$T/hlp.out" 2>&1 && "$CLI" "$c" x -h > "$T/hlp.out2" 2>&1 && cmp -s "$T/hlp.out" "$T/hlp.out2" || return 1
+        head -1 "$T/hlp.out" | grep -qE "^  dewfpga ([a-z]+ \| )*$c( |$)" && tail -1 "$T/hlp.out" | grep -qx 'dewfpga --help lists every command.' && ! grep -q 'ERROR' "$T/hlp.out" || return 1
+    done && [ -z "$(ls -A)" ] && "$CLI" sim --help | grep -q 'dewfpga sim \[top|testbench\] --wave'
+}
+check "<command> --help (or -h) prints that command's help, exit 0, runs nothing" cmd_help_each
 # eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
 # "the course file": one message per cause names every port, and the file by its name; commented-out lines likewise
 pins_grouped() {
