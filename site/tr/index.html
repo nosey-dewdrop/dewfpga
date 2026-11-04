@@ -92,6 +92,13 @@
     <div class="hero" id="hero">
       <h1>apple silicon bir mac&#x27;te systemverilog yaz ve basys 3&#x27;e yükle</h1>
       <p>vivado yok, sanal makine yok, rosetta yok</p>
+      <div class="hcli" id="hcli">
+        <div class="hc"><p class="c"># toolchain&#x27;i kur, aynı satır günceller de</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>curl</span> <span>-fsSL</span> <span>https://nosey-dewdrop.github.io/</span><wbr><span>dewfpga/install</span> <span>|</span> <span>bash</span></code><button class="copy" type="button" data-cmd="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash">kopya</button></div></div>
+        <div class="hc"><p class="c"># testbench&#x27;i çalıştırır</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor">kopya</button></div></div>
+        <div class="hc"><p class="c"># dalga formunu surfer&#x27;da açar</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span> <span>--wave</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor --wave">kopya</button></div></div>
+        <div class="hc"><p class="c"># ya da tarayıcıda</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>top_monitor</span> <span>--wave=browser</span></code><button class="copy" type="button" data-cmd="dewfpga sim top_monitor --wave=browser">kopya</button></div></div>
+        <div class="hc"><p class="c"># karta yükler</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>flash</span> <span>top_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga flash top_monitor">kopya</button></div></div>
+      </div>
     </div>
     <h2 id="how-h" class="sr">yaz, simüle et, dalga formu, yükle</h2>
     <div class="caps" id="caps">
@@ -145,11 +152,9 @@ endmodule</pre>
       <div class="cli-col">
         <div class="grp"><h3>kurulum</h3><pre class="term" data-g="install"></pre></div>
         <div class="grp"><h3>yaz</h3><pre class="term" data-g="write"></pre></div>
-        <div class="grp"><h3>simüle et</h3><pre class="term" data-g="simulate"></pre></div>
       </div>
       <div class="cli-col">
         <div class="grp"><h3>dalga formu</h3><pre class="term" data-g="waveform"></pre></div>
-        <div class="grp"><h3>yükle</h3><pre class="term" data-g="flash"></pre></div>
       </div>
     </div>
   </div>
@@ -189,7 +194,7 @@ endmodule</pre>
   <span>yapan damla su bilge · mit · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span class="more"><a href="/dewfpga/why/" hreflang="en">neden</a><a href="/dewfpga/patch-notes/" hreflang="en">yama notları</a><a href="/dewfpga/" hreflang="en">english</a></span>
 </footer>
-<script>window.HOME = {"alt": ["yakından laptop, cs223 lab 2'nin room_monitor modülü cs223_lab2.sv'ye yazılıyor", "terminal dewfpga sim tb_room_monitor çalıştırıyor, 4096 durum, 0 hata", "surfer tb_room_monitor.vcd'yi açıyor, dalga formu yeşil çiziliyor, en, room, sensor, alarm", "dewfpga flash top_monitor kartı yüklüyor, kamera kabloyu izleyip basys 3'e iniyor ve alarm ledi yanıyor"], "terms": {"install": "toolchain'i kur, aynı satır günceller de", "check": "her parça yerinde mi", "new": "vs code görevli blink örneği", "vscode": "editör entegrasyonunu kur", "sim": "testbench'leri çalıştırır", "waves": "simülasyonları tarayıcıda, dalga formu okuyan bir programda (surfer) ya da ikisinde birden açabilirsin", "tops": "top'lar için simülatör, surfer ile açılır", "tbs": "testbench'leri açar", "hw": "bunlar donanımın simülasyonları", "both": "surfer ve tarayıcı", "flash": "kodu fpga'ya yükler"}, "copy": ["kopya", "tamam", "kopyalandı", "seç"], "digit": "hane"};</script>
+<script>window.HOME = {"alt": ["yakından laptop, cs223 lab 2'nin room_monitor modülü cs223_lab2.sv'ye yazılıyor", "terminal dewfpga sim tb_room_monitor çalıştırıyor, 4096 durum, 0 hata", "surfer tb_room_monitor.vcd'yi açıyor, dalga formu yeşil çiziliyor, en, room, sensor, alarm", "dewfpga flash top_monitor kartı yüklüyor, kamera kabloyu izleyip basys 3'e iniyor ve alarm ledi yanıyor"], "terms": {"check": "her parça yerinde mi", "new": "vs code görevli blink örneği", "vscode": "editör entegrasyonunu kur", "waves": "simülasyonları tarayıcıda, dalga formu okuyan bir programda (surfer) ya da ikisinde birden açabilirsin", "tops": "top'lar için simülatör, surfer ile açılır", "tbs": "testbench'leri açar", "both": "surfer ve tarayıcı"}, "copy": ["kopya", "tamam", "kopyalandı", "seç"], "digit": "hane"};</script>
 <script defer src="/dewfpga/home.js"></script>
 </body>
 </html>

@@ -49,6 +49,18 @@ body.home nav.top { position: absolute; top: 0; left: 0; right: 0; }
 .hero { position: absolute; max-width: 560px; }
 .hero h1 { font-size: var(--t1); line-height: 1.22; font-weight: 600; letter-spacing: -0.012em; color: var(--ink); }
 .hero p { margin-top: 12px; color: var(--grey); }
+/* the cli in the room the drawing leaves under the hero's lines: the install line and the four
+   commands of the flow, each under its comment, the way the cli's windows write them. where that
+   room is too small (a phone, a short window) it stands at the top of the cli section instead */
+.hcli { margin-top: 18px; font: var(--t4)/1.3 var(--mono); }
+.hcli .hc + .hc { margin-top: var(--hg, 10px); }
+.hcli p.c { margin: 0; padding-left: 2ch; text-indent: -2ch; color: var(--quiet); }
+.hcli .k { display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto; align-items: start; }
+.hcli code { color: var(--ink); overflow-wrap: anywhere; }
+.hcli code span { white-space: nowrap; }
+.hcli .copy { align-self: end; color: var(--cmd); padding: 10px 8px; margin: -10px -8px -10px calc(1ch - 8px); }
+.hcli .copy:hover, .hcli .copy.done { color: var(--ink); }
+#cli .hcli { margin: 34px 0 0; }
 .caps { position: absolute; }
 .steps { display: flex; gap: 26px; margin-bottom: 26px; }
 .steps button { all: unset; cursor: pointer; color: var(--quiet); transition: color .15s; padding: 10px 4px; margin: -10px -4px; }

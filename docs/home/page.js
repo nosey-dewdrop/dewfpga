@@ -50,6 +50,7 @@ function boot() {
   const scene = document.getElementById('scene'), hero = document.getElementById('hero'), caps = document.getElementById('caps');
   const stepBtns = [...caps.querySelectorAll('.steps button')], capEls = [...caps.querySelectorAll('.cap')];
   const nav = document.querySelector('nav.top');
+  const hcli = document.getElementById('hcli'), cliHome = document.querySelector('#cli .cli-cols');
   const H0 = window.HOME || {};
   let M = null, lastP = -1, lastK = -1, t0 = performance.now(), heroMode = true;
 
@@ -112,6 +113,7 @@ function boot() {
       hero.style.maxWidth = 'none';
       hero.style.top = (top + Math.max(4, Math.round(spec.rows * 0.1)) * lh) + 'px';
       hero.dataset.room = Math.round((yTop - spec.rows * 0.1) * lh);
+      M.heroFloor = top + yTop * lh;
       // the captions: right of the laptop at the seat and of the board at the end
       let right = 0;
       for (const p of [0.2, 0.5, 0.7, 0.935, 1.0]) {
@@ -136,6 +138,7 @@ function boot() {
       M.capsFloor = top + floor * lh - 28;
     }
     placeCaps();
+    placeCli();
     // the board: as wide as its column, drawn finer than the desk
     const bwrap = document.querySelector('#board .wrap'), bcs = getComputedStyle(bwrap);
     const inner = bwrap.clientWidth - parseFloat(bcs.paddingLeft) - parseFloat(bcs.paddingRight);
@@ -159,6 +162,37 @@ function boot() {
     if (reduce()) {
       stills();
     }
+  }
+
+  // the cli under the hero's lines, when it fits between them and the drawing: the gap
+  // between its commands closes up to a few pixels on a short window; where it still does not
+  // fit (a phone, a short or narrow window) it stands at the top of the cli section
+  function placeCli() {
+    hero.appendChild(hcli);
+    hcli.style.removeProperty('--hg');
+    hcli.style.removeProperty('line-height');
+    if (!M.mobile) {
+      // in the stage's own frame, so a window resized further down the page measures the same
+      const hb = () => hcli.getBoundingClientRect().bottom - stage.getBoundingClientRect().top;
+      const n = hcli.children.length - 1;
+      // the gap closes first, then the lines come a little closer
+      for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
+        hcli.style.lineHeight = lh;
+        hcli.style.removeProperty('--hg');
+        const spare = M.heroFloor - 10 - hb();
+        const gap = Math.min(10, 10 + spare / n);
+        if (gap >= least) {
+          hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
+          if (lh === 1.3) {
+            hcli.style.removeProperty('line-height');
+          }
+          return;
+        }
+      }
+      hcli.style.removeProperty('line-height');
+      hcli.style.removeProperty('--hg');
+    }
+    cliHome.parentNode.insertBefore(hcli, cliHome);
   }
 
   // the caption block sits in the middle of the frame's height, or under the drawing on a phone
@@ -325,27 +359,20 @@ const TERMS = (() => {
   const C = (window.HOME && window.HOME.terms) || {};
   const c = k => C[k] || k;
   return {
+    // the install line itself is in the hero, with the four commands of the flow
     install: { title: '~ - zsh', lines: [
-      ['#', c('install')], ['%', 'curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash'], [],
       ['#', c('check')], ['%', 'dewfpga check'],
     ] },
     write: { title: '~ - zsh', lines: [
       ['#', c('new')], ['%', 'dewfpga new blink'], [],
       ['#', c('vscode')], ['%', 'dewfpga vscode'],
     ] },
-    simulate: { title: 'lab2 - zsh', lines: [
-      ['#', c('sim')], ['%', 'dewfpga sim tb_mux2'],
-    ] },
     // damla's own guide, in her order
     waveform: { title: 'lab2 - zsh', lines: [
       ['#', c('waves')], [],
       ['#', c('tops')], ['%', 'dewfpga sim top_mux --wave'], [],
       ['#', c('tbs')], ['%', 'dewfpga sim tb_mux2 --wave=browser'], [],
-      ['#', c('hw')], ['%', 'dewfpga sim top_mux --wave=browser'], [],
       ['#', c('both')], ['%', 'dewfpga sim top_mux --wave=both'],
-    ] },
-    flash: { title: 'lab2 - zsh', lines: [
-      ['#', c('flash')], ['%', 'dewfpga flash top_mux'],
     ] },
   };
 })();
@@ -498,7 +525,7 @@ function wireCopy(pcb) {
       }
       const was = b.textContent;
       b.textContent = ok ? COPY[2] : COPY[3];
-      if (b.closest('pre.term')) {
+      if (b.closest('pre.term, .hcli')) {
         b.textContent = (ok ? COPY[1] : COPY[3]).slice(0, was.length).padEnd(was.length);
       }
       b.classList.add('done');

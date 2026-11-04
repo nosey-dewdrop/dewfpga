@@ -92,6 +92,13 @@
     <div class="hero" id="hero">
       <h1>write systemverilog on an apple silicon mac and flash a basys 3</h1>
       <p>no vivado, no virtual machine, no rosetta</p>
+      <div class="hcli" id="hcli">
+        <div class="hc"><p class="c"># install the toolchain, the same line updates it</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>curl</span> <span>-fsSL</span> <span>https://nosey-dewdrop.github.io/</span><wbr><span>dewfpga/install</span> <span>|</span> <span>bash</span></code><button class="copy" type="button" data-cmd="curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash">copy</button></div></div>
+        <div class="hc"><p class="c"># runs the testbench</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor">copy</button></div></div>
+        <div class="hc"><p class="c"># opens the waveform in surfer</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>tb_room_monitor</span> <span>--wave</span></code><button class="copy" type="button" data-cmd="dewfpga sim tb_room_monitor --wave">copy</button></div></div>
+        <div class="hc"><p class="c"># or in the browser</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>sim</span> <span>top_monitor</span> <span>--wave=browser</span></code><button class="copy" type="button" data-cmd="dewfpga sim top_monitor --wave=browser">copy</button></div></div>
+        <div class="hc"><p class="c"># loads it onto the board</p><div class="k"><b class="p" aria-hidden="true">%</b><code><span>dewfpga</span> <span>flash</span> <span>top_monitor</span></code><button class="copy" type="button" data-cmd="dewfpga flash top_monitor">copy</button></div></div>
+      </div>
     </div>
     <h2 id="how-h" class="sr">write, simulate, waveform, flash</h2>
     <div class="caps" id="caps">
@@ -145,11 +152,9 @@ endmodule</pre>
       <div class="cli-col">
         <div class="grp"><h3>install</h3><pre class="term" data-g="install"></pre></div>
         <div class="grp"><h3>write</h3><pre class="term" data-g="write"></pre></div>
-        <div class="grp"><h3>simulate</h3><pre class="term" data-g="simulate"></pre></div>
       </div>
       <div class="cli-col">
         <div class="grp"><h3>waveform</h3><pre class="term" data-g="waveform"></pre></div>
-        <div class="grp"><h3>flash</h3><pre class="term" data-g="flash"></pre></div>
       </div>
     </div>
   </div>
@@ -189,7 +194,7 @@ endmodule</pre>
   <span>built by damla su bilge · mit · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
   <span class="more"><a href="/dewfpga/why/">why</a><a href="/dewfpga/patch-notes/">patch notes</a><a href="/dewfpga/tr/" hreflang="tr">türkçe</a></span>
 </footer>
-<script>window.HOME = {"alt": ["the laptop up close, the room_monitor module of cs223 lab 2 being typed into cs223_lab2.sv", "the terminal runs dewfpga sim tb_room_monitor, 4096 cases, 0 errors", "surfer opens tb_room_monitor.vcd and its waveform draws in green, en, room, sensor, alarm", "dewfpga flash top_monitor loads the board, the camera follows the cable to the basys 3 and its alarm led lights"], "terms": {"install": "install the toolchain, the same line updates it", "check": "is every piece in place", "new": "blink example with a vs code task", "vscode": "set up the editor integration", "sim": "runs the testbenches", "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both", "tops": "simulator for the tops, opens with surfer", "tbs": "opens testbenches", "hw": "these are the simulations of the hardware", "both": "surfer and the browser", "flash": "loads the code into the fpga"}, "copy": ["copy", "done", "copied", "select"], "digit": "digit"};</script>
+<script>window.HOME = {"alt": ["the laptop up close, the room_monitor module of cs223 lab 2 being typed into cs223_lab2.sv", "the terminal runs dewfpga sim tb_room_monitor, 4096 cases, 0 errors", "surfer opens tb_room_monitor.vcd and its waveform draws in green, en, room, sensor, alarm", "dewfpga flash top_monitor loads the board, the camera follows the cable to the basys 3 and its alarm led lights"], "terms": {"check": "is every piece in place", "new": "blink example with a vs code task", "vscode": "set up the editor integration", "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both", "tops": "simulator for the tops, opens with surfer", "tbs": "opens testbenches", "both": "surfer and the browser"}, "copy": ["copy", "done", "copied", "select"], "digit": "digit"};</script>
 <script defer src="/dewfpga/home.js"></script>
 </body>
 </html>

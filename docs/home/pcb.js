@@ -71,7 +71,7 @@ function startPCB(opts) {
     const xL = cx(gut * 0.5), xR = cx(W - gut * 0.5);
     // what the trace must keep clear of: every block of content, a cell around it
     const keep = [];
-    for (const el of document.querySelectorAll('#board .boardwrap, #board .txt, #cli .head, #cli .line, #cli .grp, #docs .head, #docs .paper, #docs .docs-grid, #thanks p, #cup')) {
+    for (const el of document.querySelectorAll('#board .boardwrap, #board .txt, #cli .head, #cli .line, #cli .hcli, #cli .grp, #docs .head, #docs .paper, #docs .docs-grid, #thanks p, #cup')) {
       const r = rect(el);
       keep.push([cx(r.l) - 1, cy(r.t) - 0.6, cx(r.r) + 1, cy(r.b) + 0.6]);
     }

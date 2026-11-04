@@ -27,6 +27,9 @@ STR = {
         "scene_alt": "a macbook on a desk runs dewfpga sim --wave in its terminal, surfer draws the waveform of tb_room_monitor, a basys 3 waits on a usb cable beside it",
         "h1": "write systemverilog on an apple silicon mac and flash a basys 3",
         "hero_p": "no vivado, no virtual machine, no rosetta",
+        "h_install": "install the toolchain, the same line updates it", "h_sim": "runs the testbench",
+        "h_wave": "opens the waveform in surfer", "h_browser": "or in the browser", "h_flash": "loads it onto the board",
+        "copy": "copy",
         "how_h": "write, simulate, waveform, flash",
         "step0": "write", "step1": "simulate", "step2": "waveform", "step3": "flash",
         "say0": "write it in your own editor", "say1": "run the testbench", "say2": "open the waveform in surfer",
@@ -59,13 +62,11 @@ STR = {
                 "dewfpga flash top_monitor loads the board, the camera follows the cable to the basys 3 and its alarm led lights",
             ],
             "terms": {
-                "install": "install the toolchain, the same line updates it", "check": "is every piece in place",
+                "check": "is every piece in place",
                 "new": "blink example with a vs code task", "vscode": "set up the editor integration",
-                "sim": "runs the testbenches",
                 "waves": "you can open the simulations in the browser, in software that reads waveforms (surfer), or both",
                 "tops": "simulator for the tops, opens with surfer", "tbs": "opens testbenches",
-                "hw": "these are the simulations of the hardware", "both": "surfer and the browser",
-                "flash": "loads the code into the fpga",
+                "both": "surfer and the browser",
             },
             "copy": ["copy", "done", "copied", "select"], "digit": "digit",
         },
@@ -81,6 +82,9 @@ STR = {
         "scene_alt": "masadaki bir macbook terminalinde dewfpga sim --wave çalıştırıyor, surfer tb_room_monitor'ün dalga formunu çiziyor, yanında usb kablosunda bir basys 3 bekliyor",
         "h1": "apple silicon bir mac'te systemverilog yaz ve basys 3'e yükle",
         "hero_p": "vivado yok, sanal makine yok, rosetta yok",
+        "h_install": "toolchain'i kur, aynı satır günceller de", "h_sim": "testbench'i çalıştırır",
+        "h_wave": "dalga formunu surfer'da açar", "h_browser": "ya da tarayıcıda", "h_flash": "karta yükler",
+        "copy": "kopya",
         "how_h": "yaz, simüle et, dalga formu, yükle",
         "step0": "yaz", "step1": "simüle et", "step2": "dalga formu", "step3": "yükle",
         "say0": "kendi editöründe yaz", "say1": "testbench'i çalıştır", "say2": "dalga formunu surfer'da aç",
@@ -113,13 +117,11 @@ STR = {
                 "dewfpga flash top_monitor kartı yüklüyor, kamera kabloyu izleyip basys 3'e iniyor ve alarm ledi yanıyor",
             ],
             "terms": {
-                "install": "toolchain'i kur, aynı satır günceller de", "check": "her parça yerinde mi",
+                "check": "her parça yerinde mi",
                 "new": "vs code görevli blink örneği", "vscode": "editör entegrasyonunu kur",
-                "sim": "testbench'leri çalıştırır",
                 "waves": "simülasyonları tarayıcıda, dalga formu okuyan bir programda (surfer) ya da ikisinde birden açabilirsin",
                 "tops": "top'lar için simülatör, surfer ile açılır", "tbs": "testbench'leri açar",
-                "hw": "bunlar donanımın simülasyonları", "both": "surfer ve tarayıcı",
-                "flash": "kodu fpga'ya yükler",
+                "both": "surfer ve tarayıcı",
             },
             "copy": ["kopya", "tamam", "kopyalandı", "seç"], "digit": "hane",
         },
@@ -147,15 +149,33 @@ def ld(s):
     }, ensure_ascii=False, indent=2)
 
 
+# the hero's cli: the install line and the four commands of the flow, each under its comment.
+# a command breaks only between its words (and after the host of the install line), never at a hyphen
+HCLI = [("h_install", "curl -fsSL https://nosey-dewdrop.github.io/dewfpga/install | bash"),
+        ("h_sim", "dewfpga sim tb_room_monitor"), ("h_wave", "dewfpga sim tb_room_monitor --wave"),
+        ("h_browser", "dewfpga sim top_monitor --wave=browser"), ("h_flash", "dewfpga flash top_monitor")]
+
+
+def hcli(s):
+    out = []
+    for key, cmd in HCLI:
+        words = " ".join("<span>" + html.escape(w).replace("github.io/", "github.io/</span><wbr><span>") + "</span>" for w in cmd.split(" "))
+        out.append('        <div class="hc"><p class="c"># ' + html.escape(s[key]) + '</p><div class="k"><b class="p" aria-hidden="true">%</b>'
+                   + "<code>" + words + '</code><button class="copy" type="button" data-cmd="' + html.escape(cmd, quote=True) + '">'
+                   + html.escape(s["copy"]) + "</button></div></div>")
+    return "\n".join(out)
+
+
 def page(lang):
     s = STR[lang]
     t = open(os.path.join(HERE, "page.tmpl.html"), encoding="utf-8").read()
     # the attribute values are escaped; the few strings with markup in them are written as they are
     raw = {"board_line", "hl"}
     for k, v in s.items():
-        if k in ("js", "ld_description"):
+        if k in ("js", "ld_description") or k in dict(HCLI) or k == "copy":
             continue
         t = t.replace("{{" + k + "}}", v if k in raw else html.escape(v, quote=True))
+    t = t.replace("{{hcli}}", hcli(s))
     t = t.replace("{{ld}}", ld(s))
     t = t.replace("{{js}}", json.dumps(s["js"], ensure_ascii=False).replace("</", "<\\/"))
     if "{{" in t:
