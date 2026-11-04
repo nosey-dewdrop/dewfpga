@@ -419,7 +419,8 @@ cmd_build() {  # <target> [top]
         if [ -n "$wave" ] && [ -s "$wave" ]; then
             # dewfpga sim --wave / dewfpga wave print the line themselves, with the viewer it opened in
             if [ -n "${DEWFPGA_WAVE_OUT:-}" ]; then printf '%s\n%s\n' "$wave" "$(icarus)" > "$DEWFPGA_WAVE_OUT"
-            else echo "waveform: $wave, simulated by $(icarus); dewfpga sim ${tbtop:-$top} --wave opens it"; fi
+            # a reader that has stopped (dewfpga sim | grep -q PASS) gets no more lines: a closed pipe is not a failed run
+            else ( trap '' PIPE; echo "waveform: $wave, simulated by $(icarus); dewfpga sim ${tbtop:-$top} --wave opens it" ) 2>/dev/null || true; fi
         fi
         return "$rc"
     else
