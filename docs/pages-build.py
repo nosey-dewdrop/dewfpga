@@ -522,7 +522,7 @@ def build_sv(types, written):
         url = f"{HOST}sv/{pid}/"
         oc = next(o for o in OUTCOMES if o[0] == outcome(r))
         named = ("SystemVerilog " + construct) if QUESTION.match(construct) else construct
-        title = f"{named} · Vivado: {r['vivado']} · open-source chain: {oc[2]}"
+        title = f"{named} - Vivado: {r['vivado']} - open-source chain: {oc[2]}"
         desc = (f"{construct}. Vivado: {r['vivado']}. With Yosys, nextpnr-xilinx and Icarus Verilog on a Mac, "
                 f"{oc[2]}. Probe {probe_num(pid)} of the dewfpga test suite, with its code and the source for Vivado's verdict.")
         p = head(title, desc, url, None, article(construct, url))
@@ -716,7 +716,7 @@ def build_guide(types, written):
         parent_num = num.split(".")[0] if "." in num else None
         shown_parent = parent if parent_num in slug else None   # section 7 is about the CLI: not named
         if shown_parent and not heading.endswith("?"):
-            title = f"{heading} · {parent} CS223 on a Mac, section {num}"
+            title = f"{heading} - {parent} CS223 on a Mac, section {num}"
         else:
             title = f"{heading} CS223 on a Mac without Vivado, section {num}"
         p = head(title, desc, url, "c-docs", article(heading, url))

@@ -19,7 +19,7 @@ BASE = "https://nosey-dewdrop.github.io/dewfpga/"
 STR = {
     "en": {
         "lang": "en", "locale": "en_US", "url": BASE, "hl": "",
-        "title": "dewfpga · systemverilog to basys 3 on apple silicon, no vivado",
+        "title": "dewfpga - systemverilog to basys 3 on apple silicon, no vivado",
         "description": "write systemverilog on an apple silicon mac, simulate it, open the waveform in surfer or the browser and flash a digilent basys 3. no vivado, no virtual machine, no rosetta. free and mit licensed.",
         "og_description": "write systemverilog on an apple silicon mac, simulate it, see the waveform and flash a basys 3. no vivado, no virtual machine. free, mit.",
         "og_alt": "a macbook drawn in ascii runs dewfpga sim --wave and the waveform draws in surfer, a basys 3 waits beside it on its usb cable",
@@ -75,7 +75,7 @@ STR = {
     },
     "tr": {
         "lang": "tr", "locale": "tr_TR", "url": BASE + "tr/", "hl": ' hreflang="en"',
-        "title": "dewfpga · apple silicon mac'te systemverilog'dan basys 3'e, vivado olmadan",
+        "title": "dewfpga - apple silicon mac'te systemverilog'dan basys 3'e, vivado olmadan",
         "description": "apple silicon bir mac'te systemverilog yaz, simüle et, dalga formunu surfer'da ya da tarayıcıda aç ve digilent basys 3'e yükle. vivado yok, sanal makine yok, rosetta yok. ücretsiz ve mit lisanslı.",
         "og_description": "apple silicon bir mac'te systemverilog yaz, simüle et, dalga formuna bak ve basys 3'e yükle. vivado yok, sanal makine yok. ücretsiz, mit.",
         "og_alt": "ascii çizilmiş bir macbook dewfpga sim --wave çalıştırıyor, surfer dalga formunu çiziyor, yanında usb kablosunun ucunda bir basys 3 bekliyor",
