@@ -4,7 +4,9 @@
 // (mux8, mux2, dec3, room_monitor), comes down the right margin past the cli, crosses back
 // through the lab's other modules and ends at the coffee cup. it only stays in the margins
 // and in the gaps between sections. a flipped switch sends a pulse down it; a chip lights
-// as the pulse goes through it.
+// as the pulse goes through it. on a wide window a branch leaves it under the guide, through
+// chips of the basys 3 itself (the ft2232 its usb jtag goes through, the quad spi flash, the
+// 100 mhz oscillator), bends down and ends right of the thanks, with a pulse of its own.
 
 function chipArt(label, compact) {
   const w = Math.max(9, label.length + 5);
@@ -17,6 +19,9 @@ function chipArt(label, compact) {
 const PARTS = {
   q: { rows: [' ___ ', '|   |', '|___|', ' ||| '], w: 5 },
   c: { rows: [' _ ', '|=|', '|_|', '| |'], w: 3 },
+  // a quad flat package, legs on its four sides, its pin 1 dot; a crystal oscillator's can
+  ft2232: { rows: ['   | | | | |  ', ' -.---------.-', ' -|ft2232   |-', ' -| o       |-', ' -\'---------\'-', '   | | | | |  '], w: 14, lab: 2, labAt: 3, chip: true },
+  osc: { rows: [' .------. ', ' |100mhz| ', ' \'------\' ', '  |    |  '], w: 10, lab: 1, labAt: 2, chip: true, label: '100mhz' },
 };
 
 function startPCB(opts) {
@@ -160,7 +165,7 @@ function startPCB(opts) {
           const art = '-(|||)-';
           const rx = Math.round(x - art.length / 2), ry = Math.floor(y);
           text(g, rx, ry, art.replace('|||', '   '), DIM);
-          parts.push({ kind: 'r', x: rx + 2, y: ry, art: '|||' });
+          parts.push({ kind: 'r', x: rx + 2, y: ry, art: '|||', sid: list.sid || 0 });
           continue;
         }
         const art = PARTS[name] || chipArt(name, mobile);
@@ -168,12 +173,41 @@ function startPCB(opts) {
         // a part that would touch a block of content stays off the board
         const hit = keep.some(k => px + art.w >= k[0] && px <= k[2] && py + art.rows.length >= k[1] && py <= k[3]);
         if (!hit) {
-          parts.push({ kind: PARTS[name] ? name : 'chip', x: px, y: py, art, name });
+          parts.push({ kind: PARTS[name] && !PARTS[name].chip ? name : 'chip', x: px, y: py, art, name: art.label || name, sid: list.sid || 0 });
         }
       }
     };
     placeParts(A, xL + 6, xR - 6, yA, 1);
     placeParts(B, xR - 6, xL + 6, yB, -1);
+    // the branch under the guide: off the left margin, level under its parts, bent down on the
+    // right in one curve, back left to the thanks' row, a via at its end
+    let bpath = null;
+    if (!mobile && W >= 1200) {
+      const grid = rect(docsSec.querySelector('.docs-grid')), paper = rect(docsSec.querySelector('.paper'));
+      const tp = rect(document.querySelector('#thanks p'));
+      const t0 = cy(Math.max(grid.b, paper.b)) + 1.5, t1 = cy(Math.min(cupR.t, tp.t)) - 1;
+      const yC = Math.floor(t0 + (t1 - t0) * 0.66) + 0.5, yT = Math.floor(cy(tp.t + tp.h * 0.5)) + 0.5;
+      const xb = xR - 16, xs = cx(tp.r) + 10;
+      if (t1 - t0 >= 6.5 && yT - yC >= 4 && xb - xs > 30) {
+        const C = [['ft2232', 0.2, 0], ['c', 0.34, 0], ['qspi', 0.52, 1], ['r', 0.66, 1], ['osc', 0.8, 0]];
+        const T = [['q', 0.35, 0], ['c', 0.72, 0]];
+        C.sid = 1;
+        T.sid = 1;
+        bpath = [
+          [xL, yC - 3], [xL + 6, yC],
+          ...crossing(xL + 6, xb, yC, C, 1),
+          ...catmull([[xb, yC], [xb + 5, yC + 1.2], [xb + 6.5, (yC + yT) / 2], [xb + 5, yT - 1.2], [xb, yT]], 6),
+          ...crossing(xb, xs, yT, T, -1),
+          [xs, yT],
+        ];
+        stroke(g, bpath, TRACE, false, 62, false);
+        if (free(xs - 1, yT)) {
+          put(g, xs - 1, Math.floor(yT), 'o', DIM);
+        }
+        placeParts(C, xL + 6, xb, yC, 1);
+        placeParts(T, xb, xs, yT, -1);
+      }
+    }
     pre.innerHTML = toHTML(g);
     // each part its own small element, so it can light when the pulse goes through it
     for (const p of parts) {
@@ -190,7 +224,8 @@ function startPCB(opts) {
         const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
         el.innerHTML = p.art.rows.map((r, i) => {
           if (p.kind === 'chip' && i === p.art.lab) {
-            return esc(r.slice(0, 2)) + '<span class="lab">' + esc(r.slice(2, 2 + p.name.length)) + '</span>' + esc(r.slice(2 + p.name.length));
+            const a = p.art.labAt || 2;
+            return esc(r.slice(0, a)) + '<span class="lab">' + esc(r.slice(a, a + p.name.length)) + '</span>' + esc(r.slice(a + p.name.length));
           }
           return '<span class="' + (i === p.art.rows.length - 1 || i === 0 ? 'pin' : '') + '">' + esc(r) + '</span>';
         }).join('\n');
@@ -198,27 +233,31 @@ function startPCB(opts) {
       root.appendChild(el);
       p.el = el;
     }
-    // the order the pulse walks: the cells of the trace from the pmod to the cup
-    const seq = [];
-    const seen = new Set();
-    for (let i = 0; i + 1 < path.length; i++) {
-      const [x0, y0] = path[i], [x1, y1] = path[i + 1];
-      const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.3));
-      for (let k = 0; k < n; k++) {
-        const x = Math.floor(x0 + (x1 - x0) * k / n), y = Math.floor(y0 + (y1 - y0) * k / n);
-        const key = x + ',' + y;
-        if (!seen.has(key) && x >= 0 && y >= 0 && x < cols && y < rows && g.ch[y * cols + x] !== ' ') {
-          seen.add(key);
-          seq.push([x, y, g.ch[y * cols + x]]);
+    // the order a pulse walks: the cells of the trace from the pmod to the cup, and of the branch
+    const walk = pts => {
+      const sq = [];
+      const seen = new Set();
+      for (let i = 0; i + 1 < pts.length; i++) {
+        const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+        const n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 0.3));
+        for (let k = 0; k < n; k++) {
+          const x = Math.floor(x0 + (x1 - x0) * k / n), y = Math.floor(y0 + (y1 - y0) * k / n);
+          const key = x + ',' + y;
+          if (!seen.has(key) && x >= 0 && y >= 0 && x < cols && y < rows && g.ch[y * cols + x] !== ' ') {
+            seen.add(key);
+            sq.push([x, y, g.ch[y * cols + x]]);
+          }
         }
       }
-    }
+      return sq;
+    };
+    const seq = walk(path), seqs = [seq, bpath ? walk(bpath) : []];
     // the parts a pulse meets: the step of the walk under each
     for (const p of parts) {
       const mx = p.kind === 'r' ? p.x + 1 : p.x + Math.floor(p.art.w / 2);
       const my = p.kind === 'r' ? p.y : p.y + p.art.rows.length - 1;
       let best = -1, bd = 1e9;
-      seq.forEach(([x, y], i) => {
+      seqs[p.sid].forEach(([x, y], i) => {
         const d = Math.abs(x - mx) + 2 * Math.abs(y - my);
         if (d < bd) {
           bd = d;
@@ -229,7 +268,7 @@ function startPCB(opts) {
     }
     const layer = document.createElement('div');
     root.appendChild(layer);
-    state = { seq, parts, cw, lh, layer, top, gapA, gapB, yA, yB, rows, cols };
+    state = { seq, seqs, parts, cw, lh, layer, top, gapA, gapB, yA, yB, rows, cols };
     // a crossing seen for the first time gets its own pulse
     if ('IntersectionObserver' in window && !opts.reduce()) {
       for (const [y, key] of [[yA, 'a'], [yB, 'b']]) {
@@ -245,15 +284,29 @@ function startPCB(opts) {
         }, { rootMargin: '0px 0px -30% 0px' });
         io.observe(mark);
       }
+      // the branch's own pulse, the first time its curve comes into view
+      if (seqs[1].length) {
+        const mark = document.createElement('div');
+        const my = Math.max(...seqs[1].map(c => c[1]));
+        mark.style.cssText = 'position:absolute;left:0;width:1px;height:1px;top:' + (my * lh) + 'px';
+        root.appendChild(mark);
+        const io = new IntersectionObserver(es => {
+          if (es.some(e => e.isIntersecting)) {
+            io.disconnect();
+            send(0, 1);
+          }
+        }, { rootMargin: '0px 0px -15% 0px' });
+        io.observe(mark);
+      }
     }
   }
 
   // a pulse: six cells of the trace in the colour of a signal at 1, walking to the cup
-  function send(from) {
+  function send(from, sid) {
     if (!state || opts.reduce() || pulses.length > 3) {
       return;
     }
-    pulses.push({ i: from || 0, t: performance.now(), spans: [] });
+    pulses.push({ i: from || 0, t: performance.now(), spans: [], sid: sid || 0 });
     if (!raf) {
       raf = requestAnimationFrame(tick);
     }
@@ -261,9 +314,9 @@ function startPCB(opts) {
 
   function tick(now) {
     raf = 0;
-    const { seq, parts, cw, lh, layer } = state;
+    const { seqs, parts, cw, lh, layer } = state;
     for (let k = pulses.length - 1; k >= 0; k--) {
-      const p = pulses[k];
+      const p = pulses[k], seq = seqs[p.sid];
       const head = Math.floor(p.i + (now - p.t) / 1000 * 95);
       if (head - 6 >= seq.length) {
         p.spans.forEach(s => s.remove());
@@ -289,7 +342,7 @@ function startPCB(opts) {
         s.textContent = c[2];
       });
       for (const part of parts) {
-        if (part.at >= 0 && part.at <= head && part.at > head - 4) {
+        if (part.sid === p.sid && part.at >= 0 && part.at <= head && part.at > head - 4) {
           part.el.classList.add('hot');
           clearTimeout(part.timer);
           part.timer = setTimeout(() => part.el.classList.remove('hot'), 520);
