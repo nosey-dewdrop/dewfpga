@@ -1064,7 +1064,7 @@ def line_before(where):
         code = re.sub(r"/\*.*?\*/", " ", re.sub(r"//.*", "", lines[n - 1] if n <= len(lines) else "")).rstrip()
         if not code.strip(): continue
         if re.search(r"[\w)\]'\"]$", code) and not _GOES_ON.match(code) \
-           and not re.search(r"\b(begin|end|endcase|endmodule|endfunction|endtask|endgenerate|else|default)$", code):
+           and not re.search(r"\b(begin|end\w*|else|default|fork|join(_any|_none)?)$", code):
             print(f"{m.group(1)}:{n}")
         return 0
     return 0

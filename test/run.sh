@@ -406,7 +406,9 @@ missing_semicolon() {
     && printf 'module top_tb; logic [15:0] sw = 0; wire [15:0] led; top dut(.sw(sw), .led(led)); initial begin #1 $finish; end endmodule\n' > top_tb.sv \
     && ! "$CLI" sim > out 2>&1 && grep -qF 'top.sv:2: ERROR [iverilog-refused]: ' out && grep -qF 'Fix: end top.sv:2 with ; (iverilog names top.sv:3, the line after it: a missing ; is reported where the next statement starts), then fix what is left.' out \
     && printf 'module top(input logic [15:0] sw, output logic [15:0] led);\n  always_comb\n    led = sw +;\nendmodule\n' > top.sv \
-    && ! "$CLI" bit > out 2>&1 && ! grep -q 'does not end with ;' out
+    && ! "$CLI" bit > out 2>&1 && ! grep -q 'does not end with ;' out \
+    && printf 'interface i;\n  logic a;\nendinterface\nmodule m(i.x bus);\nendmodule\n' > e.sv && [ -z "$(python3 "$ROOT/templates/check_xdc.py" --line-before e.sv:4)" ] \
+    && printf 'module m;\n  initial begin\n    fork\n    join\n  end\nendmodule\n' > e.sv && [ -z "$(python3 "$ROOT/templates/check_xdc.py" --line-before e.sv:5)" ]
 }
 check "a ; missing at the end of line 2 -> the messages name line 2 (the parsers say line 3), not after a header line" missing_semicolon
 # eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
