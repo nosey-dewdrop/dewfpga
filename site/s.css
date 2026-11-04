@@ -64,7 +64,7 @@ nav.top a.brand{margin-right:auto;font-size:20px;font-weight:600;letter-spacing:
 nav.top a:hover{color:#7cc8e4}
 nav.top a[aria-current]{color:#f4f4f4}
 nav.top a:focus-visible{outline:1px solid #a8a8a8;outline-offset:3px}
-footer.wrap{box-sizing:border-box;display:flex;justify-content:space-between;gap:12px 24px;flex-wrap:wrap;
+footer.wrap{box-sizing:border-box;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
   width:100%;max-width:1680px;margin:0 auto;padding:96px 40px 48px;border:0;
   font:400 15px/1.5 -apple-system,BlinkMacSystemFont,"SF Pro Text",system-ui,"Helvetica Neue",sans-serif;color:#8c8c8c}
 footer.wrap a{color:#7cc8e4;text-decoration:none;transition:color .15s;padding:10px 0;margin:-10px 0}
@@ -75,7 +75,19 @@ footer.wrap .more{display:flex;gap:26px;flex-wrap:wrap}
   nav.top{height:56px;gap:15px;padding:0 16px}
   nav.top a{font-size:15px;padding:14px 7px;margin:-14px -7px}
   nav.top a.brand{font-size:17px}
-  footer.wrap{padding:72px 16px 40px;flex-direction:column}
+  footer.wrap{padding:72px 16px 48px}
+  /* the turkish labels are longer: the gaps give way first, so the row still fits */
+  html[lang="tr"] nav.top{gap:clamp(6px,calc((100vw - 340px) / 5),15px)}
+}
+/* under the 390 px of a phone the gaps and the gutter give way too */
+@media (max-width:389px){
+  nav.top{gap:clamp(6px,calc((100vw - 330px) / 5),15px);padding:0 10px}
+  html[lang="tr"] nav.top{gap:clamp(5px,calc((100vw - 340px) / 5),15px)}
+}
+/* the narrowest phones: the links go under the wordmark */
+@media (max-width:340px){
+  nav.top{flex-wrap:wrap;height:auto;row-gap:2px;padding:12px 10px}
+  nav.top a.brand{flex-basis:100%}
 }
 /* ---------- /nav (generated) ---------- */
 
