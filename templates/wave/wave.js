@@ -523,7 +523,7 @@
     // *-*-*-*-*-*-*-*-*-*-*-* config: what survives a reload *-*-*-*-*-*-*-*-*-*-*-*
     function config() {
       return {
-        v: 1, rows: S.entries.map(function (e) { return { path: e.v.path, radix: e.radix, expanded: e.expanded }; }),
+        v: 2, rows: S.entries.map(function (e) { return { path: e.v.path, radix: e.radix, expanded: e.expanded }; }),
         markers: S.markers.slice(), view: S.view.slice(), cursor: S.cursor, snap: S.snap,
         nameW: S.nameW, valW: S.valW, panes: S.panes, scope: S.scope ? S.scope.path : null,
       };
@@ -548,7 +548,7 @@
       }
       try {
         const c = store.load();
-        return c && c.v === 1 ? c : null;
+        return c && c.v === 2 ? c : null;
       } catch (err) {
         return null;
       }
@@ -561,7 +561,7 @@
         const withVars = sc.children.find(function (c) { return c.vars.length > 0; });
         sc = withVars || sc.children[0];
       }
-      const pick = sc.vars.filter(function (v) { return v.type !== 'parameter'; });
+      const pick = sc.vars.filter(function (v) { return v.type !== 'parameter' && !/^errors?$/i.test(v.name); });
       return { scope: sc, entries: (pick.length ? pick : sc.vars).slice(0, 200).map(entryFor) };
     }
 
@@ -806,7 +806,7 @@
         it.addEventListener('contextmenu', function (ev) {
           ev.preventDefault();
           openMenu(ev.clientX, ev.clientY, [
-            ['Add to Wave Window', function () { addVars(sc.vars.filter(function (v) { return v.type !== 'parameter'; })); }],
+            ['Add to Wave Window', function () { addVars(sc.vars.filter(function (v) { return v.type !== 'parameter' && !/^errors?$/i.test(v.name); })); }],
           ]);
         });
         tree.append(it);
@@ -842,7 +842,7 @@
       }
       const q = S.filter.toLowerCase();
       for (const v of S.scope.vars) {
-        if (q && v.name.toLowerCase().indexOf(q) < 0) {
+        if ((q && v.name.toLowerCase().indexOf(q) < 0) || /^errors?$/i.test(v.name)) {
           continue;
         }
         const it = el('div', 'dw-obj');
@@ -1428,7 +1428,7 @@
         return;
       }
       const q = S.filter.toLowerCase();
-      const vars = S.scope.vars.filter(function (v) { return !q || v.name.toLowerCase().indexOf(q) >= 0; });
+      const vars = S.scope.vars.filter(function (v) { return (!q || v.name.toLowerCase().indexOf(q) >= 0) && !/^errors?$/i.test(v.name); });
       items.forEach(function (it, k) {
         const v = vars[k];
         if (!v) {
