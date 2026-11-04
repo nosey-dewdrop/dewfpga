@@ -1182,7 +1182,7 @@ A syntax error, an undeclared name (`summ` above: a typo of `sum`), or a constru
 
 ## What is the fix?
 
-Read iverilog's first line and fix that; run again. `sorry:` lines name constructs iverilog lacks; the [guide's section 8](/dewfpga/docs/#8-what-can-it-not-do) lists them.
+Read iverilog's first line and fix that; run again. When that line is a syntax error and the line of code above it ends a statement without its `;`, the error names that line instead and says so: a parser reports a missing `;` where the next statement starts. `sorry:` lines name constructs iverilog lacks; the [guide's section 8](/dewfpga/docs/#8-what-can-it-not-do) lists them.
 
 ```copy
 dewfpga sim

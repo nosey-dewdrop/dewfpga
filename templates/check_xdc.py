@@ -1046,6 +1046,30 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--list-tops":
 if len(sys.argv) >= 3 and sys.argv[1] == "--xdc-for":
     # --xdc-for "<port> <port> ..." <file.xdc>...
     sys.exit(xdc_for(sys.argv[2].split(), sys.argv[3:]))
+# a statement that runs on into the next line: what a parser names as the line after a missing ; (assign y = a
+# with no ; is "line 3: syntax error, unexpected endmodule"). A header that ends its line (if (a), always_ff @(...),
+# else, begin) opens a statement that goes on below; always_ff @(posedge clk) q <= d runs on without its ;
+_GOES_ON = re.compile(r"^\s*(?:(?:module|interface|package|program|class|function|task|generate|`\w+)\b"
+                      r"|(?:else|always_comb|always|initial|final|begin|fork|do|forever|unique|priority)\s*$"
+                      r"|(?:(?:else\s+)?if|for|foreach|while|repeat|case[xz]?|(?:unique\s+|priority\s+)?case[xz]?|always(?:_ff|_latch)?\s*@)\s*\(.*\)\s*$)")
+def line_before(where):
+    """`--line-before <file>:<line>`: prints <file>:<n> when the last line of code above <line> ends a statement
+    without its ; (a name, a number, ) or ] last, and no header word first), the line a missing ; is on when a
+    parser names <line>; prints nothing otherwise."""
+    m = re.fullmatch(r"(.+):(\d+)", where)
+    if not m: return 0
+    try: lines = open(m.group(1), encoding="utf-8", errors="replace").read().split("\n")
+    except OSError: return 0
+    for n in range(int(m.group(2)) - 1, 0, -1):
+        code = re.sub(r"/\*.*?\*/", " ", re.sub(r"//.*", "", lines[n - 1] if n <= len(lines) else "")).rstrip()
+        if not code.strip(): continue
+        if re.search(r"[\w)\]'\"]$", code) and not _GOES_ON.match(code) \
+           and not re.search(r"\b(begin|end|endcase|endmodule|endfunction|endtask|endgenerate|else|default)$", code):
+            print(f"{m.group(1)}:{n}")
+        return 0
+    return 0
+if len(sys.argv) == 3 and sys.argv[1] == "--line-before":
+    sys.exit(line_before(sys.argv[2]))
 if len(sys.argv) >= 3 and sys.argv[1] == "--needed":
     # --needed <clicked file> <the other .sv/.v files of its folder>...
     sys.exit(needed(sys.argv[2], sys.argv[3:]))
