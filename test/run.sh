@@ -177,7 +177,41 @@ check "bit --foo -> unknown option" "cd '$T/w' && ! '$CLI' bit --foo >out 2>&1 &
 check "FPGA_HOME with a space -> path-with-space, before any command" "cd '$T/w' && ! FPGA_HOME='$T/a b' '$CLI' check >out 2>&1 && grep -q '^ERROR \[path-with-space\]: a path with a space (.* / $T/a b): the FPGA tools cannot handle that' out"
 check "UTF-8 BOM -> error names line 1 and the sed that strips it" "mkdir -p '$T/bom' && printf '\\xEF\\xBB\\xBF' > '$T/bom/blink.sv' && cat '$ROOT/templates/blink.sv' >> '$T/bom/blink.sv' && cp '$ROOT/templates/blink.xdc' '$T/bom/' && cd '$T/bom' && ! '$CLI' bit >out 2>&1 && grep -q '^blink.sv:1: ERROR \[utf8-bom\]: blink.sv starts with a byte-order mark' out && grep -q \"sed -i '' \" out && [ ! -e blink.bit ]"
 # shellcheck disable=SC2016   # $finish and $stop are Verilog
-check 'testbench without $finish -> sim-timeout, names SIM_TIMEOUT' "mkdir -p '$T/tmo' && cp '$ROOT/templates/blink.sv' '$T/tmo/' && printf 'module blink_tb;\\n logic clk = 0; logic [15:0] sw = 0; logic [15:0] led;\\n blink dut(.clk(clk), .sw(sw), .led(led));\\n always #5 clk = ~clk;\\nendmodule\\n' > '$T/tmo/blink_tb.sv' && cd '$T/tmo' && ! SIM_TIMEOUT=2 '$CLI' sim >out 2>&1 && grep -q '^ERROR \[sim-timeout\]: the simulation did not finish in 2 s: the testbench never reached \$finish' out && grep -q 'SIM_TIMEOUT=600 dewfpga sim' out"
+check 'testbench whose $finish is never reached -> sim-timeout, names SIM_TIMEOUT' "mkdir -p '$T/tmo' && cp '$ROOT/templates/blink.sv' '$T/tmo/' && printf 'module blink_tb;\\n logic clk = 0; logic [15:0] sw = 0; logic [15:0] led;\\n blink dut(.clk(clk), .sw(sw), .led(led));\\n always #5 clk = ~clk;\\n initial begin wait (led[15] === 1); \$finish; end\\nendmodule\\n' > '$T/tmo/blink_tb.sv' && cd '$T/tmo' && ! SIM_TIMEOUT=2 '$CLI' sim >out 2>&1 && grep -q '^ERROR \[sim-timeout\]: the simulation did not finish in 2 s: the testbench never reached \$finish' out && grep -q 'SIM_TIMEOUT=600 dewfpga sim' out"
+# Vivado's Run Simulation runs 1000 ns and records every signal: a testbench written for it has a free-running clock,
+# no $finish and no $dumpvars. dewfpga sim stops it at the same 1000 ns (SIM_TIME moves it), says so, and records
+# <tb>.vcd; the recording module and the 1ns/1ps default never reach the folder.
+# shellcheck disable=SC2016   # $finish and $var are Verilog and VCD
+vivado_clock_tb() {
+    rm -rf "$T/vct" && mkdir -p "$T/vct" && cp "$ROOT/templates/blink.sv" "$T/vct/" && cd "$T/vct" \
+    && printf 'module blink_tb;\n logic clk = 0; logic [15:0] sw = 1; logic [15:0] led;\n blink dut(.clk(clk), .sw(sw), .led(led));\n always #5 clk = ~clk;\nendmodule\n' > blink_tb.sv \
+    && "$CLI" sim > out 2>&1 && grep -q '^note \[sim-run-time\]: the simulation stopped at 1000 ns, where Vivado.s Run Simulation stops: blink_tb has a clock that never stops and no \$finish' out \
+    && grep -q '^waveform: blink_tb.vcd (dewfpga wave blink_tb opens it)$' out && grep -qx '#1000000' blink_tb.vcd && grep -q '^\$var reg 1 . clk \$end' blink_tb.vcd \
+    && [ ! -e blink_wave.v ] && SIM_TIME=2.5us "$CLI" sim > out2 2>&1 && grep -q 'stopped at 2500 ns' out2 && grep -qx '#2500000' blink_tb.vcd \
+    && ! SIM_TIME=ten "$CLI" sim > out3 2>&1 && grep -q '^ERROR \[bad-sim-time\]: SIM_TIME=ten is not a time' out3
+}
+# shellcheck disable=SC2016   # $finish and $dumpvars are Verilog
+check 'Vivado-style testbench (a clock, no $finish, no $dumpvars) -> stops at 1000 ns with a note, blink_tb.vcd recorded, SIM_TIME moves it' vivado_clock_tb
+# a lab laid out as Vivado keeps it: every part in one file (two tops here), the testbenches in tb/, one per part in
+# one file, no `timescale, no $finish, no $dumpvars. Each testbench runs alone (-s; the other one and the two tops
+# do not run beside it), to its own end, in Vivado's 1ns/1ps, and its .vcd holds its own scope only.
+# shellcheck disable=SC2016,SC2012   # $error, $display and $scope are Verilog and VCD; ls lists plain names
+vivado_lab_layout() {
+    rm -rf "$T/vlab" && mkdir -p "$T/vlab/tb" && cd "$T/vlab" \
+    && printf 'module inv(input logic a, output logic y); assign y = ~a; endmodule\nmodule and2(input logic a, b, output logic y); assign y = a & b; endmodule\nmodule top_inv(input logic [15:0] sw, output logic [15:0] led); inv u(.a(sw[0]), .y(led[0])); endmodule\nmodule top_and(input logic [15:0] sw, output logic [15:0] led); and2 u(.a(sw[0]), .b(sw[1]), .y(led[0])); endmodule\n' > lab.sv \
+    && printf 'module tb_inv; logic a, y; inv dut(.a(a), .y(y)); initial begin a = 0; #1; if (y !== 1) $error("inv 0"); a = 1; #1; if (y !== 0) $error("inv 1"); $display("tb_inv done"); end endmodule\nmodule tb_and; logic a, b, y; and2 dut(.a(a), .b(b), .y(y)); initial begin for (int i = 0; i < 4; i++) begin {a, b} = i; #10; end $display("tb_and done"); end endmodule\n' > tb/lab_tb.sv \
+    && ! "$CLI" sim > out 2>&1 && grep -q '^tb/lab_tb.sv:1: ERROR \[two-testbenches\]: 2 testbenches here and nothing says which one to run: tb_inv (tb/lab_tb.sv:1), tb_and (tb/lab_tb.sv:2)\. Fix: name the one to run:  dewfpga sim tb_inv' out \
+    && [ "$("$CLI" tops --sim)" = "$(printf 'tb_inv\ttb/lab_tb.sv\tinv\ntb_and\ttb/lab_tb.sv\tand2')" ] \
+    && "$CLI" sim tb_and > out 2>&1 && grep -q '^testbench: tb_and (it tests and2)$' out && grep -q '^iverilog -g2012 -I. -Itb -s tb_and -o and2_sim lab.sv tb/lab_tb.sv$' out \
+    && grep -qx 'tb_and done' out && ! grep -q 'tb_inv done' out && ! grep -q 'sim-run-time' out && grep -q '^waveform: tb_and.vcd' out \
+    && [ "$(grep -c '^\$scope module' tb_and.vcd)" = 2 ] && grep -q '^\$scope module tb_and \$end' tb_and.vcd && grep -qx '#40000' tb_and.vcd \
+    && "$CLI" sim inv > out 2>&1 && grep -q '^testbench: tb_inv (it tests inv)$' out && grep -qx 'tb_inv done' out && ! grep -q 'tb_and done' out \
+    && [ "$(ls | LC_ALL=C sort | tr '\n' ' ')" = 'and2_sim and2_sim.deps and2_sim.out inv_sim inv_sim.deps inv_sim.out lab.sv out tb tb_and.vcd tb_inv.vcd ' ] \
+    && "$CLI" wave tb_and --no-open > out 2>&1 && page=$(sed -n 's/^waveform: .* -> //p' out) && [ -s "$page" ] && grep -q 'DewWave.mountPage' "$page" && grep -q 'scope module tb_and' "$page" \
+    && ! "$CLI" wave missing.vcd > out 2>&1 && grep -q '^ERROR \[no-waveform\]: missing.vcd does not exist' out
+}
+check "Vivado lab layout: two tops in one file, two testbenches in tb/ -> each runs alone (-s), to its end, 1ns/1ps, its own scope in its .vcd; dewfpga wave writes the page" vivado_lab_layout
+check "waveform viewer: VCD parser and radix formatting on iverilog's dump" "node '$ROOT/test/wave/test-wave.js'"
 # shellcheck disable=SC2016   # $stop is Verilog
 check 'testbench ending with $stop -> sim ends, PASS line, exit 0' "mkdir -p '$T/stp' && cp '$ROOT/templates/blink.sv' '$T/stp/' && sed 's/[\$]finish;/\$stop;/' '$ROOT/templates/blink_tb.sv' > '$T/stp/blink_tb.sv' && grep -q 'stop;' '$T/stp/blink_tb.sv' && cd '$T/stp' && '$CLI' sim >out 2>&1 && grep -q '^PASS: 3 checks' out && grep -q 'blink_tb.sv:35: \$stop called' out"
 # a Verilog-2005 testbench in a .v file (reg/wire, no logic): found by content, compiled with the .sv design
@@ -250,10 +284,10 @@ check "sim: a testbench that sets top's parameters on a design iverilog refuses 
 # shellcheck disable=SC2016   # $finish is Verilog
 blink_sim_plain() {
     rm -rf "$T/bs" && mkdir -p "$T/bs" && cp "$ROOT"/templates/{blink.sv,blink.xdc,blink_tb.sv} "$T/bs/" && cd "$T/bs" && "$CLI" sim > out 2>&1 \
-    && printf 'iverilog -g2012 -o blink_sim blink.sv blink_tb.sv\nVCD info: dumpfile blink.vcd opened for output.\nPASS: 3 checks (see the waveform for the toggle)\nblink_tb.sv:35: $finish called at 200000 (1ps)\n' | diff - out \
+    && printf 'iverilog -g2012 -o blink_sim blink.sv blink_tb.sv\nVCD info: dumpfile blink.vcd opened for output.\nPASS: 3 checks (see the waveform for the toggle)\nblink_tb.sv:35: $finish called at 200000 (1ps)\nwaveform: blink.vcd (dewfpga wave blink_tb opens it)\n' | diff - out \
     && [ ! -e blink.json ] && [ ! -e blink.il ] && [ ! -e blink_sim.elab ]
 }
-check "sim: blink is iverilog's alone: the same four lines, no note, no build started" blink_sim_plain
+check "sim: blink is iverilog's alone: the same four lines and the waveform line, no note, no build started" blink_sim_plain
 # two clocks: a divided clock the student named (slow) clocks a counter; the pnr line reports each clock by name
 two_clocks() {
     mkdir -p "$T/2c" && cd "$T/2c" && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic slow = 0; always_ff @(posedge clk) slow <= ~slow;\n  logic [15:0] c = 0; always_ff @(posedge slow) c <= c + sw;\n  assign led = c;\nendmodule\n' > top.sv \

@@ -1334,6 +1334,157 @@ End the testbench with `$finish`, and shorten long waits (a smaller parameter fo
 SIM_TIMEOUT=600 dewfpga sim
 ```
 
+## sim-run-time
+step: sim
+source: dewfpga sim
+title: note [sim-run-time]: the simulation stopped at 1000 ns, where Vivado's Run Simulation stops: tb has a clock that never stops and no $finish, or SIM_TIME says so.
+summary: A testbench with a free-running clock and no $finish runs 1000 ns, as in Vivado; SIM_TIME runs it longer.
+date: 2026-11-04
+
+```
+note [sim-run-time]: the simulation stopped at 1000 ns, where Vivado's Run Simulation stops: tb_counter has a clock that never stops and no $finish, or SIM_TIME says so. SIM_TIME=10us dewfpga sim runs it longer; $finish at the end of the testbench stops it when it is done. https://nosey-dewdrop.github.io/dewfpga/errors/sim-run-time/
+```
+
+## Why does it happen?
+
+Vivado's Run Simulation runs a testbench for 1000 ns and then waits; `run all` or `run 10us` in its Tcl console goes on. A testbench written for Vivado often has `always #5 clk = ~clk;` and no `$finish`, so on its own it would never end. dewfpga sim stops such a run at the same 1000 ns, and the waveform shows those 1000 ns. A testbench without a clock ends by itself when its `initial` blocks are done, and runs to that end.
+
+## What is the fix?
+
+Nothing is wrong. To see more of the run, give the time the way Vivado's `run` takes it:
+
+```copy
+SIM_TIME=10us dewfpga sim
+```
+
+Or end the testbench with `$finish` where its checks are done; then it stops there, whatever SIM_TIME says.
+
+## two-testbenches
+step: sim
+source: dewfpga sim
+title: ERROR [two-testbenches]: 6 testbenches here and nothing says which one to run: tb_mux2 (tb/lab2_tb.sv:3), tb_mux4 (tb/lab2_tb.sv:18), ... Fix: name the one to run:  dewfpga sim tb_mux2
+summary: The folder has more than one testbench and more than one design top; name the testbench to run.
+date: 2026-11-04
+
+```
+tb/lab2_tb.sv:3: ERROR [two-testbenches]: 6 testbenches here and nothing says which one to run: tb_mux2 (tb/lab2_tb.sv:3), tb_mux4 (tb/lab2_tb.sv:18), tb_mux8 (tb/lab2_tb.sv:33). Fix: name the one to run:  dewfpga sim tb_mux2 https://nosey-dewdrop.github.io/dewfpga/errors/two-testbenches/
+```
+
+## Why does it happen?
+
+A lab often keeps every part in one file (mux2, mux4, mux8 and three top modules) and one testbench per part in another. Vivado runs one simulation top, the one set in the simulation sources. dewfpga sim does the same: it starts from one testbench and compiles nothing else as a root, so the other testbenches and the other top modules do not run beside it. With several testbenches and no single top, nothing says which one that is.
+
+## What is the fix?
+
+Name the testbench (or the design it tests):
+
+```copy
+dewfpga sim tb_mux8
+```
+
+`dewfpga tops --sim` lists the testbenches with the module each one tests. In VS Code, Run Simulation asks which one.
+
+## testbench-without-design
+step: sim
+source: dewfpga sim
+title: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.
+summary: The testbench named on the command line does not instantiate any design module of the folder.
+date: 2026-11-04
+
+```
+tb.sv:1: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test. Fix: instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder. https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/
+```
+
+## Why does it happen?
+
+A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the design's file is elsewhere, or the instance names a module that does not exist under that name.
+
+## What is the fix?
+
+Put the design's `.sv` next to the testbench, or fix the module name in the instance.
+
+## bad-sim-time
+step: sim
+source: dewfpga sim
+title: ERROR [bad-sim-time]: SIM_TIME=ten is not a time. Fix: a number with a unit, as Vivado's run takes it:  SIM_TIME=10us dewfpga sim  (ns, us, ms; a bare number is ns).
+summary: SIM_TIME must be a number with an optional unit (ns, us, ms, s, ps).
+date: 2026-11-04
+
+```
+ERROR [bad-sim-time]: SIM_TIME=ten is not a time. Fix: a number with a unit, as Vivado's run takes it:  SIM_TIME=10us dewfpga sim  (ns, us, ms; a bare number is ns). https://nosey-dewdrop.github.io/dewfpga/errors/bad-sim-time/
+```
+
+## Why does it happen?
+
+SIM_TIME is read as a number and a unit: `1000ns`, `10us`, `2.5us`, `1ms`. Anything else cannot be turned into a time.
+
+## What is the fix?
+
+```copy
+SIM_TIME=10us dewfpga sim
+```
+
+## no-waveform
+step: wave
+source: dewfpga wave
+title: ERROR [no-waveform]: wave.vcd does not exist. Fix: run the simulation first:  dewfpga sim
+summary: dewfpga wave was given a .vcd that is not there, or the simulation wrote none.
+date: 2026-11-04
+
+```
+ERROR [no-waveform]: tb_mux8.vcd does not exist. Fix: run the simulation first:  dewfpga sim https://nosey-dewdrop.github.io/dewfpga/errors/no-waveform/
+```
+
+## Why does it happen?
+
+`dewfpga wave file.vcd` opens a file that already exists. `dewfpga wave` (without a .vcd) runs the simulation first and opens what it recorded; this error means the run stopped before it recorded anything (a compile error, printed above).
+
+## What is the fix?
+
+Run the simulation, read its first error, then open the waveform:
+
+```copy
+dewfpga wave
+```
+
+## waveform-too-large
+step: wave
+source: dewfpga wave
+title: ERROR [waveform-too-large]: wave.vcd is 300 MB, more than a browser page holds (256 MB).
+summary: The .vcd is too large for the browser page; record a shorter run or fewer signals.
+date: 2026-11-04
+
+```
+ERROR [waveform-too-large]: dump.vcd is 300 MB, more than a browser page holds (256 MB). Fix: record less (a shorter run, SIM_TIME=2us dewfpga sim) or fewer signals ($dumpvars(1, tb) records only the testbench's own). https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/
+```
+
+## Why does it happen?
+
+The waveform page carries the whole .vcd. dewfpga sim stops its own recording at 64 MB; a testbench that calls `$dumpvars` itself and runs for a long time (a counter to 50 million) writes much more.
+
+## What is the fix?
+
+Simulate a shorter time (`SIM_TIME=2us dewfpga sim`), shrink the count in simulation, or record fewer signals: `$dumpvars(1, tb)` records the testbench's own signals only. Without the testbench's `$dumpvars`, dewfpga records the run itself, up to 64 MB.
+
+## waveform-not-opened
+step: wave
+source: dewfpga wave
+title: note [waveform-not-opened]: open is missing, so the page was not opened.
+summary: The page was written, but there is no command to open it in a browser here.
+date: 2026-11-04
+
+```
+note [waveform-not-opened]: xdg-open is missing, so the page was not opened. Open it in a browser: /tmp/dewfpga-wave/tb_mux8-1a2b3c4d.html
+```
+
+## Why does it happen?
+
+dewfpga wave writes one HTML file and opens it with `open` (macOS) or `xdg-open` (Linux). On a machine without either, the file is there but nothing opens it.
+
+## What is the fix?
+
+Open the path it prints in any browser.
+
 ## sim-exit
 step: sim
 source: dewfpga sim, vvp

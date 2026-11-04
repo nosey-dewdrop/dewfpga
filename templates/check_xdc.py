@@ -719,7 +719,68 @@ def needed(clicked, siblings):
     for f in used: print("FILE=" + f)
     return 0
 
-def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
+def _sim_time_ns(text):
+    """SIM_TIME (1000ns, 10us, 2.5us, 1ms; a bare number is ns): how long a testbench without $finish runs, in
+    ns. None when it cannot be read."""
+    m = re.fullmatch(r"\s*(\d+(?:\.\d+)?)\s*(s|ms|us|ns|ps)?\s*", text or "")
+    if not m: return None
+    return float(m.group(1)) * {"s": 1e9, "ms": 1e6, "us": 1e3, "ns": 1.0, "ps": 1e-3, None: 1.0}[m.group(2)]
+
+def _tb_roots(mods, order, inst):
+    """The testbenches a simulation can start from: a module without ports that nothing instantiates and that
+    instantiates a design module, in file order."""
+    used = set().union(*inst.values()) if inst else set()
+    return [n for n in order if mods[n]["tb"] and n not in used and any(c in mods and not mods[c]["tb"] for c in inst[n])]
+
+def list_tbs(files, sim=()):
+    """`dewfpga tops --sim`: one testbench per line, `<testbench>\t<file>\t<the design module it tests>`, nothing
+    written. The editor's Run Simulation asks with this list when a folder has more than one."""
+    mods, order, inst, _, _ = _parse(files, sim)
+    design = [n for n in order if not mods[n]["tb"]]
+    for n in _tb_roots(mods, order, inst):
+        duts = [d for d in design if d in inst[n]]
+        print(f"{n}\t{mods[n]['file']}\t{duts[0] if duts else ''}")
+    return 0
+
+def _wave_keys(files, mods, order, inst, design, loose, tb, sim_time):
+    """What the simulation records, as Vivado's simulator does without being asked. TBONLY=1: another testbench
+    sits in the files iverilog reads, so the run starts at this one alone (-s), as Vivado runs its one simulation
+    top. WAVE= the .vcd: the one the testbench writes ($dumpfile, dump.vcd without one) when it calls $dumpvars
+    itself (WAVEOWN=1), else <testbench>.vcd that dewfpga records (every signal under the testbench). RUNTO= the
+    time in ns where a testbench with a free-running clock and no $finish or $stop is stopped, Vivado's Run
+    Simulation time (1000 ns), or SIM_TIME when it is set; empty when the run ends by itself. TSDEF=1: no file has a `timescale, so they get Vivado's
+    default, 1ns/1ps (iverilog's own default is 1 s: `#5` would be five seconds)."""
+    compiled = list(dict.fromkeys(loose + [mods[n]["file"] for n in design] + [mods[tb]["file"]]))
+    raw = {}
+    for f in compiled:
+        try: raw[f] = open(f, encoding="utf-8", errors="replace").read()
+        except OSError: raw[f] = ""
+    blank = {f: _blank(t) for f, t in raw.items()}
+    used = set().union(*inst.values()) if inst else set()
+    others = [n for n in order if mods[n]["tb"] and n != tb and n not in used and mods[n]["file"] in raw]
+    own = [f for f in compiled if re.search(r"\$dumpvars\b", blank[f])]
+    if own:
+        named = [m.group(1) for f in [mods[tb]["file"]] + own for m in re.finditer(r'\$dumpfile\s*\(\s*"([^"]*)"', raw[f])]
+        wave, waveown = (named[0] if named else "dump.vcd"), "1"
+    else:
+        wave, waveown = tb + ".vcd", "0"
+    # a testbench that ends by itself (its initial blocks run out, no clock left) runs to its end, all of it on the
+    # waveform; one with a free-running clock (always, forever) and no $finish would never end, so it stops where
+    # Vivado's Run Simulation stops. SIM_TIME set by hand stops every run there, as Vivado's `run 10us` does.
+    ends = re.search(r"\$(finish|stop)\b", mods[tb]["body"])
+    loops = re.search(r"\b(always|always_ff|always_comb|always_latch|forever)\b", mods[tb]["body"])
+    run = _sim_time_ns(sim_time) if sim_time else 1000.0
+    runto = ("%g" % run if run is not None else "1000") if sim_time or (loops and not ends) else ""
+    tsdef = "0" if any(re.search(r"`timescale\b", t) for t in blank.values()) else "1"
+    print("TBTOP=" + tb)
+    print("TBONLY=" + ("1" if others else "0"))
+    print("WAVE=" + wave)
+    print("WAVEOWN=" + waveown)
+    print("RUNTO=" + runto)
+    print("TSDEF=" + tsdef)
+    return bool(others)
+
+def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
     """Which file holds the top module, which files are testbenches. Printed as KEY=value lines for the shell.
     A testbench is a module with no ports (or an empty port list); a module with ports is a design, even
     when it calls $finish (that is a PROBLEM: Vivado ignores $finish, UG901 Table 21, and yosys stops on it).
@@ -737,7 +798,26 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
     where = lambda n: f"{mods[n]['file']}:{mods[n]['line']}"          # a module's declaration, the student's file:line
     listed = lambda ns: ", ".join(f"{n} ({where(n)})" for n in ns)
     def stop(code, text, fix, loc=""): print("ERROR=" + msg("ERROR", code, text, fix, loc)); return 1
-    if want:
+    # dewfpga sim starts from a testbench, the way Vivado's simulation set has its own top: named on the command
+    # line (dewfpga sim tb_mux8), or the only one there is when the designs alone do not name one top (a lab file
+    # with three tops and a testbench file with one testbench per part). Its design module is the top.
+    chosen_tb = None; tbwhy = ""
+    if cmd == "sim" and want and want in mods and mods[want]["tb"]:
+        chosen_tb = want
+    elif cmd == "sim" and not want and len(roots) != 1 and design:
+        tbroots = _tb_roots(mods, order, inst)
+        if len(tbroots) == 1: chosen_tb = tbroots[0]; tbwhy = "the only testbench here"
+        elif len(tbroots) > 1:
+            return stop("two-testbenches", f"{len(tbroots)} testbenches here and nothing says which one to run: {listed(tbroots)}.",
+                        f"name the one to run:  dewfpga sim {tbroots[0]}", where(tbroots[0]))
+    if chosen_tb:
+        duts = [n for n in design if n in inst[chosen_tb]]
+        if not duts:
+            return stop("testbench-without-design", f"{chosen_tb} instantiates no design module of these files, so it has nothing to test.",
+                        "instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder.", where(chosen_tb))
+        top = next((n for n in duts if n in roots), duts[0])
+        tbwhy = f"testbench: {chosen_tb}" + (f", {tbwhy}" if tbwhy else "") + f" (it tests {top})"
+    elif want:
         base = re.sub(r"\.(sv|v|SV|V)$", "", want)
         if want in mods and not mods[want]["tb"]: top = want
         else:
@@ -767,7 +847,9 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
         else: return stop("two-tops", f"{len(roots)} modules could be the top (nothing instantiates them): {listed(roots)}.",
                           f"name it:  dewfpga {cmd} {roots[0]}", where(roots[0]))
     tbs = [n for n in order if mods[n]["tb"]]
-    tb_for = [n for n in tbs if top in inst[n]] or ([tbs[0]] if len(tbs) == 1 else [])
+    tb_for = [chosen_tb] if chosen_tb else [n for n in tbs if top in inst[n]] or ([tbs[0]] if len(tbs) == 1 else [])
+    if cmd == "sim" and not chosen_tb and len(tb_for) > 1:
+        tbwhy = f"testbench: {tb_for[0]} (more test {top} here: {', '.join(tb_for[1:])}; dewfpga sim {tb_for[1]} runs that one)"
     print("TOP=" + top)
     print("WHY=" + why)
     print("TOPFILE=" + mods[top]["file"])
@@ -775,6 +857,11 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=()):
     print("TB=" + (mods[tb_for[0]]["file"] if tb_for else ""))
     print("AUTO=" + ("1" if not want else "0"))
     print("PORTS=" + " ".join(sorted(_port_names(mods[top]["body"]))))
+    if cmd in ("sim", "clean") and tb_for:
+        # more testbenches in the files the run reads: the line says which one runs, whatever chose it
+        if _wave_keys(files, mods, order, inst, design, loose, tb_for[0], sim_time) and not tbwhy and cmd == "sim":
+            tbwhy = f"testbench: {tb_for[0]} (it tests {top})"
+    print("TBWHY=" + tbwhy)
     return 0
 
 def _vivado_files(src_dir, xdc_dir, sim_dir):
@@ -926,7 +1013,14 @@ if len(sys.argv) >= 2 and sys.argv[1] == "--scan":
     if args and args[0] == "--xdc": xn = tuple(args[1].split(",")); args = args[2:]
     if args and args[0] == "--cmd": cmd = args[1]; args = args[2:]
     if args and args[0] == "--sim": simf = tuple(x for x in args[1].split("\n") if x); args = args[2:]
-    sys.exit(scan(args, want, xn, cmd, simf))
+    st = ""
+    if args and args[0] == "--sim-time": st = args[1]; args = args[2:]
+    sys.exit(scan(args, want, xn, cmd, simf, st))
+if len(sys.argv) >= 2 and sys.argv[1] == "--list-tbs":
+    # --list-tbs [--sim a.sv,b.sv] files...
+    args = sys.argv[2:]; simf = ()
+    if args and args[0] == "--sim": simf = tuple(x for x in args[1].split("\n") if x); args = args[2:]
+    sys.exit(list_tbs(args, simf))
 # --pins <package_pins.csv>: the chip's package pins (prjxray's artix7/xc7a35tcpg236-1/package_pins.csv, the
 # database the bitstream is built from, so it is there whenever a bitstream can be built at all); without it, or
 # when the file is not there, the pin names are not checked here and nextpnr's own line is what stops the build

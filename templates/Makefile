@@ -16,6 +16,31 @@ XDC  := blink.xdc
 # the testbench (<top>_tb.sv or .v), and the seconds after which a testbench that never reaches $finish is stopped
 TB   ?= $(firstword $(wildcard $(TOP)_tb.sv $(TOP)_tb.v))
 SIM_TIMEOUT ?= 120
+# what dewfpga sim records, the way Vivado's simulator does without being asked (check_xdc.py --scan sets these;
+# empty, as for a bare `make sim`, keeps the run as it always was). TBTOP: the testbench module; TBONLY=1: the run
+# starts at TBTOP alone (-s), because other testbenches sit in the files iverilog reads. WAVE: the .vcd; WAVEOWN=1
+# when the testbench writes it itself ($dumpvars), 0 when dewfpga records it (every signal under TBTOP, at most
+# WAVELIMIT bytes). RUNTO: ns after which a testbench without $finish or $stop is stopped (Vivado's Run Simulation
+# time, 1000 ns; SIM_TIME=10us changes it). TSDEF=1: no file has a `timescale, so they get Vivado's 1ns/1ps
+# instead of iverilog's 1 s. All of it goes into $(TOP)_wave.v, first on iverilog's line; like the start module it
+# is not on the echoed line, which is the one the student would type.
+TBTOP   ?=
+TBONLY  ?= 0
+WAVE    ?=
+WAVEOWN ?= 1
+RUNTO   ?=
+TSDEF   ?= 0
+WAVELIMIT ?= 67108864
+WAVEREC := $(and $(TBTOP),$(WAVE),$(filter 0,$(WAVEOWN)))
+WAVEMOD := $(if $(or $(RUNTO),$(WAVEREC)),1)
+WAVEGEN := $(if $(or $(WAVEMOD),$(filter 1,$(TSDEF))),1)
+WAVEV   := $(if $(WAVEGEN),$(TOP)_wave.v)
+WAVESEL := $(if $(filter 1,$(TBONLY)),-s $(TBTOP)$(if $(WAVEMOD), -s dewfpga_wave))
+COMMA   := ,
+WAVE_LINES = '`timescale 1ns/1ps' $(if $(WAVEMOD),'// written by dewfpga sim for this run and removed after it: it records the run and stops it as the Vivado simulator does' \
+	'module dewfpga_wave;' $(if $(WAVEREC),'  initial begin $$dumpfile("$(WAVE)"); $$dumplimit($(WAVELIMIT)); $$dumpvars(0$(COMMA) $(TBTOP)); end') \
+	$(if $(RUNTO),'  initial begin \#$(RUNTO); $$finish; end') 'endmodule')
+WAVE_WRITE = $(if $(WAVEGEN),printf '%s\n' $(WAVE_LINES) > $(TOP)_wave.v;)
 
 PART    := xc7a35tcpg236-1
 FPGA    ?= $(or $(FPGA_HOME),$(HOME)/fpga)
@@ -58,8 +83,9 @@ check:
 # vvp -n: $stop ends the run instead of opening vvp's interactive prompt. -l: a copy of the output for the
 # grep below, while stdout stays live on the terminal. The perl alarm stops a run that never reaches $finish.
 sim: $(TOP)_sim
-	@rc=0; SIM_TIMEOUT=$(SIM_TIMEOUT) perl -e '$$SIG{ALRM}=sub{kill TERM=>$$p; select(undef,undef,undef,0.3); kill KILL=>$$p; exit 142}; alarm $$ENV{SIM_TIMEOUT}; $$p=fork; exec @ARGV if !$$p; waitpid $$p,0; exit($$?>>8)' vvp -n -l $(TOP)_sim.out ./$(TOP)_sim || rc=$$?; \
+	@$(if $(WAVE),rm -f "$(WAVE)";) rc=0; SIM_TIMEOUT=$(SIM_TIMEOUT) perl -e '$$SIG{ALRM}=sub{kill TERM=>$$p; select(undef,undef,undef,0.3); kill KILL=>$$p; exit 142}; alarm $$ENV{SIM_TIMEOUT}; $$p=fork; exec @ARGV if !$$p; waitpid $$p,0; exit($$?>>8)' vvp -n -l $(TOP)_sim.out ./$(TOP)_sim || rc=$$?; \
 	  if [ $$rc -eq 142 ]; then echo "ERROR [sim-timeout]: the simulation did not finish in $(SIM_TIMEOUT) s: the testbench never reached \$$finish (a free-running clock never stops on its own). Fix: end the testbench with \$$finish; SIM_TIMEOUT=600 dewfpga sim waits longer. $(URL)sim-timeout/" >&2; exit 1; fi; \
+	  $(if $(RUNTO),! grep -qE '^$(TOP)_wave\.v:[0-9]+: \$$finish called' $(TOP)_sim.out || echo "note [sim-run-time]: the simulation stopped at $(RUNTO) ns$(COMMA) where Vivado's Run Simulation stops: $(TBTOP) has a clock that never stops and no \$$finish$(COMMA) or SIM_TIME says so. SIM_TIME=10us dewfpga sim runs it longer; \$$finish at the end of the testbench stops it when it is done. $(URL)sim-run-time/";) \
 	  [ $$rc -eq 0 ] || { echo "ERROR [sim-exit]: the simulator stopped with exit $$rc (its message is above: a \$$fatal, or a testbench that ends without \$$finish). Fix: read the line above this one and fix what it names; make the testbench end with \$$finish. $(URL)sim-exit/" >&2; exit 1; }; \
 	  n=$$(grep -cE '^(ERROR|FATAL):' $(TOP)_sim.out); [ "$$n" -eq 0 ] || { at=$$(grep -m1 -oE '^(ERROR|FATAL): [^ :]+:[0-9]+' $(TOP)_sim.out | sed -E 's/^(ERROR|FATAL): //'); s=s; [ "$$n" -ne 1 ] || s=""; \
 	    echo "$${at:+$$at: }ERROR [testbench-error]: the testbench reported $$n error$$s (its ERROR: lines above, from \$$error): the design does not do what the testbench expects. Fix: read the first ERROR: line, it names the check that failed; fix the design there, or the testbench if its expectation is wrong. $(URL)testbench-error/" >&2; exit 1; }
@@ -105,7 +131,7 @@ GOALS := $(or $(MAKECMDGOALS),all)
 # $(call fresh,<deps file>,<file list and checksums>,<the stage's output>)
 fresh = $(shell l="$(2)"; { [ -f $(1) ] && [ "$$(cat $(1))" = "$$l" ]; } || { echo "$$l" > $(1); rm -f $(3); })
 ifneq (,$(filter sim,$(GOALS)))
-$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP)_sim)
+$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(TBTOP) $(TBONLY) $(WAVE) $(WAVEOWN) $(RUNTO) $(TSDEF) $(WAVELIMIT) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP)_sim)
 endif
 ifeq (,$(filter sim clean check,$(GOALS)))
 $(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP).json)
@@ -174,9 +200,9 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	      || { rm -f $(TOP)_regs.json; [ ! -f "$(SLANG)" ] || ( yosys -m "$(SLANG)" -q -p "read_slang --single-unit $(INC)$$KWD; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff -keepdc; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; }; \
 	    if [ -s $(TOP)_regs.json ] && [ -n "$$py" ]; then snote=$$("$$py" "$(STARTS)" $(TOP)_regs.json $(TB) $(TOP) $(SRCS) $(SIM_DEPS) 2>/dev/null || true); fi; rm -f $(TOP)_regs.json; fi; \
 	  rm -rf "$$KWDIR"; [ -n "$$snote" ] && [ -s $(TOP)_start.sv ] || { snote=""; rm -f $(TOP)_start.sv; }; \
-	  $(call MKKW,$(SRCS) $(TB),--quiet); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC)) -o $@ $(SRCS) $(TB)"; rc=1; \
-	  if [ -n "$$snote" ]; then iverilog -g2012 $(INC) -o $@ $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
-	  if [ -z "$$snote" ]; then iverilog -g2012 $(INC) -o $@ $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv; \
+	  $(call MKKW,$(SRCS) $(TB),--quiet); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$(if $(filter 1,$(TBONLY)), -s $(TBTOP)) -o $@ $(SRCS) $(TB)"; rc=1; $(WAVE_WRITE) \
+	  if [ -n "$$snote" ]; then iverilog -g2012 $(WAVESEL)$(if $(filter 1,$(TBONLY)), -s dewfpga_start) $(INC) -o $@ $(WAVEV) $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
+	  if [ -z "$$snote" ]; then iverilog -g2012 $(WAVESEL) $(INC) -o $@ $(WAVEV) $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv $(WAVEV); \
 	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
 	  firstat() { grep -m1 -oE '^[^ :]+:[0-9]+: (syntax error|error|sorry)' $(TOP)_sim.err | sed -E 's/: (syntax error|error|sorry)$$//'; }; at=$$(firstat); ipw=""; [ $$rc -ne 0 ] || ipw=$$(awk '$(IPW_SIM_AWK)' $(TOP)_sim.err); rm -f $(TOP)_sim.err; \
 	  refused() { echo "$${at:+$$at: }ERROR [iverilog-refused]: iverilog cannot compile this code (its message is above)$${1:+, $$1}. Fix: fix the first line it names; the errors after the first often follow from it. $(URL)iverilog-refused/" >&2; exit $$rc; }; \
@@ -194,9 +220,9 @@ $(TOP)_sim: $(SRCS) $(TB) $(SIM_DEPS) $(TOP)_sim.deps
 	  rm -f $(TOP)_regs.json $(TOP)_start.sv; snote=""; ( yosys -q -p "read_rtlil $(TOP).il; hierarchy -top $(TOP); proc; flatten; opt_clean; memory_collect; opt_dff -keepdc; write_json $(TOP)_regs.json" ) >/dev/null 2>&1 || rm -f $(TOP)_regs.json; \
 	  if [ -s $(TOP)_regs.json ]; then snote=$$("$(PY)" "$(STARTS)" --plain $(TOP)_regs.json $(TB) $(TOP) $(TOP)_sim.elab 2>/dev/null || true); fi; rm -f $(TOP)_regs.json; [ -n "$$snote" ] && [ -s $(TOP)_start.sv ] || { snote=""; rm -f $(TOP)_start.sv; }; \
 	  echo "$$at: note [sim-from-build]: iverilog cannot compile this design (its lines are above), so the simulation runs on the design as the build reads it: read by $$rd, written back as Verilog ($(TOP)_sim.elab) and compiled with the testbench and yosys' models of the Xilinx cells. What differs: a # delay in the design is gone, an \`ifdef SYNTHESIS branch is taken, and a signal the testbench reaches by its hierarchical name (dut.state) may be renamed or gone. $(URL)sim-from-build/"; \
-	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB),--quiet); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib} -o $@ $(TOP)_sim.elab $(TB)"; rc=1; \
-	  if [ -n "$$snote" ]; then iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
-	  if [ -z "$$snote" ]; then iverilog -g2012 $(INC) $$lib -o $@ $(TOP)_sim.elab $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv; \
+	  cells="$(CELLS)"; [ -n "$$cells" ] || cells="$$(yosys-config --datdir 2>/dev/null)/xilinx/cells_sim.v"; lib=""; [ ! -s "$$cells" ] || lib="-l $$cells"; $(call MKKW,$(TB),--quiet); echo "iverilog -g2012$(if $(filter-out .,$(INCDIRS)), $(INC))$${lib:+ $$lib}$(if $(filter 1,$(TBONLY)), -s $(TBTOP)) -o $@ $(TOP)_sim.elab $(TB)"; rc=1; $(WAVE_WRITE) \
+	  if [ -n "$$snote" ]; then iverilog -g2012 $(WAVESEL)$(if $(filter 1,$(TBONLY)), -s dewfpga_start) $(INC) $$lib -o $@ $(WAVEV) $(TOP)_sim.elab $$KWSRCS $(TOP)_start.sv > $(TOP)_sim.err 2>&1; rc=$$?; if [ $$rc -eq 0 ]; then cat $(TOP)_sim.err; else snote=""; rm -f $(TOP)_start.sv; fi; fi; \
+	  if [ -z "$$snote" ]; then iverilog -g2012 $(WAVESEL) $(INC) $$lib -o $@ $(WAVEV) $(TOP)_sim.elab $$KWSRCS 2>&1 | tee $(TOP)_sim.err; rc=$${PIPESTATUS[0]}; fi; rm -rf "$$KW"; rm -f $(TOP)_start.sv $(WAVEV); \
 	  [ -z "$$snote" ] || echo "note [sim-starts-as-board]: $$snote $(URL)sim-starts-as-board/"; \
 	  at2=$$(firstat); rm -f $(TOP)_sim.err; [ $$rc -eq 0 ] || case $$at2 in "") refused "nor the design as the build reads it ($(TOP)_sim.elab)" ;; $(TOP)_sim.elab:*) refused "nor the design as the build reads it ($(TOP)_sim.elab, the lines above it: a Xilinx cell with no simulation model, usually)" ;; *) at=$$at2; refused ;; esac
 
@@ -757,5 +783,5 @@ flash: $(TOP).bit
 	    else echo "ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit $$rc (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on. $(URL)openfpgaloader-failed/" >&2; fi; exit 1; fi
 
 clean:
-	rm -f $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_regs.json $(TOP)_start.sv $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
+	rm -f $(TOP)_wave.v $(if $(WAVEREC),$(WAVE)) $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_regs.json $(TOP)_start.sv $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log $(TOP).autopins
