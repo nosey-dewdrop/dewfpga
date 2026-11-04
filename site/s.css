@@ -61,7 +61,9 @@ nav.top{box-sizing:border-box;display:flex;align-items:center;gap:30px;width:100
   -webkit-font-smoothing:antialiased}
 nav.top a{color:#a8a8a8;text-decoration:none;transition:color .15s;padding:12px 4px;margin:-12px -4px;border-radius:2px}
 nav.top a.brand{margin-right:auto;font-size:20px;font-weight:600;letter-spacing:-.01em;color:#f4f4f4}
-nav.top a:hover{color:#7cc8e4}
+nav.top a:hover{color:#b4d0e7}
+nav.top .soon{color:#a8a8a8;cursor:default;position:relative;padding:12px 4px;margin:-12px -4px;border-radius:2px;outline:none}
+nav.top .soon:hover::after,nav.top .soon:focus-visible::after{content:attr(data-soon);position:absolute;top:calc(100% - 4px);left:50%;transform:translateX(-50%);white-space:nowrap;font-size:13px;color:#f1a2c4}
 nav.top a[aria-current]{color:#f4f4f4}
 nav.top a:focus-visible{outline:1px solid #a8a8a8;outline-offset:3px}
 footer.wrap{box-sizing:border-box;display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap;
@@ -74,7 +76,7 @@ footer.wrap .more{display:flex;gap:26px;flex-wrap:wrap}
 @media (max-width:719px){
   /* a font wider than the mac's (a linux machine's) wraps the row instead of pushing it past the screen */
   nav.top{height:auto;min-height:56px;flex-wrap:wrap;row-gap:0;gap:0 15px;padding:0 16px}
-  nav.top a{font-size:15px;padding:14px 7px;margin:-14px -7px}
+  nav.top a,nav.top .soon{font-size:15px;padding:14px 7px;margin:-14px -7px}
   nav.top a.brand{font-size:17px}
   footer.wrap{padding:72px 16px 48px}
   /* the turkish labels are longer: the gaps give way first, so the row still fits */

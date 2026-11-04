@@ -30,6 +30,8 @@ CHIPS = [  # class, href, label (en), label (tr)
     ("c-sim", "/dewfpga/sim/", "simulator", "simülatör"),
     ("c-github", "https://github.com/nosey-dewdrop/dewfpga", "github", "github"),
 ]
+# chips shown but not linked yet, with what their hover says
+SOON = {"c-sim": {"en": "coming soon!", "tr": "yakında!"}}
 # the footer's second half: the pages the nav leaves out, and the other language
 MORE = {
     "en": [("/dewfpga/why/", "why", None), ("/dewfpga/patch-notes/", "patch notes", None), ("/dewfpga/tr/", "türkçe", "tr")],
@@ -70,6 +72,10 @@ def render(lang="en", active=None):
         raise ValueError(f"unknown chip {active!r}")
     out = ['<nav class="top" aria-label="Site">', f'  <a class="brand" href="{BRAND[lang]}">dewfpga</a>']
     for cls, href, en, tr in CHIPS:
+        if cls in SOON:
+            # not a link yet: the page stays (its address, the sitemap), the nav says when
+            out.append(f'  <span class="{cls} soon" tabindex="0" aria-disabled="true" data-soon="{SOON[cls][lang]}">{tr if lang == "tr" else en}</span>')
+            continue
         attrs = f'class="{cls}" href="{href}"'
         if lang == "tr":
             attrs += ' hreflang="en"'
