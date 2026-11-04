@@ -241,6 +241,14 @@ sim_wave() {
     && ! "$CLI" sim tb_and --no-open > out 2>&1 && grep -q '^ERROR \[unknown-option\]: --no-open goes with --wave' out
 }
 check "sim --wave: Surfer, browser, both, after the run (--no-open here); one line names the simulator and its version; both viewers start with the testbench's signals, not its checking" sim_wave
+# a run that stops at a compile error recorded nothing: the .vcd of the run before is not reported, nor opened, as its
+# waveform (it was, and --wave showed the old traces of a design that no longer compiles)
+sim_wave_stale() {
+    sim_wave && sed -i.orig 's/assign y = a & b;/assign y = a &;/' lab.sv && [ -s tb_and.vcd ] \
+    && ! "$CLI" sim tb_and --wave=browser --no-open > out 2>&1 && grep -q 'ERROR \[iverilog-refused\]' out && ! grep -q '^waveform' out && [ ! -e tb_and.vcd ] \
+    && ! "$CLI" sim tb_and > out 2>&1 && ! grep -q '^waveform' out
+}
+check "sim --wave after a compile error: no waveform, the one of the run before is not shown as this run's" sim_wave_stale
 check "waveform viewer: VCD parser, radix formatting and the first view (the browser's and Surfer's) on iverilog's dump" "node '$ROOT/test/wave/test-wave.js'"
 # shellcheck disable=SC2016   # $stop is Verilog
 check 'testbench ending with $stop -> sim ends, PASS line, exit 0' "mkdir -p '$T/stp' && cp '$ROOT/templates/blink.sv' '$T/stp/' && sed 's/[\$]finish;/\$stop;/' '$ROOT/templates/blink_tb.sv' > '$T/stp/blink_tb.sv' && grep -q 'stop;' '$T/stp/blink_tb.sv' && cd '$T/stp' && '$CLI' sim >out 2>&1 && grep -q '^PASS: 3 checks' out && grep -q 'blink_tb.sv:35: \$stop called' out"

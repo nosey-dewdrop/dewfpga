@@ -411,11 +411,11 @@ cmd_build() {  # <target> [top]
     local trailer='/^make: \*\*\* \[[^]]*\] Error [0-9]+$/d'
     if [ "$target" = sim ]; then
         DEWFPGA_TMP=$(mktemp -t dewfpga); trap 'rm -f "$DEWFPGA_TMP"' EXIT
-        local rc=0
+        local rc=0; [ -z "$wave" ] || rm -f "$wave"
         make -s -f "$HERE/templates/Makefile" TOP="$top" SRCS="${srcs[*]}" TB="$tb" XDC="$xdc" INCDIRS="${INCDIRS[*]}" CHECKER="$HERE/templates/check_xdc.py" "${wavevars[@]}" sim 2> "$DEWFPGA_TMP" || rc=$?
         sed -E "$trailer" "$DEWFPGA_TMP" >&2
-        # the recipe removes the .vcd before the run, so one that is there now is this run's, a failing
-        # testbench's too: that is the waveform to look at, as Vivado shows it after an $error
+        # the .vcd that is there now is this run's (removed before make, so a run that stops at a compile error leaves
+        # none to mistake for its own), a failing testbench's too: the waveform to look at, as Vivado shows it after an $error
         if [ -n "$wave" ] && [ -s "$wave" ]; then
             # dewfpga sim --wave / dewfpga wave print the line themselves, with the viewer it opened in
             if [ -n "${DEWFPGA_WAVE_OUT:-}" ]; then printf '%s\n%s\n' "$wave" "$(icarus)" > "$DEWFPGA_WAVE_OUT"
