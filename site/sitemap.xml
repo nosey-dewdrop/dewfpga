@@ -95,6 +95,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/async-reset-polarity/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/bad-sim-time/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/board-not-found/</loc>
     <lastmod>2026-09-20</lastmod>
   </url>
@@ -240,6 +243,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/no-top-module/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/no-waveform/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/no-xdc-file/</loc>
   </url>
   <url>
@@ -296,6 +302,9 @@
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-from-build/</loc>
   </url>
   <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-run-time/</loc>
+  </url>
+  <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/sim-starts-as-board/</loc>
   </url>
   <url>
@@ -309,6 +318,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/testbench-error/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/timing-not-met/</loc>
@@ -327,6 +339,9 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/two-assign-drivers/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/two-testbenches/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/two-tops/</loc>
@@ -390,6 +405,18 @@
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/vscode-tasks-write-failed/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/wave-viewer-missing/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/waveform-not-opened/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/</loc>
+  </url>
+  <url>
+    <loc>https://nosey-dewdrop.github.io/dewfpga/errors/waveform-unreadable/</loc>
   </url>
   <url>
     <loc>https://nosey-dewdrop.github.io/dewfpga/errors/wired-net/</loc>
