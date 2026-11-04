@@ -692,6 +692,19 @@ def needed(clicked, siblings):
         for p in ups: seen.add(p); out |= above(p, seen)
         return out
     start = [n for n in design if mods[n]["file"] == clicked]
+    tbs = [n for n in order if mods[n]["file"] == clicked and mods[n]["tb"]]
+    if not start and tbs:
+        # a testbench file: Run builds a design for the board, so it names the design the testbench tests, and sim
+        here = lambda f: os.path.dirname(os.path.abspath(f)) == os.getcwd()
+        rel = lambda f: os.path.basename(f) if here(f) else os.path.abspath(f)
+        duts = [c for c in inst[tbs[0]] if c in mods and not mods[c]["tb"]]
+        sim = f"dewfpga sim {tbs[0]}" if here(clicked) else f"cd {os.path.dirname(os.path.abspath(clicked))} && dewfpga sim {tbs[0]}"
+        what = (f"run the design it tests:  dewfpga run {rel(mods[duts[0]]['file'])}   (" if duts
+                else f"run the file that holds the design ({tbs[0]} instantiates none of this folder's), ")
+        print("ERROR=" + msg("ERROR", "top-is-a-testbench", f"{os.path.basename(clicked)} holds a testbench ({tbs[0]}, a module without "
+                             "ports), and Run builds a design for the board: a testbench has no pins to put on it.",
+                             what + f"its simulation:  {sim}" + (")" if duts else "") + ".", f"{clicked}:{mods[tbs[0]]['line']}"))
+        return 0
     tops = set().union(*(above(n, {n}) for n in start)) if start else set()
     top = ""
     if start and not any(mods[n]["file"] == clicked for n in tops) and len(tops) == 1:

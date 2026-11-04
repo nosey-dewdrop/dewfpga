@@ -32,17 +32,23 @@
 </nav>
 
 <main class="wrap">
-  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga sim / bit, the source scan before the tools run</p>
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">bit</span>dewfpga bit / flash, or dewfpga run on a testbench file, the source scan before the tools run</p>
   <h1 class="mono">blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink.</h1>
 <pre><code>blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink. https://nosey-dewdrop.github.io/dewfpga/errors/top-is-a-testbench/</code></pre>
+<p><code>dewfpga run</code> on a testbench file says the same, with the design's file:</p>
+<pre><code>decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), and Run builds a design for the board: a testbench has no pins to put on it. Fix: run the design it tests:  dewfpga run decoder2to4.sv   (its simulation:  dewfpga sim decoder2to4_tb). https://nosey-dewdrop.github.io/dewfpga/errors/top-is-a-testbench/</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
-<p>A module without ports has nothing to connect to a pin; the CLI treats it as a testbench for the design it instantiates.</p>
+<p>A module without ports has nothing to connect to a pin; the CLI treats it as a testbench for the design it instantiates. A bitstream is built from the design, and the testbench is what <code>dewfpga sim</code> runs.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Build the design, by its module or its file:</p>
 <pre data-copy="1"><code>dewfpga bit blink</code></pre>
+<p>Simulate the testbench:</p>
+<pre data-copy="1"><code>dewfpga sim blink_tb</code></pre>
 <h2 id="which-command-prints-it">Which command prints it?</h2>
 <ul>
-<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+<li><a href="/dewfpga/cli/run/"><code>dewfpga run</code></a></li>
 <li><a href="/dewfpga/cli/bit/"><code>dewfpga bit</code></a></li>
+<li><a href="/dewfpga/cli/flash/"><code>dewfpga flash</code></a></li>
 </ul>
 </main>
 

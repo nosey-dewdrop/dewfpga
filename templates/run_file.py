@@ -173,6 +173,10 @@ def main():
                               and not p.name.startswith(".") and p.is_file() and p != source)
             found = subprocess.run([sys.executable, str(HERE / "check_xdc.py"), "--needed", str(source)]
                                    + [str(p) for p in siblings], capture_output=True, text=True)
+            stop = [v for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "ERROR"]
+            if stop:
+                print(stop[0], file=sys.stderr)
+                sys.exit(1)
             uses = [Path(v) for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "FILE"]
             walked = next((v for k, _, v in (l.partition("=") for l in found.stdout.splitlines()) if k == "TOP"), "")
             staged_names, mapping = stage_source(source, work, [p for p in uses if p != source])

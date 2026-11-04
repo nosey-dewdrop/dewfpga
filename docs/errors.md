@@ -821,7 +821,7 @@ dewfpga bit counter
 
 ## top-is-a-testbench
 step: bit
-source: dewfpga sim / bit, the source scan before the tools run
+source: dewfpga bit / flash, or dewfpga run on a testbench file, the source scan before the tools run
 title: blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink.
 summary: The module named on the command line has no ports, so it is a testbench; a bitstream needs a design with ports.
 date: 2026-09-27
@@ -830,14 +830,28 @@ date: 2026-09-27
 blink_tb.sv:6: ERROR [top-is-a-testbench]: blink_tb is a testbench (it has no ports), not a design. Fix: name a design module instead:  dewfpga bit blink. https://nosey-dewdrop.github.io/dewfpga/errors/top-is-a-testbench/
 ```
 
+`dewfpga run` on a testbench file says the same, with the design's file:
+
+```
+decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), and Run builds a design for the board: a testbench has no pins to put on it. Fix: run the design it tests:  dewfpga run decoder2to4.sv   (its simulation:  dewfpga sim decoder2to4_tb). https://nosey-dewdrop.github.io/dewfpga/errors/top-is-a-testbench/
+```
+
 ## Why does it happen?
 
-A module without ports has nothing to connect to a pin; the CLI treats it as a testbench for the design it instantiates.
+A module without ports has nothing to connect to a pin; the CLI treats it as a testbench for the design it instantiates. A bitstream is built from the design, and the testbench is what `dewfpga sim` runs.
 
 ## What is the fix?
 
+Build the design, by its module or its file:
+
 ```copy
 dewfpga bit blink
+```
+
+Simulate the testbench:
+
+```copy
+dewfpga sim blink_tb
 ```
 
 ## no-such-module

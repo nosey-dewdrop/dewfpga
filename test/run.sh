@@ -342,6 +342,20 @@ tb_without_design() {
        done
 }
 check "sim: the only testbench instantiates no design -> testbench-without-design with no name, the design's name or its own, never a pass" tb_without_design
+# dewfpga run on a testbench file said to put the design in a .sv file in this folder, which it was: it names the
+# design's file for run and the testbench for sim, from the folder and from elsewhere (then with full paths)
+# shellcheck disable=SC2016   # $display and $finish are Verilog
+run_testbench_file() {
+    rm -rf "$T/rtb" && mkdir -p "$T/rtb" && cd "$T/rtb" \
+    && printf 'module decoder2to4(input logic [1:0] a, output logic [3:0] y);\n  assign y = 4'"'"'b0001 << a;\nendmodule\n' > decoder2to4.sv \
+    && printf 'module decoder2to4_tb;\n  logic [1:0] a; logic [3:0] y;\n  decoder2to4 dut(.a(a), .y(y));\n  initial begin a = 1; #1 $display("%%b", y); $finish; end\nendmodule\n' > decoder2to4_tb.sv \
+    && ! "$CLI" run decoder2to4_tb.sv --build-only > out 2>&1 && ! grep -q 'no-design-module' out \
+    && grep -qF "$PWD/decoder2to4_tb.sv:1: ERROR [top-is-a-testbench]: decoder2to4_tb.sv holds a testbench (decoder2to4_tb, a module without ports), and Run builds a design for the board" out \
+    && grep -qF 'Fix: run the design it tests:  dewfpga run decoder2to4.sv   (its simulation:  dewfpga sim decoder2to4_tb).' out \
+    && cd "$T" && ! "$CLI" run "$T/rtb/decoder2to4_tb.sv" --build-only > rtb/out2 2>&1 \
+    && grep -qF "dewfpga run $(cd rtb && pwd -P)/decoder2to4.sv   (its simulation:  cd $(cd rtb && pwd -P) && dewfpga sim decoder2to4_tb)" rtb/out2
+}
+check "run on a testbench file -> top-is-a-testbench naming the design's file to run and the testbench to sim, not no-design-module" run_testbench_file
 # two clocks: a divided clock the student named (slow) clocks a counter; the pnr line reports each clock by name
 two_clocks() {
     mkdir -p "$T/2c" && cd "$T/2c" && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic slow = 0; always_ff @(posedge clk) slow <= ~slow;\n  logic [15:0] c = 0; always_ff @(posedge slow) c <= c + sw;\n  assign led = c;\nendmodule\n' > top.sv \
