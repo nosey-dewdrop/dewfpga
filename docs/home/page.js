@@ -33,6 +33,11 @@ function inkRight(g, y0, y1, xMax) {
   }
   return m;
 }
+// the largest font size whose 1.16 line is a whole number of pixels
+function lineSnap(fs) {
+  return Math.max(4, Math.floor(fs * 1.16 + 1e-6)) / 1.16;
+}
+
 function inkTop(g, x0) {
   for (let y = 0; y < g.rows; y++) {
     for (let x = Math.max(0, x0); x < g.cols; x++) {
@@ -117,9 +122,12 @@ function boot() {
       // takes the bottom of the screen
       // (a window not yet sized, as when safari is still opening, counts as tall enough)
       const wf = availW / (124 * adv);
-      fs = H > 420 ? Math.max(wf * 0.6, Math.min(wf, (H - navH - 176) / (90 * 1.16))) : wf;
+      fs = lineSnap(H > 420 ? Math.max(wf * 0.6, Math.min(wf, (H - navH - 176) / (90 * 1.16))) : wf);
     } else {
       fs = Math.min(availW / (300 * adv), (H - navH - 10) / (88 * 1.16));
+      // a whole-pixel line: safari lays a pre's lines at whole pixels (7.59px lines are drawn
+      // 7px apart), so a fractional one makes its drawing shorter than the layout measures
+      fs = lineSnap(fs);
       const cols = Math.max(300, Math.min(480, Math.floor(availW / (adv * fs))));
       spec = { cols, rows: 88, base: 300 };
     }
@@ -194,7 +202,7 @@ function boot() {
     const bcols = mobile ? 150 : 168, bw2 = mobile ? colW * 1.75 : colW;
     const brows = board.rowsFor(bcols, mobile);
     // the whole board in one window's height, switches included
-    const bfs = Math.min(bw2 / (bcols * adv), mobile ? 99 : (H - 120) / (brows * 1.16));
+    const bfs = lineSnap(Math.min(bw2 / (bcols * adv), mobile ? 99 : (H - 120) / (brows * 1.16)));
     const bpre = document.getElementById('boardPre'), layer = document.getElementById('boardLayer');
     setGrid(bpre, bcols, brows, bfs, adv);
     layer.style.fontSize = bfs.toFixed(3) + 'px';
@@ -269,8 +277,7 @@ function boot() {
       const si = FLOW_STEPS.findIndex(([a, b]) => v.span[0] + 0.02 >= a && v.span[0] + 0.02 < b);
       capEls.forEach((c, k) => c.classList.toggle('on', k === si));
       const h = caps.getBoundingClientRect().height;
-      const mid = top + M.preH * 0.42 - h / 2;
-      const ctop = Math.max(M.navH, Math.min(mid, (M.capsFloor || 1e9) - h));
+      const ctop = Math.max(M.navH + 16, Math.min(top + Math.round(M.preH * 0.12), (M.capsFloor || 1e9) - h));
       const y = ctop + h + 30;
       // the first inked row below it in the caption's column, over the picture's frames
       let floor = Math.min(innerHeight - 12, top + M.preH);
@@ -300,14 +307,16 @@ function boot() {
     vis.size(regions, M.adv);
   }
 
-  // the caption block sits in the middle of the frame's height, or under the drawing on a phone
+  // the caption block starts level with the laptop's screen, or sits under the drawing on a phone
   function placeCaps() {
     if (!M || M.mobile) {
       return;
     }
+    // the words start level with the laptop's screen, so the picture under them has room and
+    // the right side fills the frame from its top, not from its middle
     const h = caps.getBoundingClientRect().height;
-    const mid = M.top + (M.drop || 0) + M.preH * 0.42 - h / 2;
-    caps.style.top = Math.max(M.navH, Math.min(mid, (M.capsFloor || 1e9) - h)) + 'px';
+    const top = M.top + (M.drop || 0) + Math.round(M.preH * 0.12);
+    caps.style.top = Math.max(M.navH + 16, Math.min(top, (M.capsFloor || 1e9) - h)) + 'px';
   }
 
   function progress() {
