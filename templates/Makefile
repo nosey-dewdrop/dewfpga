@@ -131,7 +131,7 @@ GOALS := $(or $(MAKECMDGOALS),all)
 # $(call fresh,<deps file>,<file list and checksums>,<the stage's output>)
 fresh = $(shell l="$(2)"; { [ -f $(1) ] && [ "$$(cat $(1))" = "$$l" ]; } || { echo "$$l" > $(1); rm -f $(3); })
 ifneq (,$(filter sim,$(GOALS)))
-$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | $(TBTOP) $(TBONLY) $(WAVE) $(WAVEOWN) $(RUNTO) $(TSDEF) $(WAVELIMIT) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP)_sim)
+$(call fresh,$(TOP)_sim.deps,$(SRCS) | $(TB) | $(SIM_DEPS) | tb=$(TBTOP) only=$(TBONLY) wave=$(WAVE) own=$(WAVEOWN) runto=$(RUNTO) tsdef=$(TSDEF) limit=$(WAVELIMIT) | $(shell $(SUM) $(SRCS) $(TB) $(SIM_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP)_sim)
 endif
 ifeq (,$(filter sim clean check,$(GOALS)))
 $(call fresh,$(TOP).deps,$(SRCS) | $(SRC_DEPS) | $(shell $(SUM) $(SRCS) $(SRC_DEPS) $(BUILD_INPUTS) 2>/dev/null),$(TOP).json)
@@ -782,6 +782,7 @@ flash: $(TOP).bit
 	    if grep -q 'unable to open ftdi device' $(TOP)_flash.out; then echo "ERROR [board-not-found]: board not found by openFPGALoader: it could not open the Basys3 USB interface. Fix: check power and the PROG data cable; if macOS lists the Digilent device, check whether this process can access USB. A failed open does not prove the board is unplugged. $(URL)board-not-found/" >&2; \
 	    else echo "ERROR [openfpgaloader-failed]: openFPGALoader stopped with exit $$rc (its message is above). Fix: read the lines above; a board that answers but refuses the bitstream usually needs the power switched off and on. $(URL)openfpgaloader-failed/" >&2; fi; exit 1; fi
 
+# the .vcd dewfpga recorded (own=0 in the last run's signature, $(TOP)_sim.deps), never one the testbench writes itself
 clean:
-	rm -f $(TOP)_wave.v $(if $(WAVEREC),$(WAVE)) $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_regs.json $(TOP)_start.sv $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
+	rm -f $(TOP)_wave.v $(if $(WAVEREC),$(WAVE)) $$(sed -n 's/.* wave=\([^ |]*\) own=0 .*/\1/p' $(TOP)_sim.deps 2>/dev/null) $(TOP)_sim $(TOP)_sim.out $(TOP)_sim.err $(TOP)_sim.elab $(TOP)_sim.bld $(TOP)_sim.deps $(TOP)_regs.json $(TOP)_start.sv $(TOP)_flash.out $(TOP).vcd $(TOP).json $(TOP)_routed.json \
 	      $(TOP).deps $(TOP).pins.deps $(TOP).il $(TOP).il.tmp $(TOP).rv.out $(TOP).sl.out $(TOP).slang.log $(TOP).yosys.log $(TOP).fasm $(TOP).frames $(TOP).bit $(TOP).log $(TOP).autopins
