@@ -1,8 +1,12 @@
-// The waveform viewer's parser and value formatting, on a dump written the way iverilog writes one
-// (templates/wave/wave.js; node test/wave/test-wave.js, exit 1 on the first wrong value).
+// The waveform viewer's parser and value formatting, on a dump written the way iverilog writes one, and the first
+// view both viewers open with: the browser page's (wave.js startVars) and Surfer's (surfer_wave.py, its commands)
+// (templates/wave/; node test/wave/test-wave.js, exit 1 on the first wrong value).
 'use strict';
 const path = require('path');
 const assert = require('assert');
+const fs = require('fs');
+const os = require('os');
+const { execFileSync } = require('child_process');
 require(path.join(__dirname, '..', '..', 'templates', 'wave', 'wave.js'));
 const W = globalThis.DewWave;
 
@@ -78,4 +82,74 @@ assert.strictEqual(empty.vars.length, 0);
 assert.strictEqual(empty.end, 10);
 assert.strictEqual(empty.tick, 1e-9);
 
-console.log('wave viewer: parse and format ok (' + d.vars.length + ' variables, ' + [...d.sigs.values()].reduce((n, s) => n + s.t.length, 0) + ' changes)');
+// *-*-*-*-*-*-*-*-*-*-*-* the first view: the testbench's own signals, not its checking *-*-*-*-*-*-*-*-*-*-*-*
+// a lab testbench as iverilog dumps it: its stimulus and response, an errors counter, expected values, a parameter,
+// a for loop's int (in iverilog's $ivl_for_loop scope), the design under it, which has an `error` output of its own
+const lab = [
+  '$timescale', '\t1ps', '$end',
+  '$scope module tb_room $end',
+  '$var parameter 32 ! N $end',
+  '$var reg 8 " sensor [7:0] $end',
+  '$var wire 1 # alarm $end',
+  '$var integer 32 $ errors [31:0] $end',
+  '$var integer 32 % error_count [31:0] $end',
+  '$var integer 32 & checks [31:0] $end',
+  '$var reg 1 \' exp_alarm $end',
+  '$var reg 1 ( expected $end',
+  '$var reg 1 ) expectedAlarm $end',
+  '$var reg 1 * Errors $end',
+  '$var reg 1 + errorsx $end',
+  '$scope module dut $end',
+  '$var wire 8 " sensor [7:0] $end',
+  '$var wire 1 # alarm $end',
+  '$var wire 1 , error $end',
+  '$scope module u_cmp $end',
+  '$var wire 1 - gt $end',
+  '$upscope $end',
+  '$upscope $end',
+  '$scope task check $end',
+  '$var reg 1 . ok $end',
+  '$upscope $end',
+  '$scope begin $ivl_for_loop0 $end',
+  '$var integer 32 / i [31:0] $end',
+  '$upscope $end',
+  '$upscope $end',
+  '$enddefinitions $end',
+  '#0', '$dumpvars', 'b0 "', '0#', '$end',
+  ...Array.from({ length: 2047 }, (_, k) => ['#' + (k + 1) * 1000, 'b' + ((k + 1) & 255).toString(2) + ' "']).flat(),
+].join('\n') + '\n';
+const ld = W.parseVcd(lab);
+const start = W.startVars(ld);
+assert.strictEqual(start.scope.path, 'tb_room', 'the first view is the testbench');
+assert.deepStrictEqual(start.vars.map((v) => v.name), ['sensor', 'alarm', 'errorsx'],
+  'its own signals; no parameter, no errors/error_count/checks/exp_/expected counter or value, no loop variable');
+const room = ld.top.children[0];
+const byName = (sc, n) => sc.vars.find((v) => v.name === n);
+assert.strictEqual(W.testOnly(byName(room, 'Errors')), true, 'the rule ignores case');
+assert.strictEqual(W.testOnly(byName(room, 'errorsx')), false, 'a longer name is a signal');
+assert.strictEqual(W.testOnly(byName(room.children[0], 'error')), false, 'a design signal named error stays: the rule is the testbench\'s');
+assert.strictEqual(W.testOnly(byName(room.children[0], 'alarm')), false);
+
+// Surfer's first view from the same dump: the same signals (surfer_wave.py reads wave.js's rule), the design as a
+// folded group per instance under the testbench (not the task, not the loop), then the zoom to the first steps
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dewfpga-test-wave-'));
+try {
+  const file = path.join(dir, 'tb_room.vcd');
+  fs.writeFileSync(file, lab);
+  const py = 'import sys; sys.path.insert(0, sys.argv[1]); import surfer_wave; print(surfer_wave.commands(sys.argv[2]), end="")';
+  const cmds = execFileSync('python3', ['-c', py, path.join(__dirname, '..', '..', 'templates', 'wave'), file], { encoding: 'utf8' }).split('\n');
+  const added = cmds.filter((c) => c.startsWith('variable_add ')).map((c) => c.slice('variable_add '.length));
+  assert.deepStrictEqual(added, start.vars.map((v) => v.path), 'Surfer starts with the signals the page starts with');
+  assert.deepStrictEqual(cmds.filter((c) => c.startsWith('scope_add_as_group_recursive ')), ['scope_add_as_group_recursive tb_room.dut']);
+  assert.deepStrictEqual(cmds.slice(added.length + 1, added.length + 3), ['group_fold_all', 'zoom_fit']);
+  // 2048 steps of 1 ns: the first 32 end at 31 ns, the run at 2047 ns, 2^6 of them; six zoom_in show the first 32
+  assert.strictEqual(cmds.filter((c) => c === 'zoom_in').length, 6, 'zoomed in to the first steps');
+  assert.strictEqual(cmds[cmds.length - 2], 'scroll_to_start');
+  // a dump with no declarations is refused, not opened empty
+  fs.writeFileSync(file, '$timescale 1ns $end\n#10\n');
+  assert.throws(() => execFileSync('python3', ['-c', py, path.join(__dirname, '..', '..', 'templates', 'wave'), file], { stdio: 'pipe' }));
+} finally {
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+console.log('wave viewer: parse, format and the first view ok (' + d.vars.length + ' variables, ' + [...d.sigs.values()].reduce((n, s) => n + s.t.length, 0) + ' changes)');

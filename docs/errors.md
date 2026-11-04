@@ -1455,7 +1455,7 @@ summary: The .vcd is too large for the browser page; record a shorter run or few
 date: 2026-11-04
 
 ```
-ERROR [waveform-too-large]: dump.vcd is 300 MB, more than a browser page holds (256 MB). Fix: record less (a shorter run, SIM_TIME=2us dewfpga sim) or fewer signals ($dumpvars(1, tb) records only the testbench's own). https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/
+ERROR [waveform-too-large]: dump.vcd is 300 MB, more than a browser page holds (256 MB). Fix: record less (a shorter run, SIM_TIME=2us dewfpga sim) or fewer signals ($dumpvars(1, tb) records only the testbench's own), or open it in Surfer:  dewfpga sim --wave https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/
 ```
 
 ## Why does it happen?
@@ -1464,7 +1464,7 @@ The waveform page carries the whole .vcd. dewfpga sim stops its own recording at
 
 ## What is the fix?
 
-Simulate a shorter time (`SIM_TIME=2us dewfpga sim`), shrink the count in simulation, or record fewer signals: `$dumpvars(1, tb)` records the testbench's own signals only. Without the testbench's `$dumpvars`, dewfpga records the run itself, up to 64 MB.
+Simulate a shorter time (`SIM_TIME=2us dewfpga sim`), shrink the count in simulation, or record fewer signals: `$dumpvars(1, tb)` records the testbench's own signals only. Without the testbench's `$dumpvars`, dewfpga records the run itself, up to 64 MB. Surfer reads a file of any size: `dewfpga sim --wave` opens it there.
 
 ## waveform-not-opened
 step: wave
@@ -1484,6 +1484,58 @@ dewfpga wave writes one HTML file and opens it with `open` (macOS) or `xdg-open`
 ## What is the fix?
 
 Open the path it prints in any browser.
+
+## wave-viewer-missing
+step: wave
+source: dewfpga sim --wave
+title: ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it.
+summary: dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.
+date: 2026-11-04
+
+```
+ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim tb_mux2 --wave=browser https://nosey-dewdrop.github.io/dewfpga/errors/wave-viewer-missing/
+```
+
+## Why does it happen?
+
+`dewfpga sim --wave` (and `--wave=both`) open the waveform in [Surfer](https://surfer-project.org/), a waveform viewer that is installed on its own. dewfpga looks for it before the simulation runs, so nothing is simulated for a window that cannot open.
+
+## What is the fix?
+
+Install Surfer, then run the same command again:
+
+```copy
+brew install surfer
+```
+
+Or open the waveform in the browser page instead, which needs nothing installed:
+
+```copy
+dewfpga sim --wave=browser
+```
+
+## waveform-unreadable
+step: wave
+source: dewfpga sim --wave, dewfpga wave
+title: ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long.
+summary: The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.
+date: 2026-11-04
+
+```
+ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave https://nosey-dewdrop.github.io/dewfpga/errors/waveform-unreadable/
+```
+
+## Why does it happen?
+
+A VCD starts with its declarations (the scopes and signals) and `$enddefinitions`, then the values. The viewers read the declarations first, to choose what to show; a file without them is another format, an empty file, or a dump cut off before its declarations ended. A file that cannot be read at all (no permission) gets this error too, with the system's reason.
+
+## What is the fix?
+
+Run the simulation again and open what it records:
+
+```copy
+dewfpga sim --wave
+```
 
 ## sim-exit
 step: sim

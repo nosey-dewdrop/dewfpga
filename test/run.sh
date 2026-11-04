@@ -178,6 +178,8 @@ check "FPGA_HOME with a space -> path-with-space, before any command" "cd '$T/w'
 check "UTF-8 BOM -> error names line 1 and the sed that strips it" "mkdir -p '$T/bom' && printf '\\xEF\\xBB\\xBF' > '$T/bom/blink.sv' && cat '$ROOT/templates/blink.sv' >> '$T/bom/blink.sv' && cp '$ROOT/templates/blink.xdc' '$T/bom/' && cd '$T/bom' && ! '$CLI' bit >out 2>&1 && grep -q '^blink.sv:1: ERROR \[utf8-bom\]: blink.sv starts with a byte-order mark' out && grep -q \"sed -i '' \" out && [ ! -e blink.bit ]"
 # shellcheck disable=SC2016   # $finish and $stop are Verilog
 check 'testbench whose $finish is never reached -> sim-timeout, names SIM_TIMEOUT' "mkdir -p '$T/tmo' && cp '$ROOT/templates/blink.sv' '$T/tmo/' && printf 'module blink_tb;\\n logic clk = 0; logic [15:0] sw = 0; logic [15:0] led;\\n blink dut(.clk(clk), .sw(sw), .led(led));\\n always #5 clk = ~clk;\\n initial begin wait (led[15] === 1); \$finish; end\\nendmodule\\n' > '$T/tmo/blink_tb.sv' && cd '$T/tmo' && ! SIM_TIMEOUT=2 '$CLI' sim >out 2>&1 && grep -q '^ERROR \[sim-timeout\]: the simulation did not finish in 2 s: the testbench never reached \$finish' out && grep -q 'SIM_TIMEOUT=600 dewfpga sim' out"
+# the simulator as its binary names itself, for the waveform line: "Icarus Verilog 13.0 (stable)"
+ICARUS="Icarus Verilog $(vvp -V 2>&1 | awk 'NR == 1 { print $5, $6 }' || true)"
 # Vivado's Run Simulation runs 1000 ns and records every signal: a testbench written for it has a free-running clock,
 # no $finish and no $dumpvars. dewfpga sim stops it at the same 1000 ns (SIM_TIME moves it), says so, and records
 # <tb>.vcd; the recording module and the 1ns/1ps default never reach the folder.
@@ -186,7 +188,7 @@ vivado_clock_tb() {
     rm -rf "$T/vct" && mkdir -p "$T/vct" && cp "$ROOT/templates/blink.sv" "$T/vct/" && cd "$T/vct" \
     && printf 'module blink_tb;\n logic clk = 0; logic [15:0] sw = 1; logic [15:0] led;\n blink dut(.clk(clk), .sw(sw), .led(led));\n always #5 clk = ~clk;\nendmodule\n' > blink_tb.sv \
     && "$CLI" sim > out 2>&1 && grep -q '^note \[sim-run-time\]: the simulation stopped at 1000 ns, where Vivado.s Run Simulation stops: blink_tb has a clock that never stops and no \$finish' out \
-    && grep -q '^waveform: blink_tb.vcd (dewfpga wave blink_tb opens it)$' out && grep -qx '#1000000' blink_tb.vcd && grep -q '^\$var reg 1 . clk \$end' blink_tb.vcd \
+    && grep -qxF "waveform: blink_tb.vcd, simulated by $ICARUS; dewfpga sim blink_tb --wave opens it" out && grep -qx '#1000000' blink_tb.vcd && grep -q '^\$var reg 1 . clk \$end' blink_tb.vcd \
     && [ ! -e blink_wave.v ] && SIM_TIME=2.5us "$CLI" sim > out2 2>&1 && grep -q 'stopped at 2500 ns' out2 && grep -qx '#2500000' blink_tb.vcd \
     && ! SIM_TIME=ten "$CLI" sim > out3 2>&1 && grep -q '^ERROR \[bad-sim-time\]: SIM_TIME=ten is not a time' out3
 }
@@ -207,11 +209,39 @@ vivado_lab_layout() {
     && [ "$(grep -c '^\$scope module' tb_and.vcd)" = 2 ] && grep -q '^\$scope module tb_and \$end' tb_and.vcd && grep -qx '#40000' tb_and.vcd \
     && "$CLI" sim inv > out 2>&1 && grep -q '^testbench: tb_inv (it tests inv)$' out && grep -qx 'tb_inv done' out && ! grep -q 'tb_and done' out \
     && [ "$(ls | LC_ALL=C sort | tr '\n' ' ')" = 'and2_sim and2_sim.deps and2_sim.out inv_sim inv_sim.deps inv_sim.out lab.sv out tb tb_and.vcd tb_inv.vcd ' ] \
-    && "$CLI" wave tb_and --no-open > out 2>&1 && page=$(sed -n 's/^waveform: .* -> //p' out) && [ -s "$page" ] && grep -q 'DewWave.mountPage' "$page" && grep -q 'scope module tb_and' "$page" \
+    && "$CLI" wave tb_and --no-open > out 2>&1 && page=$(sed -n 's/^waveform: tb_and.vcd, simulated by .*, not opened (--no-open): //p' out) && [ -s "$page" ] && grep -q 'DewWave.mountPage' "$page" && grep -q 'scope module tb_and' "$page" \
     && ! "$CLI" wave missing.vcd > out 2>&1 && grep -q '^ERROR \[no-waveform\]: missing.vcd does not exist' out
 }
 check "Vivado lab layout: two tops in one file, two testbenches in tb/ -> each runs alone (-s), to its end, 1ns/1ps, its own scope in its .vcd; dewfpga wave writes the page" vivado_lab_layout
-check "waveform viewer: VCD parser and radix formatting on iverilog's dump" "node '$ROOT/test/wave/test-wave.js'"
+# dewfpga sim --wave: Surfer (the default), the browser page, or both, opened after the run; --no-open writes what the
+# viewer gets and opens nothing (no window here). One line says what simulated it and where it went; both viewers
+# start with the testbench's own signals (no errors counter, no exp_/expected value, no loop variable), the design
+# under it to expand. The lab layout: two tops in one file, the parts' testbenches in tb/, a top's testbench beside it
+# shellcheck disable=SC2016   # $error, $display and $finish are Verilog
+sim_wave() {
+    rm -rf "$T/swv" && mkdir -p "$T/swv/tb" && cd "$T/swv" \
+    && printf 'module and2(input logic a, b, output logic y); assign y = a & b; endmodule\nmodule inv(input logic a, output logic y); assign y = ~a; endmodule\nmodule top_and(input logic [15:0] sw, output logic [15:0] led); and2 u(.a(sw[0]), .b(sw[1]), .y(led[0])); assign led[15:1] = 0; endmodule\nmodule top_inv(input logic [15:0] sw, output logic [15:0] led); inv u(.a(sw[0]), .y(led[0])); assign led[15:1] = 0; endmodule\n' > lab.sv \
+    && printf 'module tb_and; logic a, b, y; int errors = 0; and2 dut(.a(a), .b(b), .y(y)); initial begin for (int i = 0; i < 4; i++) begin {a, b} = i; #1; if (y !== (a & b)) errors++; end $display("tb_and: %%0d errors", errors); end endmodule\nmodule tb_inv; logic a, y; inv dut(.a(a), .y(y)); initial begin a = 0; #1; a = 1; #1; end endmodule\n' > tb/lab_tb.sv \
+    && printf '`timescale 1ns/1ps\nmodule top_and_tb;\n  logic [15:0] sw = 0; wire [15:0] led; integer errors = 0; logic exp_led0, expected;\n  top_and dut(.sw(sw), .led(led));\n  initial begin\n    for (integer v = 0; v < 4; v = v + 1) begin sw = v; exp_led0 = sw[0] & sw[1]; expected = exp_led0; #1; if (led[0] !== exp_led0) begin errors = errors + 1; $error("led0"); end #9; end\n    $display("PASS: top_and"); $finish;\n  end\nendmodule\n' > top_and_tb.sv \
+    && "$CLI" sim top_and --wave --no-open > out 2>&1 && grep -qx 'PASS: top_and' out \
+    && grep -qF "waveform: top_and_tb.vcd, simulated by $ICARUS, not opened (--no-open): surfer $PWD/top_and_tb.vcd --command-file " out \
+    && grep -qE '^waveform: .* --command-file [^ ]+/dewfpga-wave/top_and_tb-[0-9a-f]{8}\.sucl$' out \
+    && sucl=$(sed -n 's/^waveform: .* --command-file //p' out) && [ "$(grep '^variable_add' "$sucl" | LC_ALL=C sort | tr '\n' ' ')" = 'variable_add top_and_tb.led variable_add top_and_tb.sw ' ] \
+    && [ "$(grep '^scope_add' "$sucl")" = 'scope_add_as_group_recursive top_and_tb.dut' ] \
+    && grep -qx group_fold_all "$sucl" && [ "$(grep -c '^waveform' out)" = 1 ] && ! grep -qi 'opening\|close the window' out \
+    && node -e 'require(process.argv[1]); const W = globalThis.DewWave, s = W.startVars(W.parseVcd(require("fs").readFileSync(process.argv[2], "utf8"))); process.stdout.write(s.vars.map((v) => "variable_add " + v.path).join(" "))' "$ROOT/templates/wave/wave.js" top_and_tb.vcd > js \
+    && [ "$(cat js)" = "$(grep '^variable_add' "$sucl" | tr '\n' ' ' | sed 's/ $//')" ] \
+    && "$CLI" sim tb_and --wave=browser --no-open > out 2>&1 && grep -qx 'tb_and: 0 errors' out \
+    && page=$(sed -n "s/^waveform: tb_and.vcd, simulated by $ICARUS, not opened (--no-open): //p" out) && [ -s "$page" ] && grep -q 'scope module tb_and' "$page" && ! grep -q 'scope module tb_inv' "$page" \
+    && "$CLI" sim top_and --wave=both --no-open > out 2>&1 && grep -qE "^waveform: top_and_tb.vcd, simulated by .*, not opened \(--no-open\): surfer .*\.sucl and [^ ]+/dewfpga-wave/top_and_tb-[0-9a-f]{8}\.html$" out \
+    && ! PATH=/usr/bin:/bin "$BASH" "$CLI" sim tb_and --wave > out 2>&1 && [ "$(grep -c . out)" = 1 ] \
+    && grep -q '^ERROR \[wave-viewer-missing\]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim tb_and --wave=browser' out \
+    && { PATH=/usr/bin:/bin "$BASH" "$CLI" sim tb_and --wave > /dev/null 2>&1; [ $? = 3 ]; } \
+    && ! "$CLI" sim tb_and --wave=gtkwave > out 2>&1 && grep -q '^ERROR \[unknown-option\]: unknown option: --wave=gtkwave' out \
+    && ! "$CLI" sim tb_and --no-open > out 2>&1 && grep -q '^ERROR \[unknown-option\]: --no-open goes with --wave' out
+}
+check "sim --wave: Surfer, browser, both, after the run (--no-open here); one line names the simulator and its version; both viewers start with the testbench's signals, not its checking" sim_wave
+check "waveform viewer: VCD parser, radix formatting and the first view (the browser's and Surfer's) on iverilog's dump" "node '$ROOT/test/wave/test-wave.js'"
 # shellcheck disable=SC2016   # $stop is Verilog
 check 'testbench ending with $stop -> sim ends, PASS line, exit 0' "mkdir -p '$T/stp' && cp '$ROOT/templates/blink.sv' '$T/stp/' && sed 's/[\$]finish;/\$stop;/' '$ROOT/templates/blink_tb.sv' > '$T/stp/blink_tb.sv' && grep -q 'stop;' '$T/stp/blink_tb.sv' && cd '$T/stp' && '$CLI' sim >out 2>&1 && grep -q '^PASS: 3 checks' out && grep -q 'blink_tb.sv:35: \$stop called' out"
 # a Verilog-2005 testbench in a .v file (reg/wire, no logic): found by content, compiled with the .sv design
@@ -284,7 +314,7 @@ check "sim: a testbench that sets top's parameters on a design iverilog refuses 
 # shellcheck disable=SC2016   # $finish is Verilog
 blink_sim_plain() {
     rm -rf "$T/bs" && mkdir -p "$T/bs" && cp "$ROOT"/templates/{blink.sv,blink.xdc,blink_tb.sv} "$T/bs/" && cd "$T/bs" && "$CLI" sim > out 2>&1 \
-    && printf 'iverilog -g2012 -o blink_sim blink.sv blink_tb.sv\nVCD info: dumpfile blink.vcd opened for output.\nPASS: 3 checks (see the waveform for the toggle)\nblink_tb.sv:35: $finish called at 200000 (1ps)\nwaveform: blink.vcd (dewfpga wave blink_tb opens it)\n' | diff - out \
+    && printf 'iverilog -g2012 -o blink_sim blink.sv blink_tb.sv\nVCD info: dumpfile blink.vcd opened for output.\nPASS: 3 checks (see the waveform for the toggle)\nblink_tb.sv:35: $finish called at 200000 (1ps)\nwaveform: blink.vcd, simulated by %s; dewfpga sim blink_tb --wave opens it\n' "$ICARUS" | diff - out \
     && [ ! -e blink.json ] && [ ! -e blink.il ] && [ ! -e blink_sim.elab ]
 }
 check "sim: blink is iverilog's alone: the same four lines and the waveform line, no note, no build started" blink_sim_plain

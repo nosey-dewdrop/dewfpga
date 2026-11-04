@@ -254,9 +254,25 @@
     return 'v';
   }
 
-  // the testbench's own checking (an errors counter, exp_/expected values): not a signal of the design, so not shown
+  // the testbench's own checking (an errors counter, exp_/expected values): not a signal of the design, so not shown.
+  // Only in a testbench, a scope at the top of the file: a design signal with such a name stays where it is.
+  // templates/wave/surfer_wave.py reads this line for Surfer's first view: one rule for both viewers
+  const TEST_ONLY = /^(errors?|error_count|checks?|exp_\w*|expected\w*)$/i;
   function testOnly(v) {
-    return /^(errors?|exp_\w*|expected\w*)$/i.test(v.name);
+    return !!v.scope && !!v.scope.parent && v.scope.parent.type === 'root' && TEST_ONLY.test(v.name);
+  }
+
+  // what a first open shows, as Vivado does: the testbench's own signals, in the file's order (no parameter, none of
+  // its checking; all of them when that leaves nothing), at most 200. The design below it stays in the Scope pane,
+  // and a for loop's variable sits in its own $ivl_ scope there, which the Scope pane does not list
+  function startVars(d) {
+    let sc = d.top;
+    while (sc.vars.length === 0 && sc.children.length > 0) {
+      const withVars = sc.children.find(function (c) { return c.vars.length > 0; });
+      sc = withVars || sc.children[0];
+    }
+    const pick = sc.vars.filter(function (v) { return v.type !== 'parameter' && !testOnly(v); });
+    return { scope: sc, vars: (pick.length ? pick : sc.vars).slice(0, 200) };
   }
 
   // the last change at or before t, -1 when t is before the first one
@@ -559,15 +575,9 @@
       }
     }
 
-    // what a first open shows, as Vivado does: the signals of the testbench's own scope, in the file's order
     function defaultEntries(d) {
-      let sc = d.top;
-      while (sc.vars.length === 0 && sc.children.length > 0) {
-        const withVars = sc.children.find(function (c) { return c.vars.length > 0; });
-        sc = withVars || sc.children[0];
-      }
-      const pick = sc.vars.filter(function (v) { return v.type !== 'parameter' && !testOnly(v); });
-      return { scope: sc, entries: (pick.length ? pick : sc.vars).slice(0, 200).map(entryFor) };
+      const start = startVars(d);
+      return { scope: start.scope, entries: start.vars.map(entryFor) };
     }
 
     function findScope(path) {
@@ -1768,5 +1778,5 @@
     api.postMessage({ type: 'ready' });
   }
 
-  root.DewWave = { parseVcd: parseVcd, format: format, mount: mount, mountPage: mountPage, mountVsCode: mountVsCode };
+  root.DewWave = { parseVcd: parseVcd, format: format, testOnly: testOnly, startVars: startVars, mount: mount, mountPage: mountPage, mountVsCode: mountVsCode };
 })(typeof window !== 'undefined' ? window : globalThis);

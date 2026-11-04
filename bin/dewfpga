@@ -8,6 +8,8 @@
 #                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
 #                                    In a Vivado project (a folder with one .xpr, or anywhere under its .srcs): the
 #                                    project's enabled files, its top module, its .xdc; outputs land next to the .xpr
+#   dewfpga sim [top|testbench] --wave[=surfer|browser|both] [--no-open]
+#                                    simulate, then open the waveform in Surfer (--wave), the browser page or both
 #   dewfpga tops [--sim]            the modules that could be the top, one per line: <module><tab><file> (reads only);
 #                                    --sim: the testbenches, <testbench><tab><file><tab><the module it tests>
 #   dewfpga wave [top|testbench|file.vcd] [--no-open]
@@ -38,7 +40,7 @@ die()     { local loc=""; case $1 in *:*) loc="$1: "; shift ;; esac; echo "${loc
 note()    { echo "note [$1]: ${*:2} $SITE/$1/"; }
 [[ $HERE != *[[:space:]]* && $FPGA_HOME != *[[:space:]]* ]] || die path-with-space "a path with a space ($HERE / $FPGA_HOME): the FPGA tools cannot handle that. Fix: move the folder to a path without spaces, or set FPGA_HOME to one."
 
-usage()   { sed -n '2,21s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
+usage()   { sed -n '2,23s/^# \{0,1\}//p' "$SELF"; exit "${1:-0}"; }
 version() { sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$HERE/package.json"; }
 
 cmd_check() {
@@ -277,25 +279,43 @@ cmd_tops() {  # the candidates for the top, one per line, <module><tab><file>; t
 
 # dewfpga wave [top|testbench|file.vcd] [--no-open]: the simulation, then its waveform in the browser (the page is
 # one file in $TMPDIR/dewfpga-wave, the .vcd inlined); a .vcd named on the line is opened without simulating.
+# dewfpga sim [top|testbench] --wave[=surfer|browser|both] [--no-open] comes here too: cmd_wave <viewer> [args], the
+# viewer surfer (--wave), browser (dewfpga wave) or both; templates/wave/wave_page.py opens either, the same signals first.
 # A testbench that reports errors still opens: the waveform is where the wrong value is found.
 cmd_wave() {
-    local open="" arg="" a py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3
+    local viewer=$1 open="" arg="" a surfer="" py="$FPGA_HOME/venv/bin/python"; [ -x "$py" ] || py=python3; shift
     for a in "$@"; do
         case $a in
             --no-open) open=--no-open ;;
             -*) die unknown-option "unknown option: $a. Fix: dewfpga wave [top|testbench|file.vcd] [--no-open]" ;;
-            *) [ -z "$arg" ] || die unknown-option "dewfpga wave takes one module or .vcd, not two. Fix: dewfpga wave [top|testbench|file.vcd]"; arg=$a ;;
+            *) [ -z "$arg" ] || die unknown-option "one module or .vcd, not two ($arg, $a). Fix: dewfpga wave [top|testbench|file.vcd]"; arg=$a ;;
         esac
     done
+    # Surfer is looked for before the simulation runs, not after it
+    if [ "$viewer" != browser ] && [ -z "$open" ]; then
+        surfer=$(command -v surfer) || { echo "ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim ${arg:+$arg }--wave=browser $SITE/wave-viewer-missing/" >&2; exit 3; }
+    fi
+    local view=("$py" "$HERE/templates/wave/wave_page.py" --viewer "$viewer" ${surfer:+--surfer "$surfer"} ${open:+"$open"})
     case $arg in
-        *.vcd|*.VCD) exec "$py" "$HERE/templates/wave/wave_page.py" "$arg" $open ;;
+        *.vcd|*.VCD) exec "${view[@]}" "$arg" ;;
     esac
     locate
-    local rc=0; DEWFPGA_WAVE_TMP=$(mktemp -t dewfpga-wave); trap 'rm -f "$DEWFPGA_WAVE_TMP"' EXIT
+    local rc=0 vcd simby; DEWFPGA_WAVE_TMP=$(mktemp -t dewfpga-wave); trap 'rm -f "$DEWFPGA_WAVE_TMP"' EXIT
     ( DEWFPGA_WAVE_OUT=$DEWFPGA_WAVE_TMP cmd_build sim ${arg:+"$arg"} ) || rc=$?
-    if [ -s "$DEWFPGA_WAVE_TMP" ]; then "$py" "$HERE/templates/wave/wave_page.py" "$(cat "$DEWFPGA_WAVE_TMP")" $open || return $?; return "$rc"; fi
+    if [ -s "$DEWFPGA_WAVE_TMP" ]; then
+        { IFS= read -r vcd; IFS= read -r simby; } < "$DEWFPGA_WAVE_TMP"
+        "${view[@]}" --sim "$simby" "$vcd" || return $?
+        return "$rc"
+    fi
     [ "$rc" -ne 0 ] || die no-waveform "the simulation wrote no waveform. Fix: run dewfpga sim and read its last lines."
     return "$rc"
+}
+
+# the simulator that ran, as it names itself: "Icarus Verilog 13.0 (stable)" from vvp's first line
+# ("Icarus Verilog runtime version 13.0 (stable) (v13_0)", on stderr); just "Icarus Verilog" when it says nothing usable
+icarus() {
+    local v; v=$(vvp -V 2>&1 | sed -n '1s/^Icarus Verilog runtime version \([^ ]*\)\( ([a-z]*)\)\{0,1\}.*/\1\2/p') || true
+    echo "Icarus Verilog${v:+ $v}"
 }
 
 cmd_build() {  # <target> [top]
@@ -397,8 +417,9 @@ cmd_build() {  # <target> [top]
         # the recipe removes the .vcd before the run, so one that is there now is this run's, a failing
         # testbench's too: that is the waveform to look at, as Vivado shows it after an $error
         if [ -n "$wave" ] && [ -s "$wave" ]; then
-            echo "waveform: $wave (dewfpga wave ${tbtop:-$top} opens it)"
-            [ -z "${DEWFPGA_WAVE_OUT:-}" ] || printf '%s\n' "$PWD/$wave" > "$DEWFPGA_WAVE_OUT"
+            # dewfpga sim --wave / dewfpga wave print the line themselves, with the viewer it opened in
+            if [ -n "${DEWFPGA_WAVE_OUT:-}" ]; then printf '%s\n%s\n' "$wave" "$(icarus)" > "$DEWFPGA_WAVE_OUT"
+            else echo "waveform: $wave, simulated by $(icarus); dewfpga sim ${tbtop:-$top} --wave opens it"; fi
         fi
         return "$rc"
     else
@@ -416,9 +437,23 @@ case "${1:-}" in
     vscode)  shift; cmd_vscode "$@" ;;
     check)   cmd_check ;;
     new)     shift; cmd_new "$@" ;;
-    sim|bit|flash|clean) locate; if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then cmd_build "$@" 2>&1 | abspath; else cmd_build "$@"; fi ;;
+    sim)     # --wave[=surfer|browser|both] [--no-open]: the simulation, then its waveform (cmd_wave); anywhere on the line
+             shift; SIM_ARGS=(); sim_wave=""; sim_open=""
+             for a in "$@"; do
+                 case $a in
+                     --wave) sim_wave=surfer ;;
+                     --wave=surfer|--wave=browser|--wave=both) sim_wave=${a#--wave=} ;;
+                     --no-open) sim_open=--no-open ;;
+                     -*) die unknown-option "unknown option: $a. Fix: dewfpga sim [top|testbench] [--wave[=surfer|browser|both]]" ;;
+                     *) SIM_ARGS+=("$a") ;;
+                 esac
+             done
+             [ -z "$sim_open" ] || [ -n "$sim_wave" ] || die unknown-option "--no-open goes with --wave: it writes the waveform's files and opens nothing. Fix: dewfpga sim ${SIM_ARGS[*]:+${SIM_ARGS[*]} }--wave --no-open"
+             if [ -n "$sim_wave" ]; then set -- cmd_wave "$sim_wave" ${sim_open:+"$sim_open"}; else locate; set -- cmd_build sim; fi
+             if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then "$@" ${SIM_ARGS[@]+"${SIM_ARGS[@]}"} 2>&1 | abspath; else "$@" ${SIM_ARGS[@]+"${SIM_ARGS[@]}"}; fi ;;
+    bit|flash|clean) locate; if [ "${DEWFPGA_ABSPATH:-}" = 1 ]; then cmd_build "$@" 2>&1 | abspath; else cmd_build "$@"; fi ;;
     tops)    shift; locate; cmd_tops "$@" ;;
-    wave)    shift; cmd_wave "$@" ;;
+    wave)    shift; cmd_wave browser "$@" ;;
     mcp)     [ $# -eq 1 ] || die unknown-option "dewfpga mcp takes no arguments (it speaks MCP over stdio). Fix: dewfpga mcp"
              MCP_PY="$FPGA_HOME/mcp-venv/bin/python"
              [ -x "$MCP_PY" ] || { echo "ERROR [mcp-not-installed]: $MCP_PY is missing, so the agent interface cannot start. Fix: dewfpga install. $SITE/mcp-not-installed/" >&2; exit 3; }
