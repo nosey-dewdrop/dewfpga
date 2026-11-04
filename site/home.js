@@ -2774,9 +2774,24 @@ function inkRight(g, y0, y1, xMax) {
   }
   return m;
 }
-// the largest font size whose 1.16 line is a whole number of pixels
-function lineSnap(fs) {
-  return Math.max(4, Math.floor(fs * 1.16 + 1e-6)) / 1.16;
+// the distance a browser really lays between two lines of a pre: safari puts 7.59px lines a
+// whole 7px apart, so a drawing measured with the css line ends higher than the layout thinks
+function linePitch(el, fs, lh) {
+  const pr = document.createElement('pre');
+  pr.style.cssText = 'position:absolute;visibility:hidden;left:-9999px;top:0;margin:0;padding:0;white-space:pre';
+  pr.style.fontFamily = getComputedStyle(el).fontFamily;
+  pr.style.fontSize = fs + 'px';
+  pr.style.lineHeight = lh + 'px';
+  pr.textContent = 'x\n'.repeat(40) + 'x';
+  document.body.appendChild(pr);
+  const t = pr.firstChild, a = document.createRange(), b = document.createRange();
+  a.setStart(t, 0);
+  a.setEnd(t, 1);
+  b.setStart(t, 80);
+  b.setEnd(t, 81);
+  const pitch = (b.getBoundingClientRect().top - a.getBoundingClientRect().top) / 40;
+  pr.remove();
+  return pitch > 0 ? pitch : lh;
 }
 
 function inkTop(g, x0) {
@@ -2863,12 +2878,9 @@ function boot() {
       // takes the bottom of the screen
       // (a window not yet sized, as when safari is still opening, counts as tall enough)
       const wf = availW / (124 * adv);
-      fs = lineSnap(H > 420 ? Math.max(wf * 0.6, Math.min(wf, (H - navH - 176) / (90 * 1.16))) : wf);
+      fs = H > 420 ? Math.max(wf * 0.6, Math.min(wf, (H - navH - 176) / (90 * 1.16))) : wf;
     } else {
       fs = Math.min(availW / (300 * adv), (H - navH - 10) / (88 * 1.16));
-      // a whole-pixel line: safari lays a pre's lines at whole pixels (7.59px lines are drawn
-      // 7px apart), so a fractional one makes its drawing shorter than the layout measures
-      fs = lineSnap(fs);
       const cols = Math.max(300, Math.min(480, Math.floor(availW / (adv * fs))));
       spec = { cols, rows: 88, base: 300 };
     }
@@ -2909,6 +2921,8 @@ function boot() {
       hero.style.top = M.heroTop + 'px';
       hero.dataset.room = Math.round((yTop - spec.rows * 0.1) * lh + dy);
       M.heroFloor = top + yTop * lh;
+      M.yTop = yTop;
+      M.pitch = linePitch(scene, fs, lh);
       // the captions: right of the laptop at the seat and of the board at the end
       let right = 0;
       for (const p of [0.2, 0.5, 0.7, 0.935, 1.0]) {
@@ -2931,6 +2945,15 @@ function boot() {
         floor = Math.min(floor, inkTop(g3, capCol));
       }
       M.capsFloor = top + floor * lh - 28;
+      // the flow's frames sit higher than the hero's: lifted together until their highest ink is
+      // just under the nav, never lower than the hero's place (in the lines the browser draws)
+      let ink = spec.rows;
+      for (let i = 0; i <= 16; i++) {
+        const g4 = makeGrid(spec.cols, spec.rows);
+        frameFlow(g4, 0.05 + i * 0.059, false, spec, K);
+        ink = Math.min(ink, inkTop(g4, 0));
+      }
+      M.flowTop = Math.min(top, Math.round(navH + 16 - ink * M.pitch));
     }
     placeCaps();
     placeCli();
@@ -2943,7 +2966,7 @@ function boot() {
     const bcols = mobile ? 150 : 168, bw2 = mobile ? colW * 1.75 : colW;
     const brows = board.rowsFor(bcols, mobile);
     // the whole board in one window's height, switches included
-    const bfs = lineSnap(Math.min(bw2 / (bcols * adv), mobile ? 99 : (H - 120) / (brows * 1.16)));
+    const bfs = Math.min(bw2 / (bcols * adv), mobile ? 99 : (H - 120) / (brows * 1.16));
     const bpre = document.getElementById('boardPre'), layer = document.getElementById('boardLayer');
     setGrid(bpre, bcols, brows, bfs, adv);
     layer.style.fontSize = bfs.toFixed(3) + 'px';
@@ -2979,12 +3002,17 @@ function boot() {
       const clear = 40;
       hero.style.top = M.heroTop + 'px';
       const down = Math.max(0, Math.min(Math.ceil(hb() + clear - M.heroFloor), Math.round(6 * M.lh)));
-      scene.style.top = (M.top + down) + 'px';
+      // where the browser really draws the cable (safari: higher, see linePitch); only the hero's
+      // drawing goes down the rest, the flow keeps the place it has
+      const real = M.top + M.yTop * M.pitch;
+      const more = Math.max(0, Math.min(Math.ceil(hb() + clear - real) - down, Math.round(6 * M.lh)));
+      scene.style.top = (M.top + down + more) + 'px';
       M.drop = down;
+      M.more = more;
       for (const [lh, least] of [[1.3, 4], [1.2, 3]]) {
         hcli.style.lineHeight = lh;
         hcli.style.removeProperty('--hg');
-        const spare = M.heroFloor + down - clear - hb();
+        const spare = Math.min(M.heroFloor, real) + down + more - clear - hb();
         const gap = Math.min(10, 10 + spare / n);
         if (gap >= least) {
           hcli.style.setProperty('--hg', gap.toFixed(1) + 'px');
@@ -2996,6 +3024,7 @@ function boot() {
       }
       scene.style.top = M.top + 'px';
       M.drop = 0;
+      M.more = 0;
       hcli.style.removeProperty('line-height');
       hcli.style.removeProperty('--hg');
     }
@@ -3009,16 +3038,28 @@ function boot() {
       vis.hide();
       return;
     }
-    // the drawing's top, after the hero's cli may have moved it down
-    const W = innerWidth, x = M.capsLeft, w = W - M.gut - x, top = M.top + (M.drop || 0);
+    // the flow's drawing top
+    const W = innerWidth, x = M.capsLeft, w = W - M.gut - x, top = M.flowTop;
     const col0 = Math.floor((x - M.left) / M.cw), col1 = Math.ceil((W - M.gut - M.left) / M.cw);
     const was = capEls.map(c => c.classList.contains('on'));
-    const regions = VIS.map(v => {
-      // the caption of the step this picture belongs to, placed as placeCaps places it
+    // the words and the picture are one block, its middle level with the middle of the drawing;
+    // the blocks of one scene (the laptop's steps, then the board) share the highest of their
+    // tops, so the words do not move from one step to the next
+    const blocks = VIS.map(v => {
       const si = FLOW_STEPS.findIndex(([a, b]) => v.span[0] + 0.02 >= a && v.span[0] + 0.02 < b);
       capEls.forEach((c, k) => c.classList.toggle('on', k === si));
       const h = caps.getBoundingClientRect().height;
-      const ctop = Math.max(M.navH + 16, Math.min(top + Math.round(M.preH * 0.12), (M.capsFloor || 1e9) - h));
+      const pn = v.spec.rows * 1.16 * Math.min(11, w / (v.spec.cols * M.adv));
+      const block = h + 30 + pn;
+      const t = Math.max(M.navH + 16, Math.min(frameMid((v.span[0] + Math.min(v.span[1], 1)) / 2) - block / 2, innerHeight - 16 - block));
+      return { si, h, pn, t, board: v.span[0] >= BOARD_AT };
+    });
+    M.capTop = [false, true].map(b => Math.min(...blocks.filter(k => k.board === b).map(k => k.t), Infinity));
+    const regions = VIS.map((v, i) => {
+      const { si, h, pn } = blocks[i];
+      capEls.forEach((c, k) => c.classList.toggle('on', k === si));
+      const ctop = M.capTop[blocks[i].board ? 1 : 0];
+      v.ctop = ctop;
       const y = ctop + h + 30;
       // the first inked row below it in the caption's column, over the picture's frames
       let floor = Math.min(innerHeight - 12, top + M.preH);
@@ -3026,7 +3067,7 @@ function boot() {
         const p = v.span[0] + (Math.min(v.span[1], 1) - v.span[0]) * f;
         const g = makeGrid(M.spec.cols, M.spec.rows);
         frameFlow(g, p, false, M.spec, M.K);
-        const r0 = Math.max(0, Math.floor((y - top) / M.lh));
+        const r0 = Math.max(0, Math.floor((y - top) / M.pitch));
         for (let row = r0; row < g.rows; row++) {
           let ink = false;
           for (let c = Math.max(0, col0); c < Math.min(g.cols, col1); c++) {
@@ -3036,28 +3077,63 @@ function boot() {
             }
           }
           if (ink) {
-            floor = Math.min(floor, top + row * M.lh - 18);
+            floor = Math.min(floor, top + row * M.pitch - 18);
             break;
           }
         }
       }
-      return floor - y > 60 ? { x, y, w, h: floor - y } : null;
+      const hh = Math.min(pn, floor - y);
+      return hh > 60 ? { x, y, w, h: hh } : null;
     });
     capEls.forEach((c, k) => c.classList.toggle('on', was[k]));
     placeCaps();
     vis.size(regions, M.adv);
   }
 
-  // the caption block starts level with the laptop's screen, or sits under the drawing on a phone
+  // where the camera has crossed the desk and the board fills the frame
+  const BOARD_AT = 0.79;
+
+  // the middle of the drawing's ink left of the words, in one frame of the flow
+  function frameMid(p) {
+    const g = makeGrid(M.spec.cols, M.spec.rows);
+    frameFlow(g, p, false, M.spec, M.K);
+    const c1 = Math.min(g.cols, Math.floor((M.capsLeft - M.left) / M.cw) - 2);
+    let r0 = -1, r1 = -1;
+    for (let y = 0; y < g.rows; y++) {
+      for (let x = 0; x < c1; x++) {
+        if (g.ch[y * g.cols + x] !== ' ') {
+          if (r0 < 0) {
+            r0 = y;
+          }
+          r1 = y;
+          break;
+        }
+      }
+    }
+    return r0 < 0 ? M.navH + (innerHeight - M.navH) / 2 : M.flowTop + (r0 + r1 + 1) / 2 * M.pitch;
+  }
+
+  // the caption block: with its picture, as placeVis placed the pair; alone, its middle level with
+  // the middle of the drawing; under the drawing on a phone
   function placeCaps() {
     if (!M || M.mobile) {
       return;
     }
-    // the words start level with the laptop's screen, so the picture under them has room and
-    // the right side fills the frame from its top, not from its middle
     const h = caps.getBoundingClientRect().height;
-    const top = M.top + (M.drop || 0) + Math.round(M.preH * 0.12);
-    caps.style.top = Math.max(M.navH + 16, Math.min(top, (M.capsFloor || 1e9) - h)) + 'px';
+    const p = lastP > 0 ? lastP : FLOW_STEPS[0][0];
+    const v = VIS.find(e => p >= e.span[0] && p < e.span[1] && e.ctop !== undefined);
+    let t;
+    const shared = M.capTop && M.capTop[p >= BOARD_AT ? 1 : 0];
+    if (v) {
+      t = v.ctop;
+    } else if (shared !== undefined && isFinite(shared)) {
+      t = shared;
+    } else {
+      const si = FLOW_STEPS.findIndex(([a, b]) => p >= a && p < b);
+      const pm = si >= 0 ? (FLOW_STEPS[si][0] + Math.min(FLOW_STEPS[si][1], 1)) / 2 : p;
+      t = Math.max(M.navH + 16, Math.min(frameMid(pm) - h / 2, innerHeight - 16 - h));
+    }
+    caps.style.top = t + 'px';
   }
 
   function progress() {
@@ -3097,6 +3173,10 @@ function boot() {
     }
     hero.style.opacity = heroO.toFixed(3);
     hero.style.visibility = heroO < 0.01 ? 'hidden' : 'visible';
+    if (M && !M.mobile && M.flowTop !== undefined) {
+      const at = M.top + (M.drop || 0) + (M.more || 0);
+      scene.style.top = (M.flowTop + (at - M.flowTop) * heroO).toFixed(1) + 'px';
+    }
     caps.style.opacity = Math.min(1, capO).toFixed(3);
     caps.style.visibility = capO < 0.01 ? 'hidden' : 'visible';
     return Math.min(1, capO);
@@ -3157,6 +3237,7 @@ function boot() {
   if (reduce()) {
     return;
   }
+  let lastVi = -2;
   const tick = now => {
     const r = how.getBoundingClientRect();
     if (r.bottom > 0 && !window.__frozen) {
@@ -3183,6 +3264,11 @@ function boot() {
         lastP = p;
         const s = drawFlow(p);
         setStep(s.step);
+        const vi = VIS.findIndex(e => p >= e.span[0] && p < e.span[1]);
+        if (vi !== lastVi) {
+          lastVi = vi;
+          placeCaps();
+        }
         const capO = fades(p);
         vis.draw(p, s, M.mobile ? 0 : capO);
       }
