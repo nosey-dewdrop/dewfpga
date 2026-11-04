@@ -184,9 +184,9 @@ function boot() {
       const hb = () => hcli.getBoundingClientRect().bottom - stage.getBoundingClientRect().top;
       const n = hcli.children.length - 1;
       // the words rise a few lines first (never under the nav), then the gap closes, then the
-      // lines come a little closer; the cable keeps at least 40px under the last command
-      const clear = Math.max(40, 4 * M.lh);
-      for (const up of [0, 2, 4, 6]) {
+      // lines come a little closer; the cable keeps at least 64px under the last command
+      const clear = Math.max(64, 6 * M.lh);
+      for (const up of [0, 2, 4, 6, 8]) {
         const t = M.heroTop - up * M.lh;
         if (t < M.navH + 8) {
           break;
