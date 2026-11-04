@@ -63,6 +63,38 @@ the files that declare a name it uses: a package before its users, a typedef fil
 interface that uses the type (one that another file `includes is read through the `include, not twice).
 Example: `dewfpga new blink`.
 
+## Waveforms
+
+`dewfpga sim --wave` runs the testbench, then opens what it recorded in
+[Surfer](https://surfer-project.org/) (`brew install surfer`). `--wave=browser` opens it in a
+page in the browser instead, Vivado's wave window without Vivado, and `--wave=both` opens both.
+Both start with the testbench's own signals, the design under it to expand; the testbench's
+checking (an `errors` counter, `exp_*` and `expected*` values, the variable a `for (int i ...)` declares) is left
+out of that first view.
+
+```bash
+dewfpga sim --wave                  # the folder's one testbench, in Surfer
+dewfpga sim tb_mux8 --wave=browser  # a testbench by name (or the design it tests: mux8), in the browser
+dewfpga sim top_mux --wave=both     # Surfer and the browser
+dewfpga wave tb_mux8.vcd            # a recording that is already there, in the browser
+```
+
+The last line says what was simulated, with what, and where it opened:
+
+```
+waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
+```
+
+The testbench needs nothing added, as in Vivado: no `$dumpfile`, no `$dumpvars`, no `$finish`.
+`dewfpga sim` records every signal under the testbench into `<testbench>.vcd` (a testbench that
+calls `$dumpvars` itself keeps its own file). Testbenches may sit in a `tb/` or `sim/` folder
+beside the design, several in one file; each run starts at one of them (`dewfpga tops --sim`
+lists them). A testbench with a free-running clock and no `$finish` stops at 1000 ns, where
+Vivado's Run Simulation stops (`SIM_TIME=10us` runs it longer). Files without a `` `timescale ``
+get Vivado's 1ns/1ps. A testbench that reports errors still opens: the waveform is where the
+wrong value is found. A run that stops at a compile error opens nothing. `--no-open` writes what
+the viewer would get and opens nothing.
+
 ## Install
 
 One line, no Node needed:
@@ -116,7 +148,9 @@ Re-running the script skips finished steps. Log: `~/fpga/install.log`.
 dewfpga install                     install the toolchain (safe to re-run)
 dewfpga check                       is every piece in place
 dewfpga sim|bit|flash|clean [top]   build a flat folder or a Vivado project
-dewfpga tops                        list top candidates without writing files
+dewfpga sim --wave[=browser|both]   simulate, then open the waveform in Surfer, the browser, or both
+dewfpga wave [tb|file.vcd]          simulate if needed, then open the waveform in the browser
+dewfpga tops [--sim]                list top candidates (--sim: the testbenches) without writing files
 dewfpga vscode [--remove]           set up or remove the editor integration
 dewfpga new <dir>                   blink example with a VS Code task (⌘⇧B = flash)
 dewfpga uninstall                   remove what install built, the CLI and its link (your files and brew packages stay)

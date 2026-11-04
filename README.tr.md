@@ -62,6 +62,37 @@ kullandığı adı bildiren dosyalardan sonra: package kullanıcılarından önc
 kullanan interface'ten önce (başka bir dosyanın `include ettiği dosya o `include üzerinden okunur, iki kez değil).
 Örnek: `dewfpga new blink`.
 
+## Dalga formları
+
+`dewfpga sim --wave` testbench'i çalıştırır, kaydettiğini [Surfer](https://surfer-project.org/)'da
+açar (`brew install surfer`). `--wave=browser` onun yerine tarayıcıda bir sayfada açar (Vivado'suz
+Vivado dalga penceresi), `--wave=both` ikisini de açar. İkisi de testbench'in kendi sinyalleriyle
+başlar, altındaki tasarım açılmaya hazır durur; testbench'in kontrol değişkenleri (`errors` sayacı,
+`exp_*` ve `expected*` değerleri, bir `for (int i ...)` başlığının tanımladığı değişken) bu ilk görünüme alınmaz.
+
+```bash
+dewfpga sim --wave                  # klasördeki tek testbench, Surfer'da
+dewfpga sim tb_mux8 --wave=browser  # adıyla bir testbench (ya da test ettiği tasarım: mux8), tarayıcıda
+dewfpga sim top_mux --wave=both     # Surfer ve tarayıcı
+dewfpga wave tb_mux8.vcd            # zaten olan bir kayıt, tarayıcıda
+```
+
+Son satır neyin, neyle simüle edildiğini ve nerede açıldığını söyler:
+
+```
+waveform: top_mux_tb.vcd, simulated by Icarus Verilog 13.0 (stable), opened in Surfer 0.7.0
+```
+
+Testbench'e Vivado'daki gibi bir şey eklemen gerekmez: `$dumpfile`, `$dumpvars`, `$finish` yok.
+`dewfpga sim` testbench'in altındaki her sinyali `<testbench>.vcd` dosyasına kaydeder (`$dumpvars`'ı
+kendisi çağıran testbench kendi dosyasını tutar). Testbench'ler tasarımın yanındaki bir `tb/` veya
+`sim/` klasöründe, bir dosyada birden fazla olabilir; her koşu bunlardan biriyle başlar
+(`dewfpga tops --sim` listeler). Serbest çalışan saati olup `$finish`'i olmayan testbench, Vivado'nun
+Run Simulation'ının durduğu yerde, 1000 ns'de durur (`SIM_TIME=10us` daha uzun çalıştırır).
+`` `timescale `` taşımayan dosyalar Vivado'nun 1ns/1ps'ini alır. Hata bildiren testbench de açılır:
+yanlış değer dalga formunda bulunur. Derleme hatasında duran koşu hiçbir şey açmaz. `--no-open`
+görüntüleyicinin alacağını yazar, hiçbir şey açmaz.
+
 ## Kurulum
 
 Tek satır, Node gerekmez:
@@ -116,7 +147,9 @@ Script'i tekrar çalıştırınca biten adımlar atlanır. Log: `~/fpga/install.
 dewfpga install                     zinciri kur (tekrar çalıştırmak güvenli)
 dewfpga check                       her parça yerinde mi
 dewfpga sim|bit|flash|clean [top]   düz klasör veya Vivado projesi
-dewfpga tops                        top adaylarını dosya yazmadan listele
+dewfpga sim --wave[=browser|both]   simüle et, dalga formunu Surfer'da, tarayıcıda ya da ikisinde aç
+dewfpga wave [tb|file.vcd]          gerekirse simüle et, dalga formunu tarayıcıda aç
+dewfpga tops [--sim]                top adaylarını (--sim: testbench'leri) dosya yazmadan listele
 dewfpga vscode [--remove]           editör bağlantısını kur veya kaldır
 dewfpga new <dizin>                 VS Code görevli blink örneği (⌘⇧B = flash)
 dewfpga uninstall                   kurulumun ürettiklerini, CLI'ı ve linki sil (senin dosyaların ve brew paketleri kalır)
