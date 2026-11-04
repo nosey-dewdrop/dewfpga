@@ -329,6 +329,19 @@ blink_sim_plain() {
     && [ ! -e blink.json ] && [ ! -e blink.il ] && [ ! -e blink_sim.elab ]
 }
 check "sim: blink is iverilog's alone: the same four lines and the waveform line, no note, no build started" blink_sim_plain
+# the only testbench here never instantiates the design (a usability test wrote one): run alone it printed led=x and
+# passed, by name, by the design's name and with no name. It is stopped all three ways, and the fix writes the instance
+# shellcheck disable=SC2016   # $display and $finish are Verilog
+tb_without_design() {
+    rm -rf "$T/twd" && mkdir -p "$T/twd" && cd "$T/twd" \
+    && printf 'module andgate(input logic [15:0] sw, output logic [15:0] led);\n  assign led = {15'"'"'d0, sw[0] & sw[1]};\nendmodule\n' > andgate.sv \
+    && printf 'module andgate_tb;\n  logic [15:0] sw; logic [15:0] led;\n  initial begin sw = 3; #1; $display("led=%%b", led); $finish; end\nendmodule\n' > andgate_tb.sv \
+    && for a in "" andgate andgate_tb; do
+           ! "$CLI" sim $a > out 2>&1 || return 1
+           grep -q '^andgate_tb.sv:1: ERROR \[testbench-without-design\]: andgate_tb instantiates no design module of these files, so it has nothing to test: .* Fix: instantiate andgate in it (andgate dut(.sw(sw), .led(led));)' out && ! grep -q 'led=' out || return 1
+       done
+}
+check "sim: the only testbench instantiates no design -> testbench-without-design with no name, the design's name or its own, never a pass" tb_without_design
 # two clocks: a divided clock the student named (slow) clocks a counter; the pnr line reports each clock by name
 two_clocks() {
     mkdir -p "$T/2c" && cd "$T/2c" && printf 'module top(input logic clk, input logic [15:0] sw, output logic [15:0] led);\n  logic slow = 0; always_ff @(posedge clk) slow <= ~slow;\n  logic [15:0] c = 0; always_ff @(posedge slow) c <= c + sw;\n  assign led = c;\nendmodule\n' > top.sv \

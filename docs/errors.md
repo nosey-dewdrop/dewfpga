@@ -1387,21 +1387,21 @@ dewfpga sim tb_mux8
 ## testbench-without-design
 step: sim
 source: dewfpga sim
-title: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.
-summary: The testbench named on the command line does not instantiate any design module of the folder.
+title: andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test.
+summary: The testbench does not instantiate any design module of the folder, so it would pass whatever the design does.
 date: 2026-11-04
 
 ```
-tb.sv:1: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test. Fix: instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder. https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/
+andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test: run as it is, it shows only its own signals (x where nothing drives them) and passes whatever the design does. Fix: instantiate andgate in it (andgate dut(.sw(sw), .led(led));). https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/
 ```
 
 ## Why does it happen?
 
-A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the design's file is elsewhere, or the instance names a module that does not exist under that name.
+A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the instance was never written, the design's file is elsewhere, or the instance names a module that does not exist under that name. Run as it is, the testbench would show only its own signals (x where nothing drives them) and pass whatever the design does, so `dewfpga sim` stops, whether the testbench was named or is the only one in the folder.
 
 ## What is the fix?
 
-Put the design's `.sv` next to the testbench, or fix the module name in the instance.
+Instantiate the design in the testbench, with its ports connected (the error writes the line for the design it found), put the design's `.sv` next to the testbench, or fix the module name in the instance.
 
 ## bad-sim-time
 step: sim

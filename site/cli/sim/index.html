@@ -114,7 +114,7 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 <li><a href="/dewfpga/errors/sim-timeout/">sim-timeout</a>: The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</li>
 <li><a href="/dewfpga/errors/sim-run-time/">sim-run-time</a>: A testbench with a free-running clock and no $finish runs 1000 ns, as in Vivado; SIM_TIME runs it longer.</li>
 <li><a href="/dewfpga/errors/two-testbenches/">two-testbenches</a>: The folder has more than one testbench and more than one design top; name the testbench to run.</li>
-<li><a href="/dewfpga/errors/testbench-without-design/">testbench-without-design</a>: The testbench named on the command line does not instantiate any design module of the folder.</li>
+<li><a href="/dewfpga/errors/testbench-without-design/">testbench-without-design</a>: The testbench does not instantiate any design module of the folder, so it would pass whatever the design does.</li>
 <li><a href="/dewfpga/errors/bad-sim-time/">bad-sim-time</a>: SIM_TIME must be a number with an optional unit (ns, us, ms, s, ps).</li>
 <li><a href="/dewfpga/errors/wave-viewer-missing/">wave-viewer-missing</a>: dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.</li>
 <li><a href="/dewfpga/errors/waveform-unreadable/">waveform-unreadable</a>: The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.</li>

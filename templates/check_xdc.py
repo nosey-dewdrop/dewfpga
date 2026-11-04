@@ -269,15 +269,19 @@ def _split_commas(s):
 def _port_names(body):
     """The names of a module's ports, from its header: ANSI (`input logic [3:0] a`), Verilog-1995 (`a, b`) or
     explicit (`.dp(...)`)."""
+    return set(_ports_in_order(body))
+
+def _ports_in_order(body):
+    """The same names, in the order the header lists them."""
     head = _header_view(body).split(";", 1)[0]
     pl = _port_list(head)
-    if not pl: return set()
+    if not pl: return []
     words = {"input", "output", "inout", "logic", "wire", "reg", "bit", "signed", "unsigned", "var", "tri", "integer"}
-    names = set()
+    names = []
     for item in _split_commas(head[pl[0]:pl[1]]):
         m = re.match(r"\s*\.\s*([A-Za-z_]\w*)", item)
         ids = [m.group(1)] if m else [i for i in re.findall(r"[A-Za-z_]\w*", re.sub(r"\[[^\]]*\]|=.*", " ", item)) if i not in words]
-        if ids: names.add(ids[-1])
+        if ids and ids[-1] not in names: names.append(ids[-1])
     return names
 
 def xdc_ports(xdc):
@@ -810,11 +814,19 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
         elif len(tbroots) > 1:
             return stop("two-testbenches", f"{len(tbroots)} testbenches here and nothing says which one to run: {listed(tbroots)}.",
                         f"name the one to run:  dewfpga sim {tbroots[0]}", where(tbroots[0]))
+    # a testbench that instantiates no design runs alone: it prints its own signals (x where nothing drives them) and
+    # passes whatever the design does, so it never runs. The fix names the design and its ports when there is one
+    def no_design(tb, dut=None):
+        dut = dut or (roots[0] if len(roots) == 1 else None)
+        inst_line = f"{dut} dut(" + ", ".join(f".{p}({p})" for p in _ports_in_order(mods[dut]["body"])) + ");" if dut else ""
+        return stop("testbench-without-design", f"{tb} instantiates no design module of these files, so it has nothing to test: run as it is, "
+                    "it shows only its own signals (x where nothing drives them) and passes whatever the design does.",
+                    f"instantiate {dut} in it ({inst_line})." if dut
+                    else "instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder.", where(tb))
     if chosen_tb:
         duts = [n for n in design if n in inst[chosen_tb]]
         if not duts:
-            return stop("testbench-without-design", f"{chosen_tb} instantiates no design module of these files, so it has nothing to test.",
-                        "instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design's .sv in this folder.", where(chosen_tb))
+            return no_design(chosen_tb)
         top = next((n for n in duts if n in roots), duts[0])
         tbwhy = f"testbench: {chosen_tb}" + (f", {tbwhy}" if tbwhy else "") + f" (it tests {top})"
     elif want:
@@ -847,7 +859,12 @@ def scan(files, want=None, xdc_names=(), cmd="bit", sim=(), sim_time=""):
         else: return stop("two-tops", f"{len(roots)} modules could be the top (nothing instantiates them): {listed(roots)}.",
                           f"name it:  dewfpga {cmd} {roots[0]}", where(roots[0]))
     tbs = [n for n in order if mods[n]["tb"]]
-    tb_for = [chosen_tb] if chosen_tb else [n for n in tbs if top in inst[n]] or ([tbs[0]] if len(tbs) == 1 else [])
+    # the only testbench stands in for one that names the top only when it tests a design of these files (a part
+    # of the top, say); one that instantiates none tests nothing, and sim stops at it
+    tests = lambda n: any(c in mods and not mods[c]["tb"] for c in inst[n])
+    tb_for = [chosen_tb] if chosen_tb else [n for n in tbs if top in inst[n]] or ([tbs[0]] if len(tbs) == 1 and tests(tbs[0]) else [])
+    if cmd == "sim" and not tb_for and len(tbs) == 1:
+        return no_design(tbs[0], top)
     if cmd == "sim" and not chosen_tb and len(tb_for) > 1:
         tbwhy = f"testbench: {tb_for[0]} (more test {top} here: {', '.join(tb_for[1:])}; dewfpga sim {tb_for[1]} runs that one)"
     print("TOP=" + top)

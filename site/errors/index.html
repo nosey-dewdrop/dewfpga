@@ -231,8 +231,8 @@
     <p>dewfpga sim. The folder has more than one testbench and more than one design top; name the testbench to run.</p>
   </div>
   <div class="err">
-    <span class="step">sim</span><a class="title" href="/dewfpga/errors/testbench-without-design/">ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.</a>
-    <p>dewfpga sim. The testbench named on the command line does not instantiate any design module of the folder.</p>
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/testbench-without-design/">andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test.</a>
+    <p>dewfpga sim. The testbench does not instantiate any design module of the folder, so it would pass whatever the design does.</p>
   </div>
   <div class="err">
     <span class="step">sim</span><a class="title" href="/dewfpga/errors/bad-sim-time/">ERROR [bad-sim-time]: SIM_TIME=ten is not a time. Fix: a number with a unit, as Vivado&#x27;s run takes it:  SIM_TIME=10us dewfpga sim  (ns, us, ms; a bare number is ns).</a>

@@ -5,19 +5,19 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="author" content="Damla Su Bilge">
 <link rel="author" href="https://noseydewdrop.com">
-<title>ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test. (fix, macOS)</title>
-<meta name="description" content="The testbench named on the command line does not instantiate any design module of the folder. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<title>andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test. (fix, macOS)</title>
+<meta name="description" content="The testbench does not instantiate any design module of the folder, so it would pass whatever the design does. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/">
 <meta property="og:type" content="article">
-<meta property="og:title" content="ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test. (fix, macOS)">
-<meta property="og:description" content="The testbench named on the command line does not instantiate any design module of the folder. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:title" content="andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test. (fix, macOS)">
+<meta property="og:description" content="The testbench does not instantiate any design module of the folder, so it would pass whatever the design does. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
 <meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/">
 <meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/dewfpga/s.css">
 <script defer src="/dewfpga/s.js"></script>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-11-04","inLanguage":"en"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test.","url":"https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-11-04","inLanguage":"en"}</script>
 </head>
 <body>
 <nav class="top" aria-label="Site">
@@ -33,12 +33,12 @@
 
 <main class="wrap">
   <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">sim</span>dewfpga sim</p>
-  <h1 class="mono">ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.</h1>
-<pre><code>tb.sv:1: ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test. Fix: instantiate the design in it (mux8 dut(.d(d), .s(s), .y(y));), or put the design&#39;s .sv in this folder. https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/</code></pre>
+  <h1 class="mono">andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test.</h1>
+<pre><code>andgate_tb.sv:1: ERROR [testbench-without-design]: andgate_tb instantiates no design module of these files, so it has nothing to test: run as it is, it shows only its own signals (x where nothing drives them) and passes whatever the design does. Fix: instantiate andgate in it (andgate dut(.sw(sw), .led(led));). https://nosey-dewdrop.github.io/dewfpga/errors/testbench-without-design/</code></pre>
 <h2 id="why-does-it-happen">Why does it happen?</h2>
-<p>A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the design's file is elsewhere, or the instance names a module that does not exist under that name.</p>
+<p>A testbench drives a design through an instance of it. This one has no instance of any module in the folder (or its tb/ or sim/ folder): the instance was never written, the design's file is elsewhere, or the instance names a module that does not exist under that name. Run as it is, the testbench would show only its own signals (x where nothing drives them) and pass whatever the design does, so <code>dewfpga sim</code> stops, whether the testbench was named or is the only one in the folder.</p>
 <h2 id="what-is-the-fix">What is the fix?</h2>
-<p>Put the design's <code>.sv</code> next to the testbench, or fix the module name in the instance.</p>
+<p>Instantiate the design in the testbench, with its ports connected (the error writes the line for the design it found), put the design's <code>.sv</code> next to the testbench, or fix the module name in the instance.</p>
 <h2 id="which-command-prints-it">Which command prints it?</h2>
 <ul>
 <li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
