@@ -198,11 +198,14 @@ def main():
                 for local, original in sorted(mapping.items(), key=lambda pair: -len(pair[0])):
                     text = re.sub(r"(?<![\w/])" + re.escape(local) + r"(?=[:\s'\"\),;]|\.(?:\s|$)|$)", lambda _: original, text)
                 return text
+            # make's own "make: *** [flash] Error 1" adds nothing to the message the recipe printed (the CLI drops it too)
+            trailer = re.compile(r"^make(\[\d+\])?: \*\*\* \[[^]]*\] Error \d+$")
             def execute(command):
                 with subprocess.Popen(command, cwd=work, env=env, stdout=subprocess.PIPE,
                                       stderr=subprocess.STDOUT, text=True, errors="replace") as child:
                     for line in child.stdout:
-                        print(mapped(line), end="", flush=True)
+                        if not trailer.match(line.rstrip("\n")):
+                            print(mapped(line), end="", flush=True)
                     rc = child.wait()
                 if rc:
                     raise subprocess.CalledProcessError(rc, command)

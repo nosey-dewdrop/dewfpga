@@ -385,6 +385,15 @@ cmd_help_each() {
     done && [ -z "$(ls -A)" ] && "$CLI" sim --help | grep -q 'dewfpga sim \[top|testbench\] --wave'
 }
 check "<command> --help (or -h) prints that command's help, exit 0, runs nothing" cmd_help_each
+# run printed make's "make: *** [flash] Error 1" under its clean board-not-found line; an openFPGALoader that answers as
+# it does with no board plugged in (so the test never programs a real one)
+run_no_board() {
+    rm -rf "$T/rnb" && mkdir -p "$T/rnb/bin" && cd "$T/rnb" && cp "$ROOT/templates/blink.sv" . \
+    && printf '#!/bin/sh\necho "unable to open ftdi device: -3 (device not found)"\necho "JTAG init failed with: unable to open ftdi device"\nexit 1\n' > bin/openFPGALoader && chmod +x bin/openFPGALoader \
+    && ! PATH="$T/rnb/bin:$PATH" "$CLI" run blink.sv > out 2>&1 && grep -q '^ERROR \[board-not-found\]: board not found by openFPGALoader' out \
+    && ! grep -q '^make' out && [ "$(tail -1 out | cut -c1-26)" = 'ERROR [board-not-found]: b' ]
+}
+check "run with no board -> the board-not-found line last, no make trailer" run_no_board
 # eight ports with no board name beside Basys3_Master.xdc were eight copies of one long message that called the file
 # "the course file": one message per cause names every port, and the file by its name; commented-out lines likewise
 pins_grouped() {
