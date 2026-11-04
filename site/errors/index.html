@@ -223,6 +223,42 @@
     <p>dewfpga sim, vvp. The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</p>
   </div>
   <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-run-time/">note [sim-run-time]: the simulation stopped at 1000 ns, where Vivado&#x27;s Run Simulation stops: tb has a clock that never stops and no $finish, or SIM_TIME says so.</a>
+    <p>dewfpga sim. A testbench with a free-running clock and no $finish runs 1000 ns, as in Vivado; SIM_TIME runs it longer.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/two-testbenches/">ERROR [two-testbenches]: 6 testbenches here and nothing says which one to run: tb_mux2 (tb/lab2_tb.sv:3), tb_mux4 (tb/lab2_tb.sv:18), ... Fix: name the one to run:  dewfpga sim tb_mux2</a>
+    <p>dewfpga sim. The folder has more than one testbench and more than one design top; name the testbench to run.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/testbench-without-design/">ERROR [testbench-without-design]: tb instantiates no design module of these files, so it has nothing to test.</a>
+    <p>dewfpga sim. The testbench named on the command line does not instantiate any design module of the folder.</p>
+  </div>
+  <div class="err">
+    <span class="step">sim</span><a class="title" href="/dewfpga/errors/bad-sim-time/">ERROR [bad-sim-time]: SIM_TIME=ten is not a time. Fix: a number with a unit, as Vivado&#x27;s run takes it:  SIM_TIME=10us dewfpga sim  (ns, us, ms; a bare number is ns).</a>
+    <p>dewfpga sim. SIM_TIME must be a number with an optional unit (ns, us, ms, s, ps).</p>
+  </div>
+  <div class="err">
+    <span class="step">wave</span><a class="title" href="/dewfpga/errors/no-waveform/">ERROR [no-waveform]: wave.vcd does not exist. Fix: run the simulation first:  dewfpga sim</a>
+    <p>dewfpga wave. dewfpga wave was given a .vcd that is not there, or the simulation wrote none.</p>
+  </div>
+  <div class="err">
+    <span class="step">wave</span><a class="title" href="/dewfpga/errors/waveform-too-large/">ERROR [waveform-too-large]: wave.vcd is 300 MB, more than a browser page holds (256 MB).</a>
+    <p>dewfpga wave. The .vcd is too large for the browser page; record a shorter run or fewer signals.</p>
+  </div>
+  <div class="err">
+    <span class="step">wave</span><a class="title" href="/dewfpga/errors/waveform-not-opened/">note [waveform-not-opened]: open is missing, so the page was not opened.</a>
+    <p>dewfpga wave. The page was written, but there is no command to open it in a browser here.</p>
+  </div>
+  <div class="err">
+    <span class="step">wave</span><a class="title" href="/dewfpga/errors/wave-viewer-missing/">ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim tb_mux2 --wave=browser</a>
+    <p>dewfpga sim --wave. dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.</p>
+  </div>
+  <div class="err">
+    <span class="step">wave</span><a class="title" href="/dewfpga/errors/waveform-unreadable/">ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave</a>
+    <p>dewfpga sim --wave, dewfpga wave. The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.</p>
+  </div>
+  <div class="err">
     <span class="step">sim</span><a class="title" href="/dewfpga/errors/sim-exit/">ERROR [sim-exit]: the simulator stopped with exit 1 (its message is above: a $fatal, or a testbench that ends without $finish). Fix: read the line above this one and fix what it names; make the testbench end with $finish.</a>
     <p>dewfpga sim, vvp. vvp ended with a non-zero exit: a $fatal in the testbench, or a run that ended without $finish.</p>
   </div>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>ERROR [no-waveform]: wave.vcd does not exist. Fix: run the simulation first:  dewfpga sim (fix, macOS)</title>
+<meta name="description" content="dewfpga wave was given a .vcd that is not there, or the simulation wrote none. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/no-waveform/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [no-waveform]: wave.vcd does not exist. Fix: run the simulation first:  dewfpga sim (fix, macOS)">
+<meta property="og:description" content="dewfpga wave was given a .vcd that is not there, or the simulation wrote none. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/no-waveform/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [no-waveform]: wave.vcd does not exist. Fix: run the simulation first:  dewfpga sim","url":"https://nosey-dewdrop.github.io/dewfpga/errors/no-waveform/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-11-04","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">wave</span>dewfpga wave</p>
+  <h1 class="mono">ERROR [no-waveform]: wave.vcd does not exist. Fix: run the simulation first:  dewfpga sim</h1>
+<pre><code>ERROR [no-waveform]: tb_mux8.vcd does not exist. Fix: run the simulation first:  dewfpga sim https://nosey-dewdrop.github.io/dewfpga/errors/no-waveform/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p><code>dewfpga wave file.vcd</code> opens a file that already exists. <code>dewfpga wave</code> (without a .vcd) runs the simulation first and opens what it recorded; this error means the run stopped before it recorded anything (a compile error, printed above).</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Run the simulation, read its first error, then open the waveform:</p>
+<pre data-copy="1"><code>dewfpga wave</code></pre>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

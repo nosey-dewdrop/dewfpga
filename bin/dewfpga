@@ -8,13 +8,13 @@
 #                                    instantiates (or name it: a module or a file). pins = <top>.xdc or the only .xdc
 #                                    In a Vivado project (a folder with one .xpr, or anywhere under its .srcs): the
 #                                    project's enabled files, its top module, its .xdc; outputs land next to the .xpr
-#   dewfpga sim [top|testbench] --wave[=surfer|browser|both] [--no-open]
-#                                    simulate, then open the waveform in Surfer (--wave), the browser page or both
 #   dewfpga tops [--sim]            the modules that could be the top, one per line: <module><tab><file> (reads only);
 #                                    --sim: the testbenches, <testbench><tab><file><tab><the module it tests>
 #   dewfpga wave [top|testbench|file.vcd] [--no-open]
 #                                    run the simulation and open its waveform in the browser, Vivado's wave window
-#                                    (sim records every signal; a .vcd given by name is opened as it is)
+#                                    (sim records every signal; a .vcd given by name is opened as it is);
+#                                    dewfpga sim [top|testbench] --wave[=surfer|browser|both] [--no-open] opens it in
+#                                    Surfer (--wave), the browser page or both; --no-open writes it and opens nothing
 #   dewfpga new <dir>               blink example: blink.sv + blink_tb.sv + blink.xdc + VS Code task (⌘⇧B = flash)
 #   dewfpga uninstall               remove what install built in ~/fpga (nextpnr-xilinx, yosys-slang, prjxray, chipdb, venv, log),
 #                                    the CLI in ~/.dewfpga and its link in Homebrew's bin. Your files and brew packages stay

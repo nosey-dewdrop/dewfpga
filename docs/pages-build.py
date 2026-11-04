@@ -318,7 +318,9 @@ def error_entries():
 
 def cli_help():
     """bin/dewfpga's help text (the lines its usage() prints): command -> its entry, in that order"""
-    lines = [re.sub(r"^# ?", "", l) for l in Path("bin/dewfpga").read_text().split("\n")[1:17]]
+    src = Path("bin/dewfpga").read_text()
+    a, b = map(int, re.search(r"usage\(\)\s*\{ sed -n '(\d+),(\d+)s", src).groups())   # the lines usage() prints
+    lines = [re.sub(r"^# ?", "", l) for l in src.split("\n")[a - 1:b]]
     entries = []
     for l in lines:
         if re.match(r"^  dewfpga ", l):

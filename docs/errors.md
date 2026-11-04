@@ -1488,7 +1488,7 @@ Open the path it prints in any browser.
 ## wave-viewer-missing
 step: wave
 source: dewfpga sim --wave
-title: ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it.
+title: ERROR [wave-viewer-missing]: Surfer is not installed, so the waveform cannot open in it. Fix: brew install surfer, or open it in the browser:  dewfpga sim tb_mux2 --wave=browser
 summary: dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.
 date: 2026-11-04
 
@@ -1517,7 +1517,7 @@ dewfpga sim --wave=browser
 ## waveform-unreadable
 step: wave
 source: dewfpga sim --wave, dewfpga wave
-title: ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long.
+title: ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave
 summary: The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.
 date: 2026-11-04
 

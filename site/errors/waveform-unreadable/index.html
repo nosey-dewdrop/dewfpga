@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave (fix, macOS)</title>
+<meta name="description" content="The file given as the waveform is not a VCD the viewers can read, or it could not be read at all. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/waveform-unreadable/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave (fix, macOS)">
+<meta property="og:description" content="The file given as the waveform is not a VCD the viewers can read, or it could not be read at all. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/waveform-unreadable/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave","url":"https://nosey-dewdrop.github.io/dewfpga/errors/waveform-unreadable/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-11-04","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">wave</span>dewfpga sim --wave, dewfpga wave</p>
+  <h1 class="mono">ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave</h1>
+<pre><code>ERROR [waveform-unreadable]: wave.vcd has no $enddefinitions in its first 4 MB: not a VCD, or its declarations are too long. Fix: open a .vcd that a simulation wrote whole:  dewfpga sim --wave https://nosey-dewdrop.github.io/dewfpga/errors/waveform-unreadable/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>A VCD starts with its declarations (the scopes and signals) and <code>$enddefinitions</code>, then the values. The viewers read the declarations first, to choose what to show; a file without them is another format, an empty file, or a dump cut off before its declarations ended. A file that cannot be read at all (no permission) gets this error too, with the system's reason.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Run the simulation again and open what it records:</p>
+<pre data-copy="1"><code>dewfpga sim --wave</code></pre>
+<h2 id="which-command-prints-it">Which command prints it?</h2>
+<ul>
+<li><a href="/dewfpga/cli/sim/"><code>dewfpga sim</code></a></li>
+</ul>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

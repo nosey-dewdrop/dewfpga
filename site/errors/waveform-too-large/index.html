@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="author" content="Damla Su Bilge">
+<link rel="author" href="https://noseydewdrop.com">
+<title>ERROR [waveform-too-large]: wave.vcd is 300 MB, more than a browser page holds (256 MB). (fix, macOS)</title>
+<meta name="description" content="The .vcd is too large for the browser page; record a shorter run or fewer signals. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<link rel="canonical" href="https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ERROR [waveform-too-large]: wave.vcd is 300 MB, more than a browser page holds (256 MB). (fix, macOS)">
+<meta property="og:description" content="The .vcd is too large for the browser page; record a shorter run or fewer signals. How to fix it when building the open-source FPGA chain for a Basys3 on an Apple Silicon Mac.">
+<meta property="og:url" content="https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/">
+<meta property="og:image" content="https://nosey-dewdrop.github.io/dewfpga/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90' fill='%235b2fc9'%3E%E2%9C%B3%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/dewfpga/s.css">
+<script defer src="/dewfpga/s.js"></script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","headline":"ERROR [waveform-too-large]: wave.vcd is 300 MB, more than a browser page holds (256 MB).","url":"https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/","author":{"@type":"Person","name":"Damla Su Bilge"},"datePublished":"2026-11-04","inLanguage":"en"}</script>
+</head>
+<body>
+<nav class="top" aria-label="Site">
+  <a class="brand" href="/dewfpga/">dewfpga</a>
+  <a class="c-why" href="/dewfpga/why/">why</a>
+  <a class="c-err" href="/dewfpga/errors/" aria-current="page">errors</a>
+  <a class="c-github" href="https://github.com/nosey-dewdrop/dewfpga">github</a>
+  <a class="c-notes" href="/dewfpga/patch-notes/">patch notes</a>
+  <a class="c-cli" href="/dewfpga/cli/">cli</a>
+  <a class="c-docs" href="/dewfpga/docs/">docs</a>
+  <a class="c-sim" href="/dewfpga/sim/">simulator</a>
+</nav>
+
+<main class="wrap">
+  <p class="eyebrow"><a href="/dewfpga/errors/">errors</a> · <span class="step">wave</span>dewfpga wave</p>
+  <h1 class="mono">ERROR [waveform-too-large]: wave.vcd is 300 MB, more than a browser page holds (256 MB).</h1>
+<pre><code>ERROR [waveform-too-large]: dump.vcd is 300 MB, more than a browser page holds (256 MB). Fix: record less (a shorter run, SIM_TIME=2us dewfpga sim) or fewer signals ($dumpvars(1, tb) records only the testbench&#39;s own), or open it in Surfer:  dewfpga sim --wave https://nosey-dewdrop.github.io/dewfpga/errors/waveform-too-large/</code></pre>
+<h2 id="why-does-it-happen">Why does it happen?</h2>
+<p>The waveform page carries the whole .vcd. dewfpga sim stops its own recording at 64 MB; a testbench that calls <code>$dumpvars</code> itself and runs for a long time (a counter to 50 million) writes much more.</p>
+<h2 id="what-is-the-fix">What is the fix?</h2>
+<p>Simulate a shorter time (<code>SIM_TIME=2us dewfpga sim</code>), shrink the count in simulation, or record fewer signals: <code>$dumpvars(1, tb)</code> records the testbench's own signals only. Without the testbench's <code>$dumpvars</code>, dewfpga records the run itself, up to 64 MB. Surfer reads a file of any size: <code>dewfpga sim --wave</code> opens it there.</p>
+</main>
+
+<footer class="wrap">
+  <span>built by <a href="https://noseydewdrop.com">Damla Su Bilge</a> · MIT · <a href="https://github.com/nosey-dewdrop/dewfpga">source</a> · <a href="https://www.linkedin.com/in/damla-su-bilge-278841278/">linkedin</a></span>
+  <span><a href="/dewfpga/errors/">all errors</a></span>
+</footer>
+</body>
+</html>

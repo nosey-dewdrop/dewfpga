@@ -80,7 +80,7 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 </table>
 <p class="mute small">From the agent interface: <a href="/dewfpga/agents/json/">the machine-readable CLI</a> and <a href="/dewfpga/agents/mcp/">the MCP server</a>.</p>
 <h2 id="errors">Which errors can it stop with?</h2>
-<p class="mute small">32 codes in the error catalog.</p>
+<p class="mute small">38 codes in the error catalog.</p>
 <ul>
 <li><a href="/dewfpga/errors/unknown-option/">unknown-option</a>: A word starting with - after the command, or an argument after install: the commands take a module or file name at most, install takes nothing.</li>
 <li><a href="/dewfpga/errors/no-source-file/">no-source-file</a>: The current folder holds no .sv or .v file; dewfpga works on the files in the folder you run it in.</li>
@@ -105,6 +105,12 @@ dewfpga flash        # .bit -&gt; the board; runs bit first when the .bit is mis
 <li><a href="/dewfpga/errors/sim-from-build-parameters/">sim-from-build-parameters</a>: iverilog refused the design and the testbench sets the top module&#x27;s parameters; the simulation of the design as the build reads it cannot apply them, so it stops instead of testing another design.</li>
 <li><a href="/dewfpga/errors/sim-starts-as-board/">sim-starts-as-board</a>: Not an error: a register or a memory of the design has no start value, and the simulation starts it where the board starts it (the reset value; 0 without a reset; a LUT RAM word at 0) instead of x, so a case or an if that reads it before the first reset takes the same branch in the simulation and on the board.</li>
 <li><a href="/dewfpga/errors/sim-timeout/">sim-timeout</a>: The testbench never called $finish, or needs longer than the timeout; the CLI killed the simulator.</li>
+<li><a href="/dewfpga/errors/sim-run-time/">sim-run-time</a>: A testbench with a free-running clock and no $finish runs 1000 ns, as in Vivado; SIM_TIME runs it longer.</li>
+<li><a href="/dewfpga/errors/two-testbenches/">two-testbenches</a>: The folder has more than one testbench and more than one design top; name the testbench to run.</li>
+<li><a href="/dewfpga/errors/testbench-without-design/">testbench-without-design</a>: The testbench named on the command line does not instantiate any design module of the folder.</li>
+<li><a href="/dewfpga/errors/bad-sim-time/">bad-sim-time</a>: SIM_TIME must be a number with an optional unit (ns, us, ms, s, ps).</li>
+<li><a href="/dewfpga/errors/wave-viewer-missing/">wave-viewer-missing</a>: dewfpga sim --wave opens the waveform in Surfer, and Surfer is not on this machine.</li>
+<li><a href="/dewfpga/errors/waveform-unreadable/">waveform-unreadable</a>: The file given as the waveform is not a VCD the viewers can read, or it could not be read at all.</li>
 <li><a href="/dewfpga/errors/sim-exit/">sim-exit</a>: vvp ended with a non-zero exit: a $fatal in the testbench, or a run that ended without $finish.</li>
 <li><a href="/dewfpga/errors/testbench-error/">testbench-error</a>: The simulation ran to $finish, and the testbench printed ERROR: lines with $error: a check failed.</li>
 <li><a href="/dewfpga/errors/packed-typedef-2d/">packed-typedef-2d</a>: A typedef of a two-dimensional packed array used to declare a parameter or a net; yosys flattens the type and every row index picks one bit.</li>

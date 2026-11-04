@@ -35,7 +35,8 @@
   <p class="eyebrow"><a href="/dewfpga/cli/">cli</a> · <span class="step">tops</span>list top modules</p>
   <h1>dewfpga tops</h1>
 <h2 id="help">What does its help text say?</h2>
-<pre><code>dewfpga tops                    the modules that could be the top, one per line: &lt;module&gt;&lt;tab&gt;&lt;file&gt; (reads only)</code></pre>
+<pre><code>dewfpga tops [--sim]            the modules that could be the top, one per line: &lt;module&gt;&lt;tab&gt;&lt;file&gt; (reads only);
+                                 --sim: the testbenches, &lt;testbench&gt;&lt;tab&gt;&lt;file&gt;&lt;tab&gt;&lt;the module it tests&gt;</code></pre>
 <p class="mute small">From <code>dewfpga --help</code>, as <a href="https://github.com/nosey-dewdrop/dewfpga/blob/main/bin/dewfpga">bin/dewfpga</a> prints it.</p>
 <h2 id="readme">What does the README say?</h2>
 <p>Use a flat folder of <code>.sv</code>/<code>.v</code> modules (an <code>.xdc</code> only for ports without a board name), or run inside a Vivado project: its <code>.xpr</code> selects the enabled design, constraint and simulation files. Commands from a nested <code>.srcs</code> folder use the project root; outputs go there too. <code>dewfpga tops</code> lists top candidates without writing files. The project's selected top wins unless you name one: <code>dewfpga bit &lt;top&gt;</code>. In a flat folder, hierarchy and a unique matching <code>.xdc</code> select the top; ambiguous candidates require a choice. A filename alone does not select it. A testbench has no ports and instantiates the design; <code>$finish</code>/<code>$stop</code> in a design module is an error. A file that holds only a package, an interface or typedefs is read too, each after the files that declare a name it uses: a package before its users, a typedef file before the interface that uses the type (one that another file <code>includes is read through the </code>include, not twice). Example: <code>dewfpga new blink</code>.</p>
